@@ -40,7 +40,8 @@ const corsOptions = {
       'http://localhost:5000',
       'https://oimoqr.com',
       'https://www.oimoqr.com',
-      'https://oimoqr.onrender.com'
+      'https://oimoqr.onrender.com',
+      'https://oimoqr-frontend.vercel.app' 
     ];
 
     if (allowedOrigins.includes(origin)) return callback(null, true);
