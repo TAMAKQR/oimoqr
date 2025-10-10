@@ -134,7 +134,8 @@ export const uploadDishImage = async (req, res, next) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const imageUrl = `/uploads/${req.file.filename}`;
+    // Get image URL (Cloudinary returns full URL, local storage returns filename)
+    const imageUrl = req.file.path || `/uploads/${req.file.filename}`;
 
     const updatedDish = await prisma.dish.update({
       where: { id },

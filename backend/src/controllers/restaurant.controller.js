@@ -128,7 +128,8 @@ export const uploadBanner = async (req, res, next) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const bannerUrl = `/uploads/${req.file.filename}`;
+    // Get image URL (Cloudinary returns full URL, local storage returns filename)
+    const bannerUrl = req.file.path || `/uploads/${req.file.filename}`;
 
     // Add banner to restaurant
     const restaurant = await prisma.restaurant.findUnique({

@@ -3,26 +3,49 @@ import { join, extname } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { existsSync, mkdirSync } from 'fs';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import cloudinary from '../config/cloudinary.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Ensure upload directory exists
-const uploadDir = join(__dirname, '../../uploads');
-if (!existsSync(uploadDir)) {
-  mkdirSync(uploadDir, { recursive: true });
-}
+// Check if Cloudinary is configured
+const isCloudinaryConfigured = 
+  process.env.CLOUDINARY_CLOUD_NAME && 
+  process.env.CLOUDINARY_API_KEY && 
+  process.env.CLOUDINARY_API_SECRET;
 
-// Storage configuration
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + extname(file.originalname));
+let storage;
+
+if (isCloudinaryConfigured) {
+  // Use Cloudinary storage for production
+  console.log('✅ Using Cloudinary for file storage');
+  storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+      folder: 'oimoqr',
+      allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+      transformation: [{ width: 1000, height: 1000, crop: 'limit' }]
+    }
+  });
+} else {
+  // Fallback to local storage for development
+  console.log('⚠️ Using local storage (not recommended for production)');
+  const uploadDir = join(__dirname, '../../uploads');
+  if (!existsSync(uploadDir)) {
+    mkdirSync(uploadDir, { recursive: true });
   }
-});
+
+  storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, file.fieldname + '-' + uniqueSuffix + extname(file.originalname));
+    }
+  });
+}
 
 // File filter
 const fileFilter = (req, file, cb) => {
