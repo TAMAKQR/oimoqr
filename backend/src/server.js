@@ -16,6 +16,9 @@ import adminRoutes from './routes/admin.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { rateLimiter } from './middleware/rateLimiter.js';
 
+
+app.set('trust proxy', 1)
+
 // Load environment variables
 dotenv.config();
 
@@ -38,7 +41,8 @@ const corsOptions = {
       'http://localhost:5173',
       'http://localhost:5000',
       'https://oimoqr.com',
-      'https://www.oimoqr.com'
+      'https://www.oimoqr.com',
+      'https://oimoqr.onrender.com'
     ];
     
     // Check if origin is in allowed list
