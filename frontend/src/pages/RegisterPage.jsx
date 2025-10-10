@@ -37,11 +37,16 @@ const RegisterPage = () => {
     setError('');
     setLoading(true);
 
+    console.log('🚀 Submitting registration:', formData);
+
     try {
       const response = await authService.register(formData);
+      console.log('✅ Registration successful:', response);
       setAuth(response.user, response.token);
       navigate('/dashboard');
     } catch (err) {
+      console.error('❌ Registration error:', err);
+      console.error('Error response:', err.response);
       setError(err.response?.data?.error || 'Ошибка регистрации');
     } finally {
       setLoading(false);
@@ -135,7 +140,7 @@ const RegisterPage = () => {
                 onChange={handleChange}
                 className="input-field rounded-r-none"
                 placeholder="myrestaurant"
-                pattern="[a-z0-9\-]+"
+                minLength={3}
                 required
               />
               <span className="bg-gray-100 border border-l-0 border-gray-300 px-4 py-2 rounded-r-lg text-gray-600">
