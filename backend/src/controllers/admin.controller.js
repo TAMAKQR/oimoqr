@@ -77,6 +77,13 @@ export const updateSubscription = async (req, res, next) => {
     const { id } = req.params;
     const { plan, status } = req.body;
 
+    console.log('Admin updating subscription:', { id, plan, status });
+
+    // Validate input
+    if (!plan && !status) {
+      return res.status(400).json({ error: 'Plan or status is required' });
+    }
+
     const subscription = await prisma.subscription.findUnique({
       where: { id },
       include: {
@@ -92,27 +99,35 @@ export const updateSubscription = async (req, res, next) => {
       return res.status(404).json({ error: 'Subscription not found' });
     }
 
-    let updateData = {
-      status
-    };
+    let updateData = {};
 
     // If activating a paid plan
     if (plan && (plan === 'MONTHLY' || plan === 'YEARLY')) {
       const endDate = calculateSubscriptionEndDate(plan);
       updateData = {
-        ...updateData,
         plan,
         status: 'ACTIVE',
         currentPeriodStart: new Date(),
         currentPeriodEnd: endDate
       };
 
-      // Send activation email
-      await sendSubscriptionActivatedEmail(
-        subscription.restaurant.user.email,
-        subscription.restaurant.user.name,
-        plan
-      );
+      console.log('Activating paid plan:', updateData);
+
+      // Send activation email (don't fail if email fails)
+      try {
+        await sendSubscriptionActivatedEmail(
+          subscription.restaurant.user.email,
+          subscription.restaurant.user.name,
+          plan
+        );
+      } catch (emailError) {
+        console.error('Failed to send activation email:', emailError);
+        // Continue anyway
+      }
+    } else if (status) {
+      // Just update status
+      updateData.status = status;
+      console.log('Updating status only:', updateData);
     }
 
     const updatedSubscription = await prisma.subscription.update({
@@ -133,8 +148,10 @@ export const updateSubscription = async (req, res, next) => {
       }
     });
 
+    console.log('Subscription updated successfully:', updatedSubscription.id);
     res.json(updatedSubscription);
   } catch (error) {
+    console.error('Error in updateSubscription:', error);
     next(error);
   }
 };

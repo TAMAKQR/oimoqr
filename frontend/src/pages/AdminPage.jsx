@@ -31,11 +31,15 @@ const AdminPage = () => {
 
   const handleUpdateSubscription = async (subscriptionId, plan, status) => {
     try {
-      await api.put(`/admin/subscriptions/${subscriptionId}`, { plan, status });
-      loadData();
-      alert('Подписка обновлена');
+      console.log('Updating subscription:', { subscriptionId, plan, status });
+      const response = await api.put(`/admin/subscriptions/${subscriptionId}`, { plan, status });
+      console.log('Update response:', response.data);
+      await loadData();
+      alert('Подписка обновлена успешно!');
     } catch (err) {
-      alert('Ошибка обновления подписки');
+      console.error('Error updating subscription:', err);
+      const errorMessage = err.response?.data?.error || err.message || 'Неизвестная ошибка';
+      alert(`Ошибка обновления подписки: ${errorMessage}`);
     }
   };
 
@@ -142,19 +146,26 @@ const AdminPage = () => {
                       </span>
                     </td>
                     <td className="py-3 px-4">
-                      <select
-                        onChange={(e) => {
-                          const [plan, status] = e.target.value.split('|');
-                          handleUpdateSubscription(restaurant.subscription.id, plan, status);
-                        }}
-                        className="text-sm border rounded px-2 py-1"
-                      >
-                        <option value="">Изменить...</option>
-                        <option value="MONTHLY|ACTIVE">Активировать Monthly</option>
-                        <option value="YEARLY|ACTIVE">Активировать Yearly</option>
-                        <option value="TRIAL|EXPIRED">Завершить Trial</option>
-                        <option value="ACTIVE|CANCELLED">Отменить</option>
-                      </select>
+                      {restaurant.subscription ? (
+                        <select
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              const [plan, status] = e.target.value.split('|');
+                              handleUpdateSubscription(restaurant.subscription.id, plan, status);
+                              e.target.value = ''; // Reset select
+                            }
+                          }}
+                          className="text-sm border rounded px-2 py-1"
+                        >
+                          <option value="">Изменить...</option>
+                          <option value="MONTHLY|ACTIVE">Активировать Monthly</option>
+                          <option value="YEARLY|ACTIVE">Активировать Yearly</option>
+                          <option value="TRIAL|EXPIRED">Завершить Trial</option>
+                          <option value="ACTIVE|CANCELLED">Отменить</option>
+                        </select>
+                      ) : (
+                        <span className="text-gray-400 text-sm">Нет подписки</span>
+                      )}
                     </td>
                   </tr>
                 ))}
