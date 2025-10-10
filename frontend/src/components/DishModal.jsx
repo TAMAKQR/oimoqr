@@ -29,42 +29,44 @@ const DishModal = ({ dish, isOpen, onClose, currency = '₽' }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+      <div className="bg-white rounded-t-2xl sm:rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {dish.image && (
           <img
             src={dish.image}
             alt={dish.name}
-            className="w-full h-64 object-cover"
+            className="w-full h-48 sm:h-64 object-cover rounded-t-2xl sm:rounded-t-lg"
           />
         )}
         
-        <div className="p-6">
-          <h2 className="text-2xl font-bold mb-2">{dish.name}</h2>
+        <div className="p-4 sm:p-6">
+          <h2 className="text-xl sm:text-2xl font-bold mb-2 break-words">{dish.name}</h2>
           {dish.description && (
-            <p className="text-gray-600 mb-4">{dish.description}</p>
+            <p className="text-gray-600 text-sm sm:text-base mb-4 break-words">{dish.description}</p>
           )}
 
           {dish.modifiers && dish.modifiers.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-3">Дополнительно:</h3>
+              <h3 className="text-base sm:text-lg font-semibold mb-3">Дополнительно:</h3>
               <div className="space-y-2">
                 {dish.modifiers.map((modifier) => (
                   <label
                     key={modifier.id}
-                    className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
+                    className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors gap-2"
                   >
-                    <div className="flex items-center">
+                    <div className="flex items-center min-w-0 flex-1">
                       <input
                         type="checkbox"
                         checked={selectedModifiers.some((m) => m.id === modifier.id)}
                         onChange={() => toggleModifier(modifier)}
-                        className="mr-3"
+                        className="mr-2 sm:mr-3 flex-shrink-0 w-4 h-4 sm:w-5 sm:h-5"
                       />
-                      <span>{modifier.name}</span>
+                      <span className="text-sm sm:text-base break-words">{modifier.name}</span>
                     </div>
                     {modifier.price > 0 && (
-                      <span className="text-gray-600">+{parseFloat(modifier.price).toFixed(2)} {currency}</span>
+                      <span className="text-gray-600 text-sm sm:text-base whitespace-nowrap ml-2">
+                        +{parseFloat(modifier.price).toFixed(2)} {currency}
+                      </span>
                     )}
                   </label>
                 ))}
@@ -72,29 +74,30 @@ const DishModal = ({ dish, isOpen, onClose, currency = '₽' }) => {
             </div>
           )}
 
-          <div className="flex justify-between items-center pt-4 border-t">
-            <div>
-              <p className="text-sm text-gray-600">Итого:</p>
-              <p className="text-2xl font-bold text-primary-600">
+          <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-0 pt-4 border-t">
+            <div className="flex justify-between sm:block">
+              <p className="text-xs sm:text-sm text-gray-600">Итого:</p>
+              <p className="text-xl sm:text-2xl font-bold text-primary-600">
                 {getTotalPrice()} {currency}
               </p>
             </div>
             <div className="flex gap-2">
               <button 
                 onClick={onClose} 
-                className="w-12 h-12 flex items-center justify-center rounded-full border-2 border-gray-300 hover:bg-gray-100 transition-colors text-gray-600 text-2xl font-light"
+                className="w-12 h-12 flex items-center justify-center rounded-full border-2 border-gray-300 hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-600 text-2xl font-light flex-shrink-0"
                 aria-label="Закрыть"
               >
                 ✕
               </button>
               <button 
                 onClick={handleAddToCart} 
-                className="flex-1 btn-primary flex items-center justify-center gap-2"
+                className="flex-1 btn-primary flex items-center justify-center gap-2 active:scale-95 transition-transform"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
                 </svg>
                 <span className="hidden sm:inline">Добавить</span>
+                <span className="sm:hidden">В корзину</span>
               </button>
             </div>
           </div>
