@@ -64,4 +64,20 @@ export const menuService = {
     const response = await api.delete(`/dishes/${dishId}/image`);
     return response.data;
   },
+
+  // Modifiers
+  createModifier: async (dishId, data) => {
+    const response = await api.post(`/dishes/${dishId}/modifiers`, data);
+    return response.data;
+  },
+
+  updateModifier: async (modifierId, data) => {
+    const response = await api.put(`/dishes/modifiers/${modifierId}`, data);
+    return response.data;
+  },
+
+  deleteModifier: async (modifierId) => {
+    const response = await api.delete(`/dishes/modifiers/${modifierId}`);
+    return response.data;
+  },
 };

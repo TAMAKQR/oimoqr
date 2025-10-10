@@ -385,6 +385,9 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
   const [price, setPrice] = useState(dish?.price || '');
   const [imageFile, setImageFile] = useState(null);
   const [currentImageUrl, setCurrentImageUrl] = useState(dish?.imageUrl || null);
+  const [modifiers, setModifiers] = useState(dish?.modifiers || []);
+  const [newModifierName, setNewModifierName] = useState('');
+  const [newModifierPrice, setNewModifierPrice] = useState('');
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -399,6 +402,42 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
     } catch (err) {
       alert('Ошибка при удалении изображения');
       console.error(err);
+    }
+  };
+
+  const handleAddModifier = () => {
+    if (!newModifierName.trim()) {
+      alert('Введите название модификатора');
+      return;
+    }
+
+    const newModifier = {
+      id: `temp-${Date.now()}`, // Временный ID для новых модификаторов
+      name: newModifierName,
+      price: parseFloat(newModifierPrice) || 0,
+      isNew: true
+    };
+
+    setModifiers([...modifiers, newModifier]);
+    setNewModifierName('');
+    setNewModifierPrice('');
+  };
+
+  const handleDeleteModifier = async (modifier) => {
+    if (modifier.isNew) {
+      // Просто удаляем из локального состояния
+      setModifiers(modifiers.filter(m => m.id !== modifier.id));
+    } else {
+      // Удаляем из базы данных
+      if (!confirm('Удалить модификатор?')) return;
+      
+      try {
+        await menuService.deleteModifier(modifier.id);
+        setModifiers(modifiers.filter(m => m.id !== modifier.id));
+      } catch (err) {
+        alert('Ошибка при удалении модификатора');
+        console.error(err);
+      }
     }
   };
 
@@ -434,6 +473,15 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
           setUploadProgress(0);
         }
       }
+
+      // Save new modifiers
+      const newModifiers = modifiers.filter(m => m.isNew);
+      for (const modifier of newModifiers) {
+        await menuService.createModifier(savedDish.id, {
+          name: modifier.name,
+          price: modifier.price
+        });
+      }
       
       onSave();
     } catch (err) {
@@ -445,8 +493,8 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+      <div className="bg-white rounded-t-2xl sm:rounded-lg p-4 sm:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
         <h3 className="text-xl font-bold mb-4">
           {dish ? 'Редактировать блюдо' : 'Новое блюдо'}
         </h3>
@@ -546,6 +594,82 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Модификаторы */}
+          <div className="border-t pt-4">
+            <label className="block text-sm font-medium mb-2">Модификаторы (добавки)</label>
+            
+            {/* Список модификаторов */}
+            {modifiers.length > 0 && (
+              <div className="space-y-2 mb-3">
+                {modifiers.map((modifier) => (
+                  <div
+                    key={modifier.id}
+                    className="flex items-center justify-between p-2 sm:p-3 bg-gray-50 rounded border gap-2"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium text-sm sm:text-base break-words">{modifier.name}</span>
+                      {modifier.price > 0 && (
+                        <span className="text-gray-600 text-xs sm:text-sm ml-2 whitespace-nowrap">
+                          +{modifier.price} {currency}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteModifier(modifier)}
+                      className="text-red-600 hover:text-red-800 active:text-red-900 text-sm px-2 flex-shrink-0"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Форма добавления модификатора */}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                value={newModifierName}
+                onChange={(e) => setNewModifierName(e.target.value)}
+                placeholder="Название (например: Сыр)"
+                className="input flex-1 text-sm sm:text-base"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddModifier();
+                  }
+                }}
+              />
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  value={newModifierPrice}
+                  onChange={(e) => setNewModifierPrice(e.target.value)}
+                  placeholder="Цена"
+                  className="input flex-1 sm:w-24 text-sm sm:text-base"
+                  step="0.01"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddModifier();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={handleAddModifier}
+                  className="btn-secondary whitespace-nowrap text-sm sm:text-base px-3 sm:px-4"
+                >
+                  + Добавить
+                </button>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Модификаторы позволяют клиентам добавлять дополнения к блюду
+            </p>
           </div>
 
           <div className="flex gap-3 pt-4">
