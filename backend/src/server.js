@@ -16,9 +16,6 @@ import adminRoutes from './routes/admin.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { rateLimiter } from './middleware/rateLimiter.js';
 
-
-
-
 // Load environment variables
 dotenv.config();
 
@@ -26,21 +23,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 5000;
 
-
-
-app.set('trust proxy', 1)
+app.set('trust proxy', 1);
 
 // Security middleware
 app.use(helmet());
 
-// CORS configuration with wildcard subdomain support
+// CORS configuration (Render + localhost)
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
-    
+
     const allowedOrigins = [
       'http://localhost:5173',
       'http://localhost:5000',
@@ -48,22 +42,12 @@ const corsOptions = {
       'https://www.oimoqr.com',
       'https://oimoqr.onrender.com'
     ];
-    
-    // Check if origin is in allowed list
-    if (allowedOrigins.includes(origin)) {
+
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    if (origin.match(/^https:\/\/[\w-]+\.oimoqr\.com$/)) return callback(null, true);
+    if (process.env.NODE_ENV !== 'production' && origin.match(/^http:\/\/localhost:\d+$/))
       return callback(null, true);
-    }
-    
-    // Check if origin matches wildcard pattern *.oimoqr.com
-    if (origin.match(/^https:\/\/[\w-]+\.oimoqr\.com$/)) {
-      return callback(null, true);
-    }
-    
-    // For development, allow localhost with any port
-    if (process.env.NODE_ENV !== 'production' && origin.match(/^http:\/\/localhost:\d+$/)) {
-      return callback(null, true);
-    }
-    
+
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true
@@ -88,7 +72,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/dishes', dishRoutes);
 app.use('/api/admin', adminRoutes);
 
-// Health check
+// Health check route
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
@@ -101,17 +85,11 @@ app.use((req, res) => {
 // Error handling middleware
 app.use(errorHandler);
 
-// Start server
+// ✅ Single start command
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📝 Environment: ${process.env.NODE_ENV}`);
-  console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL}`);
+  console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'not set'}`);
 });
-
-if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-  });
-}
 
 export default app;
