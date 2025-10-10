@@ -135,7 +135,7 @@ const RegisterPage = () => {
                 onChange={handleChange}
                 className="input-field rounded-r-none"
                 placeholder="myrestaurant"
-                pattern="[a-z0-9-]+"
+                pattern="[a-z0-9\-]+"
                 required
               />
               <span className="bg-gray-100 border border-l-0 border-gray-300 px-4 py-2 rounded-r-lg text-gray-600">
