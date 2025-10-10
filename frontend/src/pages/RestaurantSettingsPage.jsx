@@ -22,6 +22,7 @@ const RestaurantSettingsPage = () => {
   const [instagram, setInstagram] = useState('');
   const [facebook, setFacebook] = useState('');
   const [currency, setCurrency] = useState('₽');
+  const [menuCardStyle, setMenuCardStyle] = useState('horizontal');
   const [deliveryEnabled, setDeliveryEnabled] = useState(false);
   const [deliveryFee, setDeliveryFee] = useState('');
   const [minOrderAmount, setMinOrderAmount] = useState('');
@@ -62,6 +63,7 @@ const RestaurantSettingsPage = () => {
         setInstagram(r.instagram || '');
         setFacebook(r.facebook || '');
         setCurrency(r.currency || '₽');
+        setMenuCardStyle(r.menuCardStyle || 'horizontal');
         setDeliveryEnabled(r.deliveryEnabled || false);
         setDeliveryFee(r.deliveryFee || '');
         setMinOrderAmount(r.minOrderAmount || '');
@@ -105,6 +107,7 @@ const RestaurantSettingsPage = () => {
         instagram,
         facebook,
         currency,
+        menuCardStyle,
         deliveryEnabled,
         deliveryFee: deliveryFee ? parseFloat(deliveryFee) : null,
         minOrderAmount: minOrderAmount ? parseFloat(minOrderAmount) : null,
@@ -231,6 +234,21 @@ const RestaurantSettingsPage = () => {
                 </select>
                 <p className="text-sm text-gray-500 mt-1">
                   Валюта будет отображаться рядом с ценами в меню
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Стиль отображения карточек меню</label>
+                <select
+                  value={menuCardStyle}
+                  onChange={(e) => setMenuCardStyle(e.target.value)}
+                  className="input w-full"
+                >
+                  <option value="horizontal">Горизонтальный (фото слева)</option>
+                  <option value="vertical">Вертикальный (фото сверху)</option>
+                </select>
+                <p className="text-sm text-gray-500 mt-1">
+                  Выберите, как будут отображаться карточки блюд в публичном меню
                 </p>
               </div>
             </div>

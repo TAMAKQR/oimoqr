@@ -48,6 +48,9 @@ model Restaurant {
   // Валюта
   currency    String   @default("₽")
   
+  // Стиль отображения карточек меню
+  menuCardStyle String @default("horizontal") // horizontal или vertical
+  
   // Баннеры (массив URL) - в SQLite используем JSON строку
   banners     String   @default("[]")
   

@@ -142,7 +142,12 @@ const MenuPage = () => {
             ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {currentCategory.dishes.map((dish) => (
-                  <DishCard key={dish.id} dish={dish} currency={restaurant.currency || '₽'} />
+                  <DishCard 
+                    key={dish.id} 
+                    dish={dish} 
+                    currency={restaurant.currency || '₽'}
+                    style={restaurant.menuCardStyle || 'horizontal'}
+                  />
                 ))}
               </div>
             )}
