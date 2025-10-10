@@ -30,7 +30,7 @@ app.set('trust proxy', 1);
 // Security middleware
 app.use(helmet());
 
-// CORS configuration (Render + localhost)
+// CORS configuration (Render + Vercel + localhost)
 const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
@@ -44,6 +44,9 @@ const corsOptions = {
       'https://oimoqr-frontend.vercel.app' 
     ];
 
+    // Allow all Vercel preview deployments
+    if (origin.match(/^https:\/\/.*\.vercel\.app$/)) return callback(null, true);
+    
     if (allowedOrigins.includes(origin)) return callback(null, true);
     if (origin.match(/^https:\/\/[\w-]+\.oimoqr\.com$/)) return callback(null, true);
     if (process.env.NODE_ENV !== 'production' && origin.match(/^http:\/\/localhost:\d+$/))
