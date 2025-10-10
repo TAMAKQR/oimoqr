@@ -7,14 +7,14 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "build": "prisma generate && prisma migrate deploy",
+    "build": "npx prisma generate && npx prisma migrate deploy",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "seed": "node src/scripts/seedDatabase.js",
     "create-admin": "node src/scripts/createAdmin.js",
-    "postinstall": "prisma generate"
+    "postinstall": "npx prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^5.8.0",
