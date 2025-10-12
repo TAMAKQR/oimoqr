@@ -88,6 +88,8 @@ model Dish {
   isActive    Boolean    @default(true)
   isAvailable Boolean    @default(true)
   order       Int        @default(0)
+  allergens   String?    // JSON массив аллергенов: ["gluten", "dairy", "nuts"]
+  discount    Int?       // Процент скидки (например, 10, 20, 50)
   categoryId  String
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt

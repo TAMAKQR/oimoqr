@@ -41,6 +41,23 @@ const MenuManagementPage = () => {
   const loadCategories = async (restaurantId) => {
     try {
       const cats = await menuService.getCategories(restaurantId);
+      
+      // DEBUG: Check dishes with images
+      console.log('🔍 DEBUG: Checking dishes with images...');
+      cats.forEach(cat => {
+        if (cat.dishes) {
+          cat.dishes.forEach(dish => {
+            if (dish.image || dish.imageUrl) {
+              console.log('✅ Dish with image:', {
+                name: dish.name,
+                image: dish.image,
+                imageUrl: dish.imageUrl
+              });
+            }
+          });
+        }
+      });
+      
       setCategories(cats);
       
       // Extract dishes from categories (they're already included in the response)
@@ -413,9 +430,31 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
   const [modifiers, setModifiers] = useState(dish?.modifiers || []);
   const [newModifierName, setNewModifierName] = useState('');
   const [newModifierPrice, setNewModifierPrice] = useState('');
+  const [allergens, setAllergens] = useState(dish?.allergens ? JSON.parse(dish.allergens) : []);
+  const [discount, setDiscount] = useState(dish?.discount || '');
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  // Доступные аллергены
+  const availableAllergens = [
+    { id: 'gluten', name: 'Глютен', icon: '🌾' },
+    { id: 'dairy', name: 'Молоко', icon: '🥛' },
+    { id: 'nuts', name: 'Орехи', icon: '🥜' },
+    { id: 'eggs', name: 'Яйца', icon: '🥚' },
+    { id: 'fish', name: 'Рыба', icon: '🐟' },
+    { id: 'shellfish', name: 'Морепродукты', icon: '🦐' },
+    { id: 'soy', name: 'Соя', icon: '🫘' },
+    { id: 'sesame', name: 'Кунжут', icon: '🌰' }
+  ];
+
+  const toggleAllergen = (allergenId) => {
+    setAllergens(prev => 
+      prev.includes(allergenId) 
+        ? prev.filter(a => a !== allergenId)
+        : [...prev, allergenId]
+    );
+  };
 
   const handleDeleteImage = async () => {
     if (!confirm('Удалить изображение блюда?')) return;
@@ -481,6 +520,13 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
       alert('Цена должна быть числом больше или равным 0');
       return;
     }
+
+    // Validate discount
+    const parsedDiscount = discount ? parseInt(discount) : null;
+    if (parsedDiscount !== null && (parsedDiscount < 0 || parsedDiscount > 100)) {
+      alert('Скидка должна быть от 0 до 100%');
+      return;
+    }
     
     setSaving(true);
 
@@ -490,6 +536,8 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
         description,
         price: parsedPrice,
         categoryId,
+        allergens: allergens.length > 0 ? JSON.stringify(allergens) : null,
+        discount: parsedDiscount,
       };
       
       let savedDish;
@@ -572,6 +620,46 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
               required
             />
             <p className="text-xs text-gray-500 mt-1">Цена должна быть 0 или больше</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Скидка (%)</label>
+            <input
+              type="number"
+              value={discount}
+              onChange={(e) => setDiscount(e.target.value)}
+              className="input w-full"
+              min="0"
+              max="100"
+              placeholder="Например: 10, 20, 50"
+            />
+            <p className="text-xs text-gray-500 mt-1">Оставьте пустым, если скидки нет</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Аллергены</label>
+            <div className="grid grid-cols-2 gap-2">
+              {availableAllergens.map((allergen) => (
+                <label
+                  key={allergen.id}
+                  className={`flex items-center gap-2 p-2 border rounded cursor-pointer transition-colors ${
+                    allergens.includes(allergen.id)
+                      ? 'bg-orange-50 border-orange-300'
+                      : 'bg-white border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={allergens.includes(allergen.id)}
+                    onChange={() => toggleAllergen(allergen.id)}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">
+                    {allergen.icon} {allergen.name}
+                  </span>
+                </label>
+              ))}
+            </div>
           </div>
 
           <div>
