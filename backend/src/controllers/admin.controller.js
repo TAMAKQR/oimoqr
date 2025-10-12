@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 import { calculateSubscriptionEndDate } from '../utils/subscription.js';
 import { sendSubscriptionActivatedEmail } from '../utils/email.js';
 
@@ -226,6 +227,90 @@ export const getSubscriptionStats = async (req, res, next) => {
       subscriptionExpiringSoon
     });
   } catch (error) {
+    next(error);
+  }
+};
+
+export const updateUserCredentials = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const { email, password } = req.body;
+
+    console.log('Admin updating user credentials:', { userId, email, hasPassword: !!password });
+
+    // Validate input
+    if (!email && !password) {
+      return res.status(400).json({ error: 'Email or password is required' });
+    }
+
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        restaurant: true
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Prevent admin from modifying other admins
+    if (user.isAdmin) {
+      return res.status(403).json({ error: 'Cannot modify admin users' });
+    }
+
+    let updateData = {};
+
+    // Update email if provided
+    if (email && email !== user.email) {
+      // Check if email is already taken
+      const existingUser = await prisma.user.findUnique({
+        where: { email }
+      });
+
+      if (existingUser && existingUser.id !== userId) {
+        return res.status(400).json({ error: 'Email already in use' });
+      }
+
+      updateData.email = email;
+    }
+
+    // Update password if provided
+    if (password) {
+      if (password.length < 6) {
+        return res.status(400).json({ error: 'Password must be at least 6 characters' });
+      }
+      updateData.password = await bcrypt.hash(password, 10);
+    }
+
+    // Update user
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phone: true,
+        isAdmin: true,
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+            subdomain: true
+          }
+        }
+      }
+    });
+
+    console.log('User credentials updated successfully:', updatedUser.id);
+    res.json({
+      message: 'User credentials updated successfully',
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error('Error in updateUserCredentials:', error);
     next(error);
   }
 };

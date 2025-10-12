@@ -385,6 +385,51 @@ Authorization: Bearer <admin-token>
 }
 ```
 
+### Update User Credentials
+
+```http
+PUT /admin/users/:userId/credentials
+Authorization: Bearer <admin-token>
+Content-Type: application/json
+
+{
+  "email": "newemail@example.com",
+  "password": "newpassword123"
+}
+```
+
+**Parameters:**
+
+- `userId` - ID пользователя (обязательно)
+- `email` - Новый email (опционально)
+- `password` - Новый пароль, минимум 6 символов (опционально)
+
+**Примечания:**
+
+- Можно изменить только email, только пароль, или оба параметра
+- Нельзя изменять учетные данные других администраторов
+- Email должен быть уникальным
+
+**Response:**
+
+```json
+{
+  "message": "User credentials updated successfully",
+  "user": {
+    "id": "uuid",
+    "email": "newemail@example.com",
+    "name": "User Name",
+    "phone": "+7 (999) 123-45-67",
+    "isAdmin": false,
+    "restaurant": {
+      "id": "uuid",
+      "name": "Restaurant Name",
+      "subdomain": "subdomain"
+    }
+  }
+}
+```
+
 ---
 
 ## Error Responses

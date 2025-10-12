@@ -9,6 +9,9 @@ const AdminPage = () => {
   const [restaurants, setRestaurants] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [editingUser, setEditingUser] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({ email: '', password: '' });
 
   useEffect(() => {
     loadData();
@@ -40,6 +43,51 @@ const AdminPage = () => {
       console.error('Error updating subscription:', err);
       const errorMessage = err.response?.data?.error || err.message || 'Неизвестная ошибка';
       alert(`Ошибка обновления подписки: ${errorMessage}`);
+    }
+  };
+
+  const handleOpenEditModal = (user) => {
+    setEditingUser(user);
+    setEditForm({ email: user.email, password: '' });
+    setShowEditModal(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    setEditingUser(null);
+    setEditForm({ email: '', password: '' });
+  };
+
+  const handleUpdateCredentials = async (e) => {
+    e.preventDefault();
+    
+    if (!editForm.email && !editForm.password) {
+      alert('Введите email или пароль для изменения');
+      return;
+    }
+
+    if (editForm.password && editForm.password.length < 6) {
+      alert('Пароль должен содержать минимум 6 символов');
+      return;
+    }
+
+    try {
+      const updateData = {};
+      if (editForm.email !== editingUser.email) {
+        updateData.email = editForm.email;
+      }
+      if (editForm.password) {
+        updateData.password = editForm.password;
+      }
+
+      await api.put(`/admin/users/${editingUser.id}/credentials`, updateData);
+      await loadData();
+      handleCloseEditModal();
+      alert('Учетные данные обновлены успешно!');
+    } catch (err) {
+      console.error('Error updating credentials:', err);
+      const errorMessage = err.response?.data?.error || err.message || 'Неизвестная ошибка';
+      alert(`Ошибка обновления: ${errorMessage}`);
     }
   };
 
@@ -144,7 +192,13 @@ const AdminPage = () => {
                     </span>
                   </p>
                 </div>
-                <div className="mt-3">
+                <div className="mt-3 space-y-2">
+                  <button
+                    onClick={() => handleOpenEditModal(restaurant.user)}
+                    className="w-full btn-secondary text-sm py-2"
+                  >
+                    ✏️ Изменить Email/Пароль
+                  </button>
                   {restaurant.subscription ? (
                     <select
                       onChange={(e) => {
@@ -156,7 +210,7 @@ const AdminPage = () => {
                       }}
                       className="w-full text-sm border rounded px-3 py-2"
                     >
-                      <option value="">Изменить...</option>
+                      <option value="">Изменить подписку...</option>
                       <option value="MONTHLY|ACTIVE">Активировать Monthly</option>
                       <option value="YEARLY|ACTIVE">Активировать Yearly</option>
                       <option value="TRIAL|EXPIRED">Завершить Trial</option>
@@ -181,7 +235,8 @@ const AdminPage = () => {
                   <th className="text-left py-3 px-4 text-sm">Субдомен</th>
                   <th className="text-left py-3 px-4 text-sm">План</th>
                   <th className="text-left py-3 px-4 text-sm">Статус</th>
-                  <th className="text-left py-3 px-4 text-sm">Действия</th>
+                  <th className="text-left py-3 px-4 text-sm">Учетные данные</th>
+                  <th className="text-left py-3 px-4 text-sm">Подписка</th>
                 </tr>
               </thead>
               <tbody>
@@ -205,6 +260,14 @@ const AdminPage = () => {
                       <span className={`px-2 py-1 rounded text-xs ${getStatusBadge(restaurant.subscription?.status)}`}>
                         {restaurant.subscription?.status}
                       </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <button
+                        onClick={() => handleOpenEditModal(restaurant.user)}
+                        className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                      >
+                        ✏️ Изменить
+                      </button>
                     </td>
                     <td className="py-3 px-4">
                       {restaurant.subscription ? (
@@ -235,6 +298,66 @@ const AdminPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Edit Credentials Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h2 className="text-xl font-bold mb-4">Изменить учетные данные</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Пользователь: <strong>{editingUser?.name}</strong>
+            </p>
+            
+            <form onSubmit={handleUpdateCredentials} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  className="input w-full"
+                  placeholder="Новый email"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Новый пароль
+                </label>
+                <input
+                  type="password"
+                  value={editForm.password}
+                  onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                  className="input w-full"
+                  placeholder="Оставьте пустым, чтобы не менять"
+                  minLength={6}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Минимум 6 символов. Оставьте пустым, если не хотите менять пароль.
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={handleCloseEditModal}
+                  className="flex-1 btn-secondary"
+                >
+                  Отмена
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 btn-primary"
+                >
+                  Сохранить
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

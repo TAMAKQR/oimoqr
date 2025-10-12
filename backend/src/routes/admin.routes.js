@@ -4,7 +4,8 @@ import {
   getRestaurantById,
   updateSubscription,
   extendSubscription,
-  getSubscriptionStats
+  getSubscriptionStats,
+  updateUserCredentials
 } from '../controllers/admin.controller.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 
@@ -18,5 +19,6 @@ router.get('/restaurants/:id', getRestaurantById);
 router.put('/subscriptions/:id', updateSubscription);
 router.post('/subscriptions/:id/extend', extendSubscription);
 router.get('/stats/subscriptions', getSubscriptionStats);
+router.put('/users/:userId/credentials', updateUserCredentials);
 
 export default router;
