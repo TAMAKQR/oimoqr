@@ -55,7 +55,7 @@ const MenuPage = () => {
         visibleEntries.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
         const topEntry = visibleEntries[0];
         
-        const categoryId = parseInt(topEntry.target.dataset.categoryId);
+        const categoryId = topEntry.target.dataset.categoryId;
         setSelectedCategory(categoryId);
         
         // Автоматически скроллим горизонтальное меню к активной кнопке
@@ -212,24 +212,20 @@ const MenuPage = () => {
         <div className="container mx-auto px-4">
           <div 
             ref={categoryMenuRef}
-            className="flex gap-2 sm:gap-4 overflow-x-auto py-3 sm:py-4 scrollbar-hide"
+            className="flex gap-2 sm:gap-4 overflow-x-auto py-3 sm:py-4 scrollbar-hide scroll-smooth"
           >
             {restaurant.categories.map((category) => (
               <button
                 key={category.id}
                 ref={(el) => (categoryButtonRefs.current[category.id] = el)}
                 onClick={() => handleCategoryClick(category.id)}
-                className={`relative px-4 sm:px-6 py-2 rounded-full whitespace-nowrap transition-all duration-300 text-sm sm:text-base font-medium ${
+                className={`px-4 sm:px-6 py-2 rounded-full whitespace-nowrap transition-all duration-300 text-sm sm:text-base font-medium ${
                   selectedCategory === category.id
                     ? 'bg-primary-600 text-white shadow-lg scale-105 ring-2 ring-primary-300'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
               >
                 {category.name}
-                {/* Индикатор активной категории */}
-                {selectedCategory === category.id && (
-                  <span className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-primary-600 rounded-full animate-pulse"></span>
-                )}
               </button>
             ))}
           </div>
