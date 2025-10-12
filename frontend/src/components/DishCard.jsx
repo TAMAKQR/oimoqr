@@ -128,8 +128,8 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal' }) => {
                 )}
               </div>
               
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <div className="flex items-center gap-2">
+              <div className="flex flex-row justify-between items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   {dish.discount ? (
                     <>
                       <span className="text-sm text-gray-400 line-through">
@@ -148,7 +148,7 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal' }) => {
                 {isAvailable ? (
                   <button 
                     onClick={handleAddClick}
-                    className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center bg-primary-600 hover:bg-primary-700 text-white rounded-full text-2xl font-light transition-colors shadow-md active:scale-95"
+                    className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center bg-primary-600 hover:bg-primary-700 text-white rounded-full text-2xl font-light transition-colors shadow-md active:scale-95"
                     aria-label="Добавить в корзину"
                   >
                     +
@@ -156,7 +156,7 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal' }) => {
                 ) : (
                   <button 
                     disabled 
-                    className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center bg-gray-300 text-gray-500 rounded-full text-2xl font-light cursor-not-allowed"
+                    className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center bg-gray-300 text-gray-500 rounded-full text-2xl font-light cursor-not-allowed"
                     aria-label="Недоступно"
                   >
                     ✕
@@ -233,8 +233,8 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal' }) => {
           </div>
         )}
 
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-row justify-between items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {dish.discount ? (
               <>
                 <span className="text-sm text-gray-400 line-through">
@@ -253,7 +253,7 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal' }) => {
           {isAvailable ? (
             <button 
               onClick={handleAddClick}
-              className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center bg-primary-600 hover:bg-primary-700 text-white rounded-full text-2xl font-light transition-colors shadow-md active:scale-95"
+              className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center bg-primary-600 hover:bg-primary-700 text-white rounded-full text-2xl font-light transition-colors shadow-md active:scale-95"
               aria-label="Добавить в корзину"
             >
               +
@@ -261,7 +261,7 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal' }) => {
           ) : (
             <button 
               disabled 
-              className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center bg-gray-300 text-gray-500 rounded-full text-2xl font-light cursor-not-allowed"
+              className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center bg-gray-300 text-gray-500 rounded-full text-2xl font-light cursor-not-allowed"
               aria-label="Недоступно"
             >
               ✕

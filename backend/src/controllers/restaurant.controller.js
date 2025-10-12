@@ -52,7 +52,19 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
       }
     }
 
-    res.json(restaurant);
+    // Map 'image' field to 'imageUrl' for frontend compatibility
+    const restaurantWithImageUrl = {
+      ...restaurant,
+      categories: restaurant.categories.map(category => ({
+        ...category,
+        dishes: category.dishes.map(dish => ({
+          ...dish,
+          imageUrl: dish.image
+        }))
+      }))
+    };
+
+    res.json(restaurantWithImageUrl);
   } catch (error) {
     next(error);
   }

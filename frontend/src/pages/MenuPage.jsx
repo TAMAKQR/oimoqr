@@ -39,7 +39,7 @@ const MenuPage = () => {
 
     const observerOptions = {
       root: null,
-      rootMargin: '-20% 0px -60% 0px', // Триггер когда категория в верхней части экрана
+      rootMargin: '-100px 0px -50% 0px', // Триггер когда категория в верхней части экрана (100px от верха)
       threshold: 0
     };
 
@@ -47,22 +47,26 @@ const MenuPage = () => {
       // Игнорируем изменения если пользователь только что кликнул на категорию
       if (isUserClick.current) return;
 
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          const categoryId = parseInt(entry.target.dataset.categoryId);
-          setSelectedCategory(categoryId);
-          
-          // Автоматически скроллим кнопку категории в видимую область
-          const categoryButton = categoryButtonRefs.current[categoryId];
-          if (categoryButton) {
-            categoryButton.scrollIntoView({
-              behavior: 'smooth',
-              block: 'nearest',
-              inline: 'center'
-            });
-          }
+      // Находим самую верхнюю видимую категорию
+      const visibleEntries = entries.filter(entry => entry.isIntersecting);
+      if (visibleEntries.length > 0) {
+        // Сортируем по позиции на экране (самая верхняя первая)
+        visibleEntries.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        const topEntry = visibleEntries[0];
+        
+        const categoryId = parseInt(topEntry.target.dataset.categoryId);
+        setSelectedCategory(categoryId);
+        
+        // Автоматически скроллим кнопку категории в видимую область
+        const categoryButton = categoryButtonRefs.current[categoryId];
+        if (categoryButton) {
+          categoryButton.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+            inline: 'center'
+          });
         }
-      });
+      }
     };
 
     const observer = new IntersectionObserver(observerCallback, observerOptions);

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <h1>Testing API Response</h1>
+    <button onclick="testAPI()">Test API</button>
+    <pre id="result"></pre>
+
+    <script>
+        async function testAPI() {
+            const resultEl = document.getElementById('result');
+            resultEl.textContent = 'Loading...';
+
+            try {
+                // Login
+                const loginRes = await fetch('http://localhost:5000/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'vladislavaonischuk@gmail.com',
+                        password: '123456'
+                    })
+                });
+
+                const { token, user } = await loginRes.json();
+                console.log('Logged in:', user.email);
+
+                // Get categories
+                const categoriesRes = await fetch(
+                    `http://localhost:5000/api/restaurants/${user.restaurant.id}/categories`,
+                    { headers: { 'Authorization': `Bearer ${token}` } }
+                );
+
+                const categories = await categoriesRes.json();
+
+                // Find dishes with images
+                let output = '🔍 Searching for dishes with images...\n\n';
+                
+                categories.forEach(cat => {
+                    if (cat.dishes) {
+                        cat.dishes.forEach(dish => {
+                            if (dish.image || dish.imageUrl) {
+                                output += `✅ FOUND: ${dish.name}\n`;
+                                output += `   Category: ${cat.name}\n`;
+                                output += `   image: ${dish.image || 'NULL'}\n`;
+                                output += `   imageUrl: ${dish.imageUrl || 'NULL'}\n`;
+                                output += `   imageUrl type: ${typeof dish.imageUrl}\n`;
+                                output += '\n' + '='.repeat(80) + '\n\n';
+                            }
+                        });
+                    }
+                });
+
+                resultEl.textContent = output;
+
+            } catch (error) {
+                resultEl.textContent = '❌ Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

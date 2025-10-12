@@ -1,30 +1,43 @@
-# 📦 QR Menu - Готовность к деплою
+# 📦 QR Menu - Production Deployment
 
-> Краткая сводка: проект готов к развертыванию в production
+> Проект успешно развернут в production
 
-**Дата:** 2025-01-10  
+**Дата:** 2025-01-15  
 **Версия:** 1.0.0  
-**Статус:** ✅ **READY FOR PRODUCTION**
+**Статус:** 🚀 **LIVE IN PRODUCTION**
 
 ---
 
-## ✅ Что готово
+## 🌐 Production URLs
 
-### 1. Код
+| Сервис           | URL                               | Статус  |
+| ---------------- | --------------------------------- | ------- |
+| **Frontend**     | https://oimoqr.com                | ✅ Live |
+| **Backend**      | https://backend.oimoqr.com        | ✅ Live |
+| **API**          | https://backend.oimoqr.com/api    | ✅ Live |
+| **Health Check** | https://backend.oimoqr.com/health | ✅ Live |
 
-- ✅ Все функции реализованы и протестированы
-- ✅ Баги исправлены
-- ✅ Код оптимизирован
-- ✅ Security best practices применены
-- ✅ Git репозиторий готов
+---
+
+## ✅ Что развернуто
+
+### 1. Инфраструктура
+
+- ✅ **Frontend:** Vercel (https://oimoqr.com)
+- ✅ **Backend:** Render (https://backend.oimoqr.com)
+- ✅ **Database:** Supabase PostgreSQL (Singapore)
+- ✅ **Storage:** Cloudinary (активен)
+- ✅ **Email:** Gmail SMTP (настроен)
+- ✅ **DNS:** Custom domains настроены
 
 ### 2. Документация
 
-- ✅ **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Полное руководство (30+ страниц)
+- ✅ **[PRODUCTION_CONFIG.md](PRODUCTION_CONFIG.md)** - Текущая конфигурация production
+- ✅ **[UPTIMEROBOT_SETUP.md](UPTIMEROBOT_SETUP.md)** - Настройка мониторинга (5 минут)
+- ✅ **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Полное руководство по деплою
 - ✅ **[QUICK_DEPLOY.md](QUICK_DEPLOY.md)** - Быстрый деплой (15 минут)
 - ✅ **[PRE_DEPLOY_CHECKLIST.md](PRE_DEPLOY_CHECKLIST.md)** - Чеклист подготовки
-- ✅ **[VERSION_1.0_RELEASE.md](VERSION_1.0_RELEASE.md)** - Release notes
-- ✅ **[README.md](README.md)** - Обновлен с информацией о деплое
+- ✅ **[CURRENT_DEPLOYMENT_STATUS.md](CURRENT_DEPLOYMENT_STATUS.md)** - Статус деплоя
 
 ### 3. Конфигурация
 
