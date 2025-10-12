@@ -43,11 +43,10 @@ const MenuManagementPage = () => {
       const cats = await menuService.getCategories(restaurantId);
       setCategories(cats);
       
-      // Load dishes for each category
+      // Extract dishes from categories (they're already included in the response)
       const dishesData = {};
       for (const cat of cats) {
-        const catDishes = await menuService.getDishes(cat.id);
-        dishesData[cat.id] = catDishes;
+        dishesData[cat.id] = cat.dishes || [];
       }
       setDishes(dishesData);
     } catch (err) {
