@@ -59,12 +59,33 @@ const MenuPage = () => {
       {/* Restaurant Info */}
       <div className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 sm:py-6">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-2 break-words">{restaurant.name}</h1>
-          {restaurant.address && (
-            <p className="text-sm sm:text-base text-gray-600 mb-2 break-words">📍 {restaurant.address}</p>
-          )}
-          {restaurant.phone && (
-            <p className="text-sm sm:text-base text-gray-600 mb-2">📞 {restaurant.phone}</p>
+          <div className="flex items-start gap-4 mb-4">
+            {restaurant.logo && (
+              <img
+                src={restaurant.logo}
+                alt={`${restaurant.name} logo`}
+                className="w-16 h-16 sm:w-20 sm:h-20 object-contain rounded border-2 border-gray-200 bg-white p-1 flex-shrink-0"
+              />
+            )}
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold mb-2 break-words">{restaurant.name}</h1>
+              {restaurant.address && (
+                <p className="text-sm sm:text-base text-gray-600 mb-2 break-words">📍 {restaurant.address}</p>
+              )}
+              {restaurant.phone && (
+                <p className="text-sm sm:text-base text-gray-600 mb-2">📞 {restaurant.phone}</p>
+              )}
+            </div>
+          </div>
+          {!restaurant.logo && (
+            <>
+              {restaurant.address && (
+                <p className="text-sm sm:text-base text-gray-600 mb-2 break-words">📍 {restaurant.address}</p>
+              )}
+              {restaurant.phone && (
+                <p className="text-sm sm:text-base text-gray-600 mb-2">📞 {restaurant.phone}</p>
+              )}
+            </>
           )}
           
           {/* Social Links */}

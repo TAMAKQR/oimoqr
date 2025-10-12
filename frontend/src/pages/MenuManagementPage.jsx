@@ -410,10 +410,16 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
       return;
     }
 
+    const modifierPrice = parseFloat(newModifierPrice) || 0;
+    if (modifierPrice < 0) {
+      alert('Цена модификатора не может быть отрицательной');
+      return;
+    }
+
     const newModifier = {
       id: `temp-${Date.now()}`, // Временный ID для новых модификаторов
       name: newModifierName,
-      price: parseFloat(newModifierPrice) || 0,
+      price: modifierPrice,
       isNew: true
     };
 
@@ -442,13 +448,21 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate price
+    const parsedPrice = parseFloat(price);
+    if (isNaN(parsedPrice) || parsedPrice < 0) {
+      alert('Цена должна быть числом больше или равным 0');
+      return;
+    }
+    
     setSaving(true);
 
     try {
       const data = {
         name,
         description,
-        price: parseFloat(price),
+        price: parsedPrice,
         categoryId,
       };
       
@@ -528,8 +542,10 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
               onChange={(e) => setPrice(e.target.value)}
               className="input w-full"
               step="0.01"
+              min="0"
               required
             />
+            <p className="text-xs text-gray-500 mt-1">Цена должна быть 0 или больше</p>
           </div>
 
           <div>
@@ -650,6 +666,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
                   placeholder="Цена"
                   className="input flex-1 sm:w-24 text-sm sm:text-base"
                   step="0.01"
+                  min="0"
                   onKeyPress={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();

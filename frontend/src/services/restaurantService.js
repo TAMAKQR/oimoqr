@@ -39,4 +39,26 @@ export const restaurantService = {
     });
     return response.data;
   },
+
+  uploadLogo: async (restaurantId, file, onProgress) => {
+    const formData = new FormData();
+    formData.append('logo', file);
+    const response = await api.post(`/restaurants/${restaurantId}/upload-logo`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          onProgress(percentCompleted);
+        }
+      },
+    });
+    return response.data;
+  },
+  
+  deleteLogo: async (restaurantId) => {
+    const response = await api.delete(`/restaurants/${restaurantId}/delete-logo`);
+    return response.data;
+  },
 };

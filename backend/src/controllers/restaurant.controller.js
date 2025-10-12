@@ -230,3 +230,75 @@ export const deleteBanner = async (req, res, next) => {
     next(error);
   }
 };
+
+export const uploadLogo = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // Check if user owns this restaurant
+    if (req.user.restaurant.id !== id && !req.user.isAdmin) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Get image URL (Cloudinary returns full URL, local storage returns filename)
+    const logoUrl = req.file.path || `/uploads/${req.file.filename}`;
+
+    const updatedRestaurant = await prisma.restaurant.update({
+      where: { id },
+      data: { logo: logoUrl }
+    });
+
+    // Parse banners for response (SQLite compatibility)
+    if (updatedRestaurant.banners && typeof updatedRestaurant.banners === 'string') {
+      try {
+        updatedRestaurant.banners = JSON.parse(updatedRestaurant.banners);
+      } catch (e) {
+        updatedRestaurant.banners = [];
+      }
+    }
+
+    res.json({
+      message: 'Logo uploaded successfully',
+      logoUrl,
+      restaurant: updatedRestaurant
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteLogo = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // Check if user owns this restaurant
+    if (req.user.restaurant.id !== id && !req.user.isAdmin) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const updatedRestaurant = await prisma.restaurant.update({
+      where: { id },
+      data: { logo: null }
+    });
+
+    // Parse banners for response (SQLite compatibility)
+    if (updatedRestaurant.banners && typeof updatedRestaurant.banners === 'string') {
+      try {
+        updatedRestaurant.banners = JSON.parse(updatedRestaurant.banners);
+      } catch (e) {
+        updatedRestaurant.banners = [];
+      }
+    }
+
+    res.json({
+      message: 'Logo deleted successfully',
+      restaurant: updatedRestaurant
+    });
+  } catch (error) {
+    next(error);
+  }
+};

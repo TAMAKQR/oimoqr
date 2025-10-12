@@ -27,6 +27,9 @@ const RestaurantSettingsPage = () => {
   const [deliveryFee, setDeliveryFee] = useState('');
   const [minOrderAmount, setMinOrderAmount] = useState('');
   const [bannerFile, setBannerFile] = useState(null);
+  const [logoFile, setLogoFile] = useState(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoUploadProgress, setLogoUploadProgress] = useState(0);
 
   // Available currencies
   const currencies = [
@@ -93,6 +96,19 @@ const RestaurantSettingsPage = () => {
     }
   };
 
+  const handleDeleteLogo = async () => {
+    if (!confirm('Удалить логотип?')) return;
+    
+    try {
+      await restaurantService.deleteLogo(userData.restaurant.id);
+      alert('Логотип удален');
+      await loadData();
+    } catch (err) {
+      alert('Ошибка при удалении логотипа');
+      console.error(err);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -114,6 +130,21 @@ const RestaurantSettingsPage = () => {
       };
 
       await restaurantService.updateRestaurant(userData.restaurant.id, data);
+
+      // Upload logo if selected
+      if (logoFile) {
+        setUploadingLogo(true);
+        setLogoUploadProgress(0);
+        try {
+          await restaurantService.uploadLogo(userData.restaurant.id, logoFile, (progress) => {
+            setLogoUploadProgress(progress);
+          });
+          setLogoFile(null);
+        } finally {
+          setUploadingLogo(false);
+          setLogoUploadProgress(0);
+        }
+      }
 
       // Upload banner if selected
       if (bannerFile) {
@@ -251,6 +282,79 @@ const RestaurantSettingsPage = () => {
                   Выберите, как будут отображаться карточки блюд в публичном меню
                 </p>
               </div>
+            </div>
+          </div>
+
+          {/* Logo */}
+          <div className="card">
+            <h2 className="text-xl font-bold mb-4">Логотип ресторана</h2>
+            
+            {userData?.restaurant?.logo && (
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">Текущий логотип:</p>
+                <div className="relative inline-block group">
+                  <img
+                    src={userData.restaurant.logo}
+                    alt="Логотип"
+                    className="w-32 h-32 object-contain rounded border-2 border-gray-200 bg-white p-2"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleDeleteLogo}
+                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-lg transition-all opacity-0 group-hover:opacity-100"
+                    title="Удалить логотип"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                {userData?.restaurant?.logo ? 'Изменить логотип' : 'Загрузить логотип'}
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setLogoFile(e.target.files[0])}
+                className="input w-full"
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                Рекомендуемый размер: 200x200 пикселей. Логотип будет отображаться в меню.
+              </p>
+              {logoFile && !uploadingLogo && (
+                <div className="mt-2">
+                  <img
+                    src={URL.createObjectURL(logoFile)}
+                    alt="Предпросмотр"
+                    className="w-32 h-32 object-contain rounded border-2 border-gray-200 bg-white p-2 mb-2"
+                  />
+                  <p className="text-sm text-green-600">
+                    ✓ Выбран файл: {logoFile.name}
+                  </p>
+                </div>
+              )}
+              {uploadingLogo && (
+                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-blue-600 font-medium">
+                      Загрузка логотипа...
+                    </span>
+                    <span className="text-sm text-blue-600 font-bold">
+                      {logoUploadProgress}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-blue-200 rounded-full h-2">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${logoUploadProgress}%` }}
+                    ></div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

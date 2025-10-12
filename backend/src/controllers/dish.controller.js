@@ -32,6 +32,12 @@ export const createDish = async (req, res, next) => {
   try {
     const { name, description, price, categoryId, order } = req.body;
 
+    // Validate price
+    const parsedPrice = parseFloat(price);
+    if (isNaN(parsedPrice) || parsedPrice < 0) {
+      return res.status(400).json({ error: 'Price must be a number greater than or equal to 0' });
+    }
+
     // Check if user owns this category's restaurant
     const category = await prisma.category.findUnique({
       where: { id: categoryId },
@@ -50,7 +56,7 @@ export const createDish = async (req, res, next) => {
       data: {
         name,
         description,
-        price: parseFloat(price),
+        price: parsedPrice,
         categoryId,
         order: order || 0
       }
@@ -69,6 +75,15 @@ export const updateDish = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { name, description, price, order, isActive } = req.body;
+
+    // Validate price if provided
+    let parsedPrice = undefined;
+    if (price !== undefined && price !== null) {
+      parsedPrice = parseFloat(price);
+      if (isNaN(parsedPrice) || parsedPrice < 0) {
+        return res.status(400).json({ error: 'Price must be a number greater than or equal to 0' });
+      }
+    }
 
     // Check if user owns this dish's restaurant
     const dish = await prisma.dish.findUnique({
@@ -93,7 +108,7 @@ export const updateDish = async (req, res, next) => {
       data: {
         name,
         description,
-        price: price ? parseFloat(price) : undefined,
+        price: parsedPrice,
         order,
         isActive
       }
@@ -232,6 +247,12 @@ export const createModifier = async (req, res, next) => {
     const { dishId } = req.params;
     const { name, price, isRequired, order } = req.body;
 
+    // Validate price
+    const parsedPrice = price ? parseFloat(price) : 0;
+    if (isNaN(parsedPrice) || parsedPrice < 0) {
+      return res.status(400).json({ error: 'Modifier price must be a number greater than or equal to 0' });
+    }
+
     // Check if user owns this dish's restaurant
     const dish = await prisma.dish.findUnique({
       where: { id: dishId },
@@ -253,7 +274,7 @@ export const createModifier = async (req, res, next) => {
     const modifier = await prisma.modifier.create({
       data: {
         name,
-        price: price ? parseFloat(price) : 0,
+        price: parsedPrice,
         isRequired: isRequired || false,
         dishId,
         order: order || 0
@@ -270,6 +291,15 @@ export const updateModifier = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { name, price, isRequired, order } = req.body;
+
+    // Validate price if provided
+    let parsedPrice = undefined;
+    if (price !== undefined && price !== null) {
+      parsedPrice = parseFloat(price);
+      if (isNaN(parsedPrice) || parsedPrice < 0) {
+        return res.status(400).json({ error: 'Modifier price must be a number greater than or equal to 0' });
+      }
+    }
 
     // Check if user owns this modifier's restaurant
     const modifier = await prisma.modifier.findUnique({
@@ -297,7 +327,7 @@ export const updateModifier = async (req, res, next) => {
       where: { id },
       data: {
         name,
-        price: price ? parseFloat(price) : undefined,
+        price: parsedPrice,
         isRequired,
         order
       }
