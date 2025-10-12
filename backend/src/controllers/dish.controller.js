@@ -30,12 +30,21 @@ export const getDishes = async (req, res, next) => {
 
 export const createDish = async (req, res, next) => {
   try {
-    const { name, description, price, categoryId, order } = req.body;
+    const { name, description, price, categoryId, order, allergens, discount } = req.body;
 
     // Validate price
     const parsedPrice = parseFloat(price);
     if (isNaN(parsedPrice) || parsedPrice < 0) {
       return res.status(400).json({ error: 'Price must be a number greater than or equal to 0' });
+    }
+
+    // Validate discount if provided
+    let parsedDiscount = null;
+    if (discount !== undefined && discount !== null && discount !== '') {
+      parsedDiscount = parseInt(discount);
+      if (isNaN(parsedDiscount) || parsedDiscount < 0 || parsedDiscount > 100) {
+        return res.status(400).json({ error: 'Discount must be a number between 0 and 100' });
+      }
     }
 
     // Check if user owns this category's restaurant
@@ -52,14 +61,18 @@ export const createDish = async (req, res, next) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
+    const dishData = {
+      name,
+      description,
+      price: parsedPrice,
+      categoryId,
+      order: order || 0,
+      allergens: allergens || null,
+      discount: parsedDiscount
+    };
+
     const dish = await prisma.dish.create({
-      data: {
-        name,
-        description,
-        price: parsedPrice,
-        categoryId,
-        order: order || 0
-      }
+      data: dishData
     });
 
     res.status(201).json({
@@ -74,7 +87,7 @@ export const createDish = async (req, res, next) => {
 export const updateDish = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, description, price, order, isActive } = req.body;
+    const { name, description, price, order, isActive, allergens, discount } = req.body;
 
     // Validate price if provided
     let parsedPrice = undefined;
@@ -82,6 +95,19 @@ export const updateDish = async (req, res, next) => {
       parsedPrice = parseFloat(price);
       if (isNaN(parsedPrice) || parsedPrice < 0) {
         return res.status(400).json({ error: 'Price must be a number greater than or equal to 0' });
+      }
+    }
+
+    // Validate discount if provided
+    let parsedDiscount = undefined;
+    if (discount !== undefined) {
+      if (discount === null || discount === '') {
+        parsedDiscount = null;
+      } else {
+        parsedDiscount = parseInt(discount);
+        if (isNaN(parsedDiscount) || parsedDiscount < 0 || parsedDiscount > 100) {
+          return res.status(400).json({ error: 'Discount must be a number between 0 and 100' });
+        }
       }
     }
 
@@ -103,15 +129,19 @@ export const updateDish = async (req, res, next) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
+    const updateData = {
+      name,
+      description,
+      price: parsedPrice,
+      order,
+      isActive,
+      allergens: allergens !== undefined ? allergens : undefined,
+      discount: parsedDiscount
+    };
+
     const updatedDish = await prisma.dish.update({
       where: { id },
-      data: {
-        name,
-        description,
-        price: parsedPrice,
-        order,
-        isActive
-      }
+      data: updateData
     });
 
     res.json({
