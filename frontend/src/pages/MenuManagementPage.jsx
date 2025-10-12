@@ -115,6 +115,16 @@ const MenuManagementPage = () => {
     }
   };
 
+  const handleToggleAvailability = async (dishId) => {
+    try {
+      await menuService.toggleDishAvailability(dishId);
+      await loadCategories(userData.restaurant.id);
+    } catch (err) {
+      alert('Ошибка при изменении статуса блюда');
+      console.error(err);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -230,8 +240,15 @@ const MenuManagementPage = () => {
                                 </svg>
                               </div>
                             )}
-                            <div>
-                              <h4 className="font-medium">{dish.name}</h4>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-medium">{dish.name}</h4>
+                                {!dish.isAvailable && (
+                                  <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded">
+                                    СТОП
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-sm text-gray-600 line-clamp-1">
                                 {dish.description}
                               </p>
@@ -241,6 +258,15 @@ const MenuManagementPage = () => {
                             </div>
                           </div>
                           <div className="flex gap-2">
+                            <button
+                              onClick={() => handleToggleAvailability(dish.id)}
+                              className={`btn-secondary text-sm ${
+                                !dish.isAvailable ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'
+                              }`}
+                              title={dish.isAvailable ? 'Поставить на стоп' : 'Вернуть в меню'}
+                            >
+                              {dish.isAvailable ? '✓' : '⏸'}
+                            </button>
                             <button
                               onClick={() => handleEditDish(dish)}
                               className="btn-secondary text-sm"

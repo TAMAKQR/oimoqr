@@ -3,22 +3,36 @@ import DishModal from './DishModal';
 
 const DishCard = ({ dish, currency = '₽', style = 'horizontal' }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const isAvailable = dish.isAvailable !== false; // По умолчанию true если поле отсутствует
 
   // Горизонтальный стиль (фото слева)
   if (style === 'horizontal') {
     return (
       <>
         <div
-          onClick={() => setIsModalOpen(true)}
-          className="card cursor-pointer hover:shadow-lg transition-all duration-200 active:scale-98"
+          onClick={() => isAvailable && setIsModalOpen(true)}
+          className={`card transition-all duration-200 relative ${
+            isAvailable 
+              ? 'cursor-pointer hover:shadow-lg active:scale-98' 
+              : 'opacity-60 cursor-not-allowed'
+          }`}
         >
+          {!isAvailable && (
+            <div className="absolute top-2 right-2 z-10">
+              <span className="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full shadow-lg">
+                НЕТ В НАЛИЧИИ
+              </span>
+            </div>
+          )}
           <div className="flex gap-3 sm:gap-4">
             {/* Фото слева */}
             {dish.image && (
               <img
                 src={dish.image}
                 alt={dish.name}
-                className="w-20 h-20 sm:w-28 sm:h-28 object-cover rounded-lg flex-shrink-0"
+                className={`w-20 h-20 sm:w-28 sm:h-28 object-cover rounded-lg flex-shrink-0 ${
+                  !isAvailable ? 'grayscale' : ''
+                }`}
               />
             )}
             
@@ -37,9 +51,18 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal' }) => {
                 <span className="text-lg sm:text-xl font-bold text-primary-600 whitespace-nowrap">
                   {parseFloat(dish.price).toFixed(2)} {currency}
                 </span>
-                <button className="btn-primary text-xs sm:text-sm px-3 py-1.5 whitespace-nowrap w-full sm:w-auto">
-                  Добавить
-                </button>
+                {isAvailable ? (
+                  <button className="btn-primary text-xs sm:text-sm px-3 py-1.5 whitespace-nowrap w-full sm:w-auto">
+                    Добавить
+                  </button>
+                ) : (
+                  <button 
+                    disabled 
+                    className="btn-secondary text-xs sm:text-sm px-3 py-1.5 whitespace-nowrap w-full sm:w-auto opacity-50 cursor-not-allowed"
+                  >
+                    Недоступно
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -59,14 +82,27 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal' }) => {
   return (
     <>
       <div
-        onClick={() => setIsModalOpen(true)}
-        className="card cursor-pointer hover:shadow-lg transition-all duration-200 active:scale-98"
+        onClick={() => isAvailable && setIsModalOpen(true)}
+        className={`card transition-all duration-200 relative ${
+          isAvailable 
+            ? 'cursor-pointer hover:shadow-lg active:scale-98' 
+            : 'opacity-60 cursor-not-allowed'
+        }`}
       >
+        {!isAvailable && (
+          <div className="absolute top-2 right-2 z-10">
+            <span className="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full shadow-lg">
+              НЕТ В НАЛИЧИИ
+            </span>
+          </div>
+        )}
         {dish.image && (
           <img
             src={dish.image}
             alt={dish.name}
-            className="w-full h-40 sm:h-48 object-cover rounded-t-lg -mt-6 -mx-6 mb-4"
+            className={`w-full h-40 sm:h-48 object-cover rounded-t-lg -mt-6 -mx-6 mb-4 ${
+              !isAvailable ? 'grayscale' : ''
+            }`}
           />
         )}
         <h3 className="text-base sm:text-lg font-semibold mb-2 break-words">{dish.name}</h3>
@@ -79,9 +115,18 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal' }) => {
           <span className="text-lg sm:text-xl font-bold text-primary-600 whitespace-nowrap">
             {parseFloat(dish.price).toFixed(2)} {currency}
           </span>
-          <button className="btn-primary text-xs sm:text-sm w-full sm:w-auto">
-            Добавить
-          </button>
+          {isAvailable ? (
+            <button className="btn-primary text-xs sm:text-sm w-full sm:w-auto">
+              Добавить
+            </button>
+          ) : (
+            <button 
+              disabled 
+              className="btn-secondary text-xs sm:text-sm w-full sm:w-auto opacity-50 cursor-not-allowed"
+            >
+              Недоступно
+            </button>
+          )}
         </div>
       </div>
 

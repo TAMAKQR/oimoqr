@@ -242,6 +242,51 @@ export const deleteDish = async (req, res, next) => {
   }
 };
 
+export const toggleDishAvailability = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // Check if user owns this dish's restaurant
+    const dish = await prisma.dish.findUnique({
+      where: { id },
+      include: {
+        category: {
+          include: { restaurant: true }
+        }
+      }
+    });
+
+    if (!dish) {
+      return res.status(404).json({ error: 'Dish not found' });
+    }
+
+    if (req.user.restaurant.id !== dish.category.restaurantId && !req.user.isAdmin) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Toggle availability
+    const updatedDish = await prisma.dish.update({
+      where: { id },
+      data: { isAvailable: !dish.isAvailable },
+      include: {
+        modifiers: {
+          orderBy: { order: 'asc' }
+        }
+      }
+    });
+
+    res.json({
+      message: `Dish ${updatedDish.isAvailable ? 'available' : 'unavailable'} successfully`,
+      dish: {
+        ...updatedDish,
+        imageUrl: updatedDish.image
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const createModifier = async (req, res, next) => {
   try {
     const { dishId } = req.params;

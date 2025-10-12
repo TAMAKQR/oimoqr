@@ -4,6 +4,7 @@ import { useCartStore } from '../store/cartStore';
 const DishModal = ({ dish, isOpen, onClose, currency = '₽' }) => {
   const [selectedModifiers, setSelectedModifiers] = useState([]);
   const addItem = useCartStore((state) => state.addItem);
+  const isAvailable = dish.isAvailable !== false; // По умолчанию true если поле отсутствует
 
   if (!isOpen) return null;
 
@@ -23,6 +24,7 @@ const DishModal = ({ dish, isOpen, onClose, currency = '₽' }) => {
   };
 
   const handleAddToCart = () => {
+    if (!isAvailable) return;
     addItem(dish, selectedModifiers);
     setSelectedModifiers([]);
     onClose();
@@ -32,15 +34,33 @@ const DishModal = ({ dish, isOpen, onClose, currency = '₽' }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
       <div className="bg-white rounded-t-2xl sm:rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {dish.image && (
-          <img
-            src={dish.image}
-            alt={dish.name}
-            className="w-full h-48 sm:h-64 object-cover rounded-t-2xl sm:rounded-t-lg"
-          />
+          <div className="relative">
+            <img
+              src={dish.image}
+              alt={dish.name}
+              className={`w-full h-48 sm:h-64 object-cover rounded-t-2xl sm:rounded-t-lg ${
+                !isAvailable ? 'grayscale' : ''
+              }`}
+            />
+            {!isAvailable && (
+              <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center rounded-t-2xl sm:rounded-t-lg">
+                <span className="px-4 py-2 bg-red-500 text-white text-lg font-bold rounded-full shadow-lg">
+                  НЕТ В НАЛИЧИИ
+                </span>
+              </div>
+            )}
+          </div>
         )}
         
         <div className="p-4 sm:p-6">
-          <h2 className="text-xl sm:text-2xl font-bold mb-2 break-words">{dish.name}</h2>
+          <div className="flex items-center gap-3 mb-2">
+            <h2 className="text-xl sm:text-2xl font-bold break-words">{dish.name}</h2>
+            {!isAvailable && !dish.image && (
+              <span className="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full">
+                НЕТ В НАЛИЧИИ
+              </span>
+            )}
+          </div>
           {dish.description && (
             <p className="text-gray-600 text-sm sm:text-base mb-4 break-words">{dish.description}</p>
           )}
@@ -91,13 +111,18 @@ const DishModal = ({ dish, isOpen, onClose, currency = '₽' }) => {
               </button>
               <button 
                 onClick={handleAddToCart} 
-                className="flex-1 btn-primary flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                disabled={!isAvailable}
+                className={`flex-1 flex items-center justify-center gap-2 active:scale-95 transition-transform ${
+                  isAvailable 
+                    ? 'btn-primary' 
+                    : 'btn-secondary opacity-50 cursor-not-allowed'
+                }`}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
                 </svg>
-                <span className="hidden sm:inline">Добавить</span>
-                <span className="sm:hidden">В корзину</span>
+                <span className="hidden sm:inline">{isAvailable ? 'Добавить' : 'Недоступно'}</span>
+                <span className="sm:hidden">{isAvailable ? 'В корзину' : 'Недоступно'}</span>
               </button>
             </div>
           </div>

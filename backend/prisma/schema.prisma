@@ -86,6 +86,7 @@ model Dish {
   price       Float
   image       String?
   isActive    Boolean    @default(true)
+  isAvailable Boolean    @default(true)
   order       Int        @default(0)
   categoryId  String
   createdAt   DateTime   @default(now())

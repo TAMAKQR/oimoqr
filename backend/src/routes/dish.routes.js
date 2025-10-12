@@ -6,6 +6,7 @@ import {
   uploadDishImage,
   deleteDishImage,
   deleteDish,
+  toggleDishAvailability,
   createModifier,
   updateModifier,
   deleteModifier
@@ -23,6 +24,7 @@ router.post('/', authenticate, requireRestaurant, createDish);
 router.put('/:id', authenticate, requireRestaurant, updateDish);
 router.post('/:id/upload-image', authenticate, requireRestaurant, upload.single('image'), uploadDishImage);
 router.delete('/:id/image', authenticate, requireRestaurant, deleteDishImage);
+router.patch('/:id/toggle-availability', authenticate, requireRestaurant, toggleDishAvailability);
 router.delete('/:id', authenticate, requireRestaurant, deleteDish);
 
 // Protected routes - Modifiers

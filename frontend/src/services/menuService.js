@@ -65,6 +65,11 @@ export const menuService = {
     return response.data;
   },
 
+  toggleDishAvailability: async (dishId) => {
+    const response = await api.patch(`/dishes/${dishId}/toggle-availability`);
+    return response.data;
+  },
+
   // Modifiers
   createModifier: async (dishId, data) => {
     const response = await api.post(`/dishes/${dishId}/modifiers`, data);
