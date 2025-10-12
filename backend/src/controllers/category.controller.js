@@ -21,7 +21,23 @@ export const getCategories = async (req, res, next) => {
       }
     });
 
-    res.json(categories);
+    // Map 'image' field to 'imageUrl' for frontend compatibility
+    const categoriesWithImageUrl = categories.map(category => {
+      const { dishes, ...categoryRest } = category;
+      return {
+        ...categoryRest,
+        dishes: dishes.map(dish => {
+          const { modifiers, ...dishRest } = dish;
+          return {
+            ...dishRest,
+            modifiers,
+            imageUrl: dish.image || null  // Explicitly set imageUrl from image field
+          };
+        })
+      };
+    });
+
+    res.json(categoriesWithImageUrl);
   } catch (error) {
     next(error);
   }
