@@ -13,6 +13,7 @@ const MenuPage = () => {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const categoryRefs = useRef({});
   const categoryButtonRefs = useRef({});
+  const categoryMenuRef = useRef(null);
   const isUserClick = useRef(false);
 
   useEffect(() => {
@@ -57,13 +58,23 @@ const MenuPage = () => {
         const categoryId = parseInt(topEntry.target.dataset.categoryId);
         setSelectedCategory(categoryId);
         
-        // Автоматически скроллим кнопку категории в видимую область
+        // Автоматически скроллим горизонтальное меню к активной кнопке
         const categoryButton = categoryButtonRefs.current[categoryId];
-        if (categoryButton) {
-          categoryButton.scrollIntoView({
-            behavior: 'smooth',
-            block: 'nearest',
-            inline: 'center'
+        const categoryMenu = categoryMenuRef.current;
+        
+        if (categoryButton && categoryMenu) {
+          const buttonLeft = categoryButton.offsetLeft;
+          const buttonWidth = categoryButton.offsetWidth;
+          const menuWidth = categoryMenu.offsetWidth;
+          const menuScrollLeft = categoryMenu.scrollLeft;
+          
+          // Вычисляем позицию для центрирования кнопки
+          const targetScrollLeft = buttonLeft - (menuWidth / 2) + (buttonWidth / 2);
+          
+          // Плавный скролл горизонтального меню
+          categoryMenu.scrollTo({
+            left: targetScrollLeft,
+            behavior: 'smooth'
           });
         }
       }
@@ -195,7 +206,10 @@ const MenuPage = () => {
       {/* Categories */}
       <div className="bg-white border-b sticky top-0 z-30 shadow-sm">
         <div className="container mx-auto px-4">
-          <div className="flex gap-2 sm:gap-4 overflow-x-auto py-3 sm:py-4 scrollbar-hide">
+          <div 
+            ref={categoryMenuRef}
+            className="flex gap-2 sm:gap-4 overflow-x-auto py-3 sm:py-4 scrollbar-hide"
+          >
             {restaurant.categories.map((category) => (
               <button
                 key={category.id}
