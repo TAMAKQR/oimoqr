@@ -63,13 +63,17 @@ const MenuPage = () => {
         const categoryMenu = categoryMenuRef.current;
         
         if (categoryButton && categoryMenu) {
-          const buttonLeft = categoryButton.offsetLeft;
-          const buttonWidth = categoryButton.offsetWidth;
-          const menuWidth = categoryMenu.offsetWidth;
-          const menuScrollLeft = categoryMenu.scrollLeft;
+          // Используем getBoundingClientRect для точного расчета позиций
+          const menuRect = categoryMenu.getBoundingClientRect();
+          const buttonRect = categoryButton.getBoundingClientRect();
+          
+          // Вычисляем смещение кнопки относительно текущей позиции скролла
+          const buttonRelativeLeft = buttonRect.left - menuRect.left + categoryMenu.scrollLeft;
+          const buttonWidth = buttonRect.width;
+          const menuWidth = menuRect.width;
           
           // Вычисляем позицию для центрирования кнопки
-          const targetScrollLeft = buttonLeft - (menuWidth / 2) + (buttonWidth / 2);
+          const targetScrollLeft = buttonRelativeLeft - (menuWidth / 2) + (buttonWidth / 2);
           
           // Плавный скролл горизонтального меню
           categoryMenu.scrollTo({

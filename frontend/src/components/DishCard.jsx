@@ -4,6 +4,7 @@ import { useCartStore } from '../store/cartStore';
 
 const DishCard = ({ dish, currency = '₽', style = 'horizontal' }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
   const addItem = useCartStore((state) => state.addItem);
   const isAvailable = dish.isAvailable !== false; // По умолчанию true если поле отсутствует
   const hasModifiers = dish.modifiers && dish.modifiers.length > 0;
@@ -38,14 +39,20 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal' }) => {
   const handleAddClick = (e) => {
     e.stopPropagation(); // Предотвращаем открытие модального окна
     
-    if (!isAvailable) return;
+    if (!isAvailable || isAdding) return;
     
     // Если есть модификаторы - открываем модальное окно
     if (hasModifiers) {
       setIsModalOpen(true);
     } else {
-      // Если нет модификаторов - сразу добавляем в корзину
+      // Если нет модификаторов - сразу добавляем в корзину с анимацией
+      setIsAdding(true);
       addItem(dish, []);
+      
+      // Сбрасываем анимацию через 600ms (время вращения)
+      setTimeout(() => {
+        setIsAdding(false);
+      }, 600);
     }
   };
 
@@ -148,7 +155,9 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal' }) => {
                 {isAvailable ? (
                   <button 
                     onClick={handleAddClick}
-                    className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center bg-primary-600 hover:bg-primary-700 text-white rounded-full text-2xl font-light transition-colors shadow-md active:scale-95"
+                    className={`w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center bg-primary-600 hover:bg-primary-700 text-white rounded-full text-2xl font-light transition-all shadow-md active:scale-95 ${
+                      isAdding ? 'animate-spin-once' : ''
+                    }`}
                     aria-label="Добавить в корзину"
                   >
                     +
@@ -253,7 +262,9 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal' }) => {
           {isAvailable ? (
             <button 
               onClick={handleAddClick}
-              className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center bg-primary-600 hover:bg-primary-700 text-white rounded-full text-2xl font-light transition-colors shadow-md active:scale-95"
+              className={`w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center bg-primary-600 hover:bg-primary-700 text-white rounded-full text-2xl font-light transition-all shadow-md active:scale-95 ${
+                isAdding ? 'animate-spin-once' : ''
+              }`}
               aria-label="Добавить в корзину"
             >
               +

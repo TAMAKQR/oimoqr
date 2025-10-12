@@ -19,6 +19,15 @@ export default {
           800: '#991b1b',
           900: '#7f1d1d',
         }
+      },
+      keyframes: {
+        'spin-once': {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' },
+        }
+      },
+      animation: {
+        'spin-once': 'spin-once 0.6s ease-in-out',
       }
     },
   },
