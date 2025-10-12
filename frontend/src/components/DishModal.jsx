@@ -38,7 +38,7 @@ const DishModal = ({ dish, isOpen, onClose, currency = '₽' }) => {
             <img
               src={dish.image}
               alt={dish.name}
-              className={`w-full h-48 sm:h-64 object-cover rounded-t-2xl sm:rounded-t-lg ${
+              className={`w-full h-64 sm:h-80 md:h-96 object-cover rounded-t-2xl sm:rounded-t-lg ${
                 !isAvailable ? 'grayscale' : ''
               }`}
             />
