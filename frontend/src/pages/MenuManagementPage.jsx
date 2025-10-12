@@ -193,38 +193,39 @@ const MenuManagementPage = () => {
           <div className="space-y-4">
             {categories.map((category) => (
               <div key={category.id} className="card">
-                {/* Category Header */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3 flex-1">
+                {/* Category Header - Desktop: flex row, Mobile: flex column */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
                     <button
                       onClick={() => toggleCategory(category.id)}
-                      className="text-2xl hover:bg-gray-100 rounded p-1"
+                      className="text-2xl hover:bg-gray-100 rounded p-1 flex-shrink-0"
                     >
                       {expandedCategories.has(category.id) ? '▼' : '▶'}
                     </button>
-                    <div>
-                      <h3 className="text-xl font-semibold">{category.name}</h3>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-xl font-semibold break-words">{category.name}</h3>
                       <p className="text-sm text-gray-600">
                         {dishes[category.id]?.length || 0} блюд
                       </p>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  {/* Action Buttons - Below on mobile, Right on desktop */}
+                  <div className="flex gap-2 sm:flex-shrink-0">
                     <button
                       onClick={() => handleAddDish(category.id)}
-                      className="btn-secondary text-sm"
+                      className="btn-secondary text-sm flex-1 sm:flex-initial whitespace-nowrap"
                     >
                       + Блюдо
                     </button>
                     <button
                       onClick={() => handleEditCategory(category)}
-                      className="btn-secondary text-sm"
+                      className="btn-secondary text-sm flex-1 sm:flex-initial"
                     >
                       ✏️
                     </button>
                     <button
                       onClick={() => handleDeleteCategory(category.id)}
-                      className="btn-secondary text-sm text-red-600 hover:bg-red-50"
+                      className="btn-secondary text-sm text-red-600 hover:bg-red-50 flex-1 sm:flex-initial"
                     >
                       🗑️
                     </button>
@@ -240,62 +241,68 @@ const MenuManagementPage = () => {
                       dishes[category.id]?.map((dish) => (
                         <div
                           key={dish.id}
-                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100"
+                          className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100"
                         >
-                          <div className="flex items-center gap-3 flex-1">
-                            {dish.imageUrl ? (
-                              <img
-                                src={dish.imageUrl}
-                                alt={dish.name}
-                                className="w-16 h-16 object-cover rounded border-2 border-green-500"
-                                title="Фото загружено"
-                              />
-                            ) : (
-                              <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center border-2 border-gray-300" title="Фото отсутствует">
-                                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
+                          {/* Desktop: flex row, Mobile: flex column */}
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            {/* Dish Info */}
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              {dish.imageUrl ? (
+                                <img
+                                  src={dish.imageUrl}
+                                  alt={dish.name}
+                                  className="w-16 h-16 flex-shrink-0 object-cover rounded border-2 border-green-500"
+                                  title="Фото загружено"
+                                />
+                              ) : (
+                                <div className="w-16 h-16 flex-shrink-0 bg-gray-200 rounded flex items-center justify-center border-2 border-gray-300" title="Фото отсутствует">
+                                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h4 className="font-medium break-words">{dish.name}</h4>
+                                  {!dish.isAvailable && (
+                                    <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded whitespace-nowrap">
+                                      СТОП
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-gray-600 line-clamp-1">
+                                  {dish.description}
+                                </p>
+                                <p className="text-primary-600 font-semibold">
+                                  {dish.price} {currency}
+                                </p>
                               </div>
-                            )}
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <h4 className="font-medium">{dish.name}</h4>
-                                {!dish.isAvailable && (
-                                  <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded">
-                                    СТОП
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-sm text-gray-600 line-clamp-1">
-                                {dish.description}
-                              </p>
-                              <p className="text-primary-600 font-semibold">
-                                {dish.price} {currency}
-                              </p>
                             </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleToggleAvailability(dish.id)}
-                              className={`btn-secondary text-sm ${
-                                !dish.isAvailable ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'
-                              }`}
-                              title={dish.isAvailable ? 'Поставить на стоп' : 'Вернуть в меню'}
-                            >
-                              {dish.isAvailable ? '✓' : '⏸'}
-                            </button>
-                            <button
-                              onClick={() => handleEditDish(dish)}
-                              className="btn-secondary text-sm"
-                            >
-                              ✏️
-                            </button>
-                            <button
-                              onClick={() => handleDeleteDish(dish.id)}
-                              className="btn-secondary text-sm text-red-600 hover:bg-red-50"
-                            >
-                              🗑️
-                            </button>
+                            
+                            {/* Action Buttons - Below on mobile, Right on desktop */}
+                            <div className="flex gap-2 sm:flex-shrink-0">
+                              <button
+                                onClick={() => handleToggleAvailability(dish.id)}
+                                className={`btn-secondary text-sm flex-1 sm:flex-initial ${
+                                  !dish.isAvailable ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                }`}
+                                title={dish.isAvailable ? 'Поставить на стоп' : 'Вернуть в меню'}
+                              >
+                                {dish.isAvailable ? '✓' : '⏸'}
+                              </button>
+                              <button
+                                onClick={() => handleEditDish(dish)}
+                                className="btn-secondary text-sm flex-1 sm:flex-initial"
+                              >
+                                ✏️
+                              </button>
+                              <button
+                                onClick={() => handleDeleteDish(dish.id)}
+                                className="btn-secondary text-sm text-red-600 hover:bg-red-50 flex-1 sm:flex-initial"
+                              >
+                                🗑️
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))
