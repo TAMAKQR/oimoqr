@@ -11,8 +11,9 @@ const MenuPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const dishesContainerRef = useRef(null);
-  const isScrollingProgrammatically = useRef(false);
+  const categoryRefs = useRef({});
+  const categoryButtonRefs = useRef({});
+  const isUserClick = useRef(false);
 
   useEffect(() => {
     loadRestaurant();
@@ -32,52 +33,66 @@ const MenuPage = () => {
     }
   };
 
-  // Автоматическое переключение категорий при скролле
+  // Плавное переключение категорий при скролле с помощью Intersection Observer
   useEffect(() => {
-    if (!restaurant || !dishesContainerRef.current) return;
+    if (!restaurant || restaurant.categories.length === 0) return;
 
-    const handleScroll = () => {
-      if (isScrollingProgrammatically.current) return;
-
-      const container = dishesContainerRef.current;
-      const scrollTop = window.scrollY || document.documentElement.scrollTop;
-      const scrollHeight = document.documentElement.scrollHeight;
-      const clientHeight = window.innerHeight;
-      
-      const containerRect = container.getBoundingClientRect();
-      const containerBottom = containerRect.bottom;
-      const containerTop = containerRect.top;
-
-      const currentIndex = restaurant.categories.findIndex(c => c.id === selectedCategory);
-      
-      // Скролл вниз - переход к следующей категории
-      if (containerBottom <= clientHeight + 100 && currentIndex < restaurant.categories.length - 1) {
-        const nextCategory = restaurant.categories[currentIndex + 1];
-        if (nextCategory && nextCategory.dishes.length > 0) {
-          setSelectedCategory(nextCategory.id);
-          isScrollingProgrammatically.current = true;
-          setTimeout(() => {
-            isScrollingProgrammatically.current = false;
-          }, 500);
-        }
-      }
-      
-      // Скролл вверх - переход к предыдущей категории
-      if (containerTop >= clientHeight - 200 && scrollTop > 0 && currentIndex > 0) {
-        const prevCategory = restaurant.categories[currentIndex - 1];
-        if (prevCategory && prevCategory.dishes.length > 0) {
-          setSelectedCategory(prevCategory.id);
-          isScrollingProgrammatically.current = true;
-          setTimeout(() => {
-            isScrollingProgrammatically.current = false;
-          }, 500);
-        }
-      }
+    const observerOptions = {
+      root: null,
+      rootMargin: '-20% 0px -60% 0px', // Триггер когда категория в верхней части экрана
+      threshold: 0
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [restaurant, selectedCategory]);
+    const observerCallback = (entries) => {
+      // Игнорируем изменения если пользователь только что кликнул на категорию
+      if (isUserClick.current) return;
+
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const categoryId = parseInt(entry.target.dataset.categoryId);
+          setSelectedCategory(categoryId);
+          
+          // Автоматически скроллим кнопку категории в видимую область
+          const categoryButton = categoryButtonRefs.current[categoryId];
+          if (categoryButton) {
+            categoryButton.scrollIntoView({
+              behavior: 'smooth',
+              block: 'nearest',
+              inline: 'center'
+            });
+          }
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+
+    // Наблюдаем за всеми секциями категорий
+    Object.values(categoryRefs.current).forEach((ref) => {
+      if (ref) observer.observe(ref);
+    });
+
+    return () => observer.disconnect();
+  }, [restaurant]);
+
+  // Обработка клика на категорию
+  const handleCategoryClick = (categoryId) => {
+    isUserClick.current = true;
+    setSelectedCategory(categoryId);
+    
+    // Плавный скролл к категории
+    const categoryElement = categoryRefs.current[categoryId];
+    if (categoryElement) {
+      const yOffset = -80; // Отступ для sticky header
+      const y = categoryElement.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    }
+
+    // Сбрасываем флаг через 1 секунду
+    setTimeout(() => {
+      isUserClick.current = false;
+    }, 1000);
+  };
 
   if (loading) {
     return (
@@ -97,8 +112,6 @@ const MenuPage = () => {
       </div>
     );
   }
-
-  const currentCategory = restaurant.categories.find(c => c.id === selectedCategory);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -182,10 +195,11 @@ const MenuPage = () => {
             {restaurant.categories.map((category) => (
               <button
                 key={category.id}
-                onClick={() => setSelectedCategory(category.id)}
-                className={`px-4 sm:px-6 py-2 rounded-full whitespace-nowrap transition-colors text-sm sm:text-base font-medium ${
+                ref={(el) => (categoryButtonRefs.current[category.id] = el)}
+                onClick={() => handleCategoryClick(category.id)}
+                className={`px-4 sm:px-6 py-2 rounded-full whitespace-nowrap transition-all duration-300 text-sm sm:text-base font-medium ${
                   selectedCategory === category.id
-                    ? 'bg-primary-600 text-white shadow-md'
+                    ? 'bg-primary-600 text-white shadow-md scale-105'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
               >
@@ -196,22 +210,27 @@ const MenuPage = () => {
         </div>
       </div>
 
-      {/* Dishes */}
-      <div ref={dishesContainerRef} className="container mx-auto px-4 py-6 sm:py-8 pb-24">
-        {currentCategory && (
-          <>
-            <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 break-words">{currentCategory.name}</h2>
-            {currentCategory.description && (
-              <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 break-words">{currentCategory.description}</p>
+      {/* All Categories with Dishes */}
+      <div className="container mx-auto px-4 py-6 sm:py-8 pb-24">
+        {restaurant.categories.map((category) => (
+          <div
+            key={category.id}
+            ref={(el) => (categoryRefs.current[category.id] = el)}
+            data-category-id={category.id}
+            className="mb-12 sm:mb-16"
+          >
+            <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 break-words">{category.name}</h2>
+            {category.description && (
+              <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 break-words">{category.description}</p>
             )}
             
-            {currentCategory.dishes.length === 0 ? (
+            {category.dishes.length === 0 ? (
               <p className="text-center text-gray-500 py-8 text-sm sm:text-base">
                 В этой категории пока нет блюд
               </p>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                {currentCategory.dishes.map((dish) => (
+                {category.dishes.map((dish) => (
                   <DishCard 
                     key={dish.id} 
                     dish={dish} 
@@ -221,8 +240,8 @@ const MenuPage = () => {
                 ))}
               </div>
             )}
-          </>
-        )}
+          </div>
+        ))}
       </div>
 
       {/* Cart */}
