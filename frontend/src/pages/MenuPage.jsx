@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { restaurantService } from '../services/restaurantService';
 import BannerSlider from '../components/BannerSlider';
@@ -11,6 +11,8 @@ const MenuPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const dishesContainerRef = useRef(null);
+  const isScrollingProgrammatically = useRef(false);
 
   useEffect(() => {
     loadRestaurant();
@@ -29,6 +31,53 @@ const MenuPage = () => {
       setLoading(false);
     }
   };
+
+  // Автоматическое переключение категорий при скролле
+  useEffect(() => {
+    if (!restaurant || !dishesContainerRef.current) return;
+
+    const handleScroll = () => {
+      if (isScrollingProgrammatically.current) return;
+
+      const container = dishesContainerRef.current;
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const scrollHeight = document.documentElement.scrollHeight;
+      const clientHeight = window.innerHeight;
+      
+      const containerRect = container.getBoundingClientRect();
+      const containerBottom = containerRect.bottom;
+      const containerTop = containerRect.top;
+
+      const currentIndex = restaurant.categories.findIndex(c => c.id === selectedCategory);
+      
+      // Скролл вниз - переход к следующей категории
+      if (containerBottom <= clientHeight + 100 && currentIndex < restaurant.categories.length - 1) {
+        const nextCategory = restaurant.categories[currentIndex + 1];
+        if (nextCategory && nextCategory.dishes.length > 0) {
+          setSelectedCategory(nextCategory.id);
+          isScrollingProgrammatically.current = true;
+          setTimeout(() => {
+            isScrollingProgrammatically.current = false;
+          }, 500);
+        }
+      }
+      
+      // Скролл вверх - переход к предыдущей категории
+      if (containerTop >= clientHeight - 200 && scrollTop > 0 && currentIndex > 0) {
+        const prevCategory = restaurant.categories[currentIndex - 1];
+        if (prevCategory && prevCategory.dishes.length > 0) {
+          setSelectedCategory(prevCategory.id);
+          isScrollingProgrammatically.current = true;
+          setTimeout(() => {
+            isScrollingProgrammatically.current = false;
+          }, 500);
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [restaurant, selectedCategory]);
 
   if (loading) {
     return (
@@ -148,7 +197,7 @@ const MenuPage = () => {
       </div>
 
       {/* Dishes */}
-      <div className="container mx-auto px-4 py-6 sm:py-8 pb-24">
+      <div ref={dishesContainerRef} className="container mx-auto px-4 py-6 sm:py-8 pb-24">
         {currentCategory && (
           <>
             <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 break-words">{currentCategory.name}</h2>

@@ -30,8 +30,18 @@ const DishModal = ({ dish, isOpen, onClose, currency = '₽' }) => {
     onClose();
   };
 
+  const handleBackdropClick = (e) => {
+    // Закрываем только если клик был на фоне, а не на контенте
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4"
+      onClick={handleBackdropClick}
+    >
       <div className="bg-white rounded-t-2xl sm:rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {dish.image && (
           <div className="relative">
