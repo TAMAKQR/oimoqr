@@ -12,6 +12,13 @@ const Cart = ({ restaurant }) => {
   const handleCheckout = async () => {
     if (items.length === 0) return;
 
+    const total = getTotal();
+    
+    if (restaurant.minOrderAmount && total < restaurant.minOrderAmount) {
+      alert(`Минимальная сумма заказа: ${restaurant.minOrderAmount} ${currency}\nТекущая сумма: ${total} ${currency}`);
+      return;
+    }
+
     setIsLoading(true);
     try {
       const orderItems = items.map((item) => ({
@@ -59,6 +66,9 @@ const Cart = ({ restaurant }) => {
   };
 
   const itemCount = getItemCount();
+  const total = getTotal();
+  const minAmount = restaurant?.minOrderAmount;
+  const isBelowMinimum = minAmount && total < minAmount;
 
   return (
     <>
@@ -204,12 +214,20 @@ const Cart = ({ restaurant }) => {
                     <div className="flex justify-between items-center mb-3 sm:mb-4">
                       <span className="text-base sm:text-lg font-semibold">Итого:</span>
                       <span className="text-xl sm:text-2xl font-bold text-primary-600">
-                        {getTotal()} {currency}
+                        {total} {currency}
                       </span>
                     </div>
+                    
+                    {isBelowMinimum && (
+                      <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-3 mb-3 rounded text-sm">
+                        <p className="font-semibold">Минимальный заказ: {minAmount} {currency}</p>
+                        <p>Добавьте еще {(minAmount - total).toFixed(2)} {currency}</p>
+                      </div>
+                    )}
+                    
                     <button
                       onClick={handleCheckout}
-                      disabled={isLoading}
+                      disabled={isLoading || isBelowMinimum}
                       className="w-full btn-primary py-3 text-base sm:text-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isLoading ? 'Создание заказа...' : 'Оформить заказ в WhatsApp'}

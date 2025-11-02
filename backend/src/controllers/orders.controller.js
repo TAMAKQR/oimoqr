@@ -83,9 +83,10 @@ export const getOrderById = async (req, res, next) => {
 export const getOrderByNumber = async (req, res, next) => {
   try {
     const { orderNumber } = req.params;
+    const fullOrderNumber = `#${orderNumber}`;
 
     const order = await prisma.order.findUnique({
-      where: { orderNumber },
+      where: { orderNumber: fullOrderNumber },
       include: { restaurant: true }
     });
 

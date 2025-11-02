@@ -191,7 +191,7 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal' }) => {
     <>
       <div
         onClick={handleCardClick}
-        className={`card transition-all duration-200 relative ${
+        className={`overflow-hidden rounded-lg border border-gray-200 bg-white transition-all duration-200 relative ${
           isAvailable 
             ? 'cursor-pointer hover:shadow-lg active:scale-98' 
             : 'opacity-60 cursor-not-allowed'
@@ -215,69 +215,72 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal' }) => {
           <img
             src={dish.image}
             alt={dish.name}
-            className={`w-full h-40 sm:h-48 object-cover rounded-t-lg -mt-6 -mx-6 mb-4 ${
+            className={`w-full h-40 sm:h-48 object-cover ${
               !isAvailable ? 'grayscale' : ''
             }`}
           />
         )}
-        <h3 className="text-base sm:text-lg font-semibold mb-2 break-words">{dish.name}</h3>
-        {dish.description && (
-          <p className="text-gray-600 text-xs sm:text-sm mb-3 line-clamp-2 break-words">
-            {dish.description}
-          </p>
-        )}
         
-        {/* Аллергены */}
-        {allergens.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-3">
-            {allergens.map((allergen) => (
-              <span
-                key={allergen}
-                className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-800 text-xs rounded-full"
-                title={allergenNames[allergen]}
-              >
-                {allergenIcons[allergen]} {allergenNames[allergen]}
-              </span>
-            ))}
-          </div>
-        )}
+        <div className="p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold mb-2 break-words">{dish.name}</h3>
+          {dish.description && (
+            <p className="text-gray-600 text-xs sm:text-sm mb-3 line-clamp-2 break-words">
+              {dish.description}
+            </p>
+          )}
+          
+          {/* Аллергены */}
+          {allergens.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-3">
+              {allergens.map((allergen) => (
+                <span
+                  key={allergen}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-800 text-xs rounded-full"
+                  title={allergenNames[allergen]}
+                >
+                  {allergenIcons[allergen]} {allergenNames[allergen]}
+                </span>
+              ))}
+            </div>
+          )}
 
-        <div className="flex flex-row justify-between items-center gap-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            {dish.discount ? (
-              <>
-                <span className="text-sm text-gray-400 line-through">
+          <div className="flex flex-row justify-between items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              {dish.discount ? (
+                <>
+                  <span className="text-sm text-gray-400 line-through">
+                    {originalPrice.toFixed(2)} {currency}
+                  </span>
+                  <span className="text-lg sm:text-xl font-bold text-red-600 whitespace-nowrap">
+                    {discountedPrice.toFixed(2)} {currency}
+                  </span>
+                </>
+              ) : (
+                <span className="text-lg sm:text-xl font-bold text-primary-600 whitespace-nowrap">
                   {originalPrice.toFixed(2)} {currency}
                 </span>
-                <span className="text-lg sm:text-xl font-bold text-red-600 whitespace-nowrap">
-                  {discountedPrice.toFixed(2)} {currency}
-                </span>
-              </>
+              )}
+            </div>
+            {isAvailable ? (
+              <button 
+                onClick={handleAddClick}
+                className={`w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center bg-primary-600 hover:bg-primary-700 text-white rounded-full text-2xl font-light transition-all shadow-md active:scale-95 ${
+                  isAdding ? 'animate-spin-once' : ''
+                }`}
+                aria-label="Добавить в корзину"
+              >
+                +
+              </button>
             ) : (
-              <span className="text-lg sm:text-xl font-bold text-primary-600 whitespace-nowrap">
-                {originalPrice.toFixed(2)} {currency}
-              </span>
+              <button 
+                disabled 
+                className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center bg-gray-300 text-gray-500 rounded-full text-2xl font-light cursor-not-allowed"
+                aria-label="Недоступно"
+              >
+                ✕
+              </button>
             )}
           </div>
-          {isAvailable ? (
-            <button 
-              onClick={handleAddClick}
-              className={`w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center bg-primary-600 hover:bg-primary-700 text-white rounded-full text-2xl font-light transition-all shadow-md active:scale-95 ${
-                isAdding ? 'animate-spin-once' : ''
-              }`}
-              aria-label="Добавить в корзину"
-            >
-              +
-            </button>
-          ) : (
-            <button 
-              disabled 
-              className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center bg-gray-300 text-gray-500 rounded-full text-2xl font-light cursor-not-allowed"
-              aria-label="Недоступно"
-            >
-              ✕
-            </button>
-          )}
         </div>
       </div>
 

@@ -251,7 +251,11 @@ const MenuPage = () => {
                 В этой категории пока нет блюд
               </p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              <div className={`gap-4 sm:gap-6 ${
+                restaurant.menuCardStyle === 'vertical' 
+                  ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' 
+                  : 'flex flex-col'
+              }`}>
                 {category.dishes.map((dish) => (
                   <DishCard 
                     key={dish.id} 
