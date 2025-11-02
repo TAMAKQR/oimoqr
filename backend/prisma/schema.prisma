@@ -23,9 +23,9 @@ model User {
 }
 
 model Restaurant {
-  id              String        @id @default(uuid())
+  id              String               @id @default(uuid())
   name            String
-  subdomain       String        @unique
+  subdomain       String               @unique
   address         String?
   phone           String?
   description     String?
@@ -33,19 +33,20 @@ model Restaurant {
   instagram       String?
   facebook        String?
   whatsapp        String?
-  deliveryEnabled Boolean       @default(false)
+  deliveryEnabled Boolean              @default(false)
   deliveryFee     Float?
   minOrderAmount  Float?
-  currency        String        @default("₽")
-  banners         String        @default("[]")
-  userId          String        @unique
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  menuCardStyle   String        @default("horizontal")
+  currency        String               @default("₽")
+  banners         String               @default("[]")
+  userId          String               @unique
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  menuCardStyle   String               @default("horizontal")
   categories      Category[]
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   subscription    Subscription?
   orders          Order[]
+  deliveryLocations DeliveryLocation[]
 
   @@map("restaurants")
 }
@@ -127,4 +128,19 @@ model Order {
   restaurant    Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
   @@map("orders")
+}
+
+model DeliveryLocation {
+  id            String     @id @default(uuid())
+  name          String
+  address       String
+  latitude      Float
+  longitude     Float
+  whatsapp      String
+  restaurantId  String
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  restaurant    Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@map("delivery_locations")
 }

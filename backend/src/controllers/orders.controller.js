@@ -27,13 +27,19 @@ export const createOrder = async (req, res, next) => {
         items: JSON.stringify(items),
         total: parseFloat(total),
         customerPhone
+      },
+      include: {
+        restaurant: {
+          include: { deliveryLocations: true }
+        }
       }
     });
 
     res.status(201).json({
       id: order.id,
       orderNumber: order.orderNumber,
-      createdAt: order.createdAt
+      createdAt: order.createdAt,
+      deliveryLocations: order.restaurant?.deliveryLocations || []
     });
   } catch (error) {
     console.error('Order creation error:', error.message);
@@ -87,7 +93,12 @@ export const getOrderByNumber = async (req, res, next) => {
 
     const order = await prisma.order.findUnique({
       where: { orderNumber: fullOrderNumber },
-      include: { restaurant: true }
+      include: { 
+        restaurant: true,
+        restaurant: {
+          include: { deliveryLocations: true }
+        }
+      }
     });
 
     if (!order) {
@@ -96,7 +107,8 @@ export const getOrderByNumber = async (req, res, next) => {
 
     res.json({
       ...order,
-      items: JSON.parse(order.items)
+      items: JSON.parse(order.items),
+      deliveryLocations: order.restaurant?.deliveryLocations || []
     });
   } catch (error) {
     next(error);
