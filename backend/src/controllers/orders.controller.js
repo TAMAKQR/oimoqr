@@ -79,3 +79,25 @@ export const getOrderById = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getOrderByNumber = async (req, res, next) => {
+  try {
+    const { orderNumber } = req.params;
+
+    const order = await prisma.order.findUnique({
+      where: { orderNumber },
+      include: { restaurant: true }
+    });
+
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    res.json({
+      ...order,
+      items: JSON.parse(order.items)
+    });
+  } catch (error) {
+    next(error);
+  }
+};
