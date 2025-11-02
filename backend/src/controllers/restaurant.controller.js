@@ -84,7 +84,8 @@ export const updateRestaurant = async (req, res, next) => {
       deliveryEnabled,
       deliveryFee,
       minOrderAmount,
-      currency
+      currency,
+      menuCardStyle
     } = req.body;
 
     // Check if user owns this restaurant
@@ -106,6 +107,7 @@ export const updateRestaurant = async (req, res, next) => {
         deliveryFee: deliveryFee ? parseFloat(deliveryFee) : null,
         minOrderAmount: minOrderAmount ? parseFloat(minOrderAmount) : null,
         currency,
+        menuCardStyle: menuCardStyle || 'horizontal',
       },
       include: {
         subscription: true
@@ -308,6 +310,34 @@ export const deleteLogo = async (req, res, next) => {
 
     res.json({
       message: 'Logo deleted successfully',
+      restaurant: updatedRestaurant
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateMenuCardStyle = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { menuCardStyle } = req.body;
+
+    if (!menuCardStyle || !['horizontal', 'vertical'].includes(menuCardStyle)) {
+      return res.status(400).json({ error: 'Invalid menuCardStyle. Must be "horizontal" or "vertical"' });
+    }
+
+    if (req.user.restaurant.id !== id && !req.user.isAdmin) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const updatedRestaurant = await prisma.restaurant.update({
+      where: { id },
+      data: { menuCardStyle }
+    });
+
+    res.json({
+      message: 'Menu card style updated successfully',
+      menuCardStyle: updatedRestaurant.menuCardStyle,
       restaurant: updatedRestaurant
     });
   } catch (error) {

@@ -5,7 +5,8 @@ import {
   uploadBanner,
   deleteBanner,
   uploadLogo,
-  deleteLogo
+  deleteLogo,
+  updateMenuCardStyle
 } from '../controllers/restaurant.controller.js';
 import { getCategories } from '../controllers/category.controller.js';
 import { authenticate, requireRestaurant } from '../middleware/auth.js';
@@ -18,6 +19,7 @@ router.get('/:restaurantId/categories', authenticate, getCategories);
 
 // Protected routes
 router.put('/:id', authenticate, requireRestaurant, updateRestaurant);
+router.put('/:id/menu-style', authenticate, requireRestaurant, updateMenuCardStyle);
 router.post('/:id/upload-banner', authenticate, requireRestaurant, upload.single('banner'), uploadBanner);
 router.delete('/:id/delete-banner', authenticate, requireRestaurant, deleteBanner);
 router.post('/:id/upload-logo', authenticate, requireRestaurant, upload.single('logo'), uploadLogo);
