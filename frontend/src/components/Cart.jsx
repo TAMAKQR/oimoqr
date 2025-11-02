@@ -1,33 +1,61 @@
 import { useState } from 'react';
 import { useCartStore } from '../store/cartStore';
+import api from '../services/api';
 
 const Cart = ({ restaurant }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showOrderNumber, setShowOrderNumber] = useState(null);
   const { items, removeItem, updateQuantity, getTotal, getItemCount, clearCart } = useCartStore();
   const currency = restaurant?.currency || '₽';
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (items.length === 0) return;
 
-    const orderText = items
-      .map((item) => {
-        const modifiersText = item.modifiers.length > 0
-          ? ` (${item.modifiers.map((m) => m.name).join(', ')})`
-          : '';
-        const itemTotal = (item.totalPrice * item.quantity).toFixed(2);
-        return `${item.quantity}x ${item.dish.name}${modifiersText} - ${itemTotal} ${currency}`;
-      })
-      .join('\n');
+    setIsLoading(true);
+    try {
+      const orderItems = items.map((item) => ({
+        quantity: item.quantity,
+        name: item.dish.name,
+        price: item.totalPrice,
+        modifiers: item.modifiers.map(m => m.name)
+      }));
 
-    const total = getTotal().toFixed(2);
-    const message = `Здравствуйте! Хочу сделать заказ:\n\n${orderText}\n\nИтого: ${total} ${currency}`;
+      const response = await api.post('/orders', {
+        restaurantId: restaurant.id,
+        items: orderItems,
+        total: parseFloat(getTotal().toFixed(2))
+      });
 
-    const whatsappNumber = restaurant.whatsapp?.replace(/\D/g, '');
-    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+      const orderNumber = response.data.orderNumber;
+      setShowOrderNumber(orderNumber);
 
-    window.open(whatsappUrl, '_blank');
-    clearCart();
-    setIsOpen(false);
+      const orderText = items
+        .map((item) => {
+          const modifiersText = item.modifiers.length > 0
+            ? ` (${item.modifiers.map((m) => m.name).join(', ')})`
+            : '';
+          const itemTotal = (item.totalPrice * item.quantity).toFixed(2);
+          return `${item.quantity}x ${item.dish.name}${modifiersText} - ${itemTotal} ${currency}`;
+        })
+        .join('\n');
+
+      const total = getTotal().toFixed(2);
+      const restaurantInfo = `${restaurant.name}${restaurant.address ? ` (${restaurant.address})` : ''}`;
+      const message = `Здравствуйте! Мой номер заказа: ${orderNumber}\n\nРесторан: ${restaurantInfo}\n\nХочу сделать заказ:\n\n${orderText}\n\nИтого: ${total} ${currency}`;
+
+      const whatsappNumber = restaurant.whatsapp?.replace(/\D/g, '');
+      const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+
+      window.open(whatsappUrl, '_blank');
+      clearCart();
+      setIsOpen(false);
+    } catch (error) {
+      console.error('Error creating order:', error);
+      alert('Ошибка при создании заказа');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const itemCount = getItemCount();
@@ -58,6 +86,48 @@ const Cart = ({ restaurant }) => {
           </span>
         )}
       </button>
+
+      {/* Order Number Modal */}
+      {showOrderNumber && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-md w-full text-center">
+            <button
+              onClick={() => setShowOrderNumber(null)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <div className="mb-4">
+              <svg className="w-16 h-16 sm:w-20 sm:h-20 mx-auto text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-bold mb-2">Заказ создан!</h3>
+            <p className="text-gray-600 mb-4">Ваш номер заказа:</p>
+            <p className="text-3xl sm:text-4xl font-bold text-primary-600 mb-6 font-mono">{showOrderNumber}</p>
+            <div className="space-y-3">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(showOrderNumber);
+                  alert('Номер заказа скопирован в буфер обмена');
+                }}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+              >
+                📋 Копировать номер
+              </button>
+              <p className="text-sm text-gray-500">Сейчас откроется WhatsApp с деталями заказа</p>
+              <button
+                onClick={() => setShowOrderNumber(null)}
+                className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg transition-colors"
+              >
+                Закрыть
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Cart Modal */}
       {isOpen && (
@@ -139,9 +209,10 @@ const Cart = ({ restaurant }) => {
                     </div>
                     <button
                       onClick={handleCheckout}
-                      className="w-full btn-primary py-3 text-base sm:text-lg"
+                      disabled={isLoading}
+                      className="w-full btn-primary py-3 text-base sm:text-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Оформить заказ в WhatsApp
+                      {isLoading ? 'Создание заказа...' : 'Оформить заказ в WhatsApp'}
                     </button>
                   </div>
                 </>

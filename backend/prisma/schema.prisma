@@ -45,6 +45,7 @@ model Restaurant {
   categories      Category[]
   user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   subscription    Subscription?
+  orders          Order[]
 
   @@map("restaurants")
 }
@@ -111,4 +112,19 @@ model Modifier {
   dish       Dish     @relation(fields: [dishId], references: [id], onDelete: Cascade)
 
   @@map("modifiers")
+}
+
+model Order {
+  id            String   @id @default(uuid())
+  orderNumber   String   @unique
+  restaurantId  String
+  items         String
+  total         Float
+  customerPhone String?
+  status        String   @default("pending")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  restaurant    Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@map("orders")
 }

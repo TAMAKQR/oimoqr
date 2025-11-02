@@ -11,6 +11,7 @@ import restaurantRoutes from './routes/restaurant.routes.js';
 import categoryRoutes from './routes/category.routes.js';
 import dishRoutes from './routes/dish.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import ordersRoutes from './routes/orders.routes.js';
 
 // Middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -79,6 +80,7 @@ app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/dishes', dishRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/orders', ordersRoutes);
 
 // Health check route
 app.get('/health', (req, res) => {
