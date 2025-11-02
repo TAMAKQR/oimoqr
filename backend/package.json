@@ -13,6 +13,9 @@
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "seed": "node src/scripts/seedDatabase.js",
+    "import:baku": "node src/scripts/importBakuMenu.js",
+    "import:baku:images": "node src/scripts/importBakuMenuWithImages.js",
+    "download:cloudinary": "node src/scripts/downloadCloudinaryImages.js",
     "create-admin": "node src/scripts/createAdmin.js",
     "postinstall": "npx prisma generate"
   },

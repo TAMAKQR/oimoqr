@@ -25,7 +25,7 @@ export const createOrder = async (req, res, next) => {
         orderNumber,
         restaurantId,
         items: JSON.stringify(items),
-        total,
+        total: parseFloat(total),
         customerPhone
       }
     });
@@ -36,7 +36,11 @@ export const createOrder = async (req, res, next) => {
       createdAt: order.createdAt
     });
   } catch (error) {
-    next(error);
+    console.error('Order creation error:', error.message);
+    res.status(500).json({
+      error: 'Failed to create order',
+      details: error.message
+    });
   }
 };
 
