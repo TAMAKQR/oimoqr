@@ -96,6 +96,9 @@ const RestaurantSettingsPage = () => {
     try {
       setLoadingLocations(true);
       const response = await fetch(`/api/restaurants/${restaurantId}/delivery-locations`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       const locations = await response.json();
       setDeliveryLocations(locations);
     } catch (err) {
@@ -106,7 +109,7 @@ const RestaurantSettingsPage = () => {
   };
 
   const handleAddLocation = async () => {
-    if (!newLocation.name || !newLocation.address || !newLocation.whatsapp) {
+    if (!newLocation.name || !newLocation.address || !newLocation.latitude || !newLocation.longitude || !newLocation.whatsapp) {
       alert('Заполните все обязательные поля');
       return;
     }
@@ -118,16 +121,18 @@ const RestaurantSettingsPage = () => {
         body: JSON.stringify(newLocation)
       });
 
-      if (response.ok) {
-        setNewLocation({ name: '', address: '', latitude: '', longitude: '', whatsapp: '' });
-        setShowAddLocation(false);
-        await loadDeliveryLocations(userData.restaurant.id);
-        alert('Точка добавлена');
-      } else {
-        alert('Ошибка при добавлении точки');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
+
+      const result = await response.json();
+      setNewLocation({ name: '', address: '', latitude: '', longitude: '', whatsapp: '' });
+      setShowAddLocation(false);
+      await loadDeliveryLocations(userData.restaurant.id);
+      alert('Точка добавлена');
     } catch (err) {
-      alert('Ошибка при добавлении точки');
+      alert('Ошибка при добавлении точки: ' + err.message);
       console.error(err);
     }
   };
@@ -140,14 +145,15 @@ const RestaurantSettingsPage = () => {
         method: 'DELETE'
       });
 
-      if (response.ok) {
-        await loadDeliveryLocations(userData.restaurant.id);
-        alert('Точка удалена');
-      } else {
-        alert('Ошибка при удалении точки');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
+
+      await loadDeliveryLocations(userData.restaurant.id);
+      alert('Точка удалена');
     } catch (err) {
-      alert('Ошибка при удалении точки');
+      alert('Ошибка при удалении точки: ' + err.message);
       console.error(err);
     }
   };
@@ -645,7 +651,7 @@ const RestaurantSettingsPage = () => {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Широта</label>
+                    <label className="block text-sm font-medium mb-1">Широта *</label>
                     <input
                       type="number"
                       value={newLocation.latitude}
@@ -653,10 +659,11 @@ const RestaurantSettingsPage = () => {
                       className="input w-full"
                       placeholder="43.2350"
                       step="0.0001"
+                      required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Долгота</label>
+                    <label className="block text-sm font-medium mb-1">Долгота *</label>
                     <input
                       type="number"
                       value={newLocation.longitude}
@@ -664,6 +671,7 @@ const RestaurantSettingsPage = () => {
                       className="input w-full"
                       placeholder="76.9399"
                       step="0.0001"
+                      required
                     />
                   </div>
                 </div>
