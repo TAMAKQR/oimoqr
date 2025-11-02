@@ -31,6 +31,18 @@ const RestaurantSettingsPage = () => {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [logoUploadProgress, setLogoUploadProgress] = useState(0);
 
+  // Delivery locations state
+  const [deliveryLocations, setDeliveryLocations] = useState([]);
+  const [loadingLocations, setLoadingLocations] = useState(false);
+  const [newLocation, setNewLocation] = useState({
+    name: '',
+    address: '',
+    latitude: '',
+    longitude: '',
+    whatsapp: ''
+  });
+  const [showAddLocation, setShowAddLocation] = useState(false);
+
   // Available currencies
   const currencies = [
     { symbol: '₽', name: 'Российский рубль', code: 'RUB' },
@@ -70,11 +82,73 @@ const RestaurantSettingsPage = () => {
         setDeliveryEnabled(r.deliveryEnabled || false);
         setDeliveryFee(r.deliveryFee || '');
         setMinOrderAmount(r.minOrderAmount || '');
+        
+        await loadDeliveryLocations(r.id);
       }
     } catch (err) {
       console.error('Error loading data:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadDeliveryLocations = async (restaurantId) => {
+    try {
+      setLoadingLocations(true);
+      const response = await fetch(`/api/restaurants/${restaurantId}/delivery-locations`);
+      const locations = await response.json();
+      setDeliveryLocations(locations);
+    } catch (err) {
+      console.error('Error loading delivery locations:', err);
+    } finally {
+      setLoadingLocations(false);
+    }
+  };
+
+  const handleAddLocation = async () => {
+    if (!newLocation.name || !newLocation.address || !newLocation.whatsapp) {
+      alert('Заполните все обязательные поля');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/restaurants/${userData.restaurant.id}/delivery-locations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newLocation)
+      });
+
+      if (response.ok) {
+        setNewLocation({ name: '', address: '', latitude: '', longitude: '', whatsapp: '' });
+        setShowAddLocation(false);
+        await loadDeliveryLocations(userData.restaurant.id);
+        alert('Точка добавлена');
+      } else {
+        alert('Ошибка при добавлении точки');
+      }
+    } catch (err) {
+      alert('Ошибка при добавлении точки');
+      console.error(err);
+    }
+  };
+
+  const handleDeleteLocation = async (locationId) => {
+    if (!confirm('Удалить эту точку доставки?')) return;
+
+    try {
+      const response = await fetch(`/api/restaurants/${userData.restaurant.id}/delivery-locations/${locationId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        await loadDeliveryLocations(userData.restaurant.id);
+        alert('Точка удалена');
+      } else {
+        alert('Ошибка при удалении точки');
+      }
+    } catch (err) {
+      alert('Ошибка при удалении точки');
+      console.error(err);
     }
   };
 
@@ -528,6 +602,128 @@ const RestaurantSettingsPage = () => {
                 </>
               )}
             </div>
+          </div>
+
+          {/* Delivery Locations */}
+          <div className="card">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Точки доставки</h2>
+              <button
+                type="button"
+                onClick={() => setShowAddLocation(!showAddLocation)}
+                className="btn-primary text-sm"
+              >
+                {showAddLocation ? '✕ Отмена' : '+ Добавить точку'}
+              </button>
+            </div>
+
+            {showAddLocation && (
+              <div className="bg-gray-50 p-4 rounded-lg mb-4 space-y-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Название точки *</label>
+                  <input
+                    type="text"
+                    value={newLocation.name}
+                    onChange={(e) => setNewLocation({ ...newLocation, name: e.target.value })}
+                    className="input w-full"
+                    placeholder="Филиал на Абая"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Адрес *</label>
+                  <input
+                    type="text"
+                    value={newLocation.address}
+                    onChange={(e) => setNewLocation({ ...newLocation, address: e.target.value })}
+                    className="input w-full"
+                    placeholder="г. Алматы, ул. Абая 123"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Широта</label>
+                    <input
+                      type="number"
+                      value={newLocation.latitude}
+                      onChange={(e) => setNewLocation({ ...newLocation, latitude: e.target.value })}
+                      className="input w-full"
+                      placeholder="43.2350"
+                      step="0.0001"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Долгота</label>
+                    <input
+                      type="number"
+                      value={newLocation.longitude}
+                      onChange={(e) => setNewLocation({ ...newLocation, longitude: e.target.value })}
+                      className="input w-full"
+                      placeholder="76.9399"
+                      step="0.0001"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">WhatsApp для менеджера *</label>
+                  <input
+                    type="tel"
+                    value={newLocation.whatsapp}
+                    onChange={(e) => setNewLocation({ ...newLocation, whatsapp: e.target.value })}
+                    className="input w-full"
+                    placeholder="+77771234567"
+                    required
+                  />
+                </div>
+
+                <button type="button" onClick={handleAddLocation} className="btn-primary w-full">
+                  Добавить точку
+                </button>
+              </div>
+            )}
+
+            {loadingLocations ? (
+              <div className="text-center py-8 text-gray-500">Загрузка...</div>
+            ) : deliveryLocations.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                Не добавлено ни одной точки доставки
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b-2 border-gray-200">
+                      <th className="text-left py-3 px-2">Название</th>
+                      <th className="text-left py-3 px-2">Адрес</th>
+                      <th className="text-left py-3 px-2">WhatsApp</th>
+                      <th className="text-center py-3 px-2">Действия</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {deliveryLocations.map((location) => (
+                      <tr key={location.id} className="border-b border-gray-200 hover:bg-gray-50">
+                        <td className="py-3 px-2 font-medium">{location.name}</td>
+                        <td className="py-3 px-2 text-sm text-gray-600">{location.address}</td>
+                        <td className="py-3 px-2 text-sm">{location.whatsapp}</td>
+                        <td className="py-3 px-2 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteLocation(location.id)}
+                            className="text-red-600 hover:text-red-800 text-sm font-medium"
+                          >
+                            Удалить
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           {/* Save Button */}
