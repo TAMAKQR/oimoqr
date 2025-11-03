@@ -77,12 +77,12 @@ app.use('/uploads', express.static(join(__dirname, '../uploads')));
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api', deliveryLocationsRoutes);
 app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/dishes', dishRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/orders', ordersRoutes);
-app.use('/api', deliveryLocationsRoutes);
 
 // Health check route
 app.get('/health', (req, res) => {
