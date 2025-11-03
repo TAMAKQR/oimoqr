@@ -4,6 +4,8 @@ import { useAuthStore } from '../store/authStore';
 import { authService } from '../services/authService';
 import { restaurantService } from '../services/restaurantService';
 
+const API_URL = import.meta.env.VITE_API_URL || '/api';
+
 const RestaurantSettingsPage = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
@@ -95,7 +97,7 @@ const RestaurantSettingsPage = () => {
   const loadDeliveryLocations = async (restaurantId) => {
     try {
       setLoadingLocations(true);
-      const response = await fetch(`/api/restaurants/${restaurantId}/delivery-locations`);
+      const response = await fetch(`${API_URL}/restaurants/${restaurantId}/delivery-locations`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -115,7 +117,7 @@ const RestaurantSettingsPage = () => {
     }
 
     try {
-      const response = await fetch(`/api/restaurants/${userData.restaurant.id}/delivery-locations`, {
+      const response = await fetch(`${API_URL}/restaurants/${userData.restaurant.id}/delivery-locations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newLocation)
@@ -141,7 +143,7 @@ const RestaurantSettingsPage = () => {
     if (!confirm('Удалить эту точку доставки?')) return;
 
     try {
-      const response = await fetch(`/api/restaurants/${userData.restaurant.id}/delivery-locations/${locationId}`, {
+      const response = await fetch(`${API_URL}/restaurants/${userData.restaurant.id}/delivery-locations/${locationId}`, {
         method: 'DELETE'
       });
 
