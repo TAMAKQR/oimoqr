@@ -12,7 +12,8 @@
     "backup": "node create-backup.js"
   },
   "dependencies": {
-    "archiver": "^7.0.1"
+    "archiver": "^7.0.1",
+    "postgres": "^3.4.7"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
