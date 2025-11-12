@@ -1,74 +1,114 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../config/prisma.js';
 import bcrypt from 'bcryptjs';
 import { calculateSubscriptionEndDate } from '../utils/subscription.js';
 import { sendSubscriptionActivatedEmail } from '../utils/email.js';
 
-const prisma = new PrismaClient();
 
-export const getAllRestaurants = async (req, res, next) => {
+
+export const updateUserSubscription = async (req, res, next) => {
   try {
-    const restaurants = await prisma.restaurant.findMany({
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            phone: true
-          }
-        },
-        subscription: true,
-        _count: {
-          select: {
-            categories: true
-          }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
+    const { userId } = req.params;
+    const { pricingTierId, status } = req.body;
 
-    res.json(restaurants);
-  } catch (error) {
-    next(error);
-  }
-};
+    console.log('Admin updating user subscription:', { userId, pricingTierId, status });
 
-export const getRestaurantById = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-
-    const restaurant = await prisma.restaurant.findUnique({
-      where: { id },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            phone: true
-          }
-        },
-        subscription: true,
-        categories: {
-          include: {
-            _count: {
-              select: {
-                dishes: true
-              }
-            }
-          }
-        }
-      }
-    });
-
-    if (!restaurant) {
-      return res.status(404).json({ error: 'Restaurant not found' });
+    // Validate input
+    if (!pricingTierId && !status) {
+      return res.status(400).json({ error: 'pricingTierId or status is required' });
     }
 
-    res.json(restaurant);
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        subscriptions: true,
+        restaurants: true
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (!user.restaurants || user.restaurants.length === 0) {
+      return res.status(404).json({ error: 'User has no restaurants' });
+    }
+
+    let updateData = {};
+
+    // If activating a pricing tier
+    if (pricingTierId) {
+      const pricingTier = await prisma.pricingTier.findUnique({
+        where: { id: pricingTierId }
+      });
+
+      if (!pricingTier) {
+        return res.status(404).json({ error: 'Pricing tier not found' });
+      }
+
+      // Проверяем, не превышает ли количество ресторанов лимит нового тарифа
+      const restaurantCount = user.restaurants.length;
+      if (pricingTier.maxRestaurants && restaurantCount > pricingTier.maxRestaurants) {
+        return res.status(400).json({ 
+          error: `Невозможно применить тариф "${pricingTier.name}". У пользователя ${restaurantCount} ресторанов, а тариф позволяет только ${pricingTier.maxRestaurants}. Сначала нужно удалить лишние рестораны.`
+        });
+      }
+
+      // Default to 30 days for subscription
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + 30);
+
+      updateData = {
+        plan: pricingTier.name,
+        status: 'ACTIVE',
+        pricingTierId,
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: endDate
+      };
+
+      console.log('Activating pricing tier:', updateData);
+
+      // Send activation email (don't fail if email fails)
+      try {
+        await sendSubscriptionActivatedEmail(user.email, user.name, pricingTier.name);
+      } catch (emailError) {
+        console.error('Failed to send activation email:', emailError);
+      }
+    } else if (status) {
+      updateData.status = status;
+    }
+
+    // Сначала удалим все существующие подписки пользователя
+    await prisma.subscription.deleteMany({
+      where: {
+        userId
+      }
+    });
+
+    // Создаем новые подписки для всех ресторанов пользователя
+    const subscriptions = await Promise.all(user.restaurants.map(restaurant => 
+      prisma.subscription.create({
+        data: {
+          userId,
+          restaurantId: restaurant.id,
+          ...updateData
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              name: true
+            }
+          },
+          pricingTier: true
+        }
+      })
+    ));
+
+    console.log('Subscriptions updated successfully:', subscriptions.map(s => s.id).join(', '));
+    res.json(subscriptions[0]); // Возвращаем первую подписку для обратной совместимости
   } catch (error) {
+    console.error('Error in updateUserSubscription:', error);
     next(error);
   }
 };
@@ -76,23 +116,20 @@ export const getRestaurantById = async (req, res, next) => {
 export const updateSubscription = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { plan, status } = req.body;
+    const { plan, status, pricingTierId } = req.body;
 
-    console.log('Admin updating subscription:', { id, plan, status });
+    console.log('Admin updating subscription:', { id, plan, status, pricingTierId });
 
     // Validate input
-    if (!plan && !status) {
-      return res.status(400).json({ error: 'Plan or status is required' });
+    if (!plan && !status && !pricingTierId) {
+      return res.status(400).json({ error: 'Plan, status or pricingTierId is required' });
     }
 
     const subscription = await prisma.subscription.findUnique({
       where: { id },
       include: {
-        restaurant: {
-          include: {
-            user: true
-          }
-        }
+        user: true,
+        pricingTier: true
       }
     });
 
@@ -102,8 +139,52 @@ export const updateSubscription = async (req, res, next) => {
 
     let updateData = {};
 
-    // If activating a paid plan
-    if (plan && (plan === 'MONTHLY' || plan === 'YEARLY')) {
+    // If activating a pricing tier
+    if (pricingTierId) {
+      const pricingTier = await prisma.pricingTier.findUnique({
+        where: { id: pricingTierId }
+      });
+
+      if (!pricingTier) {
+        return res.status(404).json({ error: 'Pricing tier not found' });
+      }
+
+      // Проверяем количество ресторанов пользователя
+      const user = await prisma.user.findUnique({
+        where: { id: subscription.userId },
+        include: { restaurants: true }
+      });
+
+      // Проверяем, не превышает ли количество ресторанов лимит нового тарифа
+      if (user && pricingTier.maxRestaurants && user.restaurants.length > pricingTier.maxRestaurants) {
+        return res.status(400).json({ 
+          error: `Невозможно применить тариф "${pricingTier.name}". У пользователя ${user.restaurants.length} ресторанов, а тариф позволяет только ${pricingTier.maxRestaurants}. Сначала нужно удалить лишние рестораны.`
+        });
+      }
+
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + 30);
+
+      updateData = {
+        plan: pricingTier.name,
+        status: 'ACTIVE',
+        pricingTierId,
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: endDate
+      };
+
+      console.log('Activating pricing tier:', updateData);
+
+      try {
+        await sendSubscriptionActivatedEmail(
+          subscription.user.email,
+          subscription.user.name,
+          pricingTier.name
+        );
+      } catch (emailError) {
+        console.error('Failed to send activation email:', emailError);
+      }
+    } else if (plan && (plan === 'MONTHLY' || plan === 'YEARLY')) {
       const endDate = calculateSubscriptionEndDate(plan);
       updateData = {
         plan,
@@ -114,38 +195,31 @@ export const updateSubscription = async (req, res, next) => {
 
       console.log('Activating paid plan:', updateData);
 
-      // Send activation email (don't fail if email fails)
       try {
         await sendSubscriptionActivatedEmail(
-          subscription.restaurant.user.email,
-          subscription.restaurant.user.name,
+          subscription.user.email,
+          subscription.user.name,
           plan
         );
       } catch (emailError) {
         console.error('Failed to send activation email:', emailError);
-        // Continue anyway
       }
     } else if (status) {
-      // Just update status
       updateData.status = status;
-      console.log('Updating status only:', updateData);
     }
 
     const updatedSubscription = await prisma.subscription.update({
       where: { id },
       data: updateData,
       include: {
-        restaurant: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                email: true,
-                name: true
-              }
-            }
+        user: {
+          select: {
+            id: true,
+            email: true,
+            name: true
           }
-        }
+        },
+        pricingTier: true
       }
     });
 
@@ -311,6 +385,259 @@ export const updateUserCredentials = async (req, res, next) => {
     });
   } catch (error) {
     console.error('Error in updateUserCredentials:', error);
+    next(error);
+  }
+};
+
+export const deactivateUser = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+
+    // Проверяем существование пользователя
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { restaurants: true }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+
+    if (user.isAdmin) {
+      return res.status(403).json({ error: 'Невозможно деактивировать администратора' });
+    }
+
+    // Обновляем статус всех подписок пользователя на CANCELLED
+    await prisma.subscription.updateMany({
+      where: { userId },
+      data: { 
+        status: 'CANCELLED',
+        currentPeriodEnd: new Date() // Немедленное окончание подписки
+      }
+    });
+
+    res.json({ message: 'Пользователь успешно деактивирован' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteUser = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+
+    // Проверяем существование пользователя
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { restaurants: true }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+
+    if (user.isAdmin) {
+      return res.status(403).json({ error: 'Невозможно удалить администратора' });
+    }
+
+    // Удаляем пользователя (каскадное удаление затронет все связанные данные)
+    await prisma.user.delete({
+      where: { id: userId }
+    });
+
+    res.json({ message: 'Пользователь и все его данные успешно удалены' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getAllUsers = async (req, res, next) => {
+  try {
+    const users = await prisma.user.findMany({
+      where: {
+        isAdmin: false
+      },
+      // Оптимизированный запрос: выбираем только то, что нужно для таблицы
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phone: true,
+        createdAt: true,
+        // Включаем все рестораны, которыми владеет пользователь
+        restaurants: {
+          select: {
+            id: true,
+            name: true,
+            subdomain: true
+          }
+        },
+        // Включаем все подписки пользователя с информацией о тарифе
+        subscriptions: {
+          select: {
+            status: true,
+            plan: true,
+            currentPeriodEnd: true,
+            pricingTier: {
+              select: {
+                name: true,
+                maxRestaurants: true
+              }
+            }
+          }
+        },
+        // Считаем количество ресторанов, которыми владеет пользователь
+        _count: {
+          select: {
+            restaurants: true
+          }
+        }
+      }
+    });
+
+    res.json(users);
+  } catch (error) {
+    console.error('Error getting users:', error);
+    next(error);
+  }
+};
+
+export const getPricingTiers = async (req, res, next) => {
+  try {
+    const tiers = await prisma.pricingTier.findMany({
+      orderBy: { order: 'asc' }
+    });
+
+    res.json(tiers);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const createPricingTier = async (req, res, next) => {
+  try {
+    const { name, price, description, features, maxRestaurants, order } = req.body;
+
+    if (!name || price === undefined) {
+      return res.status(400).json({ error: 'Name and price are required' });
+    }
+
+    if (price < 0) {
+      return res.status(400).json({ error: 'Price must be >= 0' });
+    }
+
+    const tier = await prisma.pricingTier.create({
+      data: {
+        name,
+        price: parseFloat(price),
+        description,
+        features,
+        maxRestaurants: maxRestaurants ? parseInt(maxRestaurants) : null,
+        order: order || 0
+      }
+    });
+
+    res.status(201).json({
+      message: 'Pricing tier created successfully',
+      tier
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updatePricingTier = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { name, price, description, features, maxRestaurants, order, isActive } = req.body;
+
+    if (!name || price === undefined) {
+      return res.status(400).json({ error: 'Name and price are required' });
+    }
+
+    if (price < 0) {
+      return res.status(400).json({ error: 'Price must be >= 0' });
+    }
+
+    const tier = await prisma.pricingTier.update({
+      where: { id },
+      data: {
+        name,
+        price: parseFloat(price),
+        description,
+        features,
+        maxRestaurants: maxRestaurants ? parseInt(maxRestaurants) : null,
+        order: order || 0,
+        isActive
+      }
+    });
+
+    res.json({
+      message: 'Pricing tier updated successfully',
+      tier
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deletePricingTier = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    await prisma.pricingTier.delete({
+      where: { id }
+    });
+
+    res.json({ message: 'Pricing tier deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getTrialConfig = async (req, res, next) => {
+  try {
+    const trialDays = parseInt(process.env.TRIAL_PERIOD_DAYS) || 7;
+    res.json({ days: trialDays });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateTrialConfig = async (req, res, next) => {
+  try {
+    const { name, days, message } = req.body;
+
+    if (!days || days < 1) {
+      return res.status(400).json({ error: 'Days must be >= 1' });
+    }
+
+    let config = await prisma.trialConfig.findFirst();
+
+    if (!config) {
+      config = await prisma.trialConfig.create({
+        data: {
+          name: name || 'Пробный период',
+          days: parseInt(days),
+          message: message || 'Вы получите пробный период'
+        }
+      });
+    } else {
+      config = await prisma.trialConfig.update({
+        where: { id: config.id },
+        data: {
+          name: name || config.name,
+          days: parseInt(days),
+          message: message || config.message
+        }
+      });
+    }
+
+    res.json({
+      message: 'Trial config updated successfully',
+      config
+    });
+  } catch (error) {
     next(error);
   }
 };

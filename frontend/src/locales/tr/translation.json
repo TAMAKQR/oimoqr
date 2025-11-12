@@ -1,0 +1,97 @@
+{
+  "common": {
+    "oimoqr": "OimoQR",
+    "login": "Giriş",
+    "register": "Kaydol",
+    "logout": "Çıkış",
+    "dashboard": "Kontrol Paneli",
+    "settings": "Ayarlar",
+    "admin": "Yönetici",
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "delete": "Sil",
+    "edit": "Düzenle",
+    "add": "Ekle",
+    "yes": "Evet",
+    "no": "Hayır",
+    "loading": "Yükleniyor...",
+    "error": "Hata",
+    "success": "Başarılı",
+    "language": "Dil"
+  },
+  "home": {
+    "title": "Restoranınız için Dijital Menü",
+    "subtitle": "5 dakikada modern QR menü oluşturun. Programcı veya tasarımcıya ihtiyaç yok.",
+    "cta": "7 Gün Ücretsiz Deneyin",
+    "features": {
+      "qrmenu": "QR Menü",
+      "qrmenuDesc": "Konuklar QR kodu tarayarak kendi telefonlarında menünüzü görürler",
+      "whatsapp": "WhatsApp Siparişleri",
+      "whatsappDesc": "Müşteriler menüden doğrudan sipariş verir ve WhatsApp'a gönderirler",
+      "realtime": "Gerçek Zamanlı Güncelleme",
+      "realtimeDesc": "Yeni menüleri bastırmadan fiyatları ve yemekleri gerçek zamanlı olarak değiştirin"
+    },
+    "capabilities": {
+      "title": "Özellikler",
+      "banner": "Promosyonlar ve özel teklifler için afiş kaydırıcı",
+      "categories": "Fotoğraf ve açıklama içeren yemek kategorileri",
+      "modifiers": "Değiştiriciler (boyutlar, ekstralar, soslar)",
+      "social": "Sosyal medya entegrasyonu",
+      "subdomain": "Restoranınız için benzersiz alt alan adı",
+      "trial": "7 günlük ücretsiz deneme süresi"
+    },
+    "footer": "© 2024 OimoQR. Tüm hakları saklıdır."
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Parola",
+    "confirmPassword": "Parolayı Onayla",
+    "restaurantName": "Restoran Adı",
+    "subdomain": "Alt Alan Adı",
+    "loginTitle": "Hesabınıza Giriş Yapın",
+    "registerTitle": "Hesap Oluştur",
+    "signIn": "Giriş",
+    "signUp": "Kaydol",
+    "noAccount": "Hesabınız yok mu?",
+    "haveAccount": "Zaten hesabınız var mı?",
+    "invalidEmail": "Geçersiz email",
+    "passwordMismatch": "Parolalar eşleşmiyor",
+    "fillAllFields": "Lütfen tüm alanları doldurun"
+  },
+  "menu": {
+    "title": "Menü",
+    "categories": "Kategoriler",
+    "dishes": "Yemekler",
+    "addCategory": "Kategori Ekle",
+    "addDish": "Yemek Ekle",
+    "categoryName": "Kategori Adı",
+    "dishName": "Yemek Adı",
+    "description": "Açıklama",
+    "price": "Fiyat",
+    "image": "Görüntü",
+    "uploadImage": "Görüntü Yükle",
+    "modifiers": "Değiştiriciler",
+    "noMenu": "Menü boş"
+  },
+  "restaurant": {
+    "settings": "Restoran Ayarları",
+    "name": "Restoran Adı",
+    "subdomain": "Alt Alan Adı",
+    "phone": "Telefon",
+    "address": "Adres",
+    "instagram": "Instagram",
+    "facebook": "Facebook",
+    "telegram": "Telegram",
+    "currency": "Para Birimi",
+    "deliveryInfo": "Teslimat Bilgileri",
+    "banner": "Afiş",
+    "uploadBanner": "Afiş Yükle"
+  },
+  "admin": {
+    "title": "Yönetici",
+    "restaurants": "Restoranlar",
+    "subscriptions": "Abonelikler",
+    "users": "Kullanıcılar",
+    "statistics": "İstatistikler"
+  }
+}

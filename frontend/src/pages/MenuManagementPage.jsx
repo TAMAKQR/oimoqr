@@ -3,11 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../services/authService';
 import { menuService } from '../services/menuService';
+import { restaurantService } from '../services/restaurantService';
+import toast from 'react-hot-toast';
+import RestaurantSelector from '../components/RestaurantSelector';
+import DashboardLayout from '../components/DashboardLayout';
 
 const MenuManagementPage = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const [userData, setUserData] = useState(null);
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState(null);
   const [categories, setCategories] = useState([]);
   const [dishes, setDishes] = useState({});
   const [loading, setLoading] = useState(true);
@@ -18,19 +23,56 @@ const MenuManagementPage = () => {
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [expandedCategories, setExpandedCategories] = useState(new Set());
   const [currency, setCurrency] = useState('₽');
+  const [showCopyModal, setShowCopyModal] = useState(false);
+  const [sourceRestaurantId, setSourceRestaurantId] = useState('');
+  const [copying, setCopying] = useState(false);
+  const [copyError, setCopyError] = useState('');
+  const [draggedCategoryId, setDraggedCategoryId] = useState(null);
+  const [draggedDishId, setDraggedDishId] = useState(null);
+  const [dragOverCategoryId, setDragOverCategoryId] = useState(null);
+  const [dragOverDishId, setDragOverDishId] = useState(null);
 
   useEffect(() => {
     loadData();
   }, []);
 
+  // Автоматически выбираем первый ресторан при загрузке
+  useEffect(() => {
+    if (userData && !selectedRestaurantId && (userData.restaurants?.length > 0 || userData.restaurantStaff?.length > 0)) {
+      const allRestaurants = [
+        ...(userData.restaurants || []),
+        ...(userData.restaurantStaff?.map(s => s.restaurant) || [])
+      ];
+      if (allRestaurants.length > 0) {
+        setSelectedRestaurantId(allRestaurants[0].id);
+      }
+    }
+  }, [userData]);
+
+  useEffect(() => {
+    if (userData && selectedRestaurantId) {
+      const restaurant = getSelectedRestaurant();
+      if (restaurant) {
+        setCurrency(restaurant.currency || '₽');
+        loadCategories(selectedRestaurantId);
+      }
+    }
+  }, [selectedRestaurantId]);
+
+  const getSelectedRestaurant = () => {
+    if (!userData || !selectedRestaurantId) return null;
+    
+    const owned = userData.restaurants?.find(r => r.id === selectedRestaurantId);
+    if (owned) return owned;
+    
+    const staff = userData.restaurantStaff?.find(s => s.restaurant.id === selectedRestaurantId);
+    return staff?.restaurant || null;
+  };
+
   const loadData = async () => {
     try {
       const data = await authService.getMe();
       setUserData(data);
-      if (data.restaurant) {
-        setCurrency(data.restaurant.currency || '₽');
-        await loadCategories(data.restaurant.id);
-      }
     } catch (err) {
       console.error('Error loading data:', err);
     } finally {
@@ -91,6 +133,28 @@ const MenuManagementPage = () => {
     setShowCategoryModal(true);
   };
 
+  const handleCopyMenu = async () => {
+    if (!sourceRestaurantId) {
+      setCopyError('Выберите ресторан-источник');
+      return;
+    }
+
+    setCopying(true);
+    setCopyError('');
+
+    try {
+      await restaurantService.copyMenu(selectedRestaurantId, sourceRestaurantId);
+      setShowCopyModal(false);
+      setSourceRestaurantId('');
+      await loadCategories(selectedRestaurantId);
+    } catch (err) {
+      setCopyError(err.message || 'Ошибка при копировании меню');
+      toast.error(err.message || 'Ошибка при копировании меню');
+    } finally {
+      setCopying(false);
+    }
+  };
+
   const handleEditCategory = (category) => {
     setEditingCategory(category);
     setShowCategoryModal(true);
@@ -101,9 +165,9 @@ const MenuManagementPage = () => {
     
     try {
       await menuService.deleteCategory(categoryId);
-      await loadCategories(userData.restaurant.id);
+      await loadCategories(selectedRestaurantId);
     } catch (err) {
-      alert('Ошибка при удалении категории');
+      toast.error('Ошибка при удалении категории');
       console.error(err);
     }
   };
@@ -125,20 +189,133 @@ const MenuManagementPage = () => {
     
     try {
       await menuService.deleteDish(dishId);
-      await loadCategories(userData.restaurant.id);
+      await loadCategories(selectedRestaurantId);
     } catch (err) {
-      alert('Ошибка при удалении блюда');
+      toast.error('Ошибка при удалении блюда');
       console.error(err);
     }
   };
 
   const handleToggleAvailability = async (dishId) => {
     try {
+      const dishToUpdate = Object.values(dishes)
+        .flat()
+        .find(d => d.id === dishId);
+      
+      if (!dishToUpdate) return;
+
+      const previousState = { ...dishes };
+      const updatedDishes = { ...dishes };
+      
+      Object.keys(updatedDishes).forEach(categoryId => {
+        updatedDishes[categoryId] = updatedDishes[categoryId].map(dish => 
+          dish.id === dishId ? { ...dish, available: !dish.available } : dish
+        );
+      });
+
+      setDishes(updatedDishes);
+
       await menuService.toggleDishAvailability(dishId);
-      await loadCategories(userData.restaurant.id);
+      await loadCategories(selectedRestaurantId);
     } catch (err) {
-      alert('Ошибка при изменении статуса блюда');
+      toast.error('Ошибка при изменении статуса блюда');
+      await loadCategories(selectedRestaurantId);
       console.error(err);
+    }
+  };
+
+  const handleCategoryDragStart = (e, categoryId) => {
+    setDraggedCategoryId(categoryId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleCategoryDragOver = (e, categoryId) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverCategoryId(categoryId);
+  };
+
+  const handleCategoryDragLeave = () => {
+    setDragOverCategoryId(null);
+  };
+
+  const handleCategoryDrop = async (e, dropCategoryId) => {
+    e.preventDefault();
+    setDragOverCategoryId(null);
+    
+    if (!draggedCategoryId || draggedCategoryId === dropCategoryId) {
+      setDraggedCategoryId(null);
+      return;
+    }
+
+    try {
+      const draggedIndex = categories.findIndex(c => c.id === draggedCategoryId);
+      const dropIndex = categories.findIndex(c => c.id === dropCategoryId);
+      
+      if (draggedIndex === -1 || dropIndex === -1) return;
+
+      const newCategories = [...categories];
+      const [removed] = newCategories.splice(draggedIndex, 1);
+      newCategories.splice(dropIndex, 0, removed);
+
+      setCategories(newCategories);
+
+      const categoryIds = newCategories.map(c => c.id);
+      await menuService.reorderCategories(selectedRestaurantId, categoryIds);
+      } catch (err) {
+      toast.error('Ошибка при перемещении категории');
+      console.error(err);
+      await loadCategories(selectedRestaurantId);
+    } finally {
+      setDraggedCategoryId(null);
+    }
+  };
+
+  const handleDishDragStart = (e, dishId) => {
+    setDraggedDishId(dishId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDishDragOver = (e, dishId) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverDishId(dishId);
+  };
+
+  const handleDishDragLeave = () => {
+    setDragOverDishId(null);
+  };
+
+  const handleDishDrop = async (e, dropDishId, categoryId) => {
+    e.preventDefault();
+    setDragOverDishId(null);
+    
+    if (!draggedDishId || draggedDishId === dropDishId) {
+      setDraggedDishId(null);
+      return;
+    }
+
+    try {
+      const categoryDishes = dishes[categoryId];
+      const draggedIndex = categoryDishes.findIndex(d => d.id === draggedDishId);
+      const dropIndex = categoryDishes.findIndex(d => d.id === dropDishId);
+      
+      if (draggedIndex === -1 || dropIndex === -1) return;
+
+      const newDishes = [...categoryDishes];
+      const [removed] = newDishes.splice(draggedIndex, 1);
+      newDishes.splice(dropIndex, 0, removed);
+
+      setDishes({ ...dishes, [categoryId]: newDishes });
+
+      const dishIds = newDishes.map(d => d.id);
+      await menuService.reorderDishes(categoryId, dishIds);
+    } catch (err) {
+      toast.error('Ошибка при перемещении блюда');
+      console.error(err);
+      await loadCategories(selectedRestaurantId);
+    } finally {
+      setDraggedDishId(null);
     }
   };
 
@@ -151,32 +328,34 @@ const MenuManagementPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <nav className="bg-white shadow-sm">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <button onClick={() => navigate('/dashboard')} className="text-gray-600 hover:text-gray-900">
-              ← Назад
-            </button>
-            <h1 className="text-2xl font-bold text-primary-600">Управление меню</h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-gray-600">{user?.name}</span>
-            <button onClick={handleLogout} className="btn-secondary">
-              Выход
-            </button>
-          </div>
+    <DashboardLayout userData={userData} selectedRestaurantId={selectedRestaurantId}>
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-center gap-4 mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold">Управление меню</h1>
         </div>
-      </nav>
+        {/* Restaurant Selector */}
+        {userData && (
+          <div className="mb-8">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Выберите ресторан</label>
+            <RestaurantSelector
+              userData={userData}
+              selectedRestaurantId={selectedRestaurantId}
+              onSelectRestaurant={setSelectedRestaurantId}
+            />
+          </div>
+        )}
 
-      <div className="container mx-auto px-4 py-8">
         {/* Add Category Button */}
-        <div className="mb-6 flex justify-between items-center">
+        <div className="mb-6 flex justify-between items-center gap-2 flex-wrap">
           <h2 className="text-2xl font-bold">Категории и блюда</h2>
-          <button onClick={handleAddCategory} className="btn-primary">
-            + Добавить категорию
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => setShowCopyModal(true)} className="btn-secondary">
+              📋 Копировать меню
+            </button>
+            <button onClick={handleAddCategory} className="btn-primary">
+              + Добавить категорию
+            </button>
+          </div>
         </div>
 
         {/* Categories List */}
@@ -192,7 +371,15 @@ const MenuManagementPage = () => {
         ) : (
           <div className="space-y-4">
             {categories.map((category) => (
-              <div key={category.id} className="card">
+              <div 
+                key={category.id} 
+                className={`card cursor-move transition-all ${draggedCategoryId === category.id ? 'opacity-50' : ''} ${dragOverCategoryId === category.id ? 'border-2 border-blue-500 bg-blue-50' : ''}`}
+                draggable
+                onDragStart={(e) => handleCategoryDragStart(e, category.id)}
+                onDragOver={(e) => handleCategoryDragOver(e, category.id)}
+                onDragLeave={handleCategoryDragLeave}
+                onDrop={(e) => handleCategoryDrop(e, category.id)}
+              >
                 {/* Category Header - Desktop: flex row, Mobile: flex column */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -241,30 +428,42 @@ const MenuManagementPage = () => {
                       dishes[category.id]?.map((dish) => (
                         <div
                           key={dish.id}
-                          className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100"
+                          className={`p-3 rounded-lg cursor-move transition-all ${draggedDishId === dish.id ? 'opacity-50' : ''} ${dragOverDishId === dish.id ? 'bg-blue-100 border-2 border-blue-400' : 'bg-gray-50 hover:bg-gray-100'}`}
+                          draggable
+                          onDragStart={(e) => handleDishDragStart(e, dish.id)}
+                          onDragOver={(e) => handleDishDragOver(e, dish.id)}
+                          onDragLeave={handleDishDragLeave}
+                          onDrop={(e) => handleDishDrop(e, dish.id, category.id)}
                         >
                           {/* Desktop: flex row, Mobile: flex column */}
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                             {/* Dish Info */}
                             <div className="flex items-center gap-3 flex-1 min-w-0">
-                              {dish.imageUrl ? (
-                                <img
-                                  src={dish.imageUrl}
-                                  alt={dish.name}
-                                  className="w-16 h-16 flex-shrink-0 object-cover rounded border-2 border-green-500"
-                                  title="Фото загружено"
-                                />
-                              ) : (
-                                <div className="w-16 h-16 flex-shrink-0 bg-gray-200 rounded flex items-center justify-center border-2 border-gray-300" title="Фото отсутствует">
-                                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                  </svg>
-                                </div>
-                              )}
+                              <div className="relative w-16 h-16 flex-shrink-0">
+                                {dish.imageUrl ? (
+                                  <img
+                                    src={dish.imageUrl}
+                                    alt={dish.name}
+                                    className="w-16 h-16 object-cover rounded border-2 border-green-500"
+                                    title="Фото загружено"
+                                  />
+                                ) : (
+                                  <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center border-2 border-gray-300" title="Фото отсутствует">
+                                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                  </div>
+                                )}
+                                {dish.badge && (
+                                  <div className="absolute top-0 left-0 bg-gradient-to-br from-orange-400 to-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-tl rounded-br shadow-lg">
+                                    {dish.badge}
+                                  </div>
+                                )}
+                              </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <h4 className="font-medium break-words">{dish.name}</h4>
-                                  {!dish.isAvailable && (
+                                  {!dish.available && (
                                     <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded whitespace-nowrap">
                                       СТОП
                                     </span>
@@ -284,11 +483,11 @@ const MenuManagementPage = () => {
                               <button
                                 onClick={() => handleToggleAvailability(dish.id)}
                                 className={`btn-secondary text-sm flex-1 sm:flex-initial ${
-                                  !dish.isAvailable ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                  !dish.available ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'
                                 }`}
-                                title={dish.isAvailable ? 'Поставить на стоп' : 'Вернуть в меню'}
+                                title={dish.available ? 'Поставить на стоп' : 'Вернуть в меню'}
                               >
-                                {dish.isAvailable ? '✓' : '⏸'}
+                                {dish.available ? '✓' : '⏸'}
                               </button>
                               <button
                                 onClick={() => handleEditDish(dish)}
@@ -316,20 +515,20 @@ const MenuManagementPage = () => {
       </div>
 
       {/* Category Modal */}
-      {showCategoryModal && (
+      {showCategoryModal && selectedRestaurantId && (
         <CategoryModal
           category={editingCategory}
-          restaurantId={userData.restaurant.id}
+          restaurantId={selectedRestaurantId}
           onClose={() => setShowCategoryModal(false)}
           onSave={() => {
             setShowCategoryModal(false);
-            loadCategories(userData.restaurant.id);
+            loadCategories(selectedRestaurantId);
           }}
         />
       )}
 
       {/* Dish Modal */}
-      {showDishModal && (
+      {showDishModal && selectedRestaurantId && (
         <DishModal
           dish={editingDish}
           categoryId={selectedCategoryId}
@@ -337,26 +536,92 @@ const MenuManagementPage = () => {
           onClose={() => setShowDishModal(false)}
           onSave={() => {
             setShowDishModal(false);
-            loadCategories(userData.restaurant.id);
+            loadCategories(selectedRestaurantId);
           }}
         />
       )}
-    </div>
+
+      {/* Copy Menu Modal */}
+      {showCopyModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h2 className="text-xl font-bold mb-4">Копировать меню</h2>
+            
+            {copyError && (
+              <div className="bg-red-50 text-red-700 p-3 rounded mb-4 text-sm">
+                {copyError}
+              </div>
+            )}
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Выберите ресторан-источник
+              </label>
+              <select
+                value={sourceRestaurantId}
+                onChange={(e) => setSourceRestaurantId(e.target.value)}
+                className="input w-full"
+                disabled={copying}
+              >
+                <option value="">-- Выберите ресторан --</option>
+                {userData?.restaurants?.map(r => (
+                  r.id !== selectedRestaurantId && (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  )
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-2">
+                ⚠️ Существующее меню будет перезаписано
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowCopyModal(false);
+                  setSourceRestaurantId('');
+                  setCopyError('');
+                }}
+                className="btn-secondary flex-1"
+                disabled={copying}
+              >
+                Отмена
+              </button>
+              <button
+                onClick={handleCopyMenu}
+                className="btn-primary flex-1"
+                disabled={copying || !sourceRestaurantId}
+              >
+                {copying ? 'Копирование...' : 'Копировать'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </DashboardLayout>
   );
 };
 
 // Category Modal Component
 const CategoryModal = ({ category, restaurantId, onClose, onSave }) => {
   const [name, setName] = useState(category?.name || '');
-  const [sortOrder, setSortOrder] = useState(category?.sortOrder || 0);
+  const [sortOrder, setSortOrder] = useState(category?.order || 0);
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('Attempting to save category with data:', {
+      category: category ? 'editing existing' : 'creating new',
+      name,
+      order: parseInt(sortOrder),
+      restaurantId
+    });
     setSaving(true);
 
     try {
-      const data = { name, sortOrder: parseInt(sortOrder), restaurantId };
+      const data = { name, order: parseInt(sortOrder), restaurantId };
       
       if (category) {
         await menuService.updateCategory(category.id, data);
@@ -366,7 +631,7 @@ const CategoryModal = ({ category, restaurantId, onClose, onSave }) => {
       
       onSave();
     } catch (err) {
-      alert('Ошибка при сохранении категории');
+      toast.error('Ошибка при сохранении категории');
       console.error(err);
     } finally {
       setSaving(false);
@@ -439,11 +704,11 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
   const [newModifierPrice, setNewModifierPrice] = useState('');
   const [allergens, setAllergens] = useState(dish?.allergens ? JSON.parse(dish.allergens) : []);
   const [discount, setDiscount] = useState(dish?.discount || '');
+  const [badge, setBadge] = useState(dish?.badge || '');
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  // Доступные аллергены
   const availableAllergens = [
     { id: 'gluten', name: 'Глютен', icon: '🌾' },
     { id: 'dairy', name: 'Молоко', icon: '🥛' },
@@ -457,7 +722,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
 
   const toggleAllergen = (allergenId) => {
     setAllergens(prev => 
-      prev.includes(allergenId) 
+      prev.includes(allergenId)
         ? prev.filter(a => a !== allergenId)
         : [...prev, allergenId]
     );
@@ -469,22 +734,22 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
     try {
       await menuService.deleteDishImage(dish.id);
       setCurrentImageUrl(null);
-      alert('Изображение удалено');
+      toast.success('Изображение удалено');
     } catch (err) {
-      alert('Ошибка при удалении изображения');
+      toast.error('Ошибка при удалении изображения');
       console.error(err);
     }
   };
 
   const handleAddModifier = () => {
     if (!newModifierName.trim()) {
-      alert('Введите название модификатора');
+      toast.error('Введите название модификатора');
       return;
     }
 
     const modifierPrice = parseFloat(newModifierPrice) || 0;
     if (modifierPrice < 0) {
-      alert('Цена модификатора не может быть отрицательной');
+      toast.error('Цена модификатора не может быть отрицательной');
       return;
     }
 
@@ -492,6 +757,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
       id: `temp-${Date.now()}`, // Временный ID для новых модификаторов
       name: newModifierName,
       price: modifierPrice,
+      type: 'default', // Default type
       isNew: true
     };
 
@@ -512,29 +778,28 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
         await menuService.deleteModifier(modifier.id);
         setModifiers(modifiers.filter(m => m.id !== modifier.id));
       } catch (err) {
-        alert('Ошибка при удалении модификатора');
+        toast.error('Ошибка при удалении модификатора');
         console.error(err);
       }
     }
   };
 
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Validate price
     const parsedPrice = parseFloat(price);
     if (isNaN(parsedPrice) || parsedPrice < 0) {
-      alert('Цена должна быть числом больше или равным 0');
+      toast.error('Цена должна быть числом больше или равным 0');
       return;
     }
 
-    // Validate discount
     const parsedDiscount = discount ? parseInt(discount) : null;
     if (parsedDiscount !== null && (parsedDiscount < 0 || parsedDiscount > 100)) {
-      alert('Скидка должна быть от 0 до 100%');
+      toast.error('Скидка должна быть от 0 до 100%');
       return;
     }
-    
+
     setSaving(true);
 
     try {
@@ -545,8 +810,9 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
         categoryId,
         allergens: allergens.length > 0 ? JSON.stringify(allergens) : null,
         discount: parsedDiscount,
+        badge: badge || null,
       };
-      
+
       let savedDish;
       if (dish) {
         savedDish = await menuService.updateDish(dish.id, data);
@@ -576,10 +842,10 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
           price: modifier.price
         });
       }
-      
+
       onSave();
     } catch (err) {
-      alert('Ошибка при сохранении блюда');
+      toast.error('Ошибка при сохранении блюда');
       console.error(err);
     } finally {
       setSaving(false);
@@ -667,6 +933,20 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
                 </label>
               ))}
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Бэдж (наклейка на фото)</label>
+            <select
+              value={badge}
+              onChange={(e) => setBadge(e.target.value)}
+              className="input w-full"
+            >
+              <option value="">Без бэджа</option>
+              <option value="NEW">🆕 NEW</option>
+              <option value="HIT">🔥 HIT</option>
+            </select>
+            <p className="text-xs text-gray-500 mt-1">Выбранный бэдж будет отображаться слева сверху на фото</p>
           </div>
 
           <div>

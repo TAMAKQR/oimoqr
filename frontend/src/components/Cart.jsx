@@ -1,13 +1,86 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCartStore } from '../store/cartStore';
 import api from '../services/api';
+import toast from 'react-hot-toast';
 
 const Cart = ({ restaurant }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showOrderNumber, setShowOrderNumber] = useState(null);
+  const [isCheckingLocation, setIsCheckingLocation] = useState(false);
+  
+  // Данные клиента и доставки
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [userLocation, setUserLocation] = useState(null); // { latitude, longitude }
+  const [deliveryCheck, setDeliveryCheck] = useState(null); // Результат проверки доставки
+  
   const { items, removeItem, updateQuantity, getTotal, getItemCount, clearCart } = useCartStore();
   const currency = restaurant?.currency || '₽';
+
+  // Функция определения местоположения
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Ваш браузер не поддерживает геолокацию');
+      return;
+    }
+
+    setIsCheckingLocation(true);
+    setDeliveryCheck(null);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        setUserLocation({ latitude, longitude });
+
+        // Проверяем доступность доставки
+        try {
+          const response = await api.get('/geolocation/check-delivery', {
+            params: {
+              restaurantId: restaurant.id,
+              latitude,
+              longitude
+            }
+          });
+
+          setDeliveryCheck(response.data);
+          setIsCheckingLocation(false);
+        } catch (error) {
+          console.error('Error checking delivery:', error);
+          toast.error('Ошибка проверки доставки');
+          setIsCheckingLocation(false);
+        }
+      },
+      (error) => {
+        console.error('Geolocation error:', error);
+        let errorMessage = 'Не удалось определить местоположение';
+        
+        if (error.code === error.PERMISSION_DENIED) {
+          errorMessage = 'Доступ к геолокации запрещен. Разрешите доступ в настройках браузера.';
+        } else if (error.code === error.POSITION_UNAVAILABLE) {
+          errorMessage = 'Информация о местоположении недоступна';
+        } else if (error.code === error.TIMEOUT) {
+          errorMessage = 'Время запроса местоположения истекло';
+        }
+        
+        toast.error(errorMessage);
+        setIsCheckingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  };
+
+  // Автоматическое определение местоположения при открытии корзины
+  useEffect(() => {
+    if (isOpen && restaurant.deliveryEnabled && !userLocation && !isCheckingLocation) {
+      handleGetLocation();
+    }
+  }, [isOpen, restaurant.deliveryEnabled]);
 
   const handleCheckout = async () => {
     if (items.length === 0) return;
@@ -15,8 +88,32 @@ const Cart = ({ restaurant }) => {
     const total = getTotal();
     
     if (restaurant.minOrderAmount && total < restaurant.minOrderAmount) {
-      alert(`Минимальная сумма заказа: ${restaurant.minOrderAmount} ${currency}\nТекущая сумма: ${total} ${currency}`);
+      toast.error(`Минимальная сумма заказа: ${restaurant.minOrderAmount} ${currency}\nТекущая сумма: ${total} ${currency}`);
       return;
+    }
+
+    // Если доставка включена - требуем данные
+    if (restaurant.deliveryEnabled) {
+      if (!customerName.trim()) {
+        toast.error('Пожалуйста, укажите ваше имя');
+        return;
+      }
+      if (!customerPhone.trim()) {
+        toast.error('Пожалуйста, укажите ваш телефон');
+        return;
+      }
+      if (!deliveryAddress.trim()) {
+        toast.error('Пожалуйста, укажите адрес доставки');
+        return;
+      }
+      if (!userLocation) {
+        toast.error('Пожалуйста, определите ваше местоположение');
+        return;
+      }
+      if (!deliveryCheck || !deliveryCheck.deliveryAvailable) {
+        toast.error('Доставка по вашему адресу недоступна. Вы находитесь вне зоны доставки.');
+        return;
+      }
     }
 
     setIsLoading(true);
@@ -28,12 +125,22 @@ const Cart = ({ restaurant }) => {
         modifiers: item.modifiers.map(m => m.name)
       }));
 
-      const response = await api.post('/orders', {
+      const orderData = {
         restaurantId: restaurant.id,
         items: orderItems,
         total: parseFloat(getTotal().toFixed(2))
-      });
+      };
 
+      // Добавляем данные доставки если включена
+      if (restaurant.deliveryEnabled) {
+        orderData.customerName = customerName;
+        orderData.customerPhone = customerPhone;
+        orderData.deliveryAddress = deliveryAddress;
+        orderData.deliveryLatitude = userLocation.latitude;
+        orderData.deliveryLongitude = userLocation.longitude;
+      }
+
+      const response = await api.post('/orders', orderData);
       const orderNumber = response.data.orderNumber;
       setShowOrderNumber(orderNumber);
 
@@ -49,17 +156,37 @@ const Cart = ({ restaurant }) => {
 
       const total = getTotal().toFixed(2);
       const restaurantInfo = `${restaurant.name}${restaurant.address ? ` (${restaurant.address})` : ''}`;
-      const message = `Здравствуйте! Мой номер заказа: ${orderNumber}\n\nРесторан: ${restaurantInfo}\n\nХочу сделать заказ:\n\n${orderText}\n\nИтого: ${total} ${currency}`;
+      
+      let message = `Здравствуйте! Мой номер заказа: ${orderNumber}\n\nРесторан: ${restaurantInfo}\n\n`;
+      
+      // Добавляем данные доставки если включена
+      if (restaurant.deliveryEnabled) {
+        message += `👤 Имя: ${customerName}\n📱 Телефон: ${customerPhone}\n📍 Адрес доставки: ${deliveryAddress}\n🚗 Расстояние: ${deliveryCheck.distance} км\n\n`;
+      }
+      
+      message += `Хочу сделать заказ:\n\n${orderText}\n\nИтого: ${total} ${currency}`;
+      
+      // Добавляем стоимость доставки если есть
+      if (restaurant.deliveryEnabled && restaurant.deliveryFee) {
+        message += `\nДоставка: ${restaurant.deliveryFee} ${currency}`;
+      }
 
       const whatsappNumber = restaurant.whatsapp?.replace(/\D/g, '');
       const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
 
       window.open(whatsappUrl, '_blank');
       clearCart();
+      
+      // Сброс формы
+      setCustomerName('');
+      setCustomerPhone('');
+      setDeliveryAddress('');
+      setUserLocation(null);
+      setDeliveryCheck(null);
       setIsOpen(false);
     } catch (error) {
       console.error('Error creating order:', error);
-      alert('Ошибка при создании заказа');
+      toast.error('Ошибка при создании заказа');
     } finally {
       setIsLoading(false);
     }
@@ -127,7 +254,7 @@ const Cart = ({ restaurant }) => {
               >
                 📋 Копировать номер
               </button>
-              <p className="text-sm text-gray-500">Сейчас откроется WhatsApp с деталями заказа</p>
+              <p className="text-sm text-gray-500">Спасибо за заказ, скоро с Вами свяжутся</p>
               <button
                 onClick={() => setShowOrderNumber(null)}
                 className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg transition-colors"
@@ -211,6 +338,70 @@ const Cart = ({ restaurant }) => {
                   </div>
 
                   <div className="border-t pt-4 sticky bottom-0 bg-white">
+                    {/* Форма доставки - только если включена */}
+                    {restaurant.deliveryEnabled && (
+                      <div className="mb-4 space-y-3">
+                        <h3 className="font-semibold text-base sm:text-lg">Данные для доставки:</h3>
+                        
+                        <input
+                          type="text"
+                          placeholder="Ваше имя *"
+                          value={customerName}
+                          onChange={(e) => setCustomerName(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm sm:text-base"
+                        />
+                        
+                        <input
+                          type="tel"
+                          placeholder="Ваш телефон *"
+                          value={customerPhone}
+                          onChange={(e) => setCustomerPhone(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm sm:text-base"
+                        />
+                        
+                        <input
+                          type="text"
+                          placeholder="Адрес доставки *"
+                          value={deliveryAddress}
+                          onChange={(e) => setDeliveryAddress(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm sm:text-base"
+                        />
+                        
+                        {/* Статус автоматического определения местоположения */}
+                        {isCheckingLocation && (
+                          <div className="p-3 bg-blue-50 border-l-4 border-blue-500 text-blue-700 rounded-lg text-sm flex items-center gap-2">
+                            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span>📍 Определяем ваше местоположение...</span>
+                          </div>
+                        )}
+                        
+                        {/* Результат проверки доставки */}
+                        {deliveryCheck && (
+                          <div className={`p-3 rounded-lg text-sm ${
+                            deliveryCheck.deliveryAvailable 
+                              ? 'bg-green-100 border-l-4 border-green-500 text-green-700' 
+                              : 'bg-red-100 border-l-4 border-red-500 text-red-700'
+                          }`}>
+                            <p className="font-semibold flex items-center gap-2">
+                              {deliveryCheck.deliveryAvailable ? '✅' : '❌'} {deliveryCheck.message}
+                            </p>
+                            <p className="text-xs mt-1">
+                              Расстояние: {deliveryCheck.distance} км
+                              {deliveryCheck.deliveryRadius && ` (макс. ${deliveryCheck.deliveryRadius} км)`}
+                            </p>
+                            {deliveryCheck.deliveryAvailable && restaurant.deliveryFee && (
+                              <p className="text-xs mt-1">
+                                Стоимость доставки: {restaurant.deliveryFee} {currency}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
                     <div className="flex justify-between items-center mb-3 sm:mb-4">
                       <span className="text-base sm:text-lg font-semibold">Итого:</span>
                       <span className="text-xl sm:text-2xl font-bold text-primary-600">

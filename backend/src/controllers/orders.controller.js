@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../config/prisma.js';
 
 const generateOrderNumber = () => {
   const timestamp = Date.now().toString().slice(-6);
@@ -10,12 +8,40 @@ const generateOrderNumber = () => {
 
 export const createOrder = async (req, res, next) => {
   try {
-    const { restaurantId, items, total, customerPhone } = req.body;
+    const { 
+      restaurantId, 
+      items, 
+      total, 
+      customerName,
+      customerPhone,
+      customerEmail,
+      deliveryAddress,
+      deliveryLatitude,
+      deliveryLongitude
+    } = req.body;
 
     if (!restaurantId || !items || total === undefined) {
       return res.status(400).json({
         error: 'restaurantId, items, and total are required'
       });
+    }
+
+    // Фильтруем товары без ID, чтобы избежать ошибок
+    const validItems = items.filter(item => item && item.id);
+
+    // Проверка существования всех блюд перед созданием заказа
+    const dishIds = validItems.map(item => item.id);
+    const existingDishes = await prisma.dish.findMany({
+      where: {
+        id: { in: dishIds },
+        restaurantId: restaurantId // Убедимся, что блюда принадлежат этому ресторану
+      },
+      select: { id: true }
+    });
+
+    if (existingDishes.length !== dishIds.length) {
+      const notFoundIds = dishIds.filter(id => !existingDishes.some(d => d.id === id));
+      return res.status(400).json({ error: `One or more dishes not found: ${notFoundIds.join(', ')}` });
     }
 
     const orderNumber = generateOrderNumber();
@@ -24,28 +50,42 @@ export const createOrder = async (req, res, next) => {
       data: {
         orderNumber,
         restaurantId,
-        items: JSON.stringify(items),
-        total: parseFloat(total),
-        customerPhone
+        totalAmount: parseFloat(total),
+        customerName: customerName || 'Клиент',
+        customerPhone: customerPhone || 'Не указан',
+        customerEmail: customerEmail || null,
+        deliveryAddress: deliveryAddress || null,
+        deliveryLatitude: deliveryLatitude ? parseFloat(deliveryLatitude) : null,
+        deliveryLongitude: deliveryLongitude ? parseFloat(deliveryLongitude) : null,
+        items: {
+          create: validItems.map(item => ({
+            dishId: item.id,
+            quantity: parseInt(item.quantity, 10),
+            price: item.price ?? 0, // Цена за единицу на момент заказа, с fallback на 0
+            selectedModifiers: item.selectedModifiers ? JSON.stringify(item.selectedModifiers) : undefined
+          }))
+        }
       },
       include: {
+        items: true, // Включаем созданные товары в ответ
         restaurant: {
-          include: { deliveryLocations: true }
+          include: {
+            socialLinks: true // Явно включаем социальные сети ресторана
+          }
         }
       }
     });
 
     res.status(201).json({
-      id: order.id,
-      orderNumber: order.orderNumber,
-      createdAt: order.createdAt,
-      deliveryLocations: order.restaurant?.deliveryLocations || []
+      message: 'Order created successfully',
+      order: order,
+      orderNumber: order.orderNumber // Добавляем номер заказа на верхний уровень ответа
     });
   } catch (error) {
-    console.error('Order creation error:', error.message);
+    console.error('Order creation error:', error);
     res.status(500).json({
       error: 'Failed to create order',
-      details: error.message
+      details: error.message || 'An internal server error occurred.'
     });
   }
 };
@@ -56,7 +96,14 @@ export const getOrdersByRestaurant = async (req, res, next) => {
 
     const orders = await prisma.order.findMany({
       where: { restaurantId },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      include: {
+        items: {
+          select: {
+            id: true // Просто чтобы можно было посчитать количество
+          }
+        }
+      }
     });
 
     res.json(orders);
@@ -70,17 +117,22 @@ export const getOrderById = async (req, res, next) => {
     const { orderId } = req.params;
 
     const order = await prisma.order.findUnique({
-      where: { id: orderId }
+      where: { id: orderId },
+      include: {
+        items: {
+          include: {
+            dish: true // Включаем информацию о блюде для каждого элемента заказа
+          }
+        },
+        restaurant: true
+      }
     });
 
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    res.json({
-      ...order,
-      items: JSON.parse(order.items)
-    });
+    res.json(order);
   } catch (error) {
     next(error);
   }
@@ -93,10 +145,12 @@ export const getOrderByNumber = async (req, res, next) => {
 
     const order = await prisma.order.findUnique({
       where: { orderNumber: fullOrderNumber },
-      include: { 
+      include: {
         restaurant: true,
-        restaurant: {
-          include: { deliveryLocations: true }
+        items: {
+          include: {
+            dish: true
+          }
         }
       }
     });
@@ -105,11 +159,7 @@ export const getOrderByNumber = async (req, res, next) => {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    res.json({
-      ...order,
-      items: JSON.parse(order.items),
-      deliveryLocations: order.restaurant?.deliveryLocations || []
-    });
+    res.json(order);
   } catch (error) {
     next(error);
   }

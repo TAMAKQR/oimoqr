@@ -10,7 +10,12 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-export const sendWelcomeEmail = async (email, name, restaurantName) => {
+export const sendWelcomeEmail = async (email, name, restaurantName, trialDays = 7) => {
+  if (process.env.DISABLE_EMAIL === 'true') {
+    console.log('Email sending is disabled for local development');
+    return;
+  }
+  
   try {
     await transporter.sendMail({
       from: process.env.SMTP_FROM,
@@ -19,7 +24,7 @@ export const sendWelcomeEmail = async (email, name, restaurantName) => {
       html: `
         <h1>Добро пожаловать, ${name}!</h1>
         <p>Ваш ресторан <strong>${restaurantName}</strong> успешно зарегистрирован.</p>
-        <p>Вы получили <strong>7 дней бесплатного пробного периода</strong>.</p>
+        <p>Вы получили <strong>${trialDays} дней бесплатного пробного периода</strong>.</p>
         <p>За это время вы можете:</p>
         <ul>
           <li>Настроить меню вашего ресторана</li>
@@ -37,6 +42,11 @@ export const sendWelcomeEmail = async (email, name, restaurantName) => {
 };
 
 export const sendTrialEndingEmail = async (email, name, daysLeft) => {
+  if (process.env.DISABLE_EMAIL === 'true') {
+    console.log('Email sending is disabled for local development');
+    return;
+  }
+
   try {
     await transporter.sendMail({
       from: process.env.SMTP_FROM,
@@ -55,6 +65,11 @@ export const sendTrialEndingEmail = async (email, name, daysLeft) => {
 };
 
 export const sendSubscriptionActivatedEmail = async (email, name, plan) => {
+  if (process.env.DISABLE_EMAIL === 'true') {
+    console.log('Email sending is disabled for local development');
+    return;
+  }
+
   try {
     await transporter.sendMail({
       from: process.env.SMTP_FROM,

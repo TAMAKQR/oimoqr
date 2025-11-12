@@ -83,6 +83,11 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal' }) => {
         >
           {/* Плашки в правом верхнем углу */}
           <div className="absolute top-2 right-2 z-10 flex flex-col gap-1 items-end">
+            {dish.badge && (
+              <span className="px-3 py-1 bg-gradient-to-br from-orange-400 to-red-500 text-white text-xs font-bold rounded-full shadow-lg">
+                {dish.badge}
+              </span>
+            )}
             {!isAvailable && (
               <span className="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full shadow-lg">
                 НЕТ В НАЛИЧИИ
@@ -191,34 +196,40 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal' }) => {
     <>
       <div
         onClick={handleCardClick}
-        className={`overflow-hidden rounded-lg border border-gray-200 bg-white transition-all duration-200 relative ${
+        className={`overflow-hidden rounded-lg border border-gray-200 bg-white transition-all duration-200 ${
           isAvailable 
             ? 'cursor-pointer hover:shadow-lg active:scale-98' 
             : 'opacity-60 cursor-not-allowed'
         }`}
       >
-        {/* Плашки в правом верхнем углу */}
-        <div className="absolute top-2 right-2 z-10 flex flex-col gap-1 items-end">
-          {!isAvailable && (
-            <span className="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full shadow-lg">
-              НЕТ В НАЛИЧИИ
-            </span>
-          )}
-          {dish.discount && isAvailable && (
-            <span className="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full shadow-lg">
-              -{dish.discount}%
-            </span>
-          )}
-        </div>
-
         {dish.image && (
-          <img
-            src={dish.image}
-            alt={dish.name}
-            className={`w-full h-40 sm:h-48 object-cover ${
-              !isAvailable ? 'grayscale' : ''
-            }`}
-          />
+          <div className="relative">
+            <img
+              src={dish.image}
+              alt={dish.name}
+              className={`w-full h-40 sm:h-48 object-cover ${
+                !isAvailable ? 'grayscale' : ''
+              }`}
+            />
+            {/* Плашки в правом верхнем углу */}
+            <div className="absolute top-2 right-2 z-10 flex flex-col gap-1 items-end">
+              {dish.badge && (
+                <span className="px-3 py-1 bg-gradient-to-br from-orange-400 to-red-500 text-white text-xs font-bold rounded-full shadow-lg">
+                  {dish.badge}
+                </span>
+              )}
+              {!isAvailable && (
+                <span className="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full shadow-lg">
+                  НЕТ В НАЛИЧИИ
+                </span>
+              )}
+              {dish.discount && isAvailable && (
+                <span className="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full shadow-lg">
+                  -{dish.discount}%
+                </span>
+              )}
+            </div>
+          </div>
         )}
         
         <div className="p-4 sm:p-6">

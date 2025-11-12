@@ -1,7 +1,6 @@
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../config/prisma.js';
+import { config } from '../config/env.js';
 
 export const authenticate = async (req, res, next) => {
   try {
@@ -13,7 +12,7 @@ export const authenticate = async (req, res, next) => {
 
     const token = authHeader.substring(7);
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, config.jwtSecret);
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
@@ -22,10 +21,22 @@ export const authenticate = async (req, res, next) => {
         email: true,
         name: true,
         isAdmin: true,
-        restaurant: {
+        restaurants: {
           select: {
             id: true,
             subdomain: true
+          }
+        },
+        restaurantStaff: {
+          select: {
+            restaurantId: true,
+            role: true,
+            restaurant: {
+              select: {
+                id: true,
+                subdomain: true
+              }
+            }
           }
         }
       }
@@ -56,7 +67,8 @@ export const requireAdmin = (req, res, next) => {
 };
 
 export const requireRestaurant = async (req, res, next) => {
-  if (!req.user.restaurant) {
+  const hasRestaurant = req.user.restaurants?.length > 0 || req.user.restaurantStaff?.length > 0;
+  if (!hasRestaurant) {
     return res.status(403).json({ error: 'Restaurant not found for this user' });
   }
   next();

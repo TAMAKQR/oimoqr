@@ -3,7 +3,8 @@ import {
   getCategories,
   createCategory,
   updateCategory,
-  deleteCategory
+  deleteCategory,
+  reorderCategories
 } from '../controllers/category.controller.js';
 import { getDishes } from '../controllers/dish.controller.js';
 import { authenticate, requireRestaurant } from '../middleware/auth.js';
@@ -18,6 +19,7 @@ router.get('/:categoryId/dishes', authenticate, getDishes);
 
 // Protected routes
 router.post('/', authenticate, requireRestaurant, createCategory);
+router.post('/:restaurantId/reorder', authenticate, requireRestaurant, reorderCategories);
 router.put('/:id', authenticate, requireRestaurant, updateCategory);
 router.delete('/:id', authenticate, requireRestaurant, deleteCategory);
 

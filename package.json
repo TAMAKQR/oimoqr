@@ -1,24 +1,20 @@
 {
   "name": "oimoqr",
   "version": "1.0.0",
-  "description": "OimoQR - QR Menu SaaS Platform for Restaurants",
   "private": true,
+  "type": "module",
   "workspaces": [
     "frontend",
     "backend"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:backend": "npm run dev --workspace=backend",
-    "dev:frontend": "npm run dev --workspace=frontend",
-    "build": "npm run build --workspace=frontend && npm run build --workspace=backend",
-    "install:all": "npm install && npm install --workspace=frontend && npm install --workspace=backend"
+    "dev": "concurrently \"npm run dev --workspace=frontend\" \"npm run dev --workspace=backend\"",
+    "backup": "node create-backup.js"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
-  },
-  "dependencies": {
-    "@prisma/client": "^6.18.0",
-    "prisma": "^6.18.0"
   }
 }

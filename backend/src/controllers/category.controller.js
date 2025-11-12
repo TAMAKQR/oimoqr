@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../config/prisma.js';
 
 export const getCategories = async (req, res, next) => {
   try {
@@ -47,11 +45,6 @@ export const createCategory = async (req, res, next) => {
   try {
     const { name, description, restaurantId, order } = req.body;
 
-    // Check if user owns this restaurant
-    if (req.user.restaurant.id !== restaurantId && !req.user.isAdmin) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
     const category = await prisma.category.create({
       data: {
         name,
@@ -72,18 +65,13 @@ export const updateCategory = async (req, res, next) => {
     const { id } = req.params;
     const { name, description, order, isActive } = req.body;
 
-    // Check if user owns this category's restaurant
+    // Check if user has access to this category's restaurant
     const category = await prisma.category.findUnique({
-      where: { id },
-      include: { restaurant: true }
+      where: { id }
     });
 
     if (!category) {
       return res.status(404).json({ error: 'Category not found' });
-    }
-
-    if (req.user.restaurant.id !== category.restaurantId && !req.user.isAdmin) {
-      return res.status(403).json({ error: 'Access denied' });
     }
 
     const updatedCategory = await prisma.category.update({
@@ -106,18 +94,13 @@ export const deleteCategory = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    // Check if user owns this category's restaurant
+    // Check if user has access to this category's restaurant
     const category = await prisma.category.findUnique({
-      where: { id },
-      include: { restaurant: true }
+      where: { id }
     });
 
     if (!category) {
       return res.status(404).json({ error: 'Category not found' });
-    }
-
-    if (req.user.restaurant.id !== category.restaurantId && !req.user.isAdmin) {
-      return res.status(403).json({ error: 'Access denied' });
     }
 
     await prisma.category.delete({
@@ -126,6 +109,32 @@ export const deleteCategory = async (req, res, next) => {
 
     res.json({ message: 'Category deleted successfully' });
   } catch (error) {
+    next(error);
+  }
+};
+
+export const reorderCategories = async (req, res, next) => {
+  try {
+    const { restaurantId } = req.params;
+    const { categoryIds } = req.body;
+
+    console.log('Reorder categories:', { restaurantId, categoryIds, userId: req.user.id });
+
+    if (!Array.isArray(categoryIds) || categoryIds.length === 0) {
+      return res.status(400).json({ error: 'Invalid categoryIds' });
+    }
+
+    // Update order for each category sequentially
+    for (let i = 0; i < categoryIds.length; i++) {
+      await prisma.category.update({
+        where: { id: categoryIds[i] },
+        data: { order: i }
+      });
+    }
+
+    res.json({ message: 'Categories reordered successfully' });
+  } catch (error) {
+    console.error('Error reordering categories:', error);
     next(error);
   }
 };

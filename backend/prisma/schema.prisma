@@ -3,144 +3,344 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id         String      @id @default(uuid())
-  email      String      @unique
-  password   String
-  name       String
-  phone      String?
-  isAdmin    Boolean     @default(false)
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-  restaurant Restaurant?
-
-  @@map("users")
+  id                String    @id @default(cuid())
+  email             String    @unique
+  password          String
+  name              String
+  phone             String?
+  isAdmin           Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  restaurants       Restaurant[]
+  restaurantStaff   RestaurantStaff[]
+  subscriptions     Subscription[]
 }
 
 model Restaurant {
-  id              String               @id @default(uuid())
-  name            String
-  subdomain       String               @unique
-  address         String?
-  phone           String?
-  description     String?
-  logo            String?
-  instagram       String?
-  facebook        String?
-  whatsapp        String?
-  deliveryEnabled Boolean              @default(false)
-  deliveryFee     Float?
-  minOrderAmount  Float?
-  currency        String               @default("₽")
-  banners         String               @default("[]")
-  userId          String               @unique
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
-  menuCardStyle   String               @default("horizontal")
-  categories      Category[]
-  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  subscription    Subscription?
-  orders          Order[]
-  deliveryLocations DeliveryLocation[]
+  id                String    @id @default(cuid())
+  subdomain         String    @unique
+  name              String
+  description       String?
+  phone             String?
+  address           String?
+  city              String?
+  country           String?
+  currency          String    @default("RUB")
+  banners           String?
+  logo              String?
+  cardStyle         String    @default("grid")
+  isTrialDefault    Boolean   @default(false)
+  deliveryEnabled   Boolean   @default(false)
+  deliveryFee       Float?
+  minOrderAmount    Float?
+  defaultLanguage   String    @default("ru")
+  
+  // Geolocation fields
+  latitude          Float?
+  longitude         Float?
+  deliveryRadius    Float?    // Радиус доставки в км
+  
+  // Working hours fields
+  workingHours      String?   // JSON: {"monday": {"open": "09:00", "close": "22:00", "isOpen": true}, ...}
+  isTemporarilyClosed Boolean @default(false)
+  closureReason     String?
+  
+  ownerId           String
+  owner             User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  
+  categories        Category[]
+  dishes            Dish[]
+  staff             RestaurantStaff[]
+  socialLinks       SocialLink?
+  orders            Order[]
+  languages         RestaurantLanguage[]
+  dishTranslations  DishTranslation[]
+  categoryTranslations CategoryTranslation[]
+  
+  subscriptions     Subscription[]
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
 
-  @@map("restaurants")
+model RestaurantStaff {
+  id                String    @id @default(cuid())
+  userId            String
+  restaurantId      String
+  role              String    @default("staff")
+  
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  @@unique([userId, restaurantId])
 }
 
 model Subscription {
-  id                 String     @id @default(uuid())
-  plan               String
-  status             String     @default("TRIAL")
-  trialEndsAt        DateTime?
-  currentPeriodStart DateTime
-  currentPeriodEnd   DateTime
-  restaurantId       String     @unique
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
-  restaurant         Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  id                String    @id @default(cuid())
+  
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  restaurantId      String
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
-  @@map("subscriptions")
+  @@unique([userId, restaurantId])
+  
+  plan              String    @default("TRIAL")
+  status            String    @default("TRIAL")
+  
+  trialEndsAt       DateTime?
+  currentPeriodStart DateTime?
+  currentPeriodEnd  DateTime?
+  
+  pricingTierId     String?
+  pricingTier       PricingTier? @relation(fields: [pricingTierId], references: [id], onDelete: SetNull)
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 }
 
 model Category {
-  id           String     @id @default(uuid())
-  name         String
-  description  String?
-  order        Int        @default(0)
-  isActive     Boolean    @default(true)
-  restaurantId String
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  dishes       Dish[]
-
-  @@map("categories")
+  id                String    @id @default(cuid())
+  name              String
+  description       String?
+  image             String?
+  order             Int       @default(0)
+  
+  restaurantId      String
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  
+  dishes            Dish[]
+  translations      CategoryTranslation[]
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 }
 
 model Dish {
-  id          String     @id @default(uuid())
-  name        String
-  description String?
-  price       Float
-  image       String?
-  isActive    Boolean    @default(true)
-  isAvailable Boolean    @default(true)
-  order       Int        @default(0)
-  allergens   String?    // JSON массив аллергенов: ["gluten", "dairy", "nuts"]
-  discount    Int?       // Процент скидки (например, 10, 20, 50)
-  categoryId  String
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  category    Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  modifiers   Modifier[]
-
-  @@map("dishes")
+  id                String    @id @default(cuid())
+  name              String
+  description       String?
+  price             Float
+  image             String?
+  available         Boolean   @default(true)
+  order             Int       @default(0)
+  allergens         String?
+  discount          Int?
+  badge             String?
+  
+  categoryId        String
+  category          Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  restaurantId      String
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  
+  modifiers         Modifier[]
+  orderItems        OrderItem[]
+  translations      DishTranslation[]
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 }
 
 model Modifier {
-  id         String   @id @default(uuid())
-  name       String
-  price      Float    @default(0)
-  isRequired Boolean  @default(false)
-  order      Int      @default(0)
-  dishId     String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  dish       Dish     @relation(fields: [dishId], references: [id], onDelete: Cascade)
+  id                String    @id @default(cuid())
+  name              String
+  type              String
+  price             Float?    @default(0)
+  isRequired        Boolean   @default(false)
+  order             Int       @default(0)
+  
+  dishId            String
+  dish              Dish      @relation(fields: [dishId], references: [id], onDelete: Cascade)
+  
+  options           ModifierOption[]
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
 
-  @@map("modifiers")
+model ModifierOption {
+  id                String    @id @default(cuid())
+  name              String
+  price             Float     @default(0)
+  
+  modifierId        String
+  modifier          Modifier  @relation(fields: [modifierId], references: [id], onDelete: Cascade)
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model SocialLink {
+  id                String    @id @default(cuid())
+  instagram         String?
+  facebook          String?
+  telegram          String?
+  whatsapp          String?
+  
+  restaurantId      String    @unique
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model Customer {
+  id                String    @id @default(cuid())
+  phone             String    @unique
+  name              String?
+  email             String?
+  
+  // Saved addresses
+  savedAddresses    CustomerAddress[]
+  orders            Order[]
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model CustomerAddress {
+  id                String    @id @default(cuid())
+  customerId        String
+  customer          Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  
+  address           String
+  latitude          Float
+  longitude         Float
+  label             String?   // "Дом", "Работа", etc.
+  isDefault         Boolean   @default(false)
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 }
 
 model Order {
-  id            String   @id @default(uuid())
-  orderNumber   String   @unique
-  restaurantId  String
-  items         String
-  total         Float
-  customerPhone String?
-  status        String   @default("pending")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  restaurant    Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-
-  @@map("orders")
+  id                String    @id @default(cuid())
+  orderNumber       String    @unique
+  customerName      String
+  customerPhone     String
+  customerEmail     String?
+  deliveryAddress   String?
+  deliveryLatitude  Float?
+  deliveryLongitude Float?
+  totalAmount       Float
+  status            String    @default("new")
+  notes             String?
+  
+  customerId        String?
+  customer          Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  
+  restaurantId      String
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  
+  items             OrderItem[]
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 }
 
-model DeliveryLocation {
-  id            String     @id @default(uuid())
-  name          String
-  address       String
-  latitude      Float
-  longitude     Float
-  whatsapp      String
-  restaurantId  String
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  restaurant    Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+model OrderItem {
+  id                String    @id @default(cuid())
+  quantity          Int
+  price            Float
+  selectedModifiers Json?
+  
+  orderId           String
+  order             Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  dishId            String
+  dish              Dish      @relation(fields: [dishId], references: [id])
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
 
-  @@map("delivery_locations")
+model PricingTier {
+  id                String    @id @default(cuid())
+  name              String
+  price             Float
+  description       String?
+  features          String?
+  maxRestaurants    Int?
+  order             Int       @default(0)
+  isActive          Boolean   @default(true)
+  
+  subscriptions     Subscription[]
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model RestaurantLanguage {
+  id                String    @id @default(cuid())
+  restaurantId      String
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  
+  languageCode      String
+  isEnabled         Boolean   @default(true)
+  order             Int       @default(0)
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  @@unique([restaurantId, languageCode])
+}
+
+model DishTranslation {
+  id                String    @id @default(cuid())
+  dishId            String
+  dish              Dish      @relation(fields: [dishId], references: [id], onDelete: Cascade)
+  
+  restaurantId      String
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  
+  languageCode      String
+  
+  name              String
+  description       String?
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  @@unique([dishId, languageCode])
+  @@index([restaurantId])
+}
+
+model CategoryTranslation {
+  id                String    @id @default(cuid())
+  categoryId        String
+  category          Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  restaurantId      String
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  
+  languageCode      String
+  
+  name              String
+  description       String?
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  @@unique([categoryId, languageCode])
+  @@index([restaurantId])
+}
+
+model TrialConfig {
+  id                String    @id @default(cuid())
+  name              String    @default("Пробный период")
+  days              Int       @default(7)
+  message           String    @default("Вы получите 7 дней бесплатного пробного периода")
+  
+  updatedAt         DateTime  @updatedAt
 }

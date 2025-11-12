@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../services/authService';
+import toast from 'react-hot-toast';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -17,6 +18,22 @@ const RegisterPage = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [trialDays, setTrialDays] = useState(7);
+
+  useEffect(() => {
+    const fetchTrialConfig = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/trial-config`);
+        if (response.ok) {
+          const data = await response.json();
+          setTrialDays(data.days || 7);
+        }
+      } catch (err) {
+        console.error('Error fetching trial config:', err);
+      }
+    };
+    fetchTrialConfig();
+  }, []);
 
   const handleChange = (e) => {
     let value = e.target.value;
@@ -48,6 +65,8 @@ const RegisterPage = () => {
       console.error('❌ Registration error:', err);
       console.error('Error response:', err.response);
       setError(err.response?.data?.error || 'Ошибка регистрации');
+      toast.error(err.response?.data?.error || 'Ошибка регистрации');
+      setLoading(false);
     } finally {
       setLoading(false);
     }
@@ -154,7 +173,7 @@ const RegisterPage = () => {
 
           <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
             <p className="text-sm text-primary-800">
-              🎉 Вы получите <strong>7 дней бесплатного пробного периода</strong>
+              🎉 Вы получите <strong>{trialDays} дней бесплатного пробного периода</strong>
             </p>
           </div>
 

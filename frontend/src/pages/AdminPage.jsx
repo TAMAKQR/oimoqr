@@ -2,47 +2,84 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
+import DashboardLayout from '../components/DashboardLayout';
 
 const AdminPage = () => {
   const navigate = useNavigate();
-  const logout = useAuthStore((state) => state.logout);
-  const [restaurants, setRestaurants] = useState([]);
+  const { user, logout } = useAuthStore();
+  const [users, setUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
   const [stats, setStats] = useState(null);
+  const [pricingTiers, setPricingTiers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState({ email: '', password: '' });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [notification, setNotification] = useState(null);
 
   useEffect(() => {
     loadData();
   }, []);
 
+  useEffect(() => {
+    // Фильтрация пользователей по поисковому запросу
+    if (!searchQuery.trim()) {
+      setFilteredUsers(users);
+    } else {
+      const query = searchQuery.toLowerCase();
+      setFilteredUsers(
+        users.filter(user => 
+          user.name?.toLowerCase().includes(query) ||
+          user.email?.toLowerCase().includes(query) ||
+          user.restaurants?.some(r => 
+            r.name?.toLowerCase().includes(query) ||
+            r.subdomain?.toLowerCase().includes(query)
+          )
+        )
+      );
+    }
+  }, [searchQuery, users]);
+
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 4000);
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   const loadData = async () => {
     try {
-      const [restaurantsRes, statsRes] = await Promise.all([
-        api.get('/admin/restaurants'),
-        api.get('/admin/stats/subscriptions')
+      const [usersRes, statsRes, pricingRes] = await Promise.all([
+        api.get('/admin/users'),
+        api.get('/admin/stats/subscriptions'),
+        api.get('/admin/pricing-tiers')
       ]);
-      setRestaurants(restaurantsRes.data);
+      
+      setUsers(usersRes.data);
+      setFilteredUsers(usersRes.data);
       setStats(statsRes.data);
+      setPricingTiers(pricingRes.data);
     } catch (err) {
-      console.error('Error loading admin data:', err);
+      console.error('Error loading data:', err);
+      showNotification('Ошибка загрузки данных', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUpdateSubscription = async (subscriptionId, plan, status) => {
+  const handleUpdateUserSubscription = async (userId, pricingTierId) => {
     try {
-      console.log('Updating subscription:', { subscriptionId, plan, status });
-      const response = await api.put(`/admin/subscriptions/${subscriptionId}`, { plan, status });
-      console.log('Update response:', response.data);
+      await api.put(`/admin/users/${userId}/subscriptions`, { pricingTierId });
       await loadData();
-      alert('Подписка обновлена успешно!');
+      showNotification('Подписка пользователя обновлена успешно!');
     } catch (err) {
-      console.error('Error updating subscription:', err);
+      console.error('Error updating user subscription:', err);
       const errorMessage = err.response?.data?.error || err.message || 'Неизвестная ошибка';
-      alert(`Ошибка обновления подписки: ${errorMessage}`);
+      showNotification(`Ошибка обновления подписки: ${errorMessage}`, 'error');
     }
   };
 
@@ -58,16 +95,50 @@ const AdminPage = () => {
     setEditForm({ email: '', password: '' });
   };
 
+  const handleDeactivateUser = async (user) => {
+    if (!window.confirm(`Вы уверены, что хотите деактивировать пользователя ${user.name} и все его подписки?`)) {
+      return;
+    }
+
+    try {
+      await api.post(`/admin/users/${user.id}/deactivate`);
+      await loadData();
+      showNotification('Пользователь успешно деактивирован');
+    } catch (err) {
+      console.error('Error deactivating user:', err);
+      const errorMessage = err.response?.data?.error || err.message || 'Неизвестная ошибка';
+      showNotification(`Ошибка деактивации: ${errorMessage}`, 'error');
+    }
+  };
+
+  const handleDeleteUser = async (user) => {
+    if (!window.confirm(
+      `⚠️ ВНИМАНИЕ! Это действие необратимо!\n\nВы действительно хотите удалить пользователя ${user.name} и все его рестораны?\nВсе данные будут удалены без возможности восстановления.`
+    )) {
+      return;
+    }
+
+    try {
+      await api.delete(`/admin/users/${user.id}`);
+      await loadData();
+      showNotification('Пользователь и все его данные успешно удалены');
+    } catch (err) {
+      console.error('Error deleting user:', err);
+      const errorMessage = err.response?.data?.error || err.message || 'Неизвестная ошибка';
+      showNotification(`Ошибка удаления: ${errorMessage}`, 'error');
+    }
+  };
+
   const handleUpdateCredentials = async (e) => {
     e.preventDefault();
     
     if (!editForm.email && !editForm.password) {
-      alert('Введите email или пароль для изменения');
+      showNotification('Введите email или пароль для изменения', 'error');
       return;
     }
 
     if (editForm.password && editForm.password.length < 6) {
-      alert('Пароль должен содержать минимум 6 символов');
+      showNotification('Пароль должен содержать минимум 6 символов', 'error');
       return;
     }
 
@@ -83,17 +154,12 @@ const AdminPage = () => {
       await api.put(`/admin/users/${editingUser.id}/credentials`, updateData);
       await loadData();
       handleCloseEditModal();
-      alert('Учетные данные обновлены успешно!');
+      showNotification('Учетные данные обновлены успешно!');
     } catch (err) {
       console.error('Error updating credentials:', err);
       const errorMessage = err.response?.data?.error || err.message || 'Неизвестная ошибка';
-      alert(`Ошибка обновления: ${errorMessage}`);
+      showNotification(`Ошибка обновления: ${errorMessage}`, 'error');
     }
-  };
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
   };
 
   const getStatusBadge = (status) => {
@@ -106,6 +172,10 @@ const AdminPage = () => {
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
+  const getTotalRestaurants = () => {
+    return users.reduce((total, user) => total + (user.restaurants?.length || 0), 0);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -115,187 +185,185 @@ const AdminPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <nav className="bg-white shadow-sm">
-        <div className="container mx-auto px-4 py-3 sm:py-4 flex justify-between items-center">
-          <h1 className="text-lg sm:text-2xl font-bold text-primary-600">Админ-панель</h1>
-          <button onClick={handleLogout} className="btn-secondary text-sm sm:text-base px-3 sm:px-4 py-1.5 sm:py-2">
-            Выход
-          </button>
+    <DashboardLayout userData={user} selectedRestaurantId={null}>
+      {/* Toast Notification */}
+      {notification && (
+        <div className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg text-white ${
+          notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+        } animate-fade-in-down`}>
+          {notification.message}
         </div>
-      </nav>
+      )}
 
-      <div className="container mx-auto px-4 py-4 sm:py-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
+          <h1 className="text-3xl font-bold">Админ-панель</h1>
+          <div className="flex items-center gap-4">
+            <button onClick={() => navigate('/admin/pricing')} className="btn-secondary">
+              💰 Управление тарифами
+            </button>
+            <button onClick={handleLogout} className="btn-secondary text-red-600 hover:bg-red-50">
+              Выйти
+            </button>
+          </div>
+        </div>
+
         {/* Stats */}
         {stats && (
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
-            <div className="card p-4 sm:p-6">
-              <h3 className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2">Всего ресторанов</h3>
-              <p className="text-2xl sm:text-3xl font-bold">{restaurants.length}</p>
+          <div className="grid grid-cols-4 gap-6 mb-8">
+            <div className="card p-6">
+              <h3 className="text-sm text-gray-600 mb-2">Всего пользователей</h3>
+              <p className="text-3xl font-bold">{users.length}</p>
             </div>
-            <div className="card p-4 sm:p-6">
-              <h3 className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2">Пробный период</h3>
-              <p className="text-2xl sm:text-3xl font-bold text-blue-600">
-                {stats.stats.find(s => s.status === 'TRIAL')?._count || 0}
-              </p>
+            <div className="card p-6">
+              <h3 className="text-sm text-gray-600 mb-2">Всего ресторанов</h3>
+              <p className="text-3xl font-bold">{getTotalRestaurants()}</p>
             </div>
-            <div className="card p-4 sm:p-6">
-              <h3 className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2">Активные</h3>
-              <p className="text-2xl sm:text-3xl font-bold text-green-600">
+            <div className="card p-6">
+              <h3 className="text-sm text-gray-600 mb-2">Активные подписки</h3>
+              <p className="text-3xl font-bold text-green-600">
                 {stats.stats.find(s => s.status === 'ACTIVE')?._count || 0}
               </p>
             </div>
-            <div className="card p-4 sm:p-6">
-              <h3 className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2">Истекшие</h3>
-              <p className="text-2xl sm:text-3xl font-bold text-red-600">
-                {stats.stats.find(s => s.status === 'EXPIRED')?._count || 0}
+            <div className="card p-6">
+              <h3 className="text-sm text-gray-600 mb-2">Trial период</h3>
+              <p className="text-3xl font-bold text-blue-600">
+                {stats.stats.find(s => s.status === 'TRIAL')?._count || 0}
               </p>
             </div>
           </div>
         )}
 
-        {/* Restaurants Table */}
-        <div className="card p-4 sm:p-6">
-          <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Рестораны</h2>
-          
-          {/* Mobile Cards View */}
-          <div className="block md:hidden space-y-4">
-            {restaurants.map((restaurant) => (
-              <div key={restaurant.id} className="border rounded-lg p-4 bg-gray-50">
-                <h3 className="font-bold text-base mb-2 break-words">{restaurant.name}</h3>
-                <div className="space-y-1 text-sm">
-                  <p className="text-gray-600">
-                    <span className="font-medium">Владелец:</span> {restaurant.user.name}
-                  </p>
-                  <p className="text-gray-600 break-all">
-                    <span className="font-medium">Email:</span> {restaurant.user.email}
-                  </p>
-                  <p>
-                    <span className="font-medium">Субдомен:</span>{' '}
-                    <a
-                      href={`/menu/${restaurant.subdomain}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary-600 hover:underline break-all"
-                    >
-                      {restaurant.subdomain}
-                    </a>
-                  </p>
-                  <p>
-                    <span className="font-medium">План:</span> {restaurant.subscription?.plan || '-'}
-                  </p>
-                  <p>
-                    <span className="font-medium">Статус:</span>{' '}
-                    <span className={`px-2 py-1 rounded text-xs ${getStatusBadge(restaurant.subscription?.status)}`}>
-                      {restaurant.subscription?.status || '-'}
-                    </span>
-                  </p>
-                </div>
-                <div className="mt-3 space-y-2">
-                  <button
-                    onClick={() => handleOpenEditModal(restaurant.user)}
-                    className="w-full btn-secondary text-sm py-2"
-                  >
-                    ✏️ Изменить Email/Пароль
-                  </button>
-                  {restaurant.subscription ? (
-                    <select
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          const [plan, status] = e.target.value.split('|');
-                          handleUpdateSubscription(restaurant.subscription.id, plan, status);
-                          e.target.value = '';
-                        }
-                      }}
-                      className="w-full text-sm border rounded px-3 py-2"
-                    >
-                      <option value="">Изменить подписку...</option>
-                      <option value="MONTHLY|ACTIVE">Активировать Monthly</option>
-                      <option value="YEARLY|ACTIVE">Активировать Yearly</option>
-                      <option value="TRIAL|EXPIRED">Завершить Trial</option>
-                      <option value="ACTIVE|CANCELLED">Отменить</option>
-                    </select>
-                  ) : (
-                    <span className="text-gray-400 text-sm">Нет подписки</span>
-                  )}
-                </div>
-              </div>
-            ))}
+        {/* Search and Users Table */}
+        <div className="card p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold">Пользователи ({filteredUsers.length})</h2>
+            <div className="w-80">
+              <input
+                type="text"
+                placeholder="🔍 Поиск по имени, email или ресторану..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="input w-full"
+              />
+            </div>
           </div>
-
-          {/* Desktop Table View */}
-          <div className="hidden md:block overflow-x-auto">
+          
+          <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4 text-sm">Ресторан</th>
-                  <th className="text-left py-3 px-4 text-sm">Владелец</th>
-                  <th className="text-left py-3 px-4 text-sm">Email</th>
-                  <th className="text-left py-3 px-4 text-sm">Субдомен</th>
-                  <th className="text-left py-3 px-4 text-sm">План</th>
-                  <th className="text-left py-3 px-4 text-sm">Статус</th>
-                  <th className="text-left py-3 px-4 text-sm">Учетные данные</th>
-                  <th className="text-left py-3 px-4 text-sm">Подписка</th>
+                <tr className="border-b-2 border-gray-200">
+                  <th className="text-left py-3 px-4 font-semibold">Пользователь</th>
+                  <th className="text-left py-3 px-4 font-semibold">Рестораны</th>
+                  <th className="text-left py-3 px-4 font-semibold">Тариф</th>
+                  <th className="text-left py-3 px-4 font-semibold">Статус</th>
+                  <th className="text-left py-3 px-4 font-semibold">Изменить тариф</th>
+                  <th className="text-center py-3 px-4 font-semibold">Действия</th>
                 </tr>
               </thead>
               <tbody>
-                {restaurants.map((restaurant) => (
-                  <tr key={restaurant.id} className="border-b hover:bg-gray-50">
-                    <td className="py-3 px-4 text-sm">{restaurant.name}</td>
-                    <td className="py-3 px-4 text-sm">{restaurant.user.name}</td>
-                    <td className="py-3 px-4 text-sm">{restaurant.user.email}</td>
-                    <td className="py-3 px-4 text-sm">
-                      <a
-                        href={`/menu/${restaurant.subdomain}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary-600 hover:underline"
-                      >
-                        {restaurant.subdomain}
-                      </a>
+                {filteredUsers.map((user) => (
+                  <tr key={user.id} className="border-b hover:bg-gray-50 transition-colors">
+                    <td className="py-4 px-4">
+                      <div>
+                        <div className="font-medium">{user.name}</div>
+                        <div className="text-sm text-gray-500">{user.email}</div>
+                      </div>
                     </td>
-                    <td className="py-3 px-4 text-sm">{restaurant.subscription?.plan}</td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-1 rounded text-xs ${getStatusBadge(restaurant.subscription?.status)}`}>
-                        {restaurant.subscription?.status}
+                    <td className="py-4 px-4">
+                      <div className="space-y-1">
+                        <div className="text-sm font-medium text-gray-700">
+                          {user.restaurants.length} / {user.subscriptions?.[0]?.pricingTier?.maxRestaurants || 1}
+                        </div>
+                        {user.restaurants.length > 0 && (
+                          <details className="text-sm">
+                            <summary className="cursor-pointer text-primary-600 hover:text-primary-700">
+                              Показать рестораны
+                            </summary>
+                            <div className="mt-2 space-y-1 pl-4">
+                              {user.restaurants.map((restaurant) => (
+                                <div key={restaurant.id} className="text-xs text-gray-600">
+                                  • {restaurant.name} 
+                                  <a
+                                    href={`/menu/${restaurant.subdomain}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary-500 hover:underline ml-1"
+                                  >
+                                    ({restaurant.subdomain})
+                                  </a>
+                                </div>
+                              ))}
+                            </div>
+                          </details>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className="font-medium">
+                        {user.subscriptions?.[0]?.pricingTier?.name || 'TRIAL'}
                       </span>
                     </td>
-                    <td className="py-3 px-4">
-                      <button
-                        onClick={() => handleOpenEditModal(restaurant.user)}
-                        className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-                      >
-                        ✏️ Изменить
-                      </button>
+                    <td className="py-4 px-4">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(user.subscriptions?.[0]?.status || 'TRIAL')}`}>
+                        {user.subscriptions?.[0]?.status || 'TRIAL'}
+                      </span>
                     </td>
-                    <td className="py-3 px-4">
-                      {restaurant.subscription ? (
-                        <select
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              const [plan, status] = e.target.value.split('|');
-                              handleUpdateSubscription(restaurant.subscription.id, plan, status);
-                              e.target.value = '';
-                            }
-                          }}
-                          className="text-sm border rounded px-2 py-1"
+                    <td className="py-4 px-4">
+                      <select
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            handleUpdateUserSubscription(user.id, e.target.value);
+                            e.target.value = '';
+                          }
+                        }}
+                        className="text-sm border rounded px-3 py-1.5 min-w-[150px] focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        defaultValue=""
+                      >
+                        <option value="">Выбрать тариф...</option>
+                        {pricingTiers.map((tier) => (
+                          <option key={tier.id} value={tier.id}>
+                            {tier.name} (${tier.price})
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="flex justify-center gap-2">
+                        <button
+                          onClick={() => handleOpenEditModal(user)}
+                          className="p-2 text-primary-600 hover:bg-primary-50 rounded transition-colors"
+                          title="Изменить учетные данные"
                         >
-                          <option value="">Изменить...</option>
-                          <option value="MONTHLY|ACTIVE">Активировать Monthly</option>
-                          <option value="YEARLY|ACTIVE">Активировать Yearly</option>
-                          <option value="TRIAL|EXPIRED">Завершить Trial</option>
-                          <option value="ACTIVE|CANCELLED">Отменить</option>
-                        </select>
-                      ) : (
-                        <span className="text-gray-400 text-sm">Нет подписки</span>
-                      )}
+                          ✏️
+                        </button>
+                        <button
+                          onClick={() => handleDeactivateUser(user)}
+                          className="p-2 text-yellow-600 hover:bg-yellow-50 rounded transition-colors"
+                          title="Деактивировать пользователя"
+                        >
+                          🔒
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(user)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
+                          title="Удалить пользователя"
+                        >
+                          ❌
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+
+          {filteredUsers.length === 0 && (
+            <div className="text-center py-12 text-gray-500">
+              {searchQuery ? 'Пользователи не найдены' : 'Нет пользователей'}
+            </div>
+          )}
         </div>
       </div>
 
@@ -358,7 +426,7 @@ const AdminPage = () => {
           </div>
         </div>
       )}
-    </div>
+    </DashboardLayout>
   );
 };
 

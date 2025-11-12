@@ -9,7 +9,8 @@ import {
   toggleDishAvailability,
   createModifier,
   updateModifier,
-  deleteModifier
+  deleteModifier,
+  reorderDishes
 } from '../controllers/dish.controller.js';
 import { authenticate, requireRestaurant } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
@@ -21,6 +22,7 @@ router.get('/category/:categoryId', getDishes);
 
 // Protected routes - Dishes
 router.post('/', authenticate, requireRestaurant, createDish);
+router.post('/category/:categoryId/reorder', authenticate, requireRestaurant, reorderDishes);
 router.put('/:id', authenticate, requireRestaurant, updateDish);
 router.post('/:id/upload-image', authenticate, requireRestaurant, upload.single('image'), uploadDishImage);
 router.delete('/:id/image', authenticate, requireRestaurant, deleteDishImage);

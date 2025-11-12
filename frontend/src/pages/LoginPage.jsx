@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../services/authService';
+import toast from 'react-hot-toast';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -31,12 +32,12 @@ const LoginPage = () => {
       setAuth(response.user, response.token);
       
       if (response.user.isAdmin) {
-        navigate('/admin');
+        navigate('/admin', { replace: true });
       } else {
         navigate('/dashboard');
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'Ошибка входа');
+      toast.error(err.response?.data?.error || 'Ошибка входа');
     } finally {
       setLoading(false);
     }

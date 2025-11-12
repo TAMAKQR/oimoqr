@@ -567,6 +567,7 @@ backend/src/
 │ deliveryEnabled │
 │ deliveryFee     │
 │ minOrderAmount  │
+│ defaultLanguage │
 │ subscriptionId  │
 └────┬────────┬───┘
      │ 1:1    │ 1:N

@@ -1,9 +1,11 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+
+// Config
+import { config } from './config/env.js';
 
 // Routes
 import authRoutes from './routes/auth.routes.js';
@@ -13,53 +15,45 @@ import dishRoutes from './routes/dish.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import ordersRoutes from './routes/orders.routes.js';
 import deliveryLocationsRoutes from './routes/delivery-locations.routes.js';
+import staffRoutes from './routes/staff.routes.js';
+import publicRoutes from './routes/public.routes.js';
+import languageRoutes from './routes/language.routes.js';
+import geolocationRoutes from './routes/geolocation.routes.js';
+import analyticsRoutes from './routes/analytics.routes.js';
+import pricingRoutes from './routes/pricing.routes.js';
 
 // Middleware
 import { errorHandler } from './middleware/errorHandler.js';
 import { rateLimiter } from './middleware/rateLimiter.js';
 
-// Load environment variables
-dotenv.config();
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = 5001;
 
 app.set('trust proxy', 1);
 
 // Security middleware
 app.use(helmet());
 
-// CORS configuration (Render + Vercel + localhost)
+// CORS configuration (localhost only)
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-
     const allowedOrigins = [
       'http://localhost:5173',
-      'http://localhost:5000',
-      'https://oimoqr.com',
-      'https://www.oimoqr.com',
-      'https://oimoqr.onrender.com',
-      'https://oimoqr-frontend.vercel.app' 
+      'http://localhost:3000',
     ];
-
-    // Allow all Vercel preview deployments
-    if (origin.match(/^https:\/\/.*\.vercel\.app$/)) return callback(null, true);
     
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    if (origin.match(/^https:\/\/[\w-]+\.oimoqr\.com$/)) return callback(null, true);
-    if (process.env.NODE_ENV !== 'production' && origin.match(/^http:\/\/localhost:\d+$/))
+    if (!origin || allowedOrigins.includes(origin) || origin.match(/^http:\/\/localhost:\d+$/)) {
       return callback(null, true);
-
+    }
+    
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range'],
   maxAge: 600
 };
 
@@ -68,9 +62,9 @@ app.use(cors(corsOptions));
 // Rate limiting
 app.use('/api/', rateLimiter);
 
-// Body parsing middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Body parsing middleware - увеличен лимит для загрузки изображений
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Static files (uploads)
 app.use('/uploads', express.static(join(__dirname, '../uploads')));
@@ -79,10 +73,16 @@ app.use('/uploads', express.static(join(__dirname, '../uploads')));
 app.use('/api/auth', authRoutes);
 app.use('/api', deliveryLocationsRoutes);
 app.use('/api/restaurants', restaurantRoutes);
+app.use('/api/restaurants', staffRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/dishes', dishRoutes);
+app.use('/api', publicRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/orders', ordersRoutes);
+app.use('/api/languages', languageRoutes);
+app.use('/api/geolocation', geolocationRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api', pricingRoutes);
 
 // Health check route
 app.get('/health', (req, res) => {
@@ -100,8 +100,8 @@ app.use(errorHandler);
 // ✅ Single start command
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📝 Environment: ${process.env.NODE_ENV}`);
-  console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'not set'}`);
+  console.log(`📝 Environment: ${config.nodeEnv}`);
+  console.log(`🌐 Frontend URL: ${config.frontendUrl}`);
 });
 
 export default app;

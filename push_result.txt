@@ -1,3 +1,0 @@
-\"=== STATUS ===\" 
-\"=== COMMIT ===\" 
-\"?? Nothing to commit\"

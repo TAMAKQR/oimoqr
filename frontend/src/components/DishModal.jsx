@@ -4,7 +4,7 @@ import { useCartStore } from '../store/cartStore';
 const DishModal = ({ dish, isOpen, onClose, currency = '₽' }) => {
   const [selectedModifiers, setSelectedModifiers] = useState([]);
   const addItem = useCartStore((state) => state.addItem);
-  const isAvailable = dish.isAvailable !== false; // По умолчанию true если поле отсутствует
+  const isAvailable = dish.available !== false; // По умолчанию true если поле отсутствует
 
   if (!isOpen) return null;
 
@@ -52,6 +52,19 @@ const DishModal = ({ dish, isOpen, onClose, currency = '₽' }) => {
                 !isAvailable ? 'grayscale' : ''
               }`}
             />
+            {/* Бейджи */}
+            <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex flex-col gap-2 items-end">
+              {dish.badge && (
+                <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-br from-orange-400 to-red-500 text-white text-xs sm:text-sm font-bold rounded-full shadow-lg">
+                  {dish.badge}
+                </span>
+              )}
+              {dish.discount && isAvailable && (
+                <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-red-500 text-white text-xs sm:text-sm font-bold rounded-full shadow-lg">
+                  -{dish.discount}%
+                </span>
+              )}
+            </div>
             {!isAvailable && (
               <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center rounded-t-2xl sm:rounded-t-lg">
                 <span className="px-4 py-2 bg-red-500 text-white text-lg font-bold rounded-full shadow-lg">

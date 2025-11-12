@@ -85,4 +85,14 @@ export const menuService = {
     const response = await api.delete(`/dishes/modifiers/${modifierId}`);
     return response.data;
   },
+
+  reorderCategories: async (restaurantId, categoryIds) => {
+    const response = await api.post(`/categories/${restaurantId}/reorder`, { categoryIds });
+    return response.data;
+  },
+
+  reorderDishes: async (categoryId, dishIds) => {
+    const response = await api.post(`/dishes/category/${categoryId}/reorder`, { dishIds });
+    return response.data;
+  },
 };

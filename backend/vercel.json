@@ -1,7 +1,0 @@
-{
-  "buildCommand": "cd backend && npm install && npx prisma generate",
-  "outputDirectory": "backend/src",
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/backend/src/server.js" }
-  ]
-}

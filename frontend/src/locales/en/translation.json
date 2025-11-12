@@ -1,0 +1,97 @@
+{
+  "common": {
+    "oimoqr": "OimoQR",
+    "login": "Login",
+    "register": "Sign Up",
+    "logout": "Logout",
+    "dashboard": "Dashboard",
+    "settings": "Settings",
+    "admin": "Admin",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "yes": "Yes",
+    "no": "No",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "language": "Language"
+  },
+  "home": {
+    "title": "Digital Menu for Your Restaurant",
+    "subtitle": "Create a modern QR menu in 5 minutes. No programmers or designers needed.",
+    "cta": "Try Free for 7 Days",
+    "features": {
+      "qrmenu": "QR Menu",
+      "qrmenuDesc": "Guests scan the QR code and see your menu on their phones",
+      "whatsapp": "WhatsApp Orders",
+      "whatsappDesc": "Customers place orders directly from the menu and send via WhatsApp",
+      "realtime": "Real-time Updates",
+      "realtimeDesc": "Change prices and dishes in real-time without printing new menus"
+    },
+    "capabilities": {
+      "title": "Features",
+      "banner": "Banner slider for promotions and special offers",
+      "categories": "Dish categories with photos and descriptions",
+      "modifiers": "Modifiers (sizes, add-ons, sauces)",
+      "social": "Social media integration",
+      "subdomain": "Unique subdomain for your restaurant",
+      "trial": "7 days of free trial period"
+    },
+    "footer": "© 2024 OimoQR. All rights reserved."
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "restaurantName": "Restaurant Name",
+    "subdomain": "Subdomain",
+    "loginTitle": "Sign In to Your Account",
+    "registerTitle": "Create Account",
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "noAccount": "Don't have an account?",
+    "haveAccount": "Already have an account?",
+    "invalidEmail": "Invalid email",
+    "passwordMismatch": "Passwords do not match",
+    "fillAllFields": "Please fill in all fields"
+  },
+  "menu": {
+    "title": "Menu",
+    "categories": "Categories",
+    "dishes": "Dishes",
+    "addCategory": "Add Category",
+    "addDish": "Add Dish",
+    "categoryName": "Category Name",
+    "dishName": "Dish Name",
+    "description": "Description",
+    "price": "Price",
+    "image": "Image",
+    "uploadImage": "Upload Image",
+    "modifiers": "Modifiers",
+    "noMenu": "Menu is empty"
+  },
+  "restaurant": {
+    "settings": "Restaurant Settings",
+    "name": "Restaurant Name",
+    "subdomain": "Subdomain",
+    "phone": "Phone",
+    "address": "Address",
+    "instagram": "Instagram",
+    "facebook": "Facebook",
+    "telegram": "Telegram",
+    "currency": "Currency",
+    "deliveryInfo": "Delivery Information",
+    "banner": "Banner",
+    "uploadBanner": "Upload Banner"
+  },
+  "admin": {
+    "title": "Admin",
+    "restaurants": "Restaurants",
+    "subscriptions": "Subscriptions",
+    "users": "Users",
+    "statistics": "Statistics"
+  }
+}
