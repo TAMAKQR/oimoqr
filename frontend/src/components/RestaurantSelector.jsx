@@ -15,14 +15,6 @@ const RestaurantSelector = ({ userData, selectedRestaurantId, onSelectRestaurant
     return null;
   }
 
-  if (allRestaurants.length === 1) {
-    return (
-      <div className="px-4 py-2 bg-gray-100 rounded text-sm text-gray-700">
-        {allRestaurants[0].name}
-      </div>
-    );
-  }
-
   return (
     <div className="relative">
       <button
