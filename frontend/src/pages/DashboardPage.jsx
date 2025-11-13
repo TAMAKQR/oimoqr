@@ -144,7 +144,11 @@ const DashboardPage = () => {
     setError('');
 
     try {
-      const response = await restaurantService.createRestaurant(newRestaurant);
+      const restaurantData = {
+        ...newRestaurant,
+        ownerId: userData.id, // Добавляем ID владельца
+      };
+      const response = await restaurantService.createRestaurant(restaurantData);
       
       // Проверяем только на настоящие ошибки (не requiresPayment - это просто информация)
       if (response.error) {
