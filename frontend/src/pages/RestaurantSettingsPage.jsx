@@ -350,6 +350,7 @@ const RestaurantSettingsPage = () => {
           <div className="mb-8">
             <label className="block text-sm font-medium text-gray-700 mb-2">Выберите ресторан</label>
             <RestaurantSelector
+              userData={userData}
               selectedRestaurantId={selectedRestaurantId}
               onSelectRestaurant={setSelectedRestaurantId}
             />
