@@ -3,7 +3,7 @@ import { getNearbyRestaurants, checkDelivery } from '../controllers/geolocation.
 
 const router = Router();
 
-router.get('/geolocation/nearby-restaurants', getNearbyRestaurants);
-router.get('/geolocation/check-delivery', checkDelivery);
+router.get('/nearby-restaurants', getNearbyRestaurants);
+router.get('/check-delivery', checkDelivery);
 
 export default router;
