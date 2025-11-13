@@ -17,6 +17,33 @@ function getDistance(lat1, lon1, lat2, lon2) {
   return distance;
 }
 
+export const geocodeAddress = async (req, res, next) => {
+  const { address } = req.query;
+  if (!address) {
+    return res.status(400).json({ error: 'Address is required' });
+  }
+
+  try {
+    const response = await axios.get('https://geocode-maps.yandex.ru/1.x/', {
+      params: {
+        apikey: process.env.YANDEX_GEOCODER_API_KEY,
+        format: 'json',
+        geocode: address,
+      },
+    });
+
+    const geoObject = response.data.response.GeoObjectCollection.featureMember[0]?.GeoObject;
+    if (!geoObject) {
+      return res.status(404).json({ error: 'Address not found' });
+    }
+
+    const [longitude, latitude] = geoObject.Point.pos.split(' ').map(Number);
+    res.json({ latitude, longitude });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const checkDelivery = async (req, res, next) => {
   const { restaurantId, latitude, longitude } = req.query;
 
