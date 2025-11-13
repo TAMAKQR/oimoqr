@@ -46,7 +46,7 @@ const RestaurantSettingsPage = () => {
   const [isTemporarilyClosed, setIsTemporarilyClosed] = useState(false);
   const [closureReason, setClosureReason] = useState('');
   const [workingHours, setWorkingHours] = useState({
-    monday: { open: '09:00', close: '22:00', isOpen: true },
+    monday: { open: '09:00', close: '22:00', isOpen: true, is247: false },
     tuesday: { open: '09:00', close: '22:00', isOpen: true },
     wednesday: { open: '09:00', close: '22:00', isOpen: true },
     thursday: { open: '09:00', close: '22:00', isOpen: true },
@@ -174,7 +174,7 @@ const RestaurantSettingsPage = () => {
     
     // Load working hours with defaults to ensure all days are defined
     const defaultWorkingHours = {
-      monday: { open: '09:00', close: '22:00', isOpen: true },
+      monday: { open: '09:00', close: '22:00', isOpen: true, is247: false },
       tuesday: { open: '09:00', close: '22:00', isOpen: true },
       wednesday: { open: '09:00', close: '22:00', isOpen: true },
       thursday: { open: '09:00', close: '22:00', isOpen: true },
@@ -809,7 +809,7 @@ const RestaurantSettingsPage = () => {
                 wednesday: 'Среда',
                 thursday: 'Четверг',
                 friday: 'Пятница',
-                saturday: 'Суббота',
+                saturday: 'Суббота', 
                 sunday: 'Воскресенье',
               }).map(([day, label]) => (
                 <div key={day} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
@@ -830,8 +830,24 @@ const RestaurantSettingsPage = () => {
                       {workingHours[day].isOpen ? 'Открыто' : 'Выходной'}
                     </label>
                   </div>
-
+                  
                   {workingHours[day].isOpen && (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id={`${day}-is247`}
+                        checked={workingHours[day].is247 || false}
+                        onChange={(e) => setWorkingHours({
+                          ...workingHours,
+                          [day]: { ...workingHours[day], is247: e.target.checked }
+                        })}
+                        className="w-4 h-4"
+                      />
+                      <label htmlFor={`${day}-is247`} className="text-sm text-gray-600">Круглосуточно</label>
+                    </div>
+                  )}
+
+                  {workingHours[day].isOpen && !workingHours[day].is247 && (
                     <>
                       <div className="flex items-center gap-2">
                         <label className="text-sm text-gray-600">С</label>

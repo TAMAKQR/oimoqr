@@ -34,6 +34,15 @@ const WorkingHoursSection = ({ restaurant }) => {
     const currentDay = dayNames[now.getDay()];
     const currentTime = now.getHours() * 60 + now.getMinutes(); // Minutes since midnight
 
+    // Check for 24/7 first
+    if (restaurant.workingHours[currentDay]?.is247) {
+      setCurrentStatus({
+        isOpen: true,
+        message: 'Круглосуточно'
+      });
+      return;
+    }
+
     const todaySchedule = restaurant.workingHours[currentDay];
 
     if (!todaySchedule || !todaySchedule.isOpen) {
@@ -97,7 +106,10 @@ const WorkingHoursSection = ({ restaurant }) => {
           currentStatus.isOpen ? 'text-green-600 hover:text-green-700' : 'text-red-600 hover:text-red-700'
         }`}
       >
-        🕐 {todaySchedule && todaySchedule.isOpen ? `${todaySchedule.open}–${todaySchedule.close}` : 'Выходной'}
+        🕐 {todaySchedule?.is247 
+            ? 'Круглосуточно' 
+            : (todaySchedule && todaySchedule.isOpen ? `${todaySchedule.open}–${todaySchedule.close}` : 'Выходной')
+          }
       </button>
 
       {/* Details Modal */}
@@ -131,7 +143,11 @@ const WorkingHoursSection = ({ restaurant }) => {
               <div>
                 <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                   <p className="text-sm text-gray-600 mb-1">Сегодня, <span className="capitalize font-medium">{dayLabels[currentDay]}</span></p>
-                  <p className="text-lg font-bold">{todaySchedule.open} – {todaySchedule.close}</p>
+                  <p className="text-lg font-bold">
+                    {todaySchedule.is247 
+                      ? 'Круглосуточно' 
+                      : `${todaySchedule.open} – ${todaySchedule.close}`}
+                  </p>
                   <p className={`text-sm font-medium mt-2 ${currentStatus.isOpen ? 'text-green-600' : 'text-red-600'}`}>
                     {currentStatus.isOpen ? '● Открыто' : '● Закрыто'}
                     {currentStatus.message && <span className="font-normal"> • {currentStatus.message}</span>}
@@ -153,7 +169,10 @@ const WorkingHoursSection = ({ restaurant }) => {
                           {label}
                         </span>
                         <span className={schedule?.isOpen ? 'text-gray-900' : 'text-red-600'}>
-                          {schedule?.isOpen ? `${schedule.open} – ${schedule.close}` : 'Выходной'}
+                          {schedule?.isOpen 
+                            ? (schedule.is247 ? 'Круглосуточно' : `${schedule.open} – ${schedule.close}`) 
+                            : 'Выходной'
+                          }
                         </span>
                       </div>
                     );
