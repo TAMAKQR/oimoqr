@@ -72,6 +72,7 @@ const Cart = ({ restaurant }) => {
         
         if (error.code === error.PERMISSION_DENIED) {
           errorMessage = 'Доступ к геолокации запрещен. Разрешите доступ в настройках браузера.';
+          setGeolocationDenied(true); // Устанавливаем флаг, что доступ запрещен
         } else if (error.code === error.POSITION_UNAVAILABLE) {
           errorMessage = 'Информация о местоположении недоступна';
         } else if (error.code === error.TIMEOUT) {
@@ -89,12 +90,47 @@ const Cart = ({ restaurant }) => {
     );
   };
 
+  // Функция для проверки адреса вручную
+  const handleManualAddressCheck = async () => {
+    if (!deliveryAddress.trim()) {
+      toast.error('Пожалуйста, введите адрес доставки для проверки');
+      return;
+    }
+
+    setIsCheckingLocation(true);
+    setDeliveryCheck(null);
+    setNearbyRestaurants([]);
+
+    try {
+      // 1. Получаем координаты по адресу
+      const geocodeResponse = await api.get('/geolocation/geocode', { params: { address: deliveryAddress } });
+      const { latitude, longitude } = geocodeResponse.data;
+      setUserLocation({ latitude, longitude });
+
+      // 2. Проверяем доступность доставки по полученным координатам
+      const deliveryResponse = await api.get('/geolocation/check-delivery', {
+        params: { restaurantId: restaurant.id, latitude, longitude }
+      });
+      setDeliveryCheck(deliveryResponse.data);
+
+      if (!deliveryResponse.data.deliveryAvailable) {
+        const nearbyResponse = await api.get('/geolocation/nearby-restaurants', { params: { latitude, longitude } });
+        setNearbyRestaurants(nearbyResponse.data);
+      }
+    } catch (error) {
+      console.error('Error checking manual address:', error);
+      toast.error(error.response?.data?.error || 'Не удалось проверить адрес');
+    } finally {
+      setIsCheckingLocation(false);
+    }
+  };
+
   // Автоматическое определение местоположения при открытии корзины
   useEffect(() => {
-    if (isOpen && restaurant.deliveryEnabled && !userLocation && !isCheckingLocation) {
+    if (isOpen && restaurant.deliveryEnabled && !userLocation && !isCheckingLocation && !geolocationDenied) {
       handleGetLocation();
     }
-  }, [isOpen, restaurant.deliveryEnabled]);
+  }, [isOpen, restaurant.deliveryEnabled, geolocationDenied]);
 
   const handleCheckout = async () => {
     if (items.length === 0) return;
