@@ -64,18 +64,27 @@ const DashboardPage = () => {
   };
 
   useEffect(() => {
-    // Устанавливаем ресторан по умолчанию только один раз, когда данные загружены,
-    // а ресторан еще не выбран.
-    if (userData && !selectedRestaurantId && (userData.restaurants?.length > 0 || userData.restaurantStaff?.length > 0)) {
+    if (userData) {
       const allRestaurants = [
         ...(userData.restaurants || []),
         ...(userData.restaurantStaff?.map(s => s.restaurant) || [])
       ];
+
       if (allRestaurants.length > 0) {
-        setSelectedRestaurantId(allRestaurants[0].id);
+        // Проверяем, существует ли текущий выбранный ресторан в обновленных данных
+        const currentSelectedRestaurantExists = allRestaurants.some(r => r.id === selectedRestaurantId);
+
+        // Если ресторан не выбран или выбранный ресторан больше не существует,
+        // выбираем первый доступный ресторан
+        if (!selectedRestaurantId || !currentSelectedRestaurantExists) {
+          setSelectedRestaurantId(allRestaurants[0].id);
+        }
+      } else {
+        // Если ресторанов нет, очищаем выбранный ID
+        setSelectedRestaurantId(null);
       }
     }
-  }, [userData]); // Убираем selectedRestaurantId из зависимостей, чтобы разорвать цикл
+  }, [userData, selectedRestaurantId]); // selectedRestaurantId теперь в зависимостях
 
   // Загрузка статистики при выборе ресторана
   useEffect(() => {
