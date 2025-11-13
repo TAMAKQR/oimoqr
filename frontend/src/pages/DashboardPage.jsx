@@ -308,6 +308,7 @@ const DashboardPage = () => {
               </div>
             )}
             <RestaurantSelector
+              userData={userData}
               selectedRestaurantId={selectedRestaurantId}
               onSelectRestaurant={setSelectedRestaurantId}
             />
