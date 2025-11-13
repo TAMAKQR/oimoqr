@@ -1,32 +1,60 @@
 import { useState } from 'react';
 import { useCartStore } from '../store/cartStore';
+import toast from 'react-hot-toast';
 
 const DishModal = ({ dish, isOpen, onClose, currency = '₽' }) => {
-  const [selectedModifiers, setSelectedModifiers] = useState([]);
+  // Используем объект для хранения выбранных опций для каждого модификатора
+  const [selectedModifiers, setSelectedModifiers] = useState({});
   const addItem = useCartStore((state) => state.addItem);
   const isAvailable = dish.available !== false; // По умолчанию true если поле отсутствует
 
   if (!isOpen) return null;
 
-  const toggleModifier = (modifier) => {
-    setSelectedModifiers((prev) => {
-      const exists = prev.find((m) => m.id === modifier.id);
-      if (exists) {
-        return prev.filter((m) => m.id !== modifier.id);
+  const handleModifierChange = (modifier, option) => {
+    setSelectedModifiers(prev => {
+      const newSelection = { ...prev };
+      if (modifier.type === 'single') {
+        newSelection[modifier.id] = [option];
+      } else { // multi
+        const currentOptions = newSelection[modifier.id] || [];
+        const optionIndex = currentOptions.findIndex(o => o.id === option.id);
+        if (optionIndex > -1) {
+          // Убираем опцию, если она уже выбрана
+          newSelection[modifier.id] = currentOptions.filter(o => o.id !== option.id);
+        } else {
+          // Добавляем опцию
+          newSelection[modifier.id] = [...currentOptions, option];
+        }
       }
-      return [...prev, modifier];
+      return newSelection;
     });
   };
 
   const getTotalPrice = () => {
-    const modifiersPrice = selectedModifiers.reduce((sum, m) => sum + m.price, 0);
+    const modifiersPrice = Object.values(selectedModifiers)
+      .flat()
+      .reduce((sum, option) => sum + (option.price || 0), 0);
     return parseFloat((dish.price + modifiersPrice).toFixed(2));
   };
 
   const handleAddToCart = () => {
     if (!isAvailable) return;
-    addItem(dish, selectedModifiers);
-    setSelectedModifiers([]);
+
+    const finalPrice = getTotalPrice();
+    const selectedOptions = Object.values(selectedModifiers).flat();
+
+    const modifierIds = selectedOptions.map(m => m.id).sort().join('-');
+    const itemId = `${dish.id}-${modifierIds}`;
+
+    addItem({
+      itemId: itemId,
+      dish: dish,
+      modifiers: selectedOptions,
+      quantity: 1,
+      totalPrice: finalPrice,
+    });
+
+    toast.success(`${dish.name} добавлен в корзину!`);
     onClose();
   };
 
@@ -90,28 +118,34 @@ const DishModal = ({ dish, isOpen, onClose, currency = '₽' }) => {
 
           {dish.modifiers && dish.modifiers.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-base sm:text-lg font-semibold mb-3">Дополнительно:</h3>
-              <div className="space-y-2">
-                {dish.modifiers.map((modifier) => (
-                  <label
-                    key={modifier.id}
-                    className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors gap-2"
-                  >
-                    <div className="flex items-center min-w-0 flex-1">
-                      <input
-                        type="checkbox"
-                        checked={selectedModifiers.some((m) => m.id === modifier.id)}
-                        onChange={() => toggleModifier(modifier)}
-                        className="mr-2 sm:mr-3 flex-shrink-0 w-4 h-4 sm:w-5 sm:h-5"
-                      />
-                      <span className="text-sm sm:text-base break-words">{modifier.name}</span>
-                    </div>
-                    {modifier.price > 0 && (
-                      <span className="text-gray-600 text-sm sm:text-base whitespace-nowrap ml-2">
-                        +{parseFloat(modifier.price).toFixed(2)} {currency}
-                      </span>
-                    )}
-                  </label>
+              {dish.modifiers.map((modifier) => (
+                <div key={modifier.id} className="mb-4">
+                  <h3 className="text-base sm:text-lg font-semibold mb-2">{modifier.name}</h3>
+                  <div className="space-y-2">
+                    {modifier.options.map((option) => (
+                      <label
+                        key={option.id}
+                        className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors gap-2"
+                      >
+                        <div className="flex items-center min-w-0 flex-1">
+                          <input
+                            type={modifier.type === 'single' ? 'radio' : 'checkbox'}
+                            name={modifier.id}
+                            checked={selectedModifiers[modifier.id]?.some(o => o.id === option.id) || false}
+                            onChange={() => handleModifierChange(modifier, option)}
+                            className="mr-2 sm:mr-3 flex-shrink-0 w-4 h-4 sm:w-5 sm:h-5"
+                          />
+                          <span className="text-sm sm:text-base break-words">{option.name}</span>
+                        </div>
+                        {option.price > 0 && (
+                          <span className="text-gray-600 text-sm sm:text-base whitespace-nowrap ml-2">
+                            +{parseFloat(option.price).toFixed(2)} {currency}
+                          </span>
+                        )}
+                      </label>
+                    ))}
+                  </div>
+                </div>
                 ))}
               </div>
             </div>
