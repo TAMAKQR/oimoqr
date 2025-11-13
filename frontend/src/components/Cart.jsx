@@ -11,6 +11,7 @@ const Cart = ({ restaurant }) => {
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [whatsappLink, setWhatsappLink] = useState('');
   const [isCheckingLocation, setIsCheckingLocation] = useState(false);
+  const [geolocationDenied, setGeolocationDenied] = useState(false);
   
   // Данные клиента и доставки
   const [customerName, setCustomerName] = useState('');
