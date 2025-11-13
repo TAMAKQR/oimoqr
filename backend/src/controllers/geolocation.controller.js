@@ -16,6 +16,42 @@ function getDistance(lat1, lon1, lat2, lon2) {
   return distance;
 }
 
+export const checkDelivery = async (req, res, next) => {
+  const { restaurantId, latitude, longitude } = req.query;
+
+  if (!restaurantId || !latitude || !longitude) {
+    return res.status(400).json({ error: 'restaurantId, latitude, and longitude are required' });
+  }
+
+  try {
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: restaurantId },
+      select: { latitude: true, longitude: true, deliveryRadius: true }
+    });
+
+    if (!restaurant || !restaurant.latitude || !restaurant.longitude || !restaurant.deliveryRadius) {
+      return res.json({ deliveryAvailable: false, message: 'Для этого ресторана не настроена зона доставки.' });
+    }
+
+    const userLat = parseFloat(latitude);
+    const userLon = parseFloat(longitude);
+
+    const distance = getDistance(userLat, userLon, restaurant.latitude, restaurant.longitude);
+    const deliveryAvailable = distance <= restaurant.deliveryRadius;
+
+    res.json({
+      deliveryAvailable,
+      distance: distance.toFixed(2),
+      deliveryRadius: restaurant.deliveryRadius,
+      message: deliveryAvailable
+        ? 'Доставка доступна по вашему адресу'
+        : `Вы находитесь за пределами зоны доставки (${restaurant.deliveryRadius} км)`
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getNearbyRestaurants = async (req, res, next) => {
   const { latitude, longitude } = req.query;
 

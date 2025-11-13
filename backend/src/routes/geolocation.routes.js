@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getNearbyRestaurants } from '../controllers/geolocation.controller.js';
+import { getNearbyRestaurants, checkDelivery } from '../controllers/geolocation.controller.js';
 
 const router = Router();
 

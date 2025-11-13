@@ -65,6 +65,12 @@ const main = async () => {
     console.log('... Добавляем корневые файлы');
     archive.file(path.join(projectRoot, 'package.json'), { name: 'package.json' });
     archive.file(path.join(projectRoot, 'package-lock.json'), { name: 'package-lock.json' });
+    if (fs.existsSync(path.join(projectRoot, 'docker-compose.yml'))) {
+      archive.file(path.join(projectRoot, 'docker-compose.yml'), { name: 'docker-compose.yml' });
+    }
+    if (fs.existsSync(path.join(projectRoot, 'vercel.json'))) {
+      archive.file(path.join(projectRoot, 'vercel.json'), { name: 'vercel.json' });
+    }
 
     // 5. Завершаем архивацию
     await archive.finalize();
