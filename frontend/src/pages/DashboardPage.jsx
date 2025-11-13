@@ -47,6 +47,13 @@ const DashboardPage = () => {
     loadPricingTiers();
   }, []);
 
+  useEffect(() => {
+    // Redirect admin to admin panel
+    if (userData?.isAdmin) {
+      navigate('/admin');
+    }
+  }, [userData, navigate]);
+
   const loadPricingTiers = async () => {
     try {
       const tiers = await pricingService.getPricingTiers();
@@ -250,7 +257,11 @@ const DashboardPage = () => {
                   }
                   
                   if (!activeSubscription) {
-                    // Нет активной подписки, но есть рестораны
+                    // Для админа эта логика не нужна, он может создавать рестораны без подписки
+                    if (userData?.isAdmin) {
+                      setShowCreateModal(true);
+                      return;
+                    }
                     const pricingMessage = pricingTiers.length > 0
                       ? `\n\nДоступные тарифы:\n${pricingTiers.map(tier => {
                           const tierInfo = `${tier.name} - $${tier.price.toFixed(2)}/мес`;
