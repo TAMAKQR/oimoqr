@@ -11,7 +11,6 @@ const Cart = ({ restaurant }) => {
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [whatsappLink, setWhatsappLink] = useState('');
   const [isCheckingLocation, setIsCheckingLocation] = useState(false);
-  const [geolocationDenied, setGeolocationDenied] = useState(false);
   
   // Данные клиента и доставки
   const [customerName, setCustomerName] = useState('');
@@ -91,41 +90,6 @@ const Cart = ({ restaurant }) => {
     );
   };
 
-  // Функция для проверки адреса вручную
-  const handleManualAddressCheck = async () => {
-    if (!deliveryAddress.trim()) {
-      toast.error('Пожалуйста, введите адрес доставки для проверки');
-      return;
-    }
-
-    setIsCheckingLocation(true);
-    setDeliveryCheck(null);
-    setNearbyRestaurants([]);
-
-    try {
-      // 1. Получаем координаты по адресу
-      const geocodeResponse = await api.get('/geolocation/geocode', { params: { address: deliveryAddress } });
-      const { latitude, longitude } = geocodeResponse.data;
-      setUserLocation({ latitude, longitude });
-
-      // 2. Проверяем доступность доставки по полученным координатам
-      const deliveryResponse = await api.get('/geolocation/check-delivery', {
-        params: { restaurantId: restaurant.id, latitude, longitude }
-      });
-      setDeliveryCheck(deliveryResponse.data);
-
-      if (!deliveryResponse.data.deliveryAvailable) {
-        const nearbyResponse = await api.get('/geolocation/nearby-restaurants', { params: { latitude, longitude } });
-        setNearbyRestaurants(nearbyResponse.data);
-      }
-    } catch (error) {
-      console.error('Error checking manual address:', error);
-      toast.error(error.response?.data?.error || 'Не удалось проверить адрес');
-    } finally {
-      setIsCheckingLocation(false);
-    }
-  };
-
   // Автоматическое определение местоположения при открытии корзины
   useEffect(() => {
     if (isOpen && restaurant.deliveryEnabled && !userLocation && !isCheckingLocation && !geolocationDenied) {
@@ -157,11 +121,12 @@ const Cart = ({ restaurant }) => {
         toast.error('Пожалуйста, укажите адрес доставки');
         return;
       }
-      if (!userLocation) {
+      // Если геолокация не запрещена, она обязательна
+      if (!geolocationDenied && !userLocation) {
         toast.error('Пожалуйста, определите ваше местоположение');
         return;
       }
-      if (!deliveryCheck || !deliveryCheck.deliveryAvailable) {
+      if (deliveryCheck && !deliveryCheck.deliveryAvailable) {
         toast.error('Доставка по вашему адресу недоступна. Вы находитесь вне зоны доставки.');
         return;
       }
@@ -187,8 +152,8 @@ const Cart = ({ restaurant }) => {
         orderData.customerName = customerName;
         orderData.customerPhone = customerPhone;
         orderData.deliveryAddress = deliveryAddress;
-        orderData.deliveryLatitude = userLocation.latitude;
-        orderData.deliveryLongitude = userLocation.longitude;
+        orderData.deliveryLatitude = userLocation?.latitude;
+        orderData.deliveryLongitude = userLocation?.longitude;
       }
 
       const response = await api.post('/orders', orderData);
@@ -211,7 +176,11 @@ const Cart = ({ restaurant }) => {
       
       // Добавляем данные доставки если включена
       if (restaurant.deliveryEnabled) {
-        message += `👤 Имя: ${customerName}\n📱 Телефон: ${customerPhone}\n📍 Адрес доставки: ${deliveryAddress}\n🚗 Расстояние: ${deliveryCheck.distance} км\n\n`;
+        message += `👤 Имя: ${customerName}\n📱 Телефон: ${customerPhone}\n📍 Адрес доставки: ${deliveryAddress}\n`;
+        // Добавляем расстояние, только если оно было рассчитано
+        if (deliveryCheck?.distance) {
+          message += `🚗 Расстояние: ${deliveryCheck.distance} км\n\n`;
+        }
       }
       
       message += `Хочу сделать заказ:\n\n${orderText}\n\nИтого: ${total} ${currency}`;
