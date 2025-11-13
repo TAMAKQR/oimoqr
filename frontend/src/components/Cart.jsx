@@ -220,6 +220,7 @@ const Cart = ({ restaurant }) => {
     setUserLocation(null);
     setDeliveryCheck(null);
     setNearbyRestaurants([]);
+    setGeolocationDenied(false); // Сбрасываем флаг запрета при закрытии
   };
 
   const itemCount = getItemCount();
