@@ -18,6 +18,7 @@ const Cart = ({ restaurant }) => {
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [userLocation, setUserLocation] = useState(null); // { latitude, longitude }
   const [deliveryCheck, setDeliveryCheck] = useState(null); // Результат проверки доставки
+  const [nearbyRestaurants, setNearbyRestaurants] = useState([]); // Новое состояние для ближайших ресторанов
   
   const { items, removeItem, updateQuantity, getTotal, getItemCount, clearCart } = useCartStore();
   const currency = restaurant?.currency || '₽';
@@ -48,6 +49,16 @@ const Cart = ({ restaurant }) => {
           });
 
           setDeliveryCheck(response.data);
+
+          // Если доставка недоступна, ищем ближайшие рестораны
+          if (!response.data.deliveryAvailable) {
+            try {
+              const nearbyResponse = await api.get('/geolocation/nearby-restaurants', { params: { latitude, longitude } });
+              setNearbyRestaurants(nearbyResponse.data);
+            } catch (nearbyError) {
+              console.error('Error fetching nearby restaurants:', nearbyError);
+            }
+          }
           setIsCheckingLocation(false);
         } catch (error) {
           console.error('Error checking delivery:', error);
@@ -430,6 +441,21 @@ const Cart = ({ restaurant }) => {
                                   Стоимость доставки: {restaurant.deliveryFee} {currency}
                                 </p>
                               )}
+                            {/* Блок с предложением других ресторанов */}
+                            {!deliveryCheck.deliveryAvailable && nearbyRestaurants.length > 0 && (
+                              <div className="mt-3 pt-3 border-t border-red-200">
+                                <p className="font-semibold text-sm mb-2">Возможно, вам подойдет доставка из другого нашего ресторана:</p>
+                                <ul className="space-y-2">
+                                  {nearbyRestaurants.slice(0, 3).map(r => (
+                                    <li key={r.id}>
+                                      <a href={`/menu/${r.subdomain}`} className="text-sm text-blue-600 hover:underline">
+                                        <strong>{r.name}</strong> ({r.distance.toFixed(2)} км)
+                                      </a>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
                             </div>
                           )}
                         </div>
