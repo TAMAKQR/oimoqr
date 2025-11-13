@@ -59,19 +59,19 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use('/uploads', express.static(join(__dirname, '../uploads')));
 
 // API Routes
+app.use('/api', publicRoutes); // Public routes first
+app.use('/api', pricingRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api', deliveryLocationsRoutes);
 app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/restaurants', staffRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/dishes', dishRoutes);
-app.use('/api', publicRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/languages', languageRoutes);
 app.use('/api/geolocation', geolocationRoutes);
 app.use('/api/analytics', analyticsRoutes);
-app.use('/api', pricingRoutes);
 
 // Health check route
 app.get('/health', (req, res) => {
