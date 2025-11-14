@@ -1,16 +1,20 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 
 const HomePage = () => {
   const { t } = useTranslation();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100">
-      <nav className="bg-white shadow-sm">
+      <header className="bg-white/90 backdrop-blur-sm shadow-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-primary-600">{t('common.oimoqr')}</h1>
-          <div className="flex items-center gap-6">
+
+          {/* Desktop Menu */}
+          <div className="hidden md:flex items-center gap-6">
             <LanguageSwitcher />
             <div className="space-x-4">
               <Link to="/login" className="btn-secondary">
@@ -21,8 +25,65 @@ const HomePage = () => {
               </Link>
             </div>
           </div>
+
+          {/* Mobile Menu Button */}
+          <div className="md:hidden">
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="p-2 rounded-md text-gray-500 hover:text-primary-600 focus:outline-none"
+              aria-label="Открыть меню"
+            >
+              {isMenuOpen ? (
+                <svg className="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7" />
+                </svg>
+              )}
+            </button>
+          </div>
         </div>
-      </nav>
+
+        {/* Mobile Menu Overlay */}
+        {isMenuOpen && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+            onClick={() => setIsMenuOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+      </header>
+
+      {/* Mobile Menu Panel (Sidebar) */}
+      <div
+        className={`fixed top-0 right-0 h-full w-64 bg-white shadow-xl z-50 transform transition-transform duration-300 ease-in-out md:hidden ${
+          isMenuOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        {/* Header for mobile menu */}
+        <div className="flex justify-between items-center p-4 border-b">
+          <h2 className="text-xl font-bold text-primary-600">{t('common.oimoqr')}</h2>
+          <button
+            onClick={() => setIsMenuOpen(false)}
+            className="p-2 rounded-md text-gray-500 hover:text-primary-600 focus:outline-none"
+            aria-label="Закрыть меню"
+          >
+            <svg className="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <Link to="/login" onClick={() => setIsMenuOpen(false)} className="block w-full text-center btn-secondary">{t('common.login')}</Link>
+          <Link to="/register" onClick={() => setIsMenuOpen(false)} className="block w-full text-center btn-primary">{t('common.register')}</Link>
+          <div className="border-t pt-4">
+            <LanguageSwitcher />
+          </div>
+        </div>
+      </div>
 
       <div className="container mx-auto px-4 py-16">
         <div className="text-center mb-16">

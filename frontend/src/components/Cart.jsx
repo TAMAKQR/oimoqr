@@ -16,7 +16,6 @@ const Cart = ({ restaurant }) => {
   // Данные клиента и доставки
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
-  const [deliveryAddress, setDeliveryAddress] = useState('');
   const [userLocation, setUserLocation] = useState(null); // { latitude, longitude }
   const [deliveryCheck, setDeliveryCheck] = useState(null); // Результат проверки доставки
   const [nearbyRestaurants, setNearbyRestaurants] = useState([]); // Новое состояние для ближайших ресторанов
@@ -118,10 +117,6 @@ const Cart = ({ restaurant }) => {
         toast.error('Пожалуйста, укажите ваш телефон');
         return;
       }
-      if (!deliveryAddress.trim()) {
-        toast.error('Пожалуйста, укажите адрес доставки');
-        return;
-      }
       // Если геолокация не запрещена, она обязательна
       if (!geolocationDenied && !userLocation) {
         toast.error('Пожалуйста, определите ваше местоположение');
@@ -152,7 +147,6 @@ const Cart = ({ restaurant }) => {
       if (restaurant.deliveryEnabled) {
         orderData.customerName = customerName;
         orderData.customerPhone = customerPhone;
-        orderData.deliveryAddress = deliveryAddress;
         orderData.deliveryLatitude = userLocation?.latitude;
         orderData.deliveryLongitude = userLocation?.longitude;
       }
@@ -177,7 +171,7 @@ const Cart = ({ restaurant }) => {
       
       // Добавляем данные доставки если включена
       if (restaurant.deliveryEnabled) {
-        message += `👤 Имя: ${customerName}\n📱 Телефон: ${customerPhone}\n📍 Адрес доставки: ${deliveryAddress}\n`;
+        message += `👤 Имя: ${customerName}\n📱 Телефон: ${customerPhone}\n`;
         // Добавляем расстояние, только если оно было рассчитано
         if (deliveryCheck?.distance) {
           message += `🚗 Расстояние: ${deliveryCheck.distance} км\n\n`;
@@ -216,7 +210,6 @@ const Cart = ({ restaurant }) => {
     setWhatsappLink('');
     setCustomerName('');
     setCustomerPhone('');
-    setDeliveryAddress('');
     setUserLocation(null);
     setDeliveryCheck(null);
     setNearbyRestaurants([]);
@@ -412,20 +405,12 @@ const Cart = ({ restaurant }) => {
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm sm:text-base"
                           />
                           
-                          <input
-                            type="text"
-                            placeholder="Адрес доставки *"
-                            value={deliveryAddress}
-                            onChange={(e) => setDeliveryAddress(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm sm:text-base"
-                          />
-                          
                           {/* Статус автоматического определения местоположения */}
                           {isCheckingLocation && (
                             <div className="p-3 bg-blue-50 border-l-4 border-blue-500 text-blue-700 rounded-lg text-sm flex items-center gap-2">
                               <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                               </svg>
                               <span>📍 Определяем ваше местоположение...</span>
                             </div>

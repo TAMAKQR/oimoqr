@@ -33,4 +33,13 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    proxy: {
+      // Все запросы, начинающиеся с /uploads, будут перенаправлены на бэкенд
+      '/uploads': {
+        target: 'http://localhost:5001', // Адрес твоего бэкенда
+        changeOrigin: true,
+      },
+    }
+  }
 });

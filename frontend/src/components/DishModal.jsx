@@ -146,8 +146,7 @@ const DishModal = ({ dish, isOpen, onClose, currency = '₽' }) => {
                     ))}
                   </div>
                 </div>
-                ))}
-              </div>
+              ))}
             </div>
           )}
 
