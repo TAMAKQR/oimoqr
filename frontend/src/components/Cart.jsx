@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 
 const Cart = ({ restaurant }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Для WhatsApp заказа
   const [showOrderNumber, setShowOrderNumber] = useState(null);
   // Новое состояние для экрана успеха
   const [orderSuccess, setOrderSuccess] = useState(false);
@@ -14,8 +14,6 @@ const Cart = ({ restaurant }) => {
   const [geolocationDenied, setGeolocationDenied] = useState(false);
   
   // Данные клиента и доставки
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
   const [userLocation, setUserLocation] = useState(null); // { latitude, longitude }
   const [deliveryCheck, setDeliveryCheck] = useState(null); // Результат проверки доставки
   const [nearbyRestaurants, setNearbyRestaurants] = useState([]); // Новое состояние для ближайших ресторанов
@@ -109,14 +107,6 @@ const Cart = ({ restaurant }) => {
 
     // Если доставка включена - требуем данные
     if (restaurant.deliveryEnabled) {
-      if (!customerName.trim()) {
-        toast.error('Пожалуйста, укажите ваше имя');
-        return;
-      }
-      if (!customerPhone.trim()) {
-        toast.error('Пожалуйста, укажите ваш телефон');
-        return;
-      }
       // Если геолокация не запрещена, она обязательна
       if (!geolocationDenied && !userLocation) {
         toast.error('Пожалуйста, определите ваше местоположение');
@@ -145,8 +135,6 @@ const Cart = ({ restaurant }) => {
 
       // Добавляем данные доставки если включена
       if (restaurant.deliveryEnabled) {
-        orderData.customerName = customerName;
-        orderData.customerPhone = customerPhone;
         orderData.deliveryLatitude = userLocation?.latitude;
         orderData.deliveryLongitude = userLocation?.longitude;
       }
@@ -171,7 +159,6 @@ const Cart = ({ restaurant }) => {
       
       // Добавляем данные доставки если включена
       if (restaurant.deliveryEnabled) {
-        message += `👤 Имя: ${customerName}\n📱 Телефон: ${customerPhone}\n`;
         // Добавляем расстояние, только если оно было рассчитано
         if (deliveryCheck?.distance) {
           message += `🚗 Расстояние: ${deliveryCheck.distance} км\n\n`;
@@ -208,10 +195,9 @@ const Cart = ({ restaurant }) => {
     setIsOpen(false);
     setOrderSuccess(false); // Сбрасываем экран успеха
     setWhatsappLink('');
-    setCustomerName('');
-    setCustomerPhone('');
     setUserLocation(null);
     setDeliveryCheck(null);
+    setShowOrderNumber(null); // Сбрасываем и это состояние
     setNearbyRestaurants([]);
     setGeolocationDenied(false); // Сбрасываем флаг запрета при закрытии
   };
@@ -250,38 +236,44 @@ const Cart = ({ restaurant }) => {
 
       {/* Order Number Modal */}
       {showOrderNumber && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-md w-full text-center">
+        <div className="fixed inset-0 bg-white flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-md w-full text-left">
             <button
               onClick={() => setShowOrderNumber(null)}
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 z-10"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <div className="mb-4">
-              <svg className="w-16 h-16 sm:w-20 sm:h-20 mx-auto text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+            <h3 className="text-xl sm:text-2xl font-bold mb-4">Ваш заказ</h3>
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+              {items.map((item) => (
+                <div key={item.itemId} className="flex justify-between items-start gap-2 border-b pb-2">
+                  <div className="flex-1">
+                    <p className="font-semibold">{item.quantity}x {item.dish.name}</p>
+                    {item.modifiers.length > 0 && (
+                      <p className="text-xs text-gray-500">
+                        {item.modifiers.map(m => m.name).join(', ')}
+                      </p>
+                    )}
+                  </div>
+                  <p className="font-semibold whitespace-nowrap">
+                    {(item.totalPrice * item.quantity).toFixed(2)} {currency}
+                  </p>
+                </div>
+              ))}
             </div>
-            <h3 className="text-xl sm:text-2xl font-bold mb-2">Заказ создан!</h3>
-            <p className="text-gray-600 mb-4">Ваш номер заказа:</p>
-            <p className="text-3xl sm:text-4xl font-bold text-primary-600 mb-6 font-mono">{showOrderNumber}</p>
-            <div className="space-y-3">
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(showOrderNumber);
-                  alert('Номер заказа скопирован в буфер обмена');
-                }}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
-              >
-                📋 Копировать номер
-              </button>
-              <p className="text-sm text-gray-500">Спасибо за заказ, скоро с Вами свяжутся</p>
+            <div className="flex justify-between items-center mt-4 pt-4 border-t">
+              <span className="text-lg font-bold">Итого:</span>
+              <span className="text-xl font-bold text-primary-600">
+                {total.toFixed(2)} {currency}
+              </span>
+            </div>
+            <div className="mt-6">
               <button
                 onClick={() => setShowOrderNumber(null)}
-                className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg transition-colors"
+                className="w-full btn-secondary"
               >
                 Закрыть
               </button>
@@ -389,22 +381,6 @@ const Cart = ({ restaurant }) => {
                         <div className="mb-4 space-y-3">
                           <h3 className="font-semibold text-base sm:text-lg">Данные для доставки:</h3>
                           
-                          <input
-                            type="text"
-                            placeholder="Ваше имя *"
-                            value={customerName}
-                            onChange={(e) => setCustomerName(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm sm:text-base"
-                          />
-                          
-                          <input
-                            type="tel"
-                            placeholder="Ваш телефон *"
-                            value={customerPhone}
-                            onChange={(e) => setCustomerPhone(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm sm:text-base"
-                          />
-                          
                           {/* Статус автоматического определения местоположения */}
                           {isCheckingLocation && (
                             <div className="p-3 bg-blue-50 border-l-4 border-blue-500 text-blue-700 rounded-lg text-sm flex items-center gap-2">
@@ -469,13 +445,22 @@ const Cart = ({ restaurant }) => {
                         </div>
                       )}
                       
-                      <button
-                        onClick={handleCheckout}
-                        disabled={isLoading || isBelowMinimum}
-                        className="w-full btn-primary py-3 text-base sm:text-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {isLoading ? 'Создание заказа...' : 'Оформить заказ в WhatsApp'}
-                      </button>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <button
+                          onClick={() => setShowOrderNumber('PREVIEW')}
+                          disabled={isLoading || isBelowMinimum}
+                          className="w-full btn-secondary py-3 text-base sm:text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Показать официанту
+                        </button>
+                        <button
+                          onClick={handleCheckout}
+                          disabled={isLoading || isBelowMinimum}
+                          className="w-full btn-primary py-3 text-base sm:text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isLoading ? 'Создание заказа...' : 'Оформить в WhatsApp'}
+                        </button>
+                      </div>
                     </div>
                   </>
                 )
