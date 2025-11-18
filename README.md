@@ -13,14 +13,18 @@
 - 🔧 **Модификаторы** - размеры, добавки, соусы
 - 🌐 **Уникальные поддомены** - `ваш-ресторан.oimoqr.com`
 
+Новый комит
+
 ## 🏗️ Технологический стек
 
 **Frontend:**
+
 - React 18, React Router 6, TailwindCSS
 - Zustand (state), Axios, Swiper
 - i18next (многоязычность)
 
 **Backend:**
+
 - Node.js + Express, Prisma ORM
 - SQLite (локальная разработка)
 - JWT аутентификация, Bcrypt
@@ -80,6 +84,7 @@ npm run dev
 ```
 
 Приложение будет доступна:
+
 - **Frontend:** http://localhost:5173
 - **Backend:** http://localhost:5000
 
@@ -96,10 +101,12 @@ npm run dev:backend
 ## 🗄️ База данных
 
 Проект использует **SQLite** для локальной разработки:
+
 - БД файл: `backend/prisma/dev.db`
 - Миграции: `backend/prisma/migrations/`
 
 Для работы с БД:
+
 ```bash
 cd backend
 
@@ -116,6 +123,7 @@ npx prisma migrate dev --name migration_name
 ## 📝 Переменные окружения
 
 **Backend** (`backend/.env`):
+
 ```
 DATABASE_URL=file:./prisma/dev.db
 JWT_SECRET=your-secret-key
@@ -124,6 +132,7 @@ NODE_ENV=development
 ```
 
 **Frontend** (`frontend/.env`):
+
 ```
 VITE_API_URL=http://localhost:5000/api
 ```
@@ -156,5 +165,6 @@ MIT License - см. [LICENSE](LICENSE)
 ## 👨‍💻 Команда
 
 **OimoQR Team**
+
 - Website: https://oimoqr.com
 - Email: support@oimoqr.com
