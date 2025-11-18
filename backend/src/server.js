@@ -38,8 +38,16 @@ app.set('trust proxy', 1);
 app.use(helmet());
 
 // CORS configuration
+const allowedOrigins = ['https://oimoqr.com', 'https://www.oimoqr.com'];
+
 const corsOptions = {
-  origin: config.frontendUrl,
+  origin: (origin, callback) => {
+    if (allowedOrigins.includes(origin) || !origin) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
