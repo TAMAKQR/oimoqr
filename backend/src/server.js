@@ -30,7 +30,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-const PORT = 5001;
+const PORT = process.env.PORT || 5001; // Используем PORT из переменной окружения или 5001 по умолчанию
 
 app.set('trust proxy', 1);
 
