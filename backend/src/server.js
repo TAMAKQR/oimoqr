@@ -64,6 +64,21 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
+// Явная обработка preflight-запросов OPTIONS (вдруг прокси/путь блокирует их)
+app.options('*', cors(corsOptions));
+
+// Фallback middleware: на всякий случай выставляем CORS заголовки для разрешённых origin
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && Array.isArray(allowedOrigins) && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+  }
+  next();
+});
+
 // Rate limiting
 app.use('/api/', rateLimiter);
 
