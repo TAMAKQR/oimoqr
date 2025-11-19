@@ -15,6 +15,7 @@ const AdminPricingPage = () => {
   const [isEditingTrial, setIsEditingTrial] = useState(false);
   const [saving, setSaving] = useState(false);
   const [notification, setNotification] = useState(null);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     price: '',
