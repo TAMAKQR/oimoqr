@@ -44,6 +44,16 @@ app.use((req, res, next) => {
   next();
 });
 
+// Timing middleware — логируем время выполнения каждого запроса
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const ms = Date.now() - start;
+    console.log(`TIMING: ${req.method} ${req.originalUrl} ${res.statusCode} ${ms}ms`);
+  });
+  next();
+});
+
 // CORS configuration
 const allowedOrigins = ['https://oimoqr.com', 'https://www.oimoqr.com'];
 

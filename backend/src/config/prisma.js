@@ -4,10 +4,10 @@ import { PrismaClient } from '@prisma/client';
 // Предотвращает создание множественных connection pools
 const globalForPrisma = global;
 
+const enableQueryLog = process.env.PRISMA_LOG === 'true' || process.env.NODE_ENV !== 'production';
+
 export const prisma = globalForPrisma.prisma || new PrismaClient({
-  log: process.env.NODE_ENV === 'development' 
-    ? ['query', 'error', 'warn'] 
-    : ['error'],
+  log: enableQueryLog ? ['query', 'info', 'warn', 'error'] : ['error'],
 });
 
 // В dev режиме сохраняем инстанс глобально для hot-reload
