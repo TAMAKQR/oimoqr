@@ -37,13 +37,19 @@ app.set('trust proxy', 1);
 // Security middleware
 app.use(helmet());
 
+// Расширенное логирование для отладки CORS (до CORS middleware)
+app.use((req, res, next) => {
+  console.log(`CORS DEBUG: method=${req.method}, origin=${req.headers.origin}, url=${req.originalUrl}`);
+  console.log('CORS DEBUG: headers:', req.headers);
+  next();
+});
+
 // CORS configuration
 const allowedOrigins = ['https://oimoqr.com', 'https://www.oimoqr.com'];
 
-
 const corsOptions = {
   origin: (origin, callback) => {
-    console.log('CORS origin:', origin);
+    console.log('CORS CHECK: origin:', origin);
     if (allowedOrigins.includes(origin) || !origin) {
       callback(null, true);
     } else {
