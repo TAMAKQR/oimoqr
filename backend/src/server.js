@@ -40,8 +40,10 @@ app.use(helmet());
 // CORS configuration
 const allowedOrigins = ['https://oimoqr.com', 'https://www.oimoqr.com'];
 
+
 const corsOptions = {
   origin: (origin, callback) => {
+    console.log('CORS origin:', origin);
     if (allowedOrigins.includes(origin) || !origin) {
       callback(null, true);
     } else {
