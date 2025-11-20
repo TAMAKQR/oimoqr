@@ -780,7 +780,9 @@ export const copyMenu = async (req, res, next) => {
         if (dish.modifiers && dish.modifiers.length > 0) {
           console.log(`📦 Dish "${dish.name}" has ${dish.modifiers.length} modifiers`);
           dish.modifiers.forEach(mod => {
-            console.log(`  ├─ Modifier "${mod.name}": ${mod.options?.length || 0} options`);
+            const optionsCount = mod.options?.length || 0;
+            const hasDirectPrice = mod.price !== null && mod.price !== undefined;
+            console.log(`  ├─ Modifier "${mod.name}": ${optionsCount} options${hasDirectPrice ? ` (legacy price: ${mod.price})` : ''}`);
             if (mod.options && mod.options.length > 0) {
               mod.options.forEach(opt => {
                 console.log(`  │  ├─ Option "${opt.name}": ${opt.price} price`);
@@ -818,20 +820,39 @@ export const copyMenu = async (req, res, next) => {
               badge: dish.badge,
               restaurantId: targetRestaurantId,
               modifiers: {
-                create: dish.modifiers
-                  .filter(modifier => modifier.options && modifier.options.length > 0) // Только модификаторы с опциями
-                  .map(modifier => ({
-                    name: modifier.name,
-                    type: modifier.type,
-                    required: modifier.required,
-                    order: modifier.order,
-                    options: {
-                      create: modifier.options.map(option => ({
-                        name: option.name,
-                        price: option.price || 0
-                      }))
-                    }
-                  }))
+                create: dish.modifiers.map(modifier => {
+                  // Handle both old schema (modifier.price) and new schema (modifier.options)
+                  if (modifier.options && modifier.options.length > 0) {
+                    // New schema: modifier has options array
+                    return {
+                      name: modifier.name,
+                      type: modifier.type,
+                      required: modifier.required,
+                      order: modifier.order,
+                      options: {
+                        create: modifier.options.map(option => ({
+                          name: option.name,
+                          price: option.price || 0
+                        }))
+                      }
+                    };
+                  } else {
+                    // Old schema: modifier has direct price field
+                    // Create a single option with the modifier's name and price
+                    return {
+                      name: modifier.name,
+                      type: modifier.type,
+                      required: modifier.required,
+                      order: modifier.order,
+                      options: {
+                        create: [{
+                          name: modifier.name,
+                          price: modifier.price || 0
+                        }]
+                      }
+                    };
+                  }
+                })
               }
             }))
           }
