@@ -22,6 +22,15 @@ export const getCategories = async (req, res, next) => {
       }
     });
 
+    // Debug: log modifiers data
+    categories.forEach(cat => {
+      cat.dishes.forEach(dish => {
+        if (dish.modifiers && dish.modifiers.length > 0) {
+          console.log(`📦 Dish "${dish.name}" modifiers:`, JSON.stringify(dish.modifiers, null, 2));
+        }
+      });
+    });
+
     // Map 'image' field to 'imageUrl' for frontend compatibility
     const categoriesWithImageUrl = categories.map(category => {
       const { dishes, ...categoryRest } = category;
