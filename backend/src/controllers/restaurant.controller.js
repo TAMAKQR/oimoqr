@@ -111,6 +111,18 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
       }
     }
 
+    // Debug: log modifiers before mapping
+    restaurant.categories.forEach(cat => {
+      cat.dishes.forEach(dish => {
+        if (dish.modifiers && dish.modifiers.length > 0) {
+          console.log(`🔍 BEFORE MAP - Dish "${dish.name}":`, dish.modifiers.length, 'modifiers');
+          dish.modifiers.forEach(mod => {
+            console.log(`  └─ Modifier "${mod.name}": ${mod.options?.length || 0} options`);
+          });
+        }
+      });
+    });
+
     // Map 'image' field to 'imageUrl' for frontend compatibility and apply translations
     const restaurantWithImageUrl = {
       ...restaurant,
@@ -123,12 +135,16 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
           description: categoryTranslation?.description || category.description,
           dishes: category.dishes.map(dish => {
             const translation = language && dish.translations.length > 0 ? dish.translations[0] : null;
-            return {
+            const mappedDish = {
               ...dish,
               imageUrl: dish.image,
               name: translation?.name || dish.name,
               description: translation?.description || dish.description
             };
+            if (dish.modifiers && dish.modifiers.length > 0) {
+              console.log(`🔍 AFTER MAP - Dish "${mappedDish.name}":`, mappedDish.modifiers?.length || 0, 'modifiers');
+            }
+            return mappedDish;
           })
         };
       })
