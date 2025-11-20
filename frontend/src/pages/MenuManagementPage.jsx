@@ -84,22 +84,6 @@ const MenuManagementPage = () => {
     try {
       const cats = await menuService.getCategories(restaurantId);
       
-      // DEBUG: Check dishes with images
-      console.log('🔍 DEBUG: Checking dishes with images...');
-      cats.forEach(cat => {
-        if (cat.dishes) {
-          cat.dishes.forEach(dish => {
-            if (dish.image || dish.imageUrl) {
-              console.log('✅ Dish with image:', {
-                name: dish.name,
-                image: dish.image,
-                imageUrl: dish.imageUrl
-              });
-            }
-          });
-        }
-      });
-      
       setCategories(cats);
       
       // Extract dishes from categories (they're already included in the response)
