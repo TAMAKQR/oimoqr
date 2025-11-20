@@ -410,3 +410,85 @@ export const autoReassignOrder = async (req, res, next) => {
     next(error);
   }
 };
+
+// Получить информацию о назначенном ресторане для заказа (GET)
+export const getAssignedRestaurant = async (req, res, next) => {
+  try {
+    const { orderNumber } = req.params;
+    const fullOrderNumber = orderNumber.startsWith('#') ? orderNumber : `#${orderNumber}`;
+
+    const order = await prisma.order.findUnique({
+      where: { orderNumber: fullOrderNumber },
+      include: { 
+        restaurant: {
+          include: {
+            socialLinks: true
+          }
+        }
+      }
+    });
+
+    if (!order) {
+      return res.status(404).json({ 
+        error: 'Order not found',
+        orderNumber: fullOrderNumber
+      });
+    }
+
+    // Определяем какой ресторан обслуживает заказ
+    let assignedRestaurant;
+    
+    if (order.assignedRestaurantId) {
+      // Если заказ переназначен, получаем назначенный ресторан
+      assignedRestaurant = await prisma.restaurant.findUnique({
+        where: { id: order.assignedRestaurantId },
+        include: {
+          socialLinks: true
+        }
+      });
+    } else {
+      // Иначе используем оригинальный ресторан
+      assignedRestaurant = order.restaurant;
+    }
+
+    if (!assignedRestaurant) {
+      return res.status(404).json({ 
+        error: 'Assigned restaurant not found' 
+      });
+    }
+
+    // Расчет расстояния если есть координаты
+    let distance = null;
+    if (order.deliveryLatitude && order.deliveryLongitude && 
+        assignedRestaurant.latitude && assignedRestaurant.longitude) {
+      distance = getDistance(
+        order.deliveryLatitude, 
+        order.deliveryLongitude,
+        assignedRestaurant.latitude,
+        assignedRestaurant.longitude
+      ).toFixed(2);
+    }
+
+    res.json({
+      orderNumber: order.orderNumber,
+      restaurant: {
+        id: assignedRestaurant.id,
+        name: assignedRestaurant.name,
+        address: assignedRestaurant.address,
+        phone: assignedRestaurant.phone,
+        whatsapp: assignedRestaurant.socialLinks?.whatsapp,
+        subdomain: assignedRestaurant.subdomain
+      },
+      distance: distance ? `${distance} км` : null,
+      deliveryLocation: order.deliveryLatitude && order.deliveryLongitude ? {
+        latitude: order.deliveryLatitude,
+        longitude: order.deliveryLongitude
+      } : null,
+      wasReassigned: !!order.assignedRestaurantId,
+      totalAmount: order.totalAmount,
+      currency: assignedRestaurant.currency || '₽'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
