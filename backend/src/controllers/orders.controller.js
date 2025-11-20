@@ -442,6 +442,11 @@ export const getAssignedRestaurant = async (req, res, next) => {
           include: {
             socialLinks: true
           }
+        },
+        items: {
+          include: {
+            dish: true
+          }
         }
       }
     });
@@ -497,6 +502,13 @@ export const getAssignedRestaurant = async (req, res, next) => {
         whatsapp: assignedRestaurant.socialLinks?.whatsapp,
         subdomain: assignedRestaurant.subdomain
       },
+      items: order.items.map(item => ({
+        dishName: item.dish?.name || 'Удалённое блюдо',
+        quantity: item.quantity,
+        price: item.price,
+        total: (item.price * item.quantity).toFixed(2),
+        modifiers: item.selectedModifiers ? JSON.parse(item.selectedModifiers) : []
+      })),
       distance: distance ? `${distance} км` : null,
       deliveryLocation: order.deliveryLatitude && order.deliveryLongitude ? {
         latitude: order.deliveryLatitude,
