@@ -1,17 +1,14 @@
 # 🤖 SendPulse - Автоматическое переназначение заказов
 
-## Быстрая настройка
+## ⚡ Самый простой способ (рекомендуется)
 
 ### 1️⃣ Когда клиент отправляет локацию
 
 Клиент отправляет ссылку: `https://maps.google.com/?q=10.767750740051,106.69813537598`
 
-### 2️⃣ Извлеките координаты
+### 2️⃣ Сохраните ссылку в переменную
 
-В SendPulse используйте переменные:
-
-- `{{latitude}}` = `10.767750740051`
-- `{{longitude}}` = `106.69813537598`
+В SendPulse сохраните полученную ссылку в переменную `{{location}}`
 
 ### 3️⃣ Настройте HTTP запрос
 
@@ -31,7 +28,15 @@ https://oimoqr.onrender.com/api/orders/{{orderId}}/auto-reassign
 Content-Type: application/json
 ```
 
-**Body:**
+**Body (ВАРИАНТ 1 - Просто отправьте ссылку):**
+
+```json
+{
+  "location": "{{location}}"
+}
+```
+
+**Body (ВАРИАНТ 2 - Если хотите извлечь координаты вручную):**
 
 ```json
 {
@@ -42,16 +47,20 @@ Content-Type: application/json
 
 ### 4️⃣ Получите ответ
 
-Система вернет:
+Система автоматически:
+
+- ✅ Извлечёт координаты из ссылки
+- ✅ Найдёт ближайший ресторан
+- ✅ Переназначит заказ
+
+Ответ:
 
 ```json
 {
   "message": "Order auto-assigned to nearest restaurant",
   "assignedTo": {
-    "id": "...",
     "name": "Buffet №2",
     "phone": "+77078958828",
-    "whatsapp": "77078958828",
     "distance": "0.85 км"
   },
   "inDeliveryZone": true
@@ -67,13 +76,20 @@ Content-Type: application/json
 📞 Телефон: {{assignedTo.phone}}
 📏 Расстояние: {{assignedTo.distance}}
 ⏱ Время доставки: 30-40 минут
-
-{{#if inDeliveryZone}}
-✓ Вы в зоне доставки
-{{else}}
-⚠️ Вы за пределами зоны доставки
-{{/if}}
 ```
+
+---
+
+## 📋 Поддерживаемые форматы ссылок
+
+Сервер автоматически распознаёт координаты в этих форматах:
+
+✅ `https://maps.google.com/?q=10.767750740051,106.69813537598`  
+✅ `https://www.google.com/maps?q=10.767750740051,106.69813537598`  
+✅ `https://maps.google.com/@10.767750740051,106.69813537598,15z`  
+✅ `https://www.google.com/maps/place/@10.767750740051,106.69813537598`
+
+❌ Короткие ссылки `https://maps.app.goo.gl/...` НЕ поддерживаются
 
 ---
 
@@ -153,7 +169,17 @@ CREATE INDEX IF NOT EXISTS "Order_assignedRestaurantId_idx" ON "Order" ("assigne
 
 ## 🧪 Тестирование
 
-### Тест 1: Простой запрос
+### Тест 1: С Google Maps ссылкой (рекомендуется)
+
+```bash
+curl -X POST https://oimoqr.onrender.com/api/orders/cmi708asf0001pp2aijjqlgzf/auto-reassign \
+  -H "Content-Type: application/json" \
+  -d '{
+    "location": "https://maps.google.com/?q=10.767750740051,106.69813537598"
+  }'
+```
+
+### Тест 2: С координатами напрямую
 
 ```bash
 curl -X POST https://oimoqr.onrender.com/api/orders/cmi708asf0001pp2aijjqlgzf/auto-reassign \
@@ -164,7 +190,21 @@ curl -X POST https://oimoqr.onrender.com/api/orders/cmi708asf0001pp2aijjqlgzf/au
   }'
 ```
 
-### Тест 2: PowerShell
+### Тест 3: PowerShell (с ссылкой)
+
+```powershell
+$orderId = "cmi708asf0001pp2aijjqlgzf"
+$body = @{
+  location = "https://maps.google.com/?q=10.767750740051,106.69813537598"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "https://oimoqr.onrender.com/api/orders/$orderId/auto-reassign" `
+  -Method POST `
+  -ContentType "application/json" `
+  -Body $body
+```
+
+### Тест 4: PowerShell (с координатами)
 
 ```powershell
 $orderId = "cmi708asf0001pp2aijjqlgzf"

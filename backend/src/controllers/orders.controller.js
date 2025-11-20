@@ -237,14 +237,61 @@ function getDistance(lat1, lon1, lat2, lon2) {
   return distance;
 }
 
+// Функция для извлечения координат из Google Maps ссылки
+function extractCoordinatesFromUrl(url) {
+  if (!url || typeof url !== 'string') {
+    return null;
+  }
+
+  // Поддерживаем разные форматы Google Maps ссылок:
+  // https://maps.google.com/?q=10.767750740051,106.69813537598
+  // https://www.google.com/maps?q=10.767750740051,106.69813537598
+  // https://maps.app.goo.gl/... (короткие ссылки не поддерживаются)
+  
+  const patterns = [
+    /[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/i,  // ?q=lat,lng
+    /@(-?\d+\.?\d*),(-?\d+\.?\d*)/i,       // @lat,lng
+    /ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/i      // ll=lat,lng
+  ];
+
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) {
+      return {
+        latitude: parseFloat(match[1]),
+        longitude: parseFloat(match[2])
+      };
+    }
+  }
+
+  return null;
+}
+
 // Автоматическое переназначение заказа на ближайший ресторан
 export const autoReassignOrder = async (req, res, next) => {
   try {
     const { orderId } = req.params;
-    const { latitude, longitude } = req.body;
+    let { latitude, longitude, location } = req.body;
+
+    // Если передана ссылка на Google Maps, извлекаем координаты
+    if (location && !latitude && !longitude) {
+      const coords = extractCoordinatesFromUrl(location);
+      if (coords) {
+        latitude = coords.latitude;
+        longitude = coords.longitude;
+      } else {
+        return res.status(400).json({ 
+          error: 'Could not extract coordinates from location URL',
+          hint: 'Send either {latitude, longitude} or {location: "https://maps.google.com/?q=lat,lng"}'
+        });
+      }
+    }
 
     if (!latitude || !longitude) {
-      return res.status(400).json({ error: 'latitude and longitude are required' });
+      return res.status(400).json({ 
+        error: 'latitude and longitude are required',
+        hint: 'Send either {latitude, longitude} or {location: "https://maps.google.com/?q=lat,lng"}'
+      });
     }
 
     const userLat = parseFloat(latitude);
