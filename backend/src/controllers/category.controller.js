@@ -12,7 +12,10 @@ export const getCategories = async (req, res, next) => {
           orderBy: { order: 'asc' },
           include: {
             modifiers: {
-              orderBy: { order: 'asc' }
+              orderBy: { order: 'asc' },
+              include: {
+                options: true
+              }
             }
           }
         }
