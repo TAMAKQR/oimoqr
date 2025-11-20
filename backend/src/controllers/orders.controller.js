@@ -94,8 +94,18 @@ export const getOrdersByRestaurant = async (req, res, next) => {
   try {
     const { restaurantId } = req.params;
 
+    // Фильтр заказов: показывать заказы, которые назначены этому ресторану
+    // или были созданы для этого ресторана (если не переназначены)
     const orders = await prisma.order.findMany({
-      where: { restaurantId },
+      where: {
+        OR: [
+          { assignedRestaurantId: restaurantId },
+          { 
+            assignedRestaurantId: null,
+            restaurantId: restaurantId
+          }
+        ]
+      },
       orderBy: { createdAt: 'desc' },
       include: {
         items: {

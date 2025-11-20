@@ -5,6 +5,20 @@ export const getRestaurantStats = async (req, res, next) => {
   try {
     const { restaurantId } = req.params;
 
+    // Условие для фильтрации заказов:
+    // Заказ принадлежит ресторану, если:
+    // 1. assignedRestaurantId === restaurantId (приоритет - переназначенные заказы)
+    // 2. assignedRestaurantId === null И restaurantId === restaurantId (непереназначенные заказы)
+    const orderFilter = {
+      OR: [
+        { assignedRestaurantId: restaurantId },
+        { 
+          assignedRestaurantId: null,
+          restaurantId: restaurantId
+        }
+      ]
+    };
+
     // Получаем данные параллельно для скорости
     const [
       totalDishes,
@@ -27,15 +41,15 @@ export const getRestaurantStats = async (req, res, next) => {
         where: { restaurantId }
       }),
 
-      // Все заказы
+      // Все заказы (с учетом assignedRestaurantId)
       prisma.order.count({
-        where: { restaurantId }
+        where: orderFilter
       }),
 
       // Заказы за сегодня
       prisma.order.count({
         where: {
-          restaurantId,
+          ...orderFilter,
           createdAt: {
             gte: new Date(new Date().setHours(0, 0, 0, 0))
           }
@@ -45,7 +59,7 @@ export const getRestaurantStats = async (req, res, next) => {
       // Заказы за текущую неделю (с понедельника)
       prisma.order.count({
         where: {
-          restaurantId,
+          ...orderFilter,
           createdAt: {
             gte: new Date(new Date().setDate(new Date().getDate() - (new Date().getDay() + 6) % 7))
           }
@@ -55,7 +69,7 @@ export const getRestaurantStats = async (req, res, next) => {
       // Заказы за текущий месяц (с 1-го числа)
       prisma.order.count({
         where: {
-          restaurantId,
+          ...orderFilter,
           createdAt: {
             gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
           }
@@ -64,7 +78,7 @@ export const getRestaurantStats = async (req, res, next) => {
 
       // Последние 5 заказов
       prisma.order.findMany({
-        where: { restaurantId },
+        where: orderFilter,
         orderBy: { createdAt: 'desc' },
         take: 5,
         include: {
@@ -80,7 +94,7 @@ export const getRestaurantStats = async (req, res, next) => {
       prisma.orderItem.groupBy({
         by: ['dishId'],
         where: {
-          order: { restaurantId }
+          order: orderFilter
         },
         _count: {
           dishId: true
@@ -99,7 +113,7 @@ export const getRestaurantStats = async (req, res, next) => {
       // Выручка
       prisma.order.aggregate({
         where: {
-          restaurantId,
+          ...orderFilter,
           status: {
             not: 'cancelled'
           }
@@ -127,7 +141,7 @@ export const getRestaurantStats = async (req, res, next) => {
     // Выручка за сегодня
     const todayRevenue = await prisma.order.aggregate({
       where: {
-        restaurantId,
+        ...orderFilter,
         status: {
           not: 'cancelled'
         },
@@ -143,7 +157,7 @@ export const getRestaurantStats = async (req, res, next) => {
     // Выручка за текущую неделю (с понедельника)
     const weekRevenue = await prisma.order.aggregate({
       where: {
-        restaurantId,
+        ...orderFilter,
         status: {
           not: 'cancelled'
         },
@@ -159,7 +173,7 @@ export const getRestaurantStats = async (req, res, next) => {
     // Выручка за текущий месяц (с 1-го числа)
     const monthRevenue = await prisma.order.aggregate({
       where: {
-        restaurantId,
+        ...orderFilter,
         status: {
           not: 'cancelled'
         },
@@ -184,7 +198,7 @@ export const getRestaurantStats = async (req, res, next) => {
 
       const dayOrders = await prisma.order.count({
         where: {
-          restaurantId,
+          ...orderFilter,
           createdAt: {
             gte: date,
             lt: nextDate
@@ -194,7 +208,7 @@ export const getRestaurantStats = async (req, res, next) => {
 
       const dayRevenue = await prisma.order.aggregate({
         where: {
-          restaurantId,
+          ...orderFilter,
           status: {
             not: 'cancelled'
           },
