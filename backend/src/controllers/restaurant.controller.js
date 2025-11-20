@@ -40,7 +40,11 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
               where: { available: true },
               orderBy: { order: 'asc' },
               include: {
-                modifiers: true,
+                modifiers: {
+                  include: {
+                    options: true
+                  }
+                },
                 translations: {
                   where: language ? { languageCode: language } : undefined
                 }

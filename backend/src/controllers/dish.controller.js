@@ -8,7 +8,11 @@ export const getDishes = async (req, res, next) => {
       where: { categoryId },
       orderBy: { order: 'asc' },
       include: {
-        modifiers: true
+        modifiers: {
+          include: {
+            options: true
+          }
+        }
       }
     });
 
@@ -307,7 +311,11 @@ export const toggleDishAvailability = async (req, res, next) => {
       where: { id },
       data: { available: !dish.available },
       include: {
-        modifiers: true
+        modifiers: {
+          include: {
+            options: true
+          }
+        }
       }
     });
 
