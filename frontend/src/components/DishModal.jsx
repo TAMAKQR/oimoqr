@@ -127,10 +127,11 @@ const DishModal = ({ dish, isOpen, onClose, currency = '₽' }) => {
           {dish.modifiers && dish.modifiers.length > 0 && (
             <div className="mb-6">
               {dish.modifiers.map((modifier) => (
-                <div key={modifier.id} className="mb-4">
-                  <h3 className="text-base sm:text-lg font-semibold mb-2">{modifier.name}</h3>
-                  <div className="space-y-2">
-                    {modifier.options.map((option) => (
+                modifier.options && modifier.options.length > 0 && (
+                  <div key={modifier.id} className="mb-4">
+                    <h3 className="text-base sm:text-lg font-semibold mb-2">{modifier.name}</h3>
+                    <div className="space-y-2">
+                      {modifier.options.map((option) => (
                       <label
                         key={option.id}
                         className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors gap-2"
@@ -154,6 +155,7 @@ const DishModal = ({ dish, isOpen, onClose, currency = '₽' }) => {
                     ))}
                   </div>
                 </div>
+                )
               ))}
             </div>
           )}
