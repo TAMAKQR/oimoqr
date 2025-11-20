@@ -270,8 +270,39 @@ function extractCoordinatesFromUrl(url) {
 // Автоматическое переназначение заказа на ближайший ресторан
 export const autoReassignOrder = async (req, res, next) => {
   try {
-    const { orderId } = req.params;
+    const { orderId, orderNumber } = req.params;
     let { latitude, longitude, location } = req.body;
+
+    // Если передан номер заказа вместо ID, находим заказ по номеру
+    let order;
+    if (orderNumber) {
+      const fullOrderNumber = orderNumber.startsWith('#') ? orderNumber : `#${orderNumber}`;
+      order = await prisma.order.findUnique({
+        where: { orderNumber: fullOrderNumber },
+        include: { restaurant: true }
+      });
+      
+      if (!order) {
+        return res.status(404).json({ 
+          error: 'Order not found',
+          orderNumber: fullOrderNumber
+        });
+      }
+    } else if (orderId) {
+      order = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: { restaurant: true }
+      });
+      
+      if (!order) {
+        return res.status(404).json({ 
+          error: 'Order not found',
+          orderId: orderId
+        });
+      }
+    } else {
+      return res.status(400).json({ error: 'orderId or orderNumber is required' });
+    }
 
     // Если передана ссылка на Google Maps, извлекаем координаты
     if (location && !latitude && !longitude) {
@@ -296,18 +327,6 @@ export const autoReassignOrder = async (req, res, next) => {
 
     const userLat = parseFloat(latitude);
     const userLon = parseFloat(longitude);
-
-    // Получаем заказ
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: {
-        restaurant: true
-      }
-    });
-
-    if (!order) {
-      return res.status(404).json({ error: 'Order not found' });
-    }
 
     // Получаем все рестораны той же сети (с тем же ownerId)
     const networkRestaurants = await prisma.restaurant.findMany({
@@ -343,7 +362,7 @@ export const autoReassignOrder = async (req, res, next) => {
 
     // Обновляем заказ
     const updatedOrder = await prisma.order.update({
-      where: { id: orderId },
+      where: { id: order.id },
       data: { 
         assignedRestaurantId: nearest.restaurant.id,
         deliveryLatitude: userLat,

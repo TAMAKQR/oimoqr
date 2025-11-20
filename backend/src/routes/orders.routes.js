@@ -8,6 +8,7 @@ router.get('/restaurant/:restaurantId', getOrdersByRestaurant);
 router.get('/number/:orderNumber', getOrderByNumber);
 router.get('/:orderId', getOrderById);
 router.put('/:orderId/reassign', reassignOrder);
-router.post('/:orderId/auto-reassign', autoReassignOrder); // Новый эндпоинт для автоматического переназначения
+router.post('/:orderId/auto-reassign', autoReassignOrder); // По ID заказа
+router.post('/number/:orderNumber/auto-reassign', autoReassignOrder); // По номеру заказа (ДЛЯ SENDPULSE)
 
 export default router;
