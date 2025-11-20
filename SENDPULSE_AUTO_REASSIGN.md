@@ -14,7 +14,15 @@
 
 **Блок:** HTTP Request (POST)
 
-**URL:**
+**URL (используйте НОМЕР заказа - рекомендуется):**
+
+```
+https://oimoqr.onrender.com/api/orders/number/{{orderNumber}}/auto-reassign
+```
+
+Где `{{orderNumber}}` - это номер заказа БЕЗ решетки, например: `6036924859`
+
+**Или URL (если у вас ID заказа):**
 
 ```
 https://oimoqr.onrender.com/api/orders/{{orderId}}/auto-reassign
