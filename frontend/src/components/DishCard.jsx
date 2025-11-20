@@ -64,7 +64,7 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal' }) => {
   };
 
   // Вычисляем цену со скидкой
-  const originalPrice = parseFloat(dish.price);
+  const originalPrice = parseFloat(dish.price) || 0;
   const discountedPrice = dish.discount 
     ? originalPrice * (1 - dish.discount / 100) 
     : originalPrice;
