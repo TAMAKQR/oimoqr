@@ -137,7 +137,7 @@ const Cart = ({ restaurant }) => {
 
       const orderText = items
         .map((item) => {
-          const modifiersText = item.modifiers.length > 0
+          const modifiersText = item.modifiers && item.modifiers.length > 0
             ? ` (${item.modifiers.map((m) => m.name).join(', ')})`
             : '';
           const itemTotal = (item.totalPrice * item.quantity).toFixed(2);
@@ -329,10 +329,10 @@ const Cart = ({ restaurant }) => {
                             />
                           )}
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-sm sm:text-base break-words">{item.dish.name}</h3>
-                            {item.modifiers.length > 0 && (
+                    <h3 className="font-semibold text-sm sm:text-base break-words">{item.dish.name}</h3>
+                            {item.modifiers && item.modifiers.length > 0 && (
                               <p className="text-xs sm:text-sm text-gray-600 break-words">
-                                {item.modifiers.map((m) => m.name).join(', ')}
+                                {item.modifiers.map(m => m.name).join(', ')}
                               </p>
                             )}
                             <p className="text-primary-600 font-semibold text-sm sm:text-base mt-1">
