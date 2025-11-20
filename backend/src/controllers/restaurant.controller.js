@@ -773,6 +773,24 @@ export const copyMenu = async (req, res, next) => {
       return res.status(404).json({ error: 'Source restaurant not found' });
     }
 
+    // Log modifiers for debugging
+    console.log('📋 Copying menu from restaurant:', sourceRestaurantId);
+    sourceRestaurant.categories.forEach(cat => {
+      cat.dishes.forEach(dish => {
+        if (dish.modifiers && dish.modifiers.length > 0) {
+          console.log(`📦 Dish "${dish.name}" has ${dish.modifiers.length} modifiers`);
+          dish.modifiers.forEach(mod => {
+            console.log(`  ├─ Modifier "${mod.name}": ${mod.options?.length || 0} options`);
+            if (mod.options && mod.options.length > 0) {
+              mod.options.forEach(opt => {
+                console.log(`  │  ├─ Option "${opt.name}": ${opt.price} price`);
+              });
+            }
+          });
+        }
+      });
+    });
+
     // Delete existing categories and dishes in target restaurant
     await prisma.category.deleteMany({
       where: { restaurantId: targetRestaurantId }
@@ -800,18 +818,20 @@ export const copyMenu = async (req, res, next) => {
               badge: dish.badge,
               restaurantId: targetRestaurantId,
               modifiers: {
-                create: dish.modifiers.map(modifier => ({
-                  name: modifier.name,
-                  type: modifier.type,
-                  required: modifier.required,
-                  order: modifier.order,
-                  options: {
-                    create: modifier.options.map(option => ({
-                      name: option.name,
-                      price: option.price
-                    }))
-                  }
-                }))
+                create: dish.modifiers
+                  .filter(modifier => modifier.options && modifier.options.length > 0) // Только модификаторы с опциями
+                  .map(modifier => ({
+                    name: modifier.name,
+                    type: modifier.type,
+                    required: modifier.required,
+                    order: modifier.order,
+                    options: {
+                      create: modifier.options.map(option => ({
+                        name: option.name,
+                        price: option.price || 0
+                      }))
+                    }
+                  }))
               }
             }))
           }
