@@ -5,7 +5,9 @@ export const useCartStore = create((set, get) => ({
   
   addItem: (dish, modifiers = []) => {
     const items = get().items;
-    const itemId = `${dish.id}-${modifiers.map(m => m.id).join('-')}`;
+    // Защита от undefined/null модификаторов
+    const safeModifiers = Array.isArray(modifiers) ? modifiers : [];
+    const itemId = `${dish.id}-${safeModifiers.map(m => m.id).join('-')}`;
     
     const existingItem = items.find(item => item.itemId === itemId);
     
@@ -20,7 +22,7 @@ export const useCartStore = create((set, get) => ({
     } else {
       // Защита от NaN: если цена не задана, используем 0
       const dishPrice = parseFloat(dish.price) || 0;
-      const modifiersPrice = modifiers.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0);
+      const modifiersPrice = safeModifiers.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0);
       const totalPrice = parseFloat((dishPrice + modifiersPrice).toFixed(2));
       
       set({
@@ -29,7 +31,7 @@ export const useCartStore = create((set, get) => ({
           {
             itemId,
             dish,
-            modifiers,
+            modifiers: safeModifiers,
             quantity: 1,
             totalPrice
           }
