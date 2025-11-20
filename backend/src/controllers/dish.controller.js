@@ -421,7 +421,7 @@ export const updateModifier = async (req, res, next) => {
 
 export const deleteModifier = async (req, res, next) => {
   try {
-    const { modifierId: id } = req.params;
+    const { id } = req.params;
 
     // Check if user has access to this modifier's restaurant
     const modifier = await prisma.modifier.findUnique({
