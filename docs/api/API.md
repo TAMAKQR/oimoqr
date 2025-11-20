@@ -506,6 +506,32 @@ GET /orders/number/:orderNumber
 
 **Response:** заказ с указанным номером.
 
+### Reassign Order to Another Restaurant
+
+```http
+PUT /orders/:orderId/reassign
+Content-Type: application/json
+
+{
+  "assignedRestaurantId": "uuid"
+}
+```
+
+**Response:**
+
+```json
+{
+  "message": "Order reassigned successfully",
+  "order": { ... },
+  "assignedTo": {
+    "id": "uuid",
+    "name": "Филиал №2",
+    "phone": "+77078958828",
+    "whatsapp": "77078958828"
+  }
+}
+```
+
 ---
 
 ## Error Responses
