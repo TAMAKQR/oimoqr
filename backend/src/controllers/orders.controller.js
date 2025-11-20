@@ -358,10 +358,14 @@ export const autoReassignOrder = async (req, res, next) => {
 
     // Сначала ищем ближайший ресторан В ЗОНЕ доставки
     let nearest = restaurantsWithDistance.find(r => r.inDeliveryZone);
+    let assignmentStatus = 'in_zone'; // 'in_zone', 'out_of_zone', 'no_radius'
 
     // Если ни один ресторан не покрывает зону доставки, берем просто ближайший
     if (!nearest) {
       nearest = restaurantsWithDistance[0];
+      assignmentStatus = 'out_of_zone';
+    } else if (!nearest.restaurant.deliveryRadius) {
+      assignmentStatus = 'no_radius';
     }
 
     const inDeliveryZone = nearest.inDeliveryZone;
@@ -384,8 +388,20 @@ export const autoReassignOrder = async (req, res, next) => {
       }
     });
 
+    // Формируем предупреждение если клиент вне зоны доставки
+    let warning = null;
+    let statusMessage = 'Заказ назначен на ближайший ресторан в зоне доставки';
+
+    if (assignmentStatus === 'out_of_zone') {
+      warning = 'OUT_OF_DELIVERY_ZONE';
+      statusMessage = 'ВНИМАНИЕ: Вы находитесь вне зоны доставки. Ресторан назначен как ближайший, но доставка может быть недоступна. Пожалуйста, свяжитесь с рестораном для уточнения.';
+    } else if (assignmentStatus === 'no_radius') {
+      statusMessage = 'Заказ назначен на ближайший ресторан (радиус доставки не настроен)';
+    }
+
     res.json({
-      message: 'Order auto-assigned to nearest restaurant',
+      message: statusMessage,
+      warning,
       order: updatedOrder,
       assignedTo: {
         id: nearest.restaurant.id,
@@ -393,7 +409,8 @@ export const autoReassignOrder = async (req, res, next) => {
         address: nearest.restaurant.address,
         phone: nearest.restaurant.phone,
         whatsapp: nearest.restaurant.socialLinks?.whatsapp,
-        distance: nearest.distance.toFixed(2) + ' км'
+        distance: nearest.distance.toFixed(2) + ' км',
+        deliveryRadius: nearest.restaurant.deliveryRadius ? `${nearest.restaurant.deliveryRadius} км` : 'Не настроен'
       },
       customerLocation: {
         latitude: userLat,
@@ -403,7 +420,8 @@ export const autoReassignOrder = async (req, res, next) => {
       allNearbyRestaurants: restaurantsWithDistance.slice(0, 3).map(r => ({
         id: r.restaurant.id,
         name: r.restaurant.name,
-        distance: r.distance.toFixed(2) + ' км'
+        distance: r.distance.toFixed(2) + ' км',
+        inDeliveryZone: r.inDeliveryZone
       }))
     });
   } catch (error) {
