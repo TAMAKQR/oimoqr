@@ -88,12 +88,12 @@ const Cart = ({ restaurant }) => {
     );
   };
 
-  // Автоматическое определение местоположения при открытии корзины
-  useEffect(() => {
-    if (isOpen && restaurant.deliveryEnabled && !userLocation && !isCheckingLocation && !geolocationDenied) {
-      handleGetLocation();
-    }
-  }, [isOpen, restaurant.deliveryEnabled, geolocationDenied]);
+  // Автоматическое определение местоположения при открытии корзины - ОТКЛЮЧЕНО
+  // useEffect(() => {
+  //   if (isOpen && restaurant.deliveryEnabled && !userLocation && !isCheckingLocation && !geolocationDenied) {
+  //     handleGetLocation();
+  //   }
+  // }, [isOpen, restaurant.deliveryEnabled, geolocationDenied]);
 
   const handleCheckout = async () => {
     if (items.length === 0) return;
@@ -105,17 +105,10 @@ const Cart = ({ restaurant }) => {
       return;
     }
 
-    // Если доставка включена - требуем данные
-    if (restaurant.deliveryEnabled) {
-      // Если геолокация не запрещена, она обязательна
-      if (!geolocationDenied && !userLocation) {
-        toast.error('Пожалуйста, определите ваше местоположение');
-        return;
-      }
-      if (deliveryCheck && !deliveryCheck.deliveryAvailable) {
-        toast.error('Доставка по вашему адресу недоступна. Вы находитесь вне зоны доставки.');
-        return;
-      }
+    // Проверка доступности доставки - УПРОЩЕНО (геолокация опциональна)
+    if (restaurant.deliveryEnabled && deliveryCheck && !deliveryCheck.deliveryAvailable) {
+      toast.error('Доставка по вашему адресу недоступна. Вы находитесь вне зоны доставки.');
+      return;
     }
 
     setIsLoading(true);
