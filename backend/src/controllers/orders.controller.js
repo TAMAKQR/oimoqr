@@ -164,3 +164,51 @@ export const getOrderByNumber = async (req, res, next) => {
     next(error);
   }
 };
+
+export const reassignOrder = async (req, res, next) => {
+  try {
+    const { orderId } = req.params;
+    const { assignedRestaurantId } = req.body;
+
+    if (!assignedRestaurantId) {
+      return res.status(400).json({ error: 'assignedRestaurantId is required' });
+    }
+
+    // Проверяем существование целевого ресторана
+    const targetRestaurant = await prisma.restaurant.findUnique({
+      where: { id: assignedRestaurantId },
+      include: { socialLinks: true }
+    });
+
+    if (!targetRestaurant) {
+      return res.status(404).json({ error: 'Target restaurant not found' });
+    }
+
+    // Обновляем заказ
+    const updatedOrder = await prisma.order.update({
+      where: { id: orderId },
+      data: { assignedRestaurantId },
+      include: {
+        restaurant: true,
+        items: {
+          include: {
+            dish: true
+          }
+        }
+      }
+    });
+
+    res.json({
+      message: 'Order reassigned successfully',
+      order: updatedOrder,
+      assignedTo: {
+        id: targetRestaurant.id,
+        name: targetRestaurant.name,
+        phone: targetRestaurant.phone,
+        whatsapp: targetRestaurant.socialLinks?.whatsapp
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};

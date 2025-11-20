@@ -243,6 +243,8 @@ model Order {
   restaurantId      String
   restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   
+  assignedRestaurantId String?  // ID ресторана/точки, которой переназначен заказ
+  
   items             OrderItem[]
   
   createdAt         DateTime  @default(now())
