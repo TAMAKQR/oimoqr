@@ -142,24 +142,46 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal' }) => {
                 )}
               </div>
               
-              <div className="flex flex-row justify-between items-center gap-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  {dish.discount ? (
-                    <>
-                      <span className="text-sm text-gray-400 line-through">
-                        {originalPrice.toFixed(2)} {currency}
-                      </span>
-                      <span className="text-lg sm:text-xl font-bold text-red-600 whitespace-nowrap">
-                        {discountedPrice.toFixed(2)} {currency}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-lg sm:text-xl font-bold text-primary-600 whitespace-nowrap">
-                      {originalPrice.toFixed(2)} {currency}
-                    </span>
-                  )}
-                </div>
-                {isAvailable ? (
+              <div className="flex flex-col gap-2">
+                {/* Цены модификаторов */}
+                {hasModifiers && (
+                  <div className="flex flex-wrap gap-1">
+                    {dish.modifiers.map((modifier, idx) => (
+                      modifier.options && modifier.options.length > 0 && (
+                        <div key={idx} className="text-xs text-gray-600">
+                          <span className="font-medium">{modifier.name}:</span>{' '}
+                          {modifier.options.map((option, optIdx) => (
+                            <span key={optIdx}>
+                              {option.name} - {parseFloat(option.price || 0).toFixed(2)} {currency}
+                              {optIdx < modifier.options.length - 1 ? ', ' : ''}
+                            </span>
+                          ))}
+                        </div>
+                      )
+                    ))}
+                  </div>
+                )}
+                
+                <div className="flex flex-row justify-between items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {!hasModifiers && (
+                      dish.discount ? (
+                        <>
+                          <span className="text-sm text-gray-400 line-through">
+                            {originalPrice.toFixed(2)} {currency}
+                          </span>
+                          <span className="text-lg sm:text-xl font-bold text-red-600 whitespace-nowrap">
+                            {discountedPrice.toFixed(2)} {currency}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-lg sm:text-xl font-bold text-primary-600 whitespace-nowrap">
+                          {originalPrice.toFixed(2)} {currency}
+                        </span>
+                      )
+                    )}
+                  </div>
+                  {isAvailable ? (
                   <button 
                     onClick={handleAddClick}
                     className={`w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center bg-primary-600 hover:bg-primary-700 text-white rounded-full text-2xl font-light transition-all shadow-md active:scale-95 ${
@@ -257,24 +279,46 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal' }) => {
             </div>
           )}
 
-          <div className="flex flex-row justify-between items-center gap-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              {dish.discount ? (
-                <>
-                  <span className="text-sm text-gray-400 line-through">
-                    {originalPrice.toFixed(2)} {currency}
-                  </span>
-                  <span className="text-lg sm:text-xl font-bold text-red-600 whitespace-nowrap">
-                    {discountedPrice.toFixed(2)} {currency}
-                  </span>
-                </>
-              ) : (
-                <span className="text-lg sm:text-xl font-bold text-primary-600 whitespace-nowrap">
-                  {originalPrice.toFixed(2)} {currency}
-                </span>
-              )}
-            </div>
-            {isAvailable ? (
+          <div className="flex flex-col gap-2">
+            {/* Цены модификаторов */}
+            {hasModifiers && (
+              <div className="flex flex-wrap gap-1">
+                {dish.modifiers.map((modifier, idx) => (
+                  modifier.options && modifier.options.length > 0 && (
+                    <div key={idx} className="text-xs text-gray-600">
+                      <span className="font-medium">{modifier.name}:</span>{' '}
+                      {modifier.options.map((option, optIdx) => (
+                        <span key={optIdx}>
+                          {option.name} - {parseFloat(option.price || 0).toFixed(2)} {currency}
+                          {optIdx < modifier.options.length - 1 ? ', ' : ''}
+                        </span>
+                      ))}
+                    </div>
+                  )
+                ))}
+              </div>
+            )}
+
+            <div className="flex flex-row justify-between items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {!hasModifiers && (
+                  dish.discount ? (
+                    <>
+                      <span className="text-sm text-gray-400 line-through">
+                        {originalPrice.toFixed(2)} {currency}
+                      </span>
+                      <span className="text-lg sm:text-xl font-bold text-red-600 whitespace-nowrap">
+                        {discountedPrice.toFixed(2)} {currency}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-lg sm:text-xl font-bold text-primary-600 whitespace-nowrap">
+                      {originalPrice.toFixed(2)} {currency}
+                    </span>
+                  )
+                )}
+              </div>
+              {isAvailable ? (
               <button 
                 onClick={handleAddClick}
                 className={`w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center bg-primary-600 hover:bg-primary-700 text-white rounded-full text-2xl font-light transition-all shadow-md active:scale-95 ${
