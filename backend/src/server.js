@@ -21,6 +21,7 @@ import languageRoutes from './routes/language.routes.js';
 import geolocationRoutes from './routes/geolocation.routes.js';
 import analyticsRoutes from './routes/analytics.routes.js';
 import pricingRoutes from './routes/pricing.routes.js';
+import migrationRoutes from './routes/migration.routes.js';
 
 // Middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -113,6 +114,7 @@ app.use('/api/orders', ordersRoutes);
 app.use('/api/languages', languageRoutes);
 app.use('/api/geolocation', geolocationRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/migration', migrationRoutes);
 
 // Health check route
 app.get('/health', (req, res) => {
