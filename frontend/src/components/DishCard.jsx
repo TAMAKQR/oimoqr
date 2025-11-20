@@ -41,11 +41,13 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal' }) => {
     
     if (!isAvailable || isAdding) return;
     
-    // Если есть модификаторы - открываем модальное окно
-    if (hasModifiers) {
+    const dishPrice = parseFloat(dish.price) || 0;
+    
+    // Если есть модификаторы ИЛИ цена блюда = 0 (обязательный выбор модификаторов) - открываем модальное окно
+    if (hasModifiers || dishPrice === 0) {
       setIsModalOpen(true);
     } else {
-      // Если нет модификаторов - сразу добавляем в корзину с анимацией
+      // Если нет модификаторов И цена > 0 - сразу добавляем в корзину с анимацией
       setIsAdding(true);
       addItem(dish, []);
       

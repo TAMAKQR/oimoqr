@@ -31,18 +31,26 @@ const DishModal = ({ dish, isOpen, onClose, currency = '₽' }) => {
   };
 
   const getTotalPrice = () => {
+    const basePrice = parseFloat(dish.price) || 0;
     const modifiersPrice = Object.values(selectedModifiers)
       .flat()
-      .reduce((sum, option) => sum + (option.price || 0), 0);
-    return parseFloat((dish.price + modifiersPrice).toFixed(2));
+      .reduce((sum, option) => sum + (parseFloat(option.price) || 0), 0);
+    return parseFloat((basePrice + modifiersPrice).toFixed(2));
   };
 
   const handleAddToCart = () => {
     if (!isAvailable) return;
 
-    const finalPrice = getTotalPrice();
+    const basePrice = parseFloat(dish.price) || 0;
     const selectedOptions = Object.values(selectedModifiers).flat();
 
+    // Если базовая цена = 0 и нет выбранных модификаторов - показываем ошибку
+    if (basePrice === 0 && selectedOptions.length === 0) {
+      toast.error('Пожалуйста, выберите опции для этого блюда');
+      return;
+    }
+
+    const finalPrice = getTotalPrice();
     const modifierIds = selectedOptions.map(m => m.id).sort().join('-');
     const itemId = `${dish.id}-${modifierIds}`;
 
