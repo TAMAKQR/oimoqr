@@ -492,6 +492,42 @@ export const getAssignedRestaurant = async (req, res, next) => {
       ).toFixed(2);
     }
 
+    // Формируем список блюд для массива и для текста
+    const itemsList = order.items.map(item => {
+      const modifiers = item.selectedModifiers ? JSON.parse(item.selectedModifiers) : [];
+      const modifiersText = modifiers.length > 0 
+        ? ` (${modifiers.map(m => m.name).join(', ')})` 
+        : '';
+      
+      return {
+        dishName: item.dish?.name || 'Удалённое блюдо',
+        quantity: item.quantity,
+        price: item.price,
+        total: (item.price * item.quantity).toFixed(2),
+        modifiers: modifiers
+      };
+    });
+
+    // Формируем текстовое сообщение для SendPulse
+    const itemsText = order.items.map(item => {
+      const dishName = item.dish?.name || 'Удалённое блюдо';
+      const modifiers = item.selectedModifiers ? JSON.parse(item.selectedModifiers) : [];
+      const modifiersText = modifiers.length > 0 
+        ? ` (${modifiers.map(m => m.name).join(', ')})` 
+        : '';
+      const itemTotal = (item.price * item.quantity).toFixed(2);
+      
+      return `${item.quantity}x ${dishName}${modifiersText} - ${itemTotal} ${assignedRestaurant.currency || '₽'}`;
+    }).join('\n');
+
+    const messageForClient = `📋 Ваш заказ ${order.orderNumber}\n\n` +
+      `🏪 Ресторан: ${assignedRestaurant.name}\n` +
+      `📍 Адрес: ${assignedRestaurant.address}\n` +
+      (distance ? `🚗 Расстояние: ${distance} км\n` : '') +
+      `\n📦 Состав заказа:\n${itemsText}\n\n` +
+      `💰 Итого: ${order.totalAmount} ${assignedRestaurant.currency || '₽'}\n\n` +
+      `📞 Телефон ресторана: ${assignedRestaurant.phone}`;
+
     res.json({
       orderNumber: order.orderNumber,
       restaurant: {
@@ -502,13 +538,9 @@ export const getAssignedRestaurant = async (req, res, next) => {
         whatsapp: assignedRestaurant.socialLinks?.whatsapp,
         subdomain: assignedRestaurant.subdomain
       },
-      items: order.items.map(item => ({
-        dishName: item.dish?.name || 'Удалённое блюдо',
-        quantity: item.quantity,
-        price: item.price,
-        total: (item.price * item.quantity).toFixed(2),
-        modifiers: item.selectedModifiers ? JSON.parse(item.selectedModifiers) : []
-      })),
+      items: itemsList,
+      itemsText: itemsText, // Текст списка блюд для вставки в сообщение
+      message: messageForClient, // Готовое сообщение для клиента
       distance: distance ? `${distance} км` : null,
       deliveryLocation: order.deliveryLatitude && order.deliveryLongitude ? {
         latitude: order.deliveryLatitude,
