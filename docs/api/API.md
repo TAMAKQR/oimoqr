@@ -432,6 +432,82 @@ Content-Type: application/json
 
 ---
 
+## Order Endpoints
+
+### Create Order
+
+```http
+POST /orders
+Content-Type: application/json
+
+{
+  "restaurantId": "uuid",
+  "items": [
+    { "id": "dishId", "quantity": 2, "price": 350, "selectedModifiers": [ ... ] }
+  ],
+  "total": 700,
+  "customerName": "Имя клиента",
+  "customerPhone": "+7 (999) 123-45-67",
+  "customerEmail": "client@example.com",
+  "deliveryAddress": "ул. Пример, 1",
+  "deliveryLatitude": 55.7558,
+  "deliveryLongitude": 37.6173
+}
+```
+
+### Get Order by ID
+
+```http
+GET /orders/:orderId
+```
+
+**Response:**
+
+```json
+{
+  "id": "uuid",
+  "orderNumber": "#123456",
+  "restaurantId": "uuid",
+  "totalAmount": 700,
+  "customerName": "Имя клиента",
+  "customerPhone": "+7 (999) 123-45-67",
+  "customerEmail": "client@example.com",
+  "deliveryAddress": "ул. Пример, 1",
+  "deliveryLatitude": 55.7558,
+  "deliveryLongitude": 37.6173,
+  "items": [
+    {
+      "id": "uuid",
+      "dishId": "uuid",
+      "quantity": 2,
+      "price": 350,
+      "selectedModifiers": [ ... ],
+      "dish": { ... }
+    }
+  ],
+  "restaurant": { ... },
+  "createdAt": "2025-11-19T12:00:00.000Z"
+}
+```
+
+### Get Orders by Restaurant
+
+```http
+GET /orders/restaurant/:restaurantId
+```
+
+**Response:** массив заказов по ресторану.
+
+### Get Order by Number
+
+```http
+GET /orders/number/:orderNumber
+```
+
+**Response:** заказ с указанным номером.
+
+---
+
 ## Error Responses
 
 All endpoints may return these error responses:
