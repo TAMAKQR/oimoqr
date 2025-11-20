@@ -18,7 +18,11 @@ export const useCartStore = create((set, get) => ({
         )
       });
     } else {
-      const totalPrice = parseFloat((dish.price + modifiers.reduce((sum, m) => sum + m.price, 0)).toFixed(2));
+      // Защита от NaN: если цена не задана, используем 0
+      const dishPrice = parseFloat(dish.price) || 0;
+      const modifiersPrice = modifiers.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0);
+      const totalPrice = parseFloat((dishPrice + modifiersPrice).toFixed(2));
+      
       set({
         items: [
           ...items,
@@ -58,7 +62,11 @@ export const useCartStore = create((set, get) => ({
   clearCart: () => set({ items: [] }),
   
   getTotal: () => {
-    return parseFloat(get().items.reduce((sum, item) => sum + (item.totalPrice * item.quantity), 0).toFixed(2));
+    const total = get().items.reduce((sum, item) => {
+      const itemTotal = (parseFloat(item.totalPrice) || 0) * (parseInt(item.quantity) || 0);
+      return sum + itemTotal;
+    }, 0);
+    return parseFloat(total.toFixed(2));
   },
   
   getItemCount: () => {

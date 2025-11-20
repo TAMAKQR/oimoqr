@@ -347,18 +347,24 @@ export const autoReassignOrder = async (req, res, next) => {
       });
     }
 
-    // Находим ближайший ресторан
+    // Находим ближайший ресторан с учетом радиуса доставки
     const restaurantsWithDistance = networkRestaurants.map(r => ({
       restaurant: r,
-      distance: getDistance(userLat, userLon, r.latitude, r.longitude)
+      distance: getDistance(userLat, userLon, r.latitude, r.longitude),
+      inDeliveryZone: r.deliveryRadius 
+        ? getDistance(userLat, userLon, r.latitude, r.longitude) <= r.deliveryRadius
+        : true // Если радиус не задан, считаем что доставка доступна везде
     })).sort((a, b) => a.distance - b.distance);
 
-    const nearest = restaurantsWithDistance[0];
+    // Сначала ищем ближайший ресторан В ЗОНЕ доставки
+    let nearest = restaurantsWithDistance.find(r => r.inDeliveryZone);
 
-    // Проверяем, находится ли клиент в зоне доставки
-    const inDeliveryZone = nearest.restaurant.deliveryRadius 
-      ? nearest.distance <= nearest.restaurant.deliveryRadius
-      : true;
+    // Если ни один ресторан не покрывает зону доставки, берем просто ближайший
+    if (!nearest) {
+      nearest = restaurantsWithDistance[0];
+    }
+
+    const inDeliveryZone = nearest.inDeliveryZone;
 
     // Обновляем заказ
     const updatedOrder = await prisma.order.update({
