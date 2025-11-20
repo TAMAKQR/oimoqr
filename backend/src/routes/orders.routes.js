@@ -1,5 +1,5 @@
 import express from 'express';
-import { createOrder, getOrdersByRestaurant, getOrderById, getOrderByNumber, reassignOrder } from '../controllers/orders.controller.js';
+import { createOrder, getOrdersByRestaurant, getOrderById, getOrderByNumber, reassignOrder, autoReassignOrder } from '../controllers/orders.controller.js';
 
 const router = express.Router();
 
@@ -8,5 +8,6 @@ router.get('/restaurant/:restaurantId', getOrdersByRestaurant);
 router.get('/number/:orderNumber', getOrderByNumber);
 router.get('/:orderId', getOrderById);
 router.put('/:orderId/reassign', reassignOrder);
+router.post('/:orderId/auto-reassign', autoReassignOrder); // Новый эндпоинт для автоматического переназначения
 
 export default router;

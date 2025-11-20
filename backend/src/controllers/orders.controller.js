@@ -222,3 +222,119 @@ export const reassignOrder = async (req, res, next) => {
     next(error);
   }
 };
+
+// Функция для расчета расстояния по формуле гаверсинусов
+function getDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Радиус Земли в км
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distance = R * c;
+  return distance;
+}
+
+// Автоматическое переназначение заказа на ближайший ресторан
+export const autoReassignOrder = async (req, res, next) => {
+  try {
+    const { orderId } = req.params;
+    const { latitude, longitude } = req.body;
+
+    if (!latitude || !longitude) {
+      return res.status(400).json({ error: 'latitude and longitude are required' });
+    }
+
+    const userLat = parseFloat(latitude);
+    const userLon = parseFloat(longitude);
+
+    // Получаем заказ
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        restaurant: true
+      }
+    });
+
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    // Получаем все рестораны той же сети (с тем же ownerId)
+    const networkRestaurants = await prisma.restaurant.findMany({
+      where: {
+        ownerId: order.restaurant.ownerId,
+        latitude: { not: null },
+        longitude: { not: null },
+        deliveryEnabled: true
+      },
+      include: {
+        socialLinks: true
+      }
+    });
+
+    if (networkRestaurants.length === 0) {
+      return res.status(400).json({ 
+        error: 'No restaurants with geolocation found in this network' 
+      });
+    }
+
+    // Находим ближайший ресторан
+    const restaurantsWithDistance = networkRestaurants.map(r => ({
+      restaurant: r,
+      distance: getDistance(userLat, userLon, r.latitude, r.longitude)
+    })).sort((a, b) => a.distance - b.distance);
+
+    const nearest = restaurantsWithDistance[0];
+
+    // Проверяем, находится ли клиент в зоне доставки
+    const inDeliveryZone = nearest.restaurant.deliveryRadius 
+      ? nearest.distance <= nearest.restaurant.deliveryRadius
+      : true;
+
+    // Обновляем заказ
+    const updatedOrder = await prisma.order.update({
+      where: { id: orderId },
+      data: { 
+        assignedRestaurantId: nearest.restaurant.id,
+        deliveryLatitude: userLat,
+        deliveryLongitude: userLon
+      },
+      include: {
+        restaurant: true,
+        items: {
+          include: {
+            dish: true
+          }
+        }
+      }
+    });
+
+    res.json({
+      message: 'Order auto-assigned to nearest restaurant',
+      order: updatedOrder,
+      assignedTo: {
+        id: nearest.restaurant.id,
+        name: nearest.restaurant.name,
+        address: nearest.restaurant.address,
+        phone: nearest.restaurant.phone,
+        whatsapp: nearest.restaurant.socialLinks?.whatsapp,
+        distance: nearest.distance.toFixed(2) + ' км'
+      },
+      customerLocation: {
+        latitude: userLat,
+        longitude: userLon
+      },
+      inDeliveryZone,
+      allNearbyRestaurants: restaurantsWithDistance.slice(0, 3).map(r => ({
+        id: r.restaurant.id,
+        name: r.restaurant.name,
+        distance: r.distance.toFixed(2) + ' км'
+      }))
+    });
+  } catch (error) {
+    next(error);
+  }
+};

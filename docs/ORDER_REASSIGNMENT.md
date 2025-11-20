@@ -53,13 +53,12 @@ CREATE INDEX IF NOT EXISTS "Order_assignedRestaurantId_idx" ON "Order" ("assigne
 
 ## 🚀 API
 
-### Переназначить заказ
+### Переназначить заказ вручную
 
 **Endpoint:**
 
 ```http
 PUT /api/orders/:orderId/reassign
-Authorization: Bearer <token>
 Content-Type: application/json
 ```
 
@@ -93,6 +92,156 @@ Content-Type: application/json
   }
 }
 ```
+
+---
+
+### 🤖 Автоматическое переназначение по геолокации (для SendPulse)
+
+**Endpoint:**
+
+```http
+POST /api/orders/:orderId/auto-reassign
+Content-Type: application/json
+```
+
+**Request Body:**
+
+```json
+{
+  "latitude": 10.767750740051,
+  "longitude": 106.69813537598
+}
+```
+
+**Response:**
+
+```json
+{
+  "message": "Order auto-assigned to nearest restaurant",
+  "order": {
+    "id": "cmi708asf0001pp2aijjqlgzf",
+    "orderNumber": "#3426213969",
+    "assignedRestaurantId": "cmhwxo85m0002fw2biuazxxxx",
+    "deliveryLatitude": 10.767750740051,
+    "deliveryLongitude": 106.69813537598,
+    ...
+  },
+  "assignedTo": {
+    "id": "cmhwxo85m0002fw2biuazxxxx",
+    "name": "Buffet №2",
+    "address": "Проспект Абая, 123",
+    "phone": "+77078958828",
+    "whatsapp": "77078958828",
+    "distance": "0.85 км"
+  },
+  "customerLocation": {
+    "latitude": 10.767750740051,
+    "longitude": 106.69813537598
+  },
+  "inDeliveryZone": true,
+  "allNearbyRestaurants": [
+    {
+      "id": "cmhwxo85m0002fw2biuazxxxx",
+      "name": "Buffet №2",
+      "distance": "0.85 км"
+    },
+    {
+      "id": "cmhwxo85m0003fw2biuazxxxx",
+      "name": "Buffet №3",
+      "distance": "2.14 км"
+    }
+  ]
+}
+```
+
+**Особенности:**
+
+- 🎯 Автоматически находит ближайший ресторан из той же сети
+- 📍 Сохраняет координаты клиента в заказе
+- 📊 Проверяет зону доставки
+- 📋 Возвращает список 3 ближайших ресторанов
+
+---
+
+## 📱 Интеграция с SendPulse
+
+### Настройка автоматического переназначения
+
+1. **В SendPulse чат-боте** при получении локации от клиента:
+
+```
+Когда пользователь отправляет локацию:
+  Извлечь latitude и longitude
+  Сохранить в переменные {{latitude}} и {{longitude}}
+  Отправить HTTP POST запрос
+```
+
+2. **Настройка HTTP запроса в SendPulse:**
+
+**URL:**
+
+```
+https://oimoqr.onrender.com/api/orders/{{orderId}}/auto-reassign
+```
+
+**Method:** `POST`
+
+**Headers:**
+
+```
+Content-Type: application/json
+```
+
+**Body:**
+
+```json
+{
+  "latitude": {{latitude}},
+  "longitude": {{longitude}}
+}
+```
+
+3. **Обработка ответа:**
+
+SendPulse получит информацию о назначенном ресторане:
+
+```
+Ваш заказ №{{orderNumber}} назначен на филиал:
+📍 {{assignedTo.name}}
+📞 {{assignedTo.phone}}
+📏 Расстояние: {{assignedTo.distance}}
+```
+
+### Пример сценария в SendPulse
+
+```
+[Клиент отправляет локацию]
+  ↓
+[Бот получает координаты]
+  ↓
+[POST /api/orders/{orderId}/auto-reassign]
+  ↓
+[Получаем ближайший филиал]
+  ↓
+[Отправляем клиенту:]
+  "✅ Ваш заказ принят!
+   📍 Готовить будет филиал: Buffet №2
+   📞 Телефон: +77078958828
+   📏 Расстояние: 0.85 км
+   ⏱ Ожидаемое время доставки: 30-40 минут"
+```
+
+### Извлечение координат из Google Maps ссылки
+
+Если клиент отправляет ссылку типа `https://maps.google.com/?q=10.767750740051,106.69813537598`:
+
+В SendPulse используйте регулярное выражение для извлечения координат:
+
+```regex
+q=([0-9.]+),([0-9.]+)
+```
+
+Затем передайте эти значения в API.
 
 ---
 
