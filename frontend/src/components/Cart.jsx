@@ -121,10 +121,10 @@ const Cart = ({ restaurant }) => {
     setIsLoading(true);
     try {
       const orderItems = items.map((item) => ({
+        id: item.dish.id,
         quantity: item.quantity,
-        name: item.dish.name,
-        price: item.totalPrice,
-        modifiers: item.modifiers.map(m => m.name)
+        price: item.dish.price,
+        selectedModifiers: item.modifiers
       }));
 
       const orderData = {
