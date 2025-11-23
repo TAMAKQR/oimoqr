@@ -217,13 +217,22 @@ const DashboardPage = () => {
     }
     
     if (sub.status === 'ACTIVE') {
-      const daysLeft = Math.ceil((new Date(sub.currentPeriodEnd) - now) / (1000 * 60 * 60 * 24));
+      const endDate = new Date(sub.currentPeriodEnd);
+      const daysLeft = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
       const maxRestaurants = sub.pricingTier?.maxRestaurants || 1;
       const currentRestaurantCount = userData?.restaurants?.length || 0;
       
+      // Форматируем дату окончания
+      const formattedEndDate = endDate.toLocaleDateString('ru-RU', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+      
       return { 
         status: `Активная подписка: ${sub.pricingTier?.name || sub.plan}`,
-        details: `Использовано ${currentRestaurantCount} из ${maxRestaurants} ${maxRestaurants === 1 ? 'ресторана' : 'ресторанов'} • Осталось ${daysLeft} ${daysLeft === 1 ? 'день' : daysLeft < 5 ? 'дня' : 'дней'}`
+        details: `Использовано ${currentRestaurantCount} из ${maxRestaurants} ${maxRestaurants === 1 ? 'ресторана' : 'ресторанов'}`,
+        endDate: `Действует до ${formattedEndDate} (осталось ${daysLeft} ${daysLeft === 1 ? 'день' : daysLeft < 5 ? 'дня' : 'дней'})`
       };
     }
     
@@ -336,6 +345,11 @@ const DashboardPage = () => {
                   {subscriptionInfo.details && (
                     <p className="text-xs sm:text-sm text-gray-600 mt-2">
                       {subscriptionInfo.details}
+                    </p>
+                  )}
+                  {subscriptionInfo.endDate && (
+                    <p className="text-xs sm:text-sm text-orange-600 font-medium mt-2">
+                      {subscriptionInfo.endDate}
                     </p>
                   )}
                   {getSelectedRestaurant()?.subscriptions?.[0]?.status === 'TRIAL' && (
