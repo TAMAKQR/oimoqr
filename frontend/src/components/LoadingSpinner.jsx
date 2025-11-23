@@ -23,7 +23,7 @@ const LoadingSpinner = ({ message = 'Загрузка...', fullScreen = true }) 
           {/* Loading text with animation */}
           <div className="space-y-2">
             <h3 className="text-2xl font-bold text-gray-800 animate-pulse">
-              QR Menu
+              Oimo QR
             </h3>
             <p className="text-gray-600 flex items-center justify-center gap-1">
               <span>{message}</span>
