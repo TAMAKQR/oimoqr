@@ -5,6 +5,7 @@ import BannerSlider from '../components/BannerSlider';
 import DishCard from '../components/DishCard';
 import Cart from '../components/Cart';
 import WorkingHoursSection from '../components/WorkingHoursSection';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const getCurrencySymbol = (currencyCode) => {
   const currencySymbols = {
@@ -169,11 +170,7 @@ const MenuPage = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">Загрузка...</div>
-      </div>
-    );
+    return <LoadingSpinner message="Загрузка меню..." />;
   }
 
   if (error) {
