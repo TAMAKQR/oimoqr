@@ -336,7 +336,7 @@ const Cart = ({ restaurant }) => {
                               </p>
                             )}
                             <p className="text-primary-600 font-semibold text-sm sm:text-base mt-1">
-                              {item.totalPrice} {currency}
+                              {parseFloat(item.totalPrice || 0).toFixed(2)} {currency}
                             </p>
                           </div>
                           <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">

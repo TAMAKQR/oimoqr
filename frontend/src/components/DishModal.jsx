@@ -54,13 +54,8 @@ const DishModal = ({ dish, isOpen, onClose, currency = '₽' }) => {
     const modifierIds = selectedOptions.map(m => m.id).sort().join('-');
     const itemId = `${dish.id}-${modifierIds}`;
 
-    addItem({
-      itemId: itemId,
-      dish: dish,
-      modifiers: selectedOptions,
-      quantity: 1,
-      totalPrice: finalPrice,
-    });
+    // Добавляем блюдо с модификаторами в корзину
+    addItem(dish, selectedOptions);
 
     toast.success(`${dish.name} добавлен в корзину!`);
     onClose();
