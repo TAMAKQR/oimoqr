@@ -14,6 +14,13 @@ const AdminPage = () => {
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [subscriptionForm, setSubscriptionForm] = useState({
+    pricingTierId: '',
+    durationMonths: 1,
+    startDate: '',
+    endDate: ''
+  });
   const [editForm, setEditForm] = useState({ email: '', password: '' });
   const [searchQuery, setSearchQuery] = useState('');
   const [notification, setNotification] = useState(null);
@@ -71,16 +78,47 @@ const AdminPage = () => {
     }
   };
 
-  const handleUpdateUserSubscription = async (userId, pricingTierId) => {
+  const handleUpdateUserSubscription = async (userId, pricingTierId, options = {}) => {
     try {
-      await api.put(`/admin/users/${userId}/subscriptions`, { pricingTierId });
+      const payload = { pricingTierId, ...options };
+      await api.put(`/admin/users/${userId}/subscriptions`, payload);
       await loadData();
       showNotification('Подписка пользователя обновлена успешно!');
+      setShowSubscriptionModal(false);
     } catch (err) {
       console.error('Error updating user subscription:', err);
       const errorMessage = err.response?.data?.error || err.message || 'Неизвестная ошибка';
       showNotification(`Ошибка обновления подписки: ${errorMessage}`, 'error');
     }
+  };
+
+  const handleOpenSubscriptionModal = (user) => {
+    setEditingUser(user);
+    const today = new Date().toISOString().split('T')[0];
+    setSubscriptionForm({
+      pricingTierId: user.subscriptions?.[0]?.pricingTierId || '',
+      durationMonths: 1,
+      startDate: today,
+      endDate: ''
+    });
+    setShowSubscriptionModal(true);
+  };
+
+  const handleSubmitSubscription = (e) => {
+    e.preventDefault();
+    const options = {};
+    
+    if (subscriptionForm.durationMonths) {
+      options.durationMonths = parseInt(subscriptionForm.durationMonths);
+    }
+    if (subscriptionForm.startDate) {
+      options.startDate = subscriptionForm.startDate;
+    }
+    if (subscriptionForm.endDate) {
+      options.endDate = subscriptionForm.endDate;
+    }
+    
+    handleUpdateUserSubscription(editingUser.id, subscriptionForm.pricingTierId, options);
   };
 
   const handleOpenEditModal = (user) => {
@@ -310,23 +348,32 @@ const AdminPage = () => {
                       </span>
                     </td>
                     <td className="py-4 px-4">
-                      <select
-                        onChange={(e) => {
-                          if (e.target.value) {
-                            handleUpdateUserSubscription(user.id, e.target.value);
-                            e.target.value = '';
-                          }
-                        }}
-                        className="text-sm border rounded px-3 py-1.5 min-w-[150px] focus:outline-none focus:ring-2 focus:ring-primary-500"
-                        defaultValue=""
-                      >
-                        <option value="">Выбрать тариф...</option>
-                        {pricingTiers.map((tier) => (
-                          <option key={tier.id} value={tier.id}>
-                            {tier.name} (${tier.price})
-                          </option>
-                        ))}
-                      </select>
+                      <div className="flex gap-2">
+                        <select
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              handleUpdateUserSubscription(user.id, e.target.value);
+                              e.target.value = '';
+                            }
+                          }}
+                          className="text-sm border rounded px-3 py-1.5 min-w-[150px] focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          defaultValue=""
+                        >
+                          <option value="">Выбрать тариф...</option>
+                          {pricingTiers.map((tier) => (
+                            <option key={tier.id} value={tier.id}>
+                              {tier.name} (${tier.price})
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => handleOpenSubscriptionModal(user)}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                          title="Расширенные настройки подписки"
+                        >
+                          ⚙️
+                        </button>
+                      </div>
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex justify-center gap-2">
@@ -420,6 +467,100 @@ const AdminPage = () => {
                   className="flex-1 btn-primary"
                 >
                   Сохранить
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Subscription Settings Modal */}
+      {showSubscriptionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h2 className="text-xl font-bold mb-4">Настройки подписки</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Пользователь: <strong>{editingUser?.name}</strong>
+            </p>
+            
+            <form onSubmit={handleSubmitSubscription} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Тариф
+                </label>
+                <select
+                  value={subscriptionForm.pricingTierId}
+                  onChange={(e) => setSubscriptionForm({ ...subscriptionForm, pricingTierId: e.target.value })}
+                  className="input w-full"
+                  required
+                >
+                  <option value="">Выберите тариф</option>
+                  {pricingTiers.map((tier) => (
+                    <option key={tier.id} value={tier.id}>
+                      {tier.name} (${tier.price}/мес)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Длительность (месяцев)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="24"
+                  value={subscriptionForm.durationMonths}
+                  onChange={(e) => setSubscriptionForm({ ...subscriptionForm, durationMonths: e.target.value })}
+                  className="input w-full"
+                  placeholder="Количество месяцев"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  По умолчанию используется 1 месяц если не указаны конкретные даты
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Дата начала
+                </label>
+                <input
+                  type="date"
+                  value={subscriptionForm.startDate}
+                  onChange={(e) => setSubscriptionForm({ ...subscriptionForm, startDate: e.target.value })}
+                  className="input w-full"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Дата окончания (опционально)
+                </label>
+                <input
+                  type="date"
+                  value={subscriptionForm.endDate}
+                  onChange={(e) => setSubscriptionForm({ ...subscriptionForm, endDate: e.target.value })}
+                  className="input w-full"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Если указана, длительность игнорируется
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowSubscriptionModal(false)}
+                  className="flex-1 btn-secondary"
+                >
+                  Отмена
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 btn-primary"
+                >
+                  Применить
                 </button>
               </div>
             </form>

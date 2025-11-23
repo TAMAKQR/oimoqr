@@ -8,9 +8,9 @@ import { sendSubscriptionActivatedEmail } from '../utils/email.js';
 export const updateUserSubscription = async (req, res, next) => {
   try {
     const { userId } = req.params;
-    const { pricingTierId, status } = req.body;
+    const { pricingTierId, status, durationMonths, startDate, endDate } = req.body;
 
-    console.log('Admin updating user subscription:', { userId, pricingTierId, status });
+    console.log('Admin updating user subscription:', { userId, pricingTierId, status, durationMonths, startDate, endDate });
 
     // Validate input
     if (!pricingTierId && !status) {
@@ -53,16 +53,29 @@ export const updateUserSubscription = async (req, res, next) => {
         });
       }
 
-      // Default to 30 days for subscription
-      const endDate = new Date();
-      endDate.setDate(endDate.getDate() + 30);
+      // Рассчитываем даты подписки
+      let periodStart = startDate ? new Date(startDate) : new Date();
+      let periodEnd;
+
+      if (endDate) {
+        // Если указана конечная дата - используем её
+        periodEnd = new Date(endDate);
+      } else if (durationMonths) {
+        // Если указано количество месяцев - добавляем к дате начала
+        periodEnd = new Date(periodStart);
+        periodEnd.setMonth(periodEnd.getMonth() + parseInt(durationMonths));
+      } else {
+        // По умолчанию - 1 месяц (30 дней)
+        periodEnd = new Date(periodStart);
+        periodEnd.setDate(periodEnd.getDate() + 30);
+      }
 
       updateData = {
         plan: pricingTier.name,
         status: 'ACTIVE',
         pricingTierId,
-        currentPeriodStart: new Date(),
-        currentPeriodEnd: endDate
+        currentPeriodStart: periodStart,
+        currentPeriodEnd: periodEnd
       };
 
       console.log('Activating pricing tier:', updateData);
