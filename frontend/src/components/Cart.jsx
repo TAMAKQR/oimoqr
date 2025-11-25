@@ -116,7 +116,7 @@ const Cart = ({ restaurant }) => {
       const orderItems = items.map((item) => ({
         id: item.dish.id,
         quantity: item.quantity,
-        price: parseFloat(item.dish.price) || 0,
+        price: parseFloat(item.totalPrice) || 0,
         selectedModifiers: item.modifiers
       }));
 
