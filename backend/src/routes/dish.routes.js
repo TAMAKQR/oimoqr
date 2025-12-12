@@ -10,7 +10,10 @@ import {
   createModifier,
   updateModifier,
   deleteModifier,
-  reorderDishes
+  reorderDishes,
+  createModifierOption,
+  updateModifierOption,
+  deleteModifierOption
 } from '../controllers/dish.controller.js';
 import { authenticate, requireRestaurant } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
@@ -33,5 +36,10 @@ router.delete('/:id', authenticate, requireRestaurant, deleteDish);
 router.post('/:dishId/modifiers', authenticate, requireRestaurant, createModifier);
 router.put('/modifiers/:id', authenticate, requireRestaurant, updateModifier);
 router.delete('/modifiers/:id', authenticate, requireRestaurant, deleteModifier);
+
+// Protected routes - Modifier Options
+router.post('/modifiers/:modifierId/options', authenticate, requireRestaurant, createModifierOption);
+router.put('/modifiers/options/:optionId', authenticate, requireRestaurant, updateModifierOption);
+router.delete('/modifiers/options/:optionId', authenticate, requireRestaurant, deleteModifierOption);
 
 export default router;

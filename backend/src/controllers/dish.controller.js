@@ -207,8 +207,8 @@ export const uploadDishImage = async (req, res, next) => {
     }
 
     // Get image URL (Cloudinary returns full URL, local storage returns filename)
-    const imageUrl = req.file.path && req.file.path.startsWith('http') 
-      ? req.file.path 
+    const imageUrl = req.file.path && req.file.path.startsWith('http')
+      ? req.file.path
       : `/uploads/${req.file.filename}`;
     console.log('📸 Image URL:', imageUrl);
 
@@ -252,7 +252,7 @@ export const deleteDishImage = async (req, res, next) => {
       data: { image: null }
     });
 
-    res.json({ 
+    res.json({
       message: 'Image deleted successfully',
       dish: {
         ...updatedDish,
@@ -357,13 +357,23 @@ export const createModifier = async (req, res, next) => {
       return res.status(404).json({ error: 'Dish not found' });
     }
 
+    // Создаем модификатор вместе с опцией
     const modifier = await prisma.modifier.create({
       data: {
         name,
         type,
-        price: parsedPrice, // Corrected from 'price' to 'parsedPrice'
+        price: parsedPrice,
         isRequired: isRequired || false,
-        dishId
+        dishId,
+        options: {
+          create: {
+            name: name, // Опция получает то же имя, что и модификатор
+            price: parsedPrice
+          }
+        }
+      },
+      include: {
+        options: true
       }
     });
 
@@ -484,6 +494,133 @@ export const reorderDishes = async (req, res, next) => {
     await Promise.all(updates);
 
     res.json({ message: 'Dishes reordered successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ============ MODIFIER OPTIONS CONTROLLERS ============
+
+export const createModifierOption = async (req, res, next) => {
+  try {
+    const { modifierId } = req.params;
+    const { name, price = 0 } = req.body;
+
+    // Validate price
+    const parsedPrice = parseFloat(price);
+    if (isNaN(parsedPrice) || parsedPrice < 0) {
+      return res.status(400).json({ error: 'Option price must be a number greater than or equal to 0' });
+    }
+
+    // Check if modifier exists and user has access
+    const modifier = await prisma.modifier.findUnique({
+      where: { id: modifierId },
+      include: {
+        dish: {
+          include: {
+            category: true
+          }
+        }
+      }
+    });
+
+    if (!modifier) {
+      return res.status(404).json({ error: 'Modifier not found' });
+    }
+
+    const option = await prisma.modifierOption.create({
+      data: {
+        modifierId,
+        name,
+        price: parsedPrice
+      }
+    });
+
+    res.status(201).json(option);
+  } catch (error) {
+    console.error('Error creating modifier option:', error);
+    next(error);
+  }
+};
+
+export const updateModifierOption = async (req, res, next) => {
+  try {
+    const { optionId } = req.params;
+    const { name, price } = req.body;
+
+    // Validate price if provided
+    let parsedPrice = undefined;
+    if (price !== undefined && price !== null) {
+      parsedPrice = parseFloat(price);
+      if (isNaN(parsedPrice) || parsedPrice < 0) {
+        return res.status(400).json({ error: 'Option price must be a number greater than or equal to 0' });
+      }
+    }
+
+    // Check if option exists and user has access
+    const option = await prisma.modifierOption.findUnique({
+      where: { id: optionId },
+      include: {
+        modifier: {
+          include: {
+            dish: {
+              include: {
+                category: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!option) {
+      return res.status(404).json({ error: 'Option not found' });
+    }
+
+    const updateData = {};
+    if (name !== undefined) updateData.name = name;
+    if (parsedPrice !== undefined) updateData.price = parsedPrice;
+
+    const updatedOption = await prisma.modifierOption.update({
+      where: { id: optionId },
+      data: updateData
+    });
+
+    res.json(updatedOption);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteModifierOption = async (req, res, next) => {
+  try {
+    const { optionId } = req.params;
+
+    // Check if option exists and user has access
+    const option = await prisma.modifierOption.findUnique({
+      where: { id: optionId },
+      include: {
+        modifier: {
+          include: {
+            dish: {
+              include: {
+                category: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!option) {
+      return res.status(404).json({ error: 'Option not found' });
+    }
+
+    await prisma.modifierOption.delete({
+      where: { id: optionId }
+    });
+
+    res.json({ message: 'Option deleted successfully' });
   } catch (error) {
     next(error);
   }
