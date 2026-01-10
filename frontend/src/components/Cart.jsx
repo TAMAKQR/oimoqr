@@ -1,9 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useCartStore } from '../store/cartStore';
 
 const Cart = ({ restaurant }) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Следим за открытием модального окна блюда
+  useEffect(() => {
+    const checkModal = () => {
+      // Проверяем наличие активного DishModal в DOM
+      const dishModal = document.querySelector('[class*="animate-slide-up"]');
+      setIsModalOpen(!!dishModal);
+    };
+
+    // Проверяем при монтировании и при изменениях DOM
+    checkModal();
+    const observer = new MutationObserver(checkModal);
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    return () => observer.disconnect();
+  }, []);
   const navigate = useNavigate();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
@@ -40,7 +57,7 @@ const Cart = ({ restaurant }) => {
     setIsCheckingOut(false);
   };
 
-  if (!itemCount) {
+  if (!itemCount || isModalOpen) {
     return null;
   }
 
