@@ -5,8 +5,10 @@ import { authService } from '../services/authService';
 import { menuService } from '../services/menuService';
 import { restaurantService } from '../services/restaurantService';
 import toast from 'react-hot-toast';
+import { confirmDialog } from '../utils/confirmDialog';
 import RestaurantSelector from '../components/RestaurantSelector';
 import DashboardLayout from '../components/DashboardLayout';
+import CategoryGroupsModal from '../components/CategoryGroupsModal';
 
 const MenuManagementPage = () => {
   const navigate = useNavigate();
@@ -31,6 +33,8 @@ const MenuManagementPage = () => {
   const [draggedDishId, setDraggedDishId] = useState(null);
   const [dragOverCategoryId, setDragOverCategoryId] = useState(null);
   const [dragOverDishId, setDragOverDishId] = useState(null);
+  const [showCategoryGroupsModal, setShowCategoryGroupsModal] = useState(false);
+  const [categoryGroups, setCategoryGroups] = useState([]);
 
   useEffect(() => {
     loadData();
@@ -49,22 +53,12 @@ const MenuManagementPage = () => {
     }
   }, [userData]);
 
-  useEffect(() => {
-    if (userData && selectedRestaurantId) {
-      const restaurant = getSelectedRestaurant();
-      if (restaurant) {
-        setCurrency(restaurant.currency || '₽');
-        loadCategories(selectedRestaurantId);
-      }
-    }
-  }, [selectedRestaurantId]);
-
   const getSelectedRestaurant = () => {
     if (!userData || !selectedRestaurantId) return null;
-    
+
     const owned = userData.restaurants?.find(r => r.id === selectedRestaurantId);
     if (owned) return owned;
-    
+
     const staff = userData.restaurantStaff?.find(s => s.restaurant.id === selectedRestaurantId);
     return staff?.restaurant || null;
   };
@@ -83,9 +77,9 @@ const MenuManagementPage = () => {
   const loadCategories = async (restaurantId) => {
     try {
       const cats = await menuService.getCategories(restaurantId);
-      
+
       setCategories(cats);
-      
+
       // Extract dishes from categories (they're already included in the response)
       const dishesData = {};
       for (const cat of cats) {
@@ -96,6 +90,27 @@ const MenuManagementPage = () => {
       console.error('Error loading categories:', err);
     }
   };
+
+  const loadCategoryGroups = async (restaurantId) => {
+    try {
+      const { categoryGroupService } = await import('../services/categoryGroupService');
+      const groups = await categoryGroupService.getCategoryGroups(restaurantId);
+      setCategoryGroups(groups);
+    } catch (err) {
+      console.error('Error loading category groups:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (userData && selectedRestaurantId) {
+      const restaurant = getSelectedRestaurant();
+      if (restaurant) {
+        setCurrency(restaurant.currency || '₽');
+        loadCategories(selectedRestaurantId);
+        loadCategoryGroups(selectedRestaurantId);
+      }
+    }
+  }, [selectedRestaurantId, userData]);
 
   const handleLogout = () => {
     logout();
@@ -145,8 +160,13 @@ const MenuManagementPage = () => {
   };
 
   const handleDeleteCategory = async (categoryId) => {
-    if (!confirm('Удалить категорию и все блюда в ней?')) return;
-    
+    const confirmed = await confirmDialog('Удалить категорию и все блюда в ней?', {
+      confirmText: 'Удалить',
+      cancelText: 'Отмена',
+      icon: '🗑️'
+    });
+    if (!confirmed) return;
+
     try {
       await menuService.deleteCategory(categoryId);
       await loadCategories(selectedRestaurantId);
@@ -169,8 +189,13 @@ const MenuManagementPage = () => {
   };
 
   const handleDeleteDish = async (dishId) => {
-    if (!confirm('Удалить блюдо?')) return;
-    
+    const confirmed = await confirmDialog('Удалить блюдо?', {
+      confirmText: 'Удалить',
+      cancelText: 'Отмена',
+      icon: '🗑️'
+    });
+    if (!confirmed) return;
+
     try {
       await menuService.deleteDish(dishId);
       await loadCategories(selectedRestaurantId);
@@ -185,14 +210,14 @@ const MenuManagementPage = () => {
       const dishToUpdate = Object.values(dishes)
         .flat()
         .find(d => d.id === dishId);
-      
+
       if (!dishToUpdate) return;
 
       const previousState = { ...dishes };
       const updatedDishes = { ...dishes };
-      
+
       Object.keys(updatedDishes).forEach(categoryId => {
-        updatedDishes[categoryId] = updatedDishes[categoryId].map(dish => 
+        updatedDishes[categoryId] = updatedDishes[categoryId].map(dish =>
           dish.id === dishId ? { ...dish, available: !dish.available } : dish
         );
       });
@@ -226,7 +251,7 @@ const MenuManagementPage = () => {
   const handleCategoryDrop = async (e, dropCategoryId) => {
     e.preventDefault();
     setDragOverCategoryId(null);
-    
+
     if (!draggedCategoryId || draggedCategoryId === dropCategoryId) {
       setDraggedCategoryId(null);
       return;
@@ -235,7 +260,7 @@ const MenuManagementPage = () => {
     try {
       const draggedIndex = categories.findIndex(c => c.id === draggedCategoryId);
       const dropIndex = categories.findIndex(c => c.id === dropCategoryId);
-      
+
       if (draggedIndex === -1 || dropIndex === -1) return;
 
       const newCategories = [...categories];
@@ -246,7 +271,7 @@ const MenuManagementPage = () => {
 
       const categoryIds = newCategories.map(c => c.id);
       await menuService.reorderCategories(selectedRestaurantId, categoryIds);
-      } catch (err) {
+    } catch (err) {
       toast.error('Ошибка при перемещении категории');
       console.error(err);
       await loadCategories(selectedRestaurantId);
@@ -273,7 +298,7 @@ const MenuManagementPage = () => {
   const handleDishDrop = async (e, dropDishId, categoryId) => {
     e.preventDefault();
     setDragOverDishId(null);
-    
+
     if (!draggedDishId || draggedDishId === dropDishId) {
       setDraggedDishId(null);
       return;
@@ -283,7 +308,7 @@ const MenuManagementPage = () => {
       const categoryDishes = dishes[categoryId];
       const draggedIndex = categoryDishes.findIndex(d => d.id === draggedDishId);
       const dropIndex = categoryDishes.findIndex(d => d.id === dropDishId);
-      
+
       if (draggedIndex === -1 || dropIndex === -1) return;
 
       const newDishes = [...categoryDishes];
@@ -332,7 +357,10 @@ const MenuManagementPage = () => {
         {/* Add Category Button */}
         <div className="mb-6 flex justify-between items-center gap-2 flex-wrap">
           <h2 className="text-2xl font-bold">Категории и блюда</h2>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <button onClick={() => setShowCategoryGroupsModal(true)} className="btn-secondary">
+              📂 Группы категорий
+            </button>
             <button onClick={() => setShowCopyModal(true)} className="btn-secondary">
               📋 Копировать меню
             </button>
@@ -355,8 +383,8 @@ const MenuManagementPage = () => {
         ) : (
           <div className="space-y-4">
             {categories.map((category) => (
-              <div 
-                key={category.id} 
+              <div
+                key={category.id}
                 className={`card cursor-move transition-all ${draggedCategoryId === category.id ? 'opacity-50' : ''} ${dragOverCategoryId === category.id ? 'border-2 border-blue-500 bg-blue-50' : ''}`}
                 draggable
                 onDragStart={(e) => handleCategoryDragStart(e, category.id)}
@@ -461,14 +489,13 @@ const MenuManagementPage = () => {
                                 </p>
                               </div>
                             </div>
-                            
+
                             {/* Action Buttons - Below on mobile, Right on desktop */}
                             <div className="flex gap-2 sm:flex-shrink-0">
                               <button
                                 onClick={() => handleToggleAvailability(dish.id)}
-                                className={`btn-secondary text-sm flex-1 sm:flex-initial ${
-                                  !dish.available ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'
-                                }`}
+                                className={`btn-secondary text-sm flex-1 sm:flex-initial ${!dish.available ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                  }`}
                                 title={dish.available ? 'Поставить на стоп' : 'Вернуть в меню'}
                               >
                                 {dish.available ? '✓' : '⏸'}
@@ -503,10 +530,12 @@ const MenuManagementPage = () => {
         <CategoryModal
           category={editingCategory}
           restaurantId={selectedRestaurantId}
+          categoryGroups={categoryGroups}
           onClose={() => setShowCategoryModal(false)}
           onSave={() => {
             setShowCategoryModal(false);
             loadCategories(selectedRestaurantId);
+            loadCategoryGroups(selectedRestaurantId);
           }}
         />
       )}
@@ -525,12 +554,25 @@ const MenuManagementPage = () => {
         />
       )}
 
+      {/* Category Groups Modal */}
+      {showCategoryGroupsModal && selectedRestaurantId && (
+        <CategoryGroupsModal
+          restaurantId={selectedRestaurantId}
+          categories={categories}
+          onClose={() => setShowCategoryGroupsModal(false)}
+          onSave={() => {
+            setShowCategoryGroupsModal(false);
+            loadCategories(selectedRestaurantId);
+          }}
+        />
+      )}
+
       {/* Copy Menu Modal */}
       {showCopyModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <h2 className="text-xl font-bold mb-4">Копировать меню</h2>
-            
+
             {copyError && (
               <div className="bg-red-50 text-red-700 p-3 rounded mb-4 text-sm">
                 {copyError}
@@ -589,9 +631,10 @@ const MenuManagementPage = () => {
 };
 
 // Category Modal Component
-const CategoryModal = ({ category, restaurantId, onClose, onSave }) => {
+const CategoryModal = ({ category, restaurantId, onClose, onSave, categoryGroups }) => {
   const [name, setName] = useState(category?.name || '');
   const [sortOrder, setSortOrder] = useState(category?.order || 0);
+  const [categoryGroupId, setCategoryGroupId] = useState(category?.categoryGroupId || '');
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -600,19 +643,25 @@ const CategoryModal = ({ category, restaurantId, onClose, onSave }) => {
       category: category ? 'editing existing' : 'creating new',
       name,
       order: parseInt(sortOrder),
+      categoryGroupId: categoryGroupId || null,
       restaurantId
     });
     setSaving(true);
 
     try {
-      const data = { name, order: parseInt(sortOrder), restaurantId };
-      
+      const data = {
+        name,
+        order: parseInt(sortOrder),
+        restaurantId,
+        categoryGroupId: categoryGroupId || null
+      };
+
       if (category) {
         await menuService.updateCategory(category.id, data);
       } else {
         await menuService.createCategory(data);
       }
-      
+
       onSave();
     } catch (err) {
       toast.error('Ошибка при сохранении категории');
@@ -628,7 +677,7 @@ const CategoryModal = ({ category, restaurantId, onClose, onSave }) => {
         <h3 className="text-xl font-bold mb-4">
           {category ? 'Редактировать категорию' : 'Новая категория'}
         </h3>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1">Название</label>
@@ -651,6 +700,27 @@ const CategoryModal = ({ category, restaurantId, onClose, onSave }) => {
               onChange={(e) => setSortOrder(e.target.value)}
               className="input w-full"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Группа категорий (необязательно)
+            </label>
+            <select
+              value={categoryGroupId}
+              onChange={(e) => setCategoryGroupId(e.target.value)}
+              className="input w-full"
+            >
+              <option value="">Без группы</option>
+              {categoryGroups && categoryGroups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Категории в группе отображаются под её карточкой в QR-меню
+            </p>
           </div>
 
           <div className="flex gap-3 pt-4">
@@ -705,7 +775,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
   ];
 
   const toggleAllergen = (allergenId) => {
-    setAllergens(prev => 
+    setAllergens(prev =>
       prev.includes(allergenId)
         ? prev.filter(a => a !== allergenId)
         : [...prev, allergenId]
@@ -713,8 +783,13 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
   };
 
   const handleDeleteImage = async () => {
-    if (!confirm('Удалить изображение блюда?')) return;
-    
+    const confirmed = await confirmDialog('Удалить изображение блюда?', {
+      confirmText: 'Удалить',
+      cancelText: 'Отмена',
+      icon: '🖼️'
+    });
+    if (!confirmed) return;
+
     try {
       await menuService.deleteDishImage(dish.id);
       setCurrentImageUrl(null);
@@ -756,8 +831,13 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
       setModifiers(modifiers.filter(m => m.id !== modifier.id));
     } else {
       // Удаляем из базы данных
-      if (!confirm('Удалить модификатор?')) return;
-      
+      const confirmed = await confirmDialog('Удалить модификатор?', {
+        confirmText: 'Удалить',
+        cancelText: 'Отмена',
+        icon: '🗑️'
+      });
+      if (!confirmed) return;
+
       try {
         await menuService.deleteModifier(modifier.id);
         setModifiers(modifiers.filter(m => m.id !== modifier.id));
@@ -768,7 +848,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
     }
   };
 
-const handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Validate price
@@ -842,7 +922,7 @@ const handleSubmit = async (e) => {
         <h3 className="text-xl font-bold mb-4">
           {dish ? 'Редактировать блюдо' : 'Новое блюдо'}
         </h3>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1">Название</label>
@@ -871,6 +951,7 @@ const handleSubmit = async (e) => {
               type="number"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
+              onWheel={(e) => e.currentTarget.blur()}
               className="input w-full"
               step="0.01"
               min="0"
@@ -899,11 +980,10 @@ const handleSubmit = async (e) => {
               {availableAllergens.map((allergen) => (
                 <label
                   key={allergen.id}
-                  className={`flex items-center gap-2 p-2 border rounded cursor-pointer transition-colors ${
-                    allergens.includes(allergen.id)
-                      ? 'bg-orange-50 border-orange-300'
-                      : 'bg-white border-gray-300 hover:bg-gray-50'
-                  }`}
+                  className={`flex items-center gap-2 p-2 border rounded cursor-pointer transition-colors ${allergens.includes(allergen.id)
+                    ? 'bg-orange-50 border-orange-300'
+                    : 'bg-white border-gray-300 hover:bg-gray-50'
+                    }`}
                 >
                   <input
                     type="checkbox"
@@ -987,7 +1067,7 @@ const handleSubmit = async (e) => {
                   </span>
                 </div>
                 <div className="w-full bg-blue-200 rounded-full h-2">
-                  <div 
+                  <div
                     className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${uploadProgress}%` }}
                   ></div>
@@ -999,7 +1079,7 @@ const handleSubmit = async (e) => {
           {/* Модификаторы */}
           <div className="border-t pt-4">
             <label className="block text-sm font-medium mb-2">Модификаторы (добавки)</label>
-            
+
             {/* Список модификаторов */}
             {modifiers.length > 0 && (
               <div className="space-y-2 mb-3">

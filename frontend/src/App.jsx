@@ -16,6 +16,12 @@ import RestaurantSettingsPage from './pages/RestaurantSettingsPage';
 import StaffManagementPage from './pages/StaffManagementPage';
 import AdminPricingPage from './pages/AdminPricingPage';
 import LanguageSettingsPage from './pages/LanguageSettingsPage';
+import CustomerLoginPage from './pages/CustomerLoginPage';
+import CustomerProfilePage from './pages/CustomerProfilePage';
+import CustomerRestaurantsPage from './pages/CustomerRestaurantsPage';
+import PricingPage from './pages/PricingPage';
+import CustomersPage from './pages/CustomersPage';
+import CheckoutPage from './pages/CheckoutPage';
 
 // Components
 import PrivateRoute from './components/PrivateRoute';
@@ -28,76 +34,143 @@ function App() {
         <Routes>
           {/* Public routes */}
           <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/menu/:subdomain" element={<MenuPage />} />
-        <Route path="/:subdomain" element={<MenuPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/menu/:subdomain" element={<MenuPage />} />
+          <Route path="/:subdomain" element={<MenuPage />} />
 
-        {/* Protected routes */}
-        <Route
-          path="/dashboard"
-          element={
-            <PrivateRoute>
-              <DashboardPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/menu-management"
-          element={
-            <PrivateRoute>
-              <MenuManagementPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/settings"
-          element={
-            <PrivateRoute>
-              <RestaurantSettingsPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/languages"
-          element={
-            <PrivateRoute>
-              <LanguageSettingsPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/staff/:restaurantId"
-          element={
-            <PrivateRoute>
-              <StaffManagementPage />
-            </PrivateRoute>
-          }
-        />
+          {/* Customer routes */}
+          <Route path="/customer/login" element={<CustomerLoginPage />} />
+          <Route path="/customer/profile" element={<CustomerProfilePage />} />
+          <Route path="/customer/restaurants" element={<CustomerRestaurantsPage />} />
+          <Route path="/customer/orders" element={<CustomerProfilePage />} />
+          <Route path="/customer/orders/:orderId" element={<CustomerProfilePage />} />
+          <Route path="/customer/favorites" element={<CustomerProfilePage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
 
-        {/* Admin routes */}
-        <Route
-          path="/admin"
-          element={
-            <AdminRoute>
-              <AdminPage />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin/pricing"
-          element={
-            <AdminRoute>
-              <AdminPricingPage />
-            </AdminRoute>
-          }
-        />
+          {/* Protected routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <PrivateRoute>
+                <DashboardPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/menu-management"
+            element={
+              <PrivateRoute>
+                <MenuManagementPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <PrivateRoute>
+                <RestaurantSettingsPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/languages"
+            element={
+              <PrivateRoute>
+                <LanguageSettingsPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/staff/:restaurantId"
+            element={
+              <PrivateRoute>
+                <StaffManagementPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/customers/:restaurantId"
+            element={
+              <PrivateRoute>
+                <CustomersPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/pricing"
+            element={
+              <PrivateRoute>
+                <PricingPage />
+              </PrivateRoute>
+            }
+          />
 
-        {/* 404 */}
+          {/* Admin routes */}
+          <Route
+            path="/admin"
+            element={
+              <AdminRoute>
+                <AdminPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/pricing"
+            element={
+              <AdminRoute>
+                <AdminPricingPage />
+              </AdminRoute>
+            }
+          />
+
+          {/* 404 */}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Router>
-      <Toaster />
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          // Настройки по умолчанию для всех toast
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+            padding: '16px',
+            borderRadius: '8px',
+            fontSize: '14px',
+            maxWidth: '500px',
+          },
+          // Успешные уведомления
+          success: {
+            duration: 3000,
+            style: {
+              background: '#10b981',
+            },
+            iconTheme: {
+              primary: '#fff',
+              secondary: '#10b981',
+            },
+          },
+          // Ошибки
+          error: {
+            duration: 5000,
+            style: {
+              background: '#ef4444',
+            },
+            iconTheme: {
+              primary: '#fff',
+              secondary: '#ef4444',
+            },
+          },
+          // Загрузка
+          loading: {
+            style: {
+              background: '#3b82f6',
+            },
+          },
+        }}
+      />
     </ErrorBoundary>
   );
 }

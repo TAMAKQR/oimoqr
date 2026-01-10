@@ -10,7 +10,8 @@ import {
   createRestaurant,
   deleteRestaurant,
   copyMenu,
-  getRestaurantCategories
+  getRestaurantCategories,
+  getRestaurantCustomers
 } from '../controllers/restaurant.controller.js';
 import { getCategories } from '../controllers/category.controller.js';
 import { getRestaurantDishes } from '../controllers/dish.controller.js';
@@ -24,6 +25,9 @@ router.post('/', authenticate, createRestaurant);
 
 // Get categories list only (for translations) - MUST be before /:subdomain
 router.get('/:restaurantId/categories-list', authenticate, getRestaurantCategories);
+
+// Get customers for a restaurant (protected) - MUST be before /:subdomain
+router.get('/:restaurantId/customers', authenticate, getRestaurantCustomers);
 
 // Get categories for a restaurant (protected) - MUST be before /:subdomain
 router.get('/:restaurantId/categories', authenticate, getCategories);

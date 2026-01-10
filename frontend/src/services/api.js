@@ -9,16 +9,36 @@ const api = axios.create({
   },
 });
 
-// Request interceptor to add token
+// Request interceptor to add token (prioritize customer token for /customers*)
 api.interceptors.request.use(
   (config) => {
-    const authStorage = localStorage.getItem('auth-storage');
-    if (authStorage) {
-      const { state } = JSON.parse(authStorage);
-      if (state.token) {
-        config.headers.Authorization = `Bearer ${state.token}`;
+    const url = config.url || '';
+    const isCustomerEndpoint = url.includes('/customers');
+
+    if (isCustomerEndpoint) {
+      const customerToken = localStorage.getItem('customer-token') || localStorage.getItem('customerToken');
+      if (customerToken) {
+        config.headers.Authorization = `Bearer ${customerToken}`;
+      } else {
+        delete config.headers.Authorization;
+      }
+    } else {
+      const authStorage = localStorage.getItem('auth-storage');
+      if (authStorage) {
+        const { state } = JSON.parse(authStorage);
+        if (state.token) {
+          config.headers.Authorization = `Bearer ${state.token}`;
+        }
+      }
+
+      if (!config.headers.Authorization) {
+        const customerToken = localStorage.getItem('customer-token') || localStorage.getItem('customerToken');
+        if (customerToken) {
+          config.headers.Authorization = `Bearer ${customerToken}`;
+        }
       }
     }
+
     return config;
   },
   (error) => {
@@ -31,9 +51,26 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Clear auth and redirect to login
-      localStorage.removeItem('auth-storage');
-      window.location.href = '/login';
+      const url = error.config?.url || '';
+      const isCustomerEndpoint = url.includes('/customers');
+      const isCustomerAuth = url.includes('/customers/login') || url.includes('/customers/register');
+
+      if (isCustomerEndpoint) {
+        // clear customer storages
+        localStorage.removeItem('customer-token');
+        localStorage.removeItem('customerToken');
+        localStorage.removeItem('customer');
+        localStorage.removeItem('customer-auth-storage');
+
+        // do not redirect on auth endpoints (let UI show error)
+        if (!isCustomerAuth) {
+          window.location.href = '/customer/login';
+        }
+      } else {
+        // admin/default flow
+        localStorage.removeItem('auth-storage');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

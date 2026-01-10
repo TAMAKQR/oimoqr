@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 const RegisterPage = () => {
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
-  
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -37,12 +37,12 @@ const RegisterPage = () => {
 
   const handleChange = (e) => {
     let value = e.target.value;
-    
+
     // Auto-format subdomain
     if (e.target.name === 'subdomain') {
       value = value.toLowerCase().replace(/[^a-z0-9-]/g, '');
     }
-    
+
     setFormData({
       ...formData,
       [e.target.name]: value,
@@ -59,8 +59,17 @@ const RegisterPage = () => {
     try {
       const response = await authService.register(formData);
       console.log('✅ Registration successful:', response);
+
+      // Сохраняем данные пользователя
       setAuth(response.user, response.token);
-      navigate('/dashboard');
+
+      // Показываем успешное уведомление
+      toast.success(`Добро пожаловать, ${response.user.name}! Ваш ресторан "${formData.restaurantName}" создан.`);
+
+      // Даём небольшую задержку для того, чтобы пользователь увидел уведомление
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 500);
     } catch (err) {
       console.error('❌ Registration error:', err);
       console.error('Error response:', err.response);
@@ -68,7 +77,7 @@ const RegisterPage = () => {
       toast.error(err.response?.data?.error || 'Ошибка регистрации');
       setLoading(false);
     } finally {
-      setLoading(false);
+      // Не сбрасываем loading здесь, чтобы кнопка оставалась заблокированной во время редиректа
     }
   };
 

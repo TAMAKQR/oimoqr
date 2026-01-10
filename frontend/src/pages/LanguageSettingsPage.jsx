@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../services/authService';
+import toast from 'react-hot-toast';
 import DashboardLayout from '../components/DashboardLayout';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -88,13 +89,13 @@ const LanguageSettingsPage = () => {
       const response = await fetch(`${API_URL}/languages/restaurants/${selectedRestaurantId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       if (!response.ok) {
         throw new Error(`Failed to load languages: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       // Handle new response format with languages and defaultLanguage
       if (data.languages && Array.isArray(data.languages)) {
         setRestaurantLanguages(data.languages);
@@ -107,7 +108,7 @@ const LanguageSettingsPage = () => {
       console.error('Error loading languages:', err);
       setRestaurantLanguages([]);
       if (err.message.includes('401')) {
-        alert('Сессия истекла. Пожалуйста, войдите снова.');
+        toast.error('Сессия истекла. Пожалуйста, войдите снова.');
         navigate('/login');
       }
     } finally {
@@ -120,11 +121,11 @@ const LanguageSettingsPage = () => {
       const response = await fetch(`${API_URL}/restaurants/${selectedRestaurantId}/dishes`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       if (!response.ok) {
         throw new Error(`Failed to load dishes: ${response.status}`);
       }
-      
+
       const data = await response.json();
       setDishes(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -224,17 +225,17 @@ const LanguageSettingsPage = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           languages: restaurantLanguages,
           defaultLanguage: defaultLanguage
         })
       });
 
       if (!response.ok) throw new Error('Failed to save languages');
-      alert('Языки сохранены успешно!');
+      toast.success('Языки сохранены успешно!');
       loadLanguages();
     } catch (err) {
-      alert('Ошибка при сохранении языков');
+      toast.error('Ошибка при сохранении языков');
       console.error(err);
     } finally {
       setSaving(false);
@@ -256,11 +257,11 @@ const LanguageSettingsPage = () => {
       );
 
       if (!response.ok) throw new Error('Failed to save translation');
-      alert('Перевод сохранен!');
+      toast.success('Перевод сохранен!');
       setEditingTranslation(null);
       loadTranslations();
     } catch (err) {
-      alert('Ошибка при сохранении перевода');
+      toast.error('Ошибка при сохранении перевода');
       console.error(err);
     }
   };
@@ -280,11 +281,11 @@ const LanguageSettingsPage = () => {
       );
 
       if (!response.ok) throw new Error('Failed to save category translation');
-      alert('Перевод категории сохранен!');
+      toast.success('Перевод категории сохранен!');
       setEditingTranslation(null);
       loadCategoryTranslations();
     } catch (err) {
-      alert('Ошибка при сохранении перевода категории');
+      toast.error('Ошибка при сохранении перевода категории');
       console.error(err);
     }
   };
@@ -338,314 +339,310 @@ const LanguageSettingsPage = () => {
 
         {selectedRestaurantId && (
           <div>
-          <div className="tabs flex gap-4 mb-6 border-b">
-            <button
-              onClick={() => setActiveTab('languages')}
-              className={`px-4 py-2 font-medium ${
-                activeTab === 'languages'
-                  ? 'border-b-2 border-primary-600 text-primary-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Языки ресторана
-            </button>
-            <button
-              onClick={() => setActiveTab('translations')}
-              className={`px-4 py-2 font-medium ${
-                activeTab === 'translations'
-                  ? 'border-b-2 border-primary-600 text-primary-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Переводы
-            </button>
-          </div>
-
-          {/* Languages Tab */}
-          {activeTab === 'languages' && (
-            <div className="space-y-6">
-              <div className="card">
-                <h2 className="text-xl font-bold mb-4">Доступные языки</h2>
-                <div className="space-y-3">
-                  {AVAILABLE_LANGUAGES.map(lang => (
-                    <label key={lang.code} className="flex items-center gap-3 p-3 border rounded hover:bg-gray-50 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={restaurantLanguages.some(l => l.languageCode === lang.code)}
-                        onChange={() => toggleLanguage(lang.code)}
-                        className="w-5 h-5 rounded border-gray-300"
-                      />
-                      <span className="text-lg">{lang.name}</span>
-                      <span className="text-gray-500 ml-auto">{lang.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {restaurantLanguages.length > 0 && (
-                <>
-                  <div className="card">
-                    <h2 className="text-xl font-bold mb-4">Порядок языков (перетаскивайте для переупорядочения)</h2>
-                    <div className="space-y-2">
-                      {restaurantLanguages.map(lang => {
-                        const langInfo = AVAILABLE_LANGUAGES.find(l => l.code === lang.languageCode);
-                        return (
-                          <div
-                            key={lang.languageCode}
-                            draggable
-                            onDragStart={() => handleDragStart(lang)}
-                            onDragOver={handleDragOver}
-                            onDrop={() => handleDrop(lang)}
-                            className="p-3 bg-white border rounded cursor-move hover:bg-gray-50 flex items-center gap-3"
-                          >
-                            <span className="text-lg">⋮⋮</span>
-                            <span className="text-lg">{langInfo?.name}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="card">
-                    <h2 className="text-xl font-bold mb-4">Язык по умолчанию в QR меню</h2>
-                    <p className="text-gray-600 mb-4">Выберите язык, который будет отображаться при первом открытии меню</p>
-                    <select
-                      value={defaultLanguage}
-                      onChange={(e) => setDefaultLanguage(e.target.value)}
-                      className="input w-full"
-                    >
-                      {AVAILABLE_LANGUAGES.map(lang => (
-                        <option key={lang.code} value={lang.code}>
-                          {lang.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </>
-              )}
-
+            <div className="tabs flex gap-4 mb-6 border-b">
               <button
-                onClick={saveLanguages}
-                disabled={saving}
-                className="btn-primary w-full"
+                onClick={() => setActiveTab('languages')}
+                className={`px-4 py-2 font-medium ${activeTab === 'languages'
+                    ? 'border-b-2 border-primary-600 text-primary-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                  }`}
               >
-                {saving ? 'Сохранение...' : 'Сохранить языки'}
+                Языки ресторана
+              </button>
+              <button
+                onClick={() => setActiveTab('translations')}
+                className={`px-4 py-2 font-medium ${activeTab === 'translations'
+                    ? 'border-b-2 border-primary-600 text-primary-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                  }`}
+              >
+                Переводы
               </button>
             </div>
-          )}
 
-          {/* Translations Tab */}
-          {activeTab === 'translations' && (
-            <div className="space-y-6">
-              <div className="flex gap-2 mb-4">
+            {/* Languages Tab */}
+            {activeTab === 'languages' && (
+              <div className="space-y-6">
+                <div className="card">
+                  <h2 className="text-xl font-bold mb-4">Доступные языки</h2>
+                  <div className="space-y-3">
+                    {AVAILABLE_LANGUAGES.map(lang => (
+                      <label key={lang.code} className="flex items-center gap-3 p-3 border rounded hover:bg-gray-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={restaurantLanguages.some(l => l.languageCode === lang.code)}
+                          onChange={() => toggleLanguage(lang.code)}
+                          className="w-5 h-5 rounded border-gray-300"
+                        />
+                        <span className="text-lg">{lang.name}</span>
+                        <span className="text-gray-500 ml-auto">{lang.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {restaurantLanguages.length > 0 && (
+                  <>
+                    <div className="card">
+                      <h2 className="text-xl font-bold mb-4">Порядок языков (перетаскивайте для переупорядочения)</h2>
+                      <div className="space-y-2">
+                        {restaurantLanguages.map(lang => {
+                          const langInfo = AVAILABLE_LANGUAGES.find(l => l.code === lang.languageCode);
+                          return (
+                            <div
+                              key={lang.languageCode}
+                              draggable
+                              onDragStart={() => handleDragStart(lang)}
+                              onDragOver={handleDragOver}
+                              onDrop={() => handleDrop(lang)}
+                              className="p-3 bg-white border rounded cursor-move hover:bg-gray-50 flex items-center gap-3"
+                            >
+                              <span className="text-lg">⋮⋮</span>
+                              <span className="text-lg">{langInfo?.name}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="card">
+                      <h2 className="text-xl font-bold mb-4">Язык по умолчанию в QR меню</h2>
+                      <p className="text-gray-600 mb-4">Выберите язык, который будет отображаться при первом открытии меню</p>
+                      <select
+                        value={defaultLanguage}
+                        onChange={(e) => setDefaultLanguage(e.target.value)}
+                        className="input w-full"
+                      >
+                        {AVAILABLE_LANGUAGES.map(lang => (
+                          <option key={lang.code} value={lang.code}>
+                            {lang.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                )}
+
                 <button
-                  onClick={() => {
-                    setTranslationType('dishes');
-                    setSelectedDish(null);
-                    setEditingTranslation(null);
-                  }}
-                  className={`px-4 py-2 rounded ${
-                    translationType === 'dishes'
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
+                  onClick={saveLanguages}
+                  disabled={saving}
+                  className="btn-primary w-full"
                 >
-                  Блюда
-                </button>
-                <button
-                  onClick={() => {
-                    setTranslationType('categories');
-                    setSelectedCategory(null);
-                    setEditingTranslation(null);
-                  }}
-                  className={`px-4 py-2 rounded ${
-                    translationType === 'categories'
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  Категории
+                  {saving ? 'Сохранение...' : 'Сохранить языки'}
                 </button>
               </div>
+            )}
 
-              {translationType === 'dishes' && (
-                <>
-                  <div className="card">
-                    <h2 className="text-xl font-bold mb-4">Выберите блюдо для перевода</h2>
-                    <select
-                      value={selectedDish || ''}
-                      onChange={(e) => setSelectedDish(e.target.value)}
-                      className="input w-full"
-                    >
-                      <option value="">Выберите блюдо</option>
-                      {dishes.map(dish => (
-                        <option key={dish.id} value={dish.id}>{dish.name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {selectedDish && (
-                <div className="space-y-4">
-                  {restaurantLanguages.filter(lang => lang.languageCode !== 'ru').map(lang => {
-                    const langInfo = AVAILABLE_LANGUAGES.find(l => l.code === lang.languageCode);
-                    const translation = translations.find(t => t.languageCode === lang.languageCode);
-                    const isEditing = editingTranslation?.languageCode === lang.languageCode;
-
-                    return (
-                      <div key={lang.languageCode} className="card">
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="text-lg font-semibold">{langInfo?.name}</h3>
-                          {!isEditing && (
-                            <button
-                              onClick={() => setEditingTranslation({ languageCode: lang.languageCode, name: translation?.name || '', description: translation?.description || '' })}
-                              className="text-primary-600 hover:text-primary-700"
-                            >
-                              Редактировать
-                            </button>
-                          )}
-                        </div>
-
-                        {isEditing ? (
-                          <div className="space-y-3">
-                            <div>
-                              <label className="block text-sm font-medium mb-1">Название</label>
-                              <input
-                                type="text"
-                                value={editingTranslation.name}
-                                onChange={(e) => setEditingTranslation({ ...editingTranslation, name: e.target.value })}
-                                className="input w-full"
-                                placeholder="Название блюда"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium mb-1">Описание</label>
-                              <textarea
-                                value={editingTranslation.description || ''}
-                                onChange={(e) => setEditingTranslation({ ...editingTranslation, description: e.target.value })}
-                                className="input w-full"
-                                rows="3"
-                                placeholder="Описание блюда"
-                              />
-                            </div>
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => saveTranslation(editingTranslation)}
-                                className="btn-primary flex-1"
-                              >
-                                Сохранить
-                              </button>
-                              <button
-                                onClick={() => setEditingTranslation(null)}
-                                className="btn-secondary flex-1"
-                              >
-                                Отмена
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="text-gray-700 space-y-1">
-                            <p><span className="font-medium">Название:</span> {translation?.name || '—'}</p>
-                            <p><span className="font-medium">Описание:</span> {translation?.description || '—'}</p>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+            {/* Translations Tab */}
+            {activeTab === 'translations' && (
+              <div className="space-y-6">
+                <div className="flex gap-2 mb-4">
+                  <button
+                    onClick={() => {
+                      setTranslationType('dishes');
+                      setSelectedDish(null);
+                      setEditingTranslation(null);
+                    }}
+                    className={`px-4 py-2 rounded ${translationType === 'dishes'
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                  >
+                    Блюда
+                  </button>
+                  <button
+                    onClick={() => {
+                      setTranslationType('categories');
+                      setSelectedCategory(null);
+                      setEditingTranslation(null);
+                    }}
+                    className={`px-4 py-2 rounded ${translationType === 'categories'
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                  >
+                    Категории
+                  </button>
                 </div>
-              )}
-                </>
-              )}
 
-              {translationType === 'categories' && (
-                <>
-                  <div className="card">
-                    <h2 className="text-xl font-bold mb-4">Выберите категорию для перевода</h2>
-                    <select
-                      value={selectedCategory || ''}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                      className="input w-full"
-                    >
-                      <option value="">Выберите категорию</option>
-                      {categories.map(category => (
-                        <option key={category.id} value={category.id}>{category.name}</option>
-                      ))}
-                    </select>
-                  </div>
+                {translationType === 'dishes' && (
+                  <>
+                    <div className="card">
+                      <h2 className="text-xl font-bold mb-4">Выберите блюдо для перевода</h2>
+                      <select
+                        value={selectedDish || ''}
+                        onChange={(e) => setSelectedDish(e.target.value)}
+                        className="input w-full"
+                      >
+                        <option value="">Выберите блюдо</option>
+                        {dishes.map(dish => (
+                          <option key={dish.id} value={dish.id}>{dish.name}</option>
+                        ))}
+                      </select>
+                    </div>
 
-                  {selectedCategory && (
-                    <div className="space-y-4">
-                      {restaurantLanguages.filter(lang => lang.languageCode !== 'ru').map(lang => {
-                        const langInfo = AVAILABLE_LANGUAGES.find(l => l.code === lang.languageCode);
-                        const translation = categoryTranslations.find(t => t.languageCode === lang.languageCode);
-                        const isEditing = editingTranslation?.languageCode === lang.languageCode;
+                    {selectedDish && (
+                      <div className="space-y-4">
+                        {restaurantLanguages.filter(lang => lang.languageCode !== 'ru').map(lang => {
+                          const langInfo = AVAILABLE_LANGUAGES.find(l => l.code === lang.languageCode);
+                          const translation = translations.find(t => t.languageCode === lang.languageCode);
+                          const isEditing = editingTranslation?.languageCode === lang.languageCode;
 
-                        return (
-                          <div key={lang.languageCode} className="card">
-                            <div className="flex items-center justify-between mb-3">
-                              <h3 className="text-lg font-semibold">{langInfo?.name}</h3>
-                              {!isEditing && (
-                                <button
-                                  onClick={() => setEditingTranslation({ languageCode: lang.languageCode, name: translation?.name || '', description: translation?.description || '' })}
-                                  className="text-primary-600 hover:text-primary-700"
-                                >
-                                  Редактировать
-                                </button>
+                          return (
+                            <div key={lang.languageCode} className="card">
+                              <div className="flex items-center justify-between mb-3">
+                                <h3 className="text-lg font-semibold">{langInfo?.name}</h3>
+                                {!isEditing && (
+                                  <button
+                                    onClick={() => setEditingTranslation({ languageCode: lang.languageCode, name: translation?.name || '', description: translation?.description || '' })}
+                                    className="text-primary-600 hover:text-primary-700"
+                                  >
+                                    Редактировать
+                                  </button>
+                                )}
+                              </div>
+
+                              {isEditing ? (
+                                <div className="space-y-3">
+                                  <div>
+                                    <label className="block text-sm font-medium mb-1">Название</label>
+                                    <input
+                                      type="text"
+                                      value={editingTranslation.name}
+                                      onChange={(e) => setEditingTranslation({ ...editingTranslation, name: e.target.value })}
+                                      className="input w-full"
+                                      placeholder="Название блюда"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-sm font-medium mb-1">Описание</label>
+                                    <textarea
+                                      value={editingTranslation.description || ''}
+                                      onChange={(e) => setEditingTranslation({ ...editingTranslation, description: e.target.value })}
+                                      className="input w-full"
+                                      rows="3"
+                                      placeholder="Описание блюда"
+                                    />
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => saveTranslation(editingTranslation)}
+                                      className="btn-primary flex-1"
+                                    >
+                                      Сохранить
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingTranslation(null)}
+                                      className="btn-secondary flex-1"
+                                    >
+                                      Отмена
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="text-gray-700 space-y-1">
+                                  <p><span className="font-medium">Название:</span> {translation?.name || '—'}</p>
+                                  <p><span className="font-medium">Описание:</span> {translation?.description || '—'}</p>
+                                </div>
                               )}
                             </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                )}
 
-                            {isEditing ? (
-                              <div className="space-y-3">
-                                <div>
-                                  <label className="block text-sm font-medium mb-1">Название</label>
-                                  <input
-                                    type="text"
-                                    value={editingTranslation.name}
-                                    onChange={(e) => setEditingTranslation({ ...editingTranslation, name: e.target.value })}
-                                    className="input w-full"
-                                    placeholder="Название категории"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-sm font-medium mb-1">Описание</label>
-                                  <textarea
-                                    value={editingTranslation.description || ''}
-                                    onChange={(e) => setEditingTranslation({ ...editingTranslation, description: e.target.value })}
-                                    className="input w-full"
-                                    rows="3"
-                                    placeholder="Описание категории"
-                                  />
-                                </div>
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => saveCategoryTranslation(editingTranslation)}
-                                    className="btn-primary flex-1"
-                                  >
-                                    Сохранить
-                                  </button>
-                                  <button
-                                    onClick={() => setEditingTranslation(null)}
-                                    className="btn-secondary flex-1"
-                                  >
-                                    Отмена
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="text-gray-700 space-y-1">
-                                <p><span className="font-medium">Название:</span> {translation?.name || '—'}</p>
-                                <p><span className="font-medium">Описание:</span> {translation?.description || '—'}</p>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                {translationType === 'categories' && (
+                  <>
+                    <div className="card">
+                      <h2 className="text-xl font-bold mb-4">Выберите категорию для перевода</h2>
+                      <select
+                        value={selectedCategory || ''}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        className="input w-full"
+                      >
+                        <option value="">Выберите категорию</option>
+                        {categories.map(category => (
+                          <option key={category.id} value={category.id}>{category.name}</option>
+                        ))}
+                      </select>
                     </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-        </div>
+
+                    {selectedCategory && (
+                      <div className="space-y-4">
+                        {restaurantLanguages.filter(lang => lang.languageCode !== 'ru').map(lang => {
+                          const langInfo = AVAILABLE_LANGUAGES.find(l => l.code === lang.languageCode);
+                          const translation = categoryTranslations.find(t => t.languageCode === lang.languageCode);
+                          const isEditing = editingTranslation?.languageCode === lang.languageCode;
+
+                          return (
+                            <div key={lang.languageCode} className="card">
+                              <div className="flex items-center justify-between mb-3">
+                                <h3 className="text-lg font-semibold">{langInfo?.name}</h3>
+                                {!isEditing && (
+                                  <button
+                                    onClick={() => setEditingTranslation({ languageCode: lang.languageCode, name: translation?.name || '', description: translation?.description || '' })}
+                                    className="text-primary-600 hover:text-primary-700"
+                                  >
+                                    Редактировать
+                                  </button>
+                                )}
+                              </div>
+
+                              {isEditing ? (
+                                <div className="space-y-3">
+                                  <div>
+                                    <label className="block text-sm font-medium mb-1">Название</label>
+                                    <input
+                                      type="text"
+                                      value={editingTranslation.name}
+                                      onChange={(e) => setEditingTranslation({ ...editingTranslation, name: e.target.value })}
+                                      className="input w-full"
+                                      placeholder="Название категории"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-sm font-medium mb-1">Описание</label>
+                                    <textarea
+                                      value={editingTranslation.description || ''}
+                                      onChange={(e) => setEditingTranslation({ ...editingTranslation, description: e.target.value })}
+                                      className="input w-full"
+                                      rows="3"
+                                      placeholder="Описание категории"
+                                    />
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => saveCategoryTranslation(editingTranslation)}
+                                      className="btn-primary flex-1"
+                                    >
+                                      Сохранить
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingTranslation(null)}
+                                      className="btn-secondary flex-1"
+                                    >
+                                      Отмена
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="text-gray-700 space-y-1">
+                                  <p><span className="font-medium">Название:</span> {translation?.name || '—'}</p>
+                                  <p><span className="font-medium">Описание:</span> {translation?.description || '—'}</p>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </DashboardLayout>

@@ -1,12 +1,34 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCartStore } from '../store/cartStore';
 import toast from 'react-hot-toast';
 
-const DishModal = ({ dish, isOpen, onClose, currency = '₽' }) => {
+const DishModal = ({
+  dish,
+  isOpen,
+  onClose,
+  currency = '₽',
+  isFavorite = false,
+  onToggleFavorite,
+  favoriteLoading = false
+}) => {
   // Используем объект для хранения выбранных опций для каждого модификатора
   const [selectedModifiers, setSelectedModifiers] = useState({});
   const addItem = useCartStore((state) => state.addItem);
-  const isAvailable = dish.available !== false; // По умолчанию true если поле отсутствует
+  const isAvailable = dish?.available !== false; // По умолчанию true если поле отсутствует
+
+  // Lock background scroll only when modal is open
+  useEffect(() => {
+    if (!isOpen) return;
+    const originalOverflow = document?.body?.style?.overflow;
+    if (document?.body) {
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      if (document?.body) {
+        document.body.style.overflow = originalOverflow || '';
+      }
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -69,27 +91,57 @@ const DishModal = ({ dish, isOpen, onClose, currency = '₽' }) => {
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4"
       onClick={handleBackdropClick}
     >
-      <div className="bg-white rounded-t-2xl sm:rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-t-2xl sm:rounded-lg w-full max-w-[480px] max-h-[90vh] overflow-y-auto shadow-2xl mx-0 animate-slide-up">
         {dish.image && (
           <div className="relative">
             <img
               src={dish.image}
               alt={dish.name}
-              className={`w-full h-64 sm:h-80 md:h-96 object-cover rounded-t-2xl sm:rounded-t-lg ${
-                !isAvailable ? 'grayscale' : ''
-              }`}
+              className={`w-full h-56 sm:h-64 md:h-72 object-contain bg-white rounded-t-2xl sm:rounded-t-lg ${!isAvailable ? 'grayscale' : ''
+                }`}
             />
-            {/* Бейджи */}
+            {/* Бейджи и избранное */}
             <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex flex-col gap-2 items-end">
-              {dish.badge && (
-                <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-br from-orange-400 to-red-500 text-white text-xs sm:text-sm font-bold rounded-full shadow-lg">
-                  {dish.badge}
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                {onToggleFavorite && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleFavorite?.();
+                    }}
+                    disabled={favoriteLoading}
+                    className="w-11 h-11 sm:w-12 sm:h-12 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center hover:bg-white active:scale-95 transition"
+                    aria-label={isFavorite ? 'Удалить из избранного' : 'Добавить в избранное'}
+                  >
+                    {favoriteLoading ? (
+                      <svg className="w-5 h-5 text-gray-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    ) : (
+                      <svg
+                        className={`w-6 h-6 transition-colors ${isFavorite ? 'text-red-500 fill-current' : 'text-gray-400'}`}
+                        fill={isFavorite ? 'currentColor' : 'none'}
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                      </svg>
+                    )}
+                  </button>
+                )}
+
+                {dish.badge && (
+                  <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-br from-orange-400 to-red-500 text-white text-xs sm:text-sm font-bold rounded-full shadow-lg">
+                    {dish.badge}
+                  </span>
+                )}
+              </div>
+
               {dish.discount && isAvailable && (
                 <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-red-500 text-white text-xs sm:text-sm font-bold rounded-full shadow-lg">
                   -{dish.discount}%
@@ -105,7 +157,7 @@ const DishModal = ({ dish, isOpen, onClose, currency = '₽' }) => {
             )}
           </div>
         )}
-        
+
         <div className="p-4 sm:p-6">
           <div className="flex items-center gap-3 mb-2">
             <h2 className="text-xl sm:text-2xl font-bold break-words">{dish.name}</h2>
@@ -127,29 +179,29 @@ const DishModal = ({ dish, isOpen, onClose, currency = '₽' }) => {
                     <h3 className="text-base sm:text-lg font-semibold mb-2">{modifier.name}</h3>
                     <div className="space-y-2">
                       {modifier.options.map((option) => (
-                      <label
-                        key={option.id}
-                        className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors gap-2"
-                      >
-                        <div className="flex items-center min-w-0 flex-1">
-                          <input
-                            type={modifier.type === 'single' ? 'radio' : 'checkbox'}
-                            name={modifier.id}
-                            checked={selectedModifiers[modifier.id]?.some(o => o.id === option.id) || false}
-                            onChange={() => handleModifierChange(modifier, option)}
-                            className="mr-2 sm:mr-3 flex-shrink-0 w-4 h-4 sm:w-5 sm:h-5"
-                          />
-                          <span className="text-sm sm:text-base break-words">{option.name}</span>
-                        </div>
-                        {option.price > 0 && (
-                          <span className="text-gray-600 text-sm sm:text-base whitespace-nowrap ml-2">
-                            +{parseFloat(option.price).toFixed(2)} {currency}
-                          </span>
-                        )}
-                      </label>
-                    ))}
+                        <label
+                          key={option.id}
+                          className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors gap-2"
+                        >
+                          <div className="flex items-center min-w-0 flex-1">
+                            <input
+                              type={modifier.type === 'single' ? 'radio' : 'checkbox'}
+                              name={modifier.id}
+                              checked={selectedModifiers[modifier.id]?.some(o => o.id === option.id) || false}
+                              onChange={() => handleModifierChange(modifier, option)}
+                              className="mr-2 sm:mr-3 flex-shrink-0 w-4 h-4 sm:w-5 sm:h-5"
+                            />
+                            <span className="text-sm sm:text-base break-words">{option.name}</span>
+                          </div>
+                          {option.price > 0 && (
+                            <span className="text-gray-600 text-sm sm:text-base whitespace-nowrap ml-2">
+                              +{parseFloat(option.price).toFixed(2)} {currency}
+                            </span>
+                          )}
+                        </label>
+                      ))}
+                    </div>
                   </div>
-                </div>
                 )
               ))}
             </div>
@@ -163,21 +215,20 @@ const DishModal = ({ dish, isOpen, onClose, currency = '₽' }) => {
               </p>
             </div>
             <div className="flex gap-2">
-              <button 
-                onClick={onClose} 
+              <button
+                onClick={onClose}
                 className="w-12 h-12 flex items-center justify-center rounded-full border-2 border-gray-300 hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-600 text-2xl font-light flex-shrink-0"
                 aria-label="Закрыть"
               >
                 ✕
               </button>
-              <button 
-                onClick={handleAddToCart} 
+              <button
+                onClick={handleAddToCart}
                 disabled={!isAvailable}
-                className={`flex-1 flex items-center justify-center gap-2 active:scale-95 transition-transform ${
-                  isAvailable 
-                    ? 'btn-primary' 
-                    : 'btn-secondary opacity-50 cursor-not-allowed'
-                }`}
+                className={`flex-1 flex items-center justify-center gap-2 active:scale-95 transition-transform ${isAvailable
+                  ? 'btn-primary'
+                  : 'btn-secondary opacity-50 cursor-not-allowed'
+                  }`}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />

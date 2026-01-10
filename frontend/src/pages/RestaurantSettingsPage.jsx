@@ -3,8 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../services/authService';
 import { restaurantService } from '../services/restaurantService';
+import toast from 'react-hot-toast';
+import { confirmDialog } from '../utils/confirmDialog';
 import RestaurantSelector from '../components/RestaurantSelector';
 import DashboardLayout from '../components/DashboardLayout';
+import ThemeSwitcher from '../components/ThemeSwitcher';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -38,10 +41,10 @@ const RestaurantSettingsPage = () => {
   const [logoFile, setLogoFile] = useState(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [logoUploadProgress, setLogoUploadProgress] = useState(0);
-  
+
   // Максимальный размер файла (10MB)
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB в байтах
-  
+
   // Working hours state
   const [isTemporarilyClosed, setIsTemporarilyClosed] = useState(false);
   const [closureReason, setClosureReason] = useState('');
@@ -102,7 +105,9 @@ const RestaurantSettingsPage = () => {
   const validateFileSize = (file) => {
     if (file && file.size > MAX_FILE_SIZE) {
       const sizeMB = (file.size / 1024 / 1024).toFixed(2);
-      alert(`Файл слишком большой (${sizeMB} МБ). Максимальный размер: 10 МБ.\n\nПожалуйста, сожмите изображение перед загрузкой.`);
+      toast.error(`Файл слишком большой (${sizeMB} МБ). Максимальный размер: 10 МБ.\n\nПожалуйста, сожмите изображение перед загрузкой.`, {
+        duration: 5000
+      });
       return false;
     }
     return true;
@@ -130,10 +135,10 @@ const RestaurantSettingsPage = () => {
 
   const getSelectedRestaurant = () => {
     if (!userData || !selectedRestaurantId) return null;
-    
+
     const owned = userData.restaurants?.find(r => r.id === selectedRestaurantId);
     if (owned) return owned;
-    
+
     const staff = userData.restaurantStaff?.find(s => s.restaurant.id === selectedRestaurantId);
     return staff?.restaurant || null;
   };
@@ -171,7 +176,7 @@ const RestaurantSettingsPage = () => {
     setLatitude(r.latitude || '');
     setLongitude(r.longitude || '');
     setDeliveryRadius(r.deliveryRadius || '');
-    
+
     // Load working hours with defaults to ensure all days are defined
     const defaultWorkingHours = {
       monday: { open: '09:00', close: '22:00', isOpen: true, is247: false },
@@ -182,7 +187,7 @@ const RestaurantSettingsPage = () => {
       saturday: { open: '10:00', close: '23:00', isOpen: true },
       sunday: { open: '10:00', close: '23:00', isOpen: true },
     };
-    
+
     if (r.workingHours) {
       // Merge API data with defaults to ensure all days exist
       setWorkingHours({
@@ -192,7 +197,7 @@ const RestaurantSettingsPage = () => {
     } else {
       setWorkingHours(defaultWorkingHours);
     }
-    
+
     setIsTemporarilyClosed(r.isTemporarilyClosed || false);
     setClosureReason(r.closureReason || '');
   };
@@ -203,29 +208,39 @@ const RestaurantSettingsPage = () => {
   };
 
   const handleDeleteBanner = async (bannerUrl) => {
-    if (!confirm('Удалить этот баннер?')) return;
-    
+    const confirmed = await confirmDialog('Удалить этот баннер?', {
+      confirmText: 'Удалить',
+      cancelText: 'Отмена',
+      icon: '🗑️'
+    });
+    if (!confirmed) return;
+
     try {
       await restaurantService.deleteBanner(selectedRestaurantId, bannerUrl);
-      alert('Баннер удален');
+      toast.success('Баннер удален');
       const restaurant = getSelectedRestaurant();
       if (restaurant) loadRestaurantData(restaurant);
     } catch (err) {
-      alert('Ошибка при удалении баннера');
+      toast.error('Ошибка при удалении баннера');
       console.error(err);
     }
   };
 
   const handleDeleteLogo = async () => {
-    if (!confirm('Удалить логотип?')) return;
-    
+    const confirmed = await confirmDialog('Удалить логотип?', {
+      confirmText: 'Удалить',
+      cancelText: 'Отмена',
+      icon: '🗑️'
+    });
+    if (!confirmed) return;
+
     try {
       await restaurantService.deleteLogo(selectedRestaurantId);
-      alert('Логотип удален');
+      toast.success('Логотип удален');
       const restaurant = getSelectedRestaurant();
       if (restaurant) loadRestaurantData(restaurant);
     } catch (err) {
-      alert('Ошибка при удалении логотипа');
+      toast.error('Ошибка при удалении логотипа');
       console.error(err);
     }
   };
@@ -236,28 +251,35 @@ const RestaurantSettingsPage = () => {
 
     const confirmText = `Вы уверены, что хотите УДАЛИТЬ ресторан "${restaurant.name}"?`;
     const confirmText2 = 'Это действие НЕОБРАТИМО! Все данные (меню, категории, блюда, модификаторы) будут удалены навсегда.';
-    
-    if (!confirm(`${confirmText}\n\n${confirmText2}\n\nНажмите OK для подтверждения удаления.`)) {
+
+    const confirmed = await confirmDialog(`${confirmText}\n\n${confirmText2}`, {
+      confirmText: 'Удалить навсегда',
+      cancelText: 'Отмена',
+      icon: '⚠️',
+      duration: 10000
+    });
+
+    if (!confirmed) {
       return;
     }
 
     // Дополнительное подтверждение
     const finalConfirm = prompt(`Введите название ресторана "${restaurant.name}" для подтверждения удаления:`);
     if (finalConfirm !== restaurant.name) {
-      alert('Название не совпадает. Удаление отменено.');
+      toast.error('Название не совпадает. Удаление отменено.');
       return;
     }
 
     try {
       setSaving(true);
       await restaurantService.deleteRestaurant(selectedRestaurantId);
-      alert('Ресторан успешно удален');
+      toast.success('Ресторан успешно удален');
       // Обновляем данные и переходим на dashboard
       await loadData();
       navigate('/dashboard');
     } catch (err) {
       const errorMsg = err.response?.data?.message || err.response?.data?.error || 'Ошибка при удалении ресторана';
-      alert(errorMsg);
+      toast.error(errorMsg);
       console.error(err);
     } finally {
       setSaving(false);
@@ -322,10 +344,10 @@ const RestaurantSettingsPage = () => {
         }
       }
 
-      alert('Настройки сохранены!');
+      toast.success('Настройки сохранены!');
       await loadData();
     } catch (err) {
-      alert('Ошибка при сохранении настроек');
+      toast.error('Ошибка при сохранении настроек');
       console.error(err);
     } finally {
       setSaving(false);
@@ -361,7 +383,7 @@ const RestaurantSettingsPage = () => {
           {/* Basic Info */}
           <div className="card">
             <h2 className="text-xl font-bold mb-4">Основная информация</h2>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Название ресторана *</label>
@@ -434,6 +456,7 @@ const RestaurantSettingsPage = () => {
                 >
                   <option value="horizontal">Горизонтальный (фото слева)</option>
                   <option value="vertical">Вертикальный (фото сверху)</option>
+                  <option value="grid">Сетка 2 колонки (компактный)</option>
                 </select>
                 <p className="text-sm text-gray-500 mt-1">
                   Выберите, как будут отображаться карточки блюд в публичном меню
@@ -445,7 +468,7 @@ const RestaurantSettingsPage = () => {
           {/* Logo */}
           <div className="card">
             <h2 className="text-xl font-bold mb-4">Логотип ресторана</h2>
-            
+
             {getSelectedRestaurant()?.logo && (
               <div className="mb-4">
                 <p className="text-sm text-gray-600 mb-2">Текущий логотип:</p>
@@ -505,7 +528,7 @@ const RestaurantSettingsPage = () => {
                     </span>
                   </div>
                   <div className="w-full bg-blue-200 rounded-full h-2">
-                    <div 
+                    <div
                       className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${logoUploadProgress}%` }}
                     ></div>
@@ -518,7 +541,7 @@ const RestaurantSettingsPage = () => {
           {/* Banner */}
           <div className="card">
             <h2 className="text-xl font-bold mb-4">Баннеры</h2>
-            
+
             {getSelectedRestaurant()?.banners && getSelectedRestaurant().banners.length > 0 && (
               <div className="mb-4">
                 <p className="text-sm text-gray-600 mb-2">Текущие баннеры:</p>
@@ -582,7 +605,7 @@ const RestaurantSettingsPage = () => {
                     </span>
                   </div>
                   <div className="w-full bg-blue-200 rounded-full h-2">
-                    <div 
+                    <div
                       className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${uploadProgress}%` }}
                     ></div>
@@ -592,10 +615,18 @@ const RestaurantSettingsPage = () => {
             </div>
           </div>
 
+          {/* Тема оформления */}
+          <div className="card">
+            <h2 className="text-xl font-bold mb-2">Тема оформления меню</h2>
+            <p className="text-sm text-gray-600 mb-4">Выберите цветовую гамму для клиентского меню.</p>
+            <ThemeSwitcher inline />
+            <p className="text-xs text-gray-500 mt-3">Сохранение происходит локально (в браузере). Для каждого устройства можно выбрать свою тему предпросмотра.</p>
+          </div>
+
           {/* Social Media */}
           <div className="card">
             <h2 className="text-xl font-bold mb-4">Социальные сети</h2>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">WhatsApp</label>
@@ -638,7 +669,7 @@ const RestaurantSettingsPage = () => {
           {/* Delivery Settings */}
           <div className="card">
             <h2 className="text-xl font-bold mb-4">Настройки доставки</h2>
-            
+
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <input
@@ -688,7 +719,7 @@ const RestaurantSettingsPage = () => {
                     <p className="text-sm text-gray-600 mb-4">
                       Укажите координаты вашего ресторана для определения зоны доставки
                     </p>
-                    
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium mb-1">
@@ -768,7 +799,7 @@ const RestaurantSettingsPage = () => {
           {/* Working Hours */}
           <div className="card">
             <h2 className="text-xl font-bold mb-4">⏰ Режим работы</h2>
-            
+
             {/* Temporary Closure */}
             <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
               <div className="flex items-center gap-3 mb-3">
@@ -783,7 +814,7 @@ const RestaurantSettingsPage = () => {
                   🚫 Ресторан временно закрыт
                 </label>
               </div>
-              
+
               {isTemporarilyClosed && (
                 <div>
                   <label className="block text-sm font-medium mb-1 text-gray-700">Причина закрытия</label>
@@ -809,12 +840,12 @@ const RestaurantSettingsPage = () => {
                 wednesday: 'Среда',
                 thursday: 'Четверг',
                 friday: 'Пятница',
-                saturday: 'Суббота', 
+                saturday: 'Суббота',
                 sunday: 'Воскресенье',
               }).map(([day, label]) => (
                 <div key={day} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
                   <div className="w-32 font-medium text-gray-700">{label}</div>
-                  
+
                   <div className="flex items-center gap-2">
                     <input
                       type="checkbox"
@@ -830,7 +861,7 @@ const RestaurantSettingsPage = () => {
                       {workingHours[day].isOpen ? 'Открыто' : 'Выходной'}
                     </label>
                   </div>
-                  
+
                   {workingHours[day].isOpen && (
                     <div className="flex items-center gap-2">
                       <input

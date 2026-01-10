@@ -51,6 +51,7 @@ export const register = async (req, res, next) => {
           create: {
             name: restaurantName,
             subdomain,
+            currency: 'KGS',
             isTrialDefault: true
           }
         }
@@ -83,8 +84,30 @@ export const register = async (req, res, next) => {
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
 
+    // Fetch created user with restaurants to return in response
+    const userWithRestaurants = await prisma.user.findUnique({
+      where: { id: user.id },
+      include: {
+        restaurants: {
+          include: {
+            subscriptions: {
+              include: {
+                pricingTier: true
+              }
+            },
+            socialLinks: true
+          }
+        },
+        subscriptions: {
+          include: {
+            pricingTier: true
+          }
+        }
+      }
+    });
+
     // Remove password from response
-    const { password: _, ...userWithoutPassword } = user;
+    const { password: _, ...userWithoutPassword } = userWithRestaurants;
 
     res.status(201).json({
       message: 'Registration successful',
