@@ -31,17 +31,20 @@ const CheckoutPage = () => {
         comment: ''
     });
     const [showNewAddressForm, setShowNewAddressForm] = useState(false);
+    const [initialLoad, setInitialLoad] = useState(true);
 
     useEffect(() => {
         console.log('CheckoutPage loaded', { customer, restaurant, cartItems, currency });
 
-        // Проверяем наличие корзины и ресторана
-        if (!restaurant || !cartItems || cartItems.length === 0) {
+        // Проверяем наличие корзины и ресторана ТОЛЬКО при первой загрузке
+        if (initialLoad && (!restaurant || !cartItems || cartItems.length === 0)) {
             console.log('No restaurant or items, going back');
             toast.error('Корзина пуста');
             navigate(-1);
             return;
         }
+
+        setInitialLoad(false);
 
         // Если пользователь авторизован - загружаем адреса
         if (customer && customer.id) {
