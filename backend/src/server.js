@@ -25,6 +25,7 @@ import pricingRoutes from './routes/pricing.routes.js';
 import migrationRoutes from './routes/migration.routes.js';
 import productRoutes from './routes/product.routes.js';
 import customerRoutes from './routes/customer.routes.js';
+import telegramRoutes from './routes/telegram.routes.js';
 
 // Middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -128,6 +129,7 @@ app.use('/api/languages', languageRoutes);
 app.use('/api/geolocation', geolocationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/migration', migrationRoutes);
+app.use('/api', telegramRoutes);
 
 // Health check route
 app.get('/health', (req, res) => {

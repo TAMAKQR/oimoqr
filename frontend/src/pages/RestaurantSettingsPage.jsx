@@ -42,6 +42,10 @@ const RestaurantSettingsPage = () => {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [logoUploadProgress, setLogoUploadProgress] = useState(0);
 
+  // Telegram settings
+  const [telegramGroupId, setTelegramGroupId] = useState('');
+  const [testingTelegram, setTestingTelegram] = useState(false);
+
   // Максимальный размер файла (10MB)
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB в байтах
 
@@ -176,6 +180,7 @@ const RestaurantSettingsPage = () => {
     setLatitude(r.latitude || '');
     setLongitude(r.longitude || '');
     setDeliveryRadius(r.deliveryRadius || '');
+    setTelegramGroupId(r.telegramGroupId || '');
 
     // Load working hours with defaults to ensure all days are defined
     const defaultWorkingHours = {
@@ -286,6 +291,37 @@ const RestaurantSettingsPage = () => {
     }
   };
 
+  const handleTestTelegram = async () => {
+    if (!telegramGroupId) {
+      toast.error('Введите ID группы Telegram');
+      return;
+    }
+
+    setTestingTelegram(true);
+    try {
+      const response = await fetch(`${API_URL}/telegram/test`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ chatId: telegramGroupId })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Ошибка подключения');
+      }
+
+      toast.success('✅ Подключение успешно! Проверьте Telegram группу.');
+    } catch (err) {
+      toast.error(err.message || 'Ошибка при тестировании подключения');
+      console.error(err);
+    } finally {
+      setTestingTelegram(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -310,6 +346,7 @@ const RestaurantSettingsPage = () => {
         workingHours,
         isTemporarilyClosed,
         closureReason: isTemporarilyClosed ? closureReason : null,
+        telegramGroupId: telegramGroupId || null,
       };
 
       await restaurantService.updateRestaurant(selectedRestaurantId, data);
@@ -793,6 +830,48 @@ const RestaurantSettingsPage = () => {
                   </div>
                 </>
               )}
+            </div>
+          </div>
+
+          {/* Working Hours */}
+          <div className="card">
+            <h2 className="text-xl font-bold mb-4">📲 Уведомления Telegram</h2>
+
+            <div className="space-y-4">
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h3 className="font-semibold text-blue-900 mb-2">Как настроить уведомления:</h3>
+                <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                  <li>Создайте группу в Telegram</li>
+                  <li>Добавьте бота <strong>@OimoQR_bot</strong> в группу</li>
+                  <li>Отправьте команду <code className="bg-blue-100 px-1 rounded">/getid</code> в группе</li>
+                  <li>Скопируйте ID группы и вставьте ниже</li>
+                  <li>Нажмите "Проверить подключение"</li>
+                </ol>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">ID группы Telegram</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={telegramGroupId}
+                    onChange={(e) => setTelegramGroupId(e.target.value)}
+                    className="input flex-1"
+                    placeholder="-1001234567890"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleTestTelegram}
+                    disabled={testingTelegram || !telegramGroupId}
+                    className="btn-secondary whitespace-nowrap"
+                  >
+                    {testingTelegram ? '⏳ Проверка...' : '✓ Проверить'}
+                  </button>
+                </div>
+                <p className="text-sm text-gray-600 mt-1">
+                  После настройки вы будете получать уведомления о новых заказах в Telegram группу
+                </p>
+              </div>
             </div>
           </div>
 
