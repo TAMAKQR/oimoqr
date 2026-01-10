@@ -338,7 +338,7 @@ const MenuManagementPage = () => {
 
   return (
     <DashboardLayout userData={userData} selectedRestaurantId={selectedRestaurantId}>
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center gap-4 mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold">Управление меню</h1>
         </div>

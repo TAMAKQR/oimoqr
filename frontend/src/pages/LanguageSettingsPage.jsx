@@ -318,7 +318,7 @@ const LanguageSettingsPage = () => {
 
   return (
     <DashboardLayout userData={userData} selectedRestaurantId={selectedRestaurantId}>
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto px-4">
         <h1 className="text-2xl sm:text-3xl font-bold mb-6">Управление языками</h1>
 
         {allRestaurants.length > 1 && (
@@ -343,8 +343,8 @@ const LanguageSettingsPage = () => {
               <button
                 onClick={() => setActiveTab('languages')}
                 className={`px-4 py-2 font-medium ${activeTab === 'languages'
-                    ? 'border-b-2 border-primary-600 text-primary-600'
-                    : 'text-gray-600 hover:text-gray-900'
+                  ? 'border-b-2 border-primary-600 text-primary-600'
+                  : 'text-gray-600 hover:text-gray-900'
                   }`}
               >
                 Языки ресторана
@@ -352,8 +352,8 @@ const LanguageSettingsPage = () => {
               <button
                 onClick={() => setActiveTab('translations')}
                 className={`px-4 py-2 font-medium ${activeTab === 'translations'
-                    ? 'border-b-2 border-primary-600 text-primary-600'
-                    : 'text-gray-600 hover:text-gray-900'
+                  ? 'border-b-2 border-primary-600 text-primary-600'
+                  : 'text-gray-600 hover:text-gray-900'
                   }`}
               >
                 Переводы
@@ -444,8 +444,8 @@ const LanguageSettingsPage = () => {
                       setEditingTranslation(null);
                     }}
                     className={`px-4 py-2 rounded ${translationType === 'dishes'
-                        ? 'bg-primary-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                       }`}
                   >
                     Блюда
@@ -457,8 +457,8 @@ const LanguageSettingsPage = () => {
                       setEditingTranslation(null);
                     }}
                     className={`px-4 py-2 rounded ${translationType === 'categories'
-                        ? 'bg-primary-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                       }`}
                   >
                     Категории

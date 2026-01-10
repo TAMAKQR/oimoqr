@@ -139,7 +139,7 @@ const StaffManagementPage = () => {
 
   return (
     <DashboardLayout userData={userData} selectedRestaurantId={restaurantId}>
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto px-4">
         <h2 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8">Управление сотрудниками</h2>
 
         {error && (
