@@ -3,7 +3,7 @@ import DishModal from './DishModal';
 import { useCartStore } from '../store/cartStore';
 import customerService from '../services/customerService';
 
-const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteToggle }) => {
+const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteToggle, onModalStateChange }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [isFavorite, setIsFavorite] = useState(Boolean(dish?.isFavorite));
@@ -41,6 +41,13 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
   useEffect(() => {
     setIsFavorite(Boolean(dish?.isFavorite));
   }, [dish?.id, dish?.isFavorite]);
+
+  // Уведомляем родительский компонент об изменении состояния модалки
+  useEffect(() => {
+    if (onModalStateChange) {
+      onModalStateChange(isModalOpen);
+    }
+  }, [isModalOpen, onModalStateChange]);
 
   const toggleFavorite = async () => {
     if (!customerService.isAuthenticated()) {
