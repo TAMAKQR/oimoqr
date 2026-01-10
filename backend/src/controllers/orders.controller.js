@@ -1,5 +1,15 @@
 import { prisma } from '../config/prisma.js';
 
+const ALLOWED_STATUSES = [
+  'new',
+  'confirmed',
+  'preparing',
+  'ready',
+  'delivered',
+  'completed',
+  'cancelled'
+];
+
 const generateOrderNumber = () => {
   const timestamp = Date.now().toString().slice(-6);
   const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
@@ -8,10 +18,10 @@ const generateOrderNumber = () => {
 
 export const createOrder = async (req, res, next) => {
   try {
-    const { 
-      restaurantId, 
-      items, 
-      total, 
+    const {
+      restaurantId,
+      items,
+      total,
       customerName,
       customerPhone,
       customerEmail,
@@ -100,7 +110,7 @@ export const getOrdersByRestaurant = async (req, res, next) => {
       where: {
         OR: [
           { assignedRestaurantId: restaurantId },
-          { 
+          {
             assignedRestaurantId: null,
             restaurantId: restaurantId
           }
@@ -134,7 +144,9 @@ export const getOrderById = async (req, res, next) => {
             dish: true // Включаем информацию о блюде для каждого элемента заказа
           }
         },
-        restaurant: true
+        restaurant: true,
+        customer: true,
+        customerAddress: true
       }
     });
 
@@ -144,6 +156,43 @@ export const getOrderById = async (req, res, next) => {
 
     res.json(order);
   } catch (error) {
+    next(error);
+  }
+};
+
+export const updateOrderStatus = async (req, res, next) => {
+  try {
+    const { orderId } = req.params;
+    const { status } = req.body;
+
+    if (!status || !ALLOWED_STATUSES.includes(status)) {
+      return res.status(400).json({
+        error: 'Invalid status',
+        allowed: ALLOWED_STATUSES
+      });
+    }
+
+    const updatedOrder = await prisma.order.update({
+      where: { id: orderId },
+      data: { status },
+      include: {
+        items: {
+          include: {
+            dish: true
+          }
+        },
+        restaurant: true,
+        customer: true,
+        customerAddress: true
+      }
+    });
+
+    res.json({
+      message: 'Order status updated',
+      order: updatedOrder
+    });
+  } catch (error) {
+    console.error('Error updating order status:', error);
     next(error);
   }
 };
@@ -247,7 +296,7 @@ function extractCoordinatesFromUrl(url) {
   // https://maps.google.com/?q=10.767750740051,106.69813537598
   // https://www.google.com/maps?q=10.767750740051,106.69813537598
   // https://maps.app.goo.gl/... (короткие ссылки не поддерживаются)
-  
+
   const patterns = [
     /[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/i,  // ?q=lat,lng
     /@(-?\d+\.?\d*),(-?\d+\.?\d*)/i,       // @lat,lng
@@ -281,9 +330,9 @@ export const autoReassignOrder = async (req, res, next) => {
         where: { orderNumber: fullOrderNumber },
         include: { restaurant: true }
       });
-      
+
       if (!order) {
-        return res.status(404).json({ 
+        return res.status(404).json({
           error: 'Order not found',
           orderNumber: fullOrderNumber
         });
@@ -293,9 +342,9 @@ export const autoReassignOrder = async (req, res, next) => {
         where: { id: orderId },
         include: { restaurant: true }
       });
-      
+
       if (!order) {
-        return res.status(404).json({ 
+        return res.status(404).json({
           error: 'Order not found',
           orderId: orderId
         });
@@ -311,7 +360,7 @@ export const autoReassignOrder = async (req, res, next) => {
         latitude = coords.latitude;
         longitude = coords.longitude;
       } else {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'Could not extract coordinates from location URL',
           hint: 'Send either {latitude, longitude} or {location: "https://maps.google.com/?q=lat,lng"}'
         });
@@ -319,7 +368,7 @@ export const autoReassignOrder = async (req, res, next) => {
     }
 
     if (!latitude || !longitude) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'latitude and longitude are required',
         hint: 'Send either {latitude, longitude} or {location: "https://maps.google.com/?q=lat,lng"}'
       });
@@ -342,8 +391,8 @@ export const autoReassignOrder = async (req, res, next) => {
     });
 
     if (networkRestaurants.length === 0) {
-      return res.status(400).json({ 
-        error: 'No restaurants with geolocation found in this network' 
+      return res.status(400).json({
+        error: 'No restaurants with geolocation found in this network'
       });
     }
 
@@ -351,7 +400,7 @@ export const autoReassignOrder = async (req, res, next) => {
     const restaurantsWithDistance = networkRestaurants.map(r => ({
       restaurant: r,
       distance: getDistance(userLat, userLon, r.latitude, r.longitude),
-      inDeliveryZone: r.deliveryRadius 
+      inDeliveryZone: r.deliveryRadius
         ? getDistance(userLat, userLon, r.latitude, r.longitude) <= r.deliveryRadius
         : true // Если радиус не задан, считаем что доставка доступна везде
     })).sort((a, b) => a.distance - b.distance);
@@ -373,7 +422,7 @@ export const autoReassignOrder = async (req, res, next) => {
     // Обновляем заказ
     const updatedOrder = await prisma.order.update({
       where: { id: order.id },
-      data: { 
+      data: {
         assignedRestaurantId: nearest.restaurant.id,
         deliveryLatitude: userLat,
         deliveryLongitude: userLon
@@ -437,7 +486,7 @@ export const getAssignedRestaurant = async (req, res, next) => {
 
     const order = await prisma.order.findUnique({
       where: { orderNumber: fullOrderNumber },
-      include: { 
+      include: {
         restaurant: {
           include: {
             socialLinks: true
@@ -452,7 +501,7 @@ export const getAssignedRestaurant = async (req, res, next) => {
     });
 
     if (!order) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         error: 'Order not found',
         orderNumber: fullOrderNumber
       });
@@ -460,7 +509,7 @@ export const getAssignedRestaurant = async (req, res, next) => {
 
     // Определяем какой ресторан обслуживает заказ
     let assignedRestaurant;
-    
+
     if (order.assignedRestaurantId) {
       // Если заказ переназначен, получаем назначенный ресторан
       assignedRestaurant = await prisma.restaurant.findUnique({
@@ -475,17 +524,17 @@ export const getAssignedRestaurant = async (req, res, next) => {
     }
 
     if (!assignedRestaurant) {
-      return res.status(404).json({ 
-        error: 'Assigned restaurant not found' 
+      return res.status(404).json({
+        error: 'Assigned restaurant not found'
       });
     }
 
     // Расчет расстояния если есть координаты
     let distance = null;
-    if (order.deliveryLatitude && order.deliveryLongitude && 
-        assignedRestaurant.latitude && assignedRestaurant.longitude) {
+    if (order.deliveryLatitude && order.deliveryLongitude &&
+      assignedRestaurant.latitude && assignedRestaurant.longitude) {
       distance = getDistance(
-        order.deliveryLatitude, 
+        order.deliveryLatitude,
         order.deliveryLongitude,
         assignedRestaurant.latitude,
         assignedRestaurant.longitude
@@ -495,10 +544,10 @@ export const getAssignedRestaurant = async (req, res, next) => {
     // Формируем список блюд для массива и для текста
     const itemsList = order.items.map(item => {
       const modifiers = item.selectedModifiers ? JSON.parse(item.selectedModifiers) : [];
-      const modifiersText = modifiers.length > 0 
-        ? ` (${modifiers.map(m => m.name).join(', ')})` 
+      const modifiersText = modifiers.length > 0
+        ? ` (${modifiers.map(m => m.name).join(', ')})`
         : '';
-      
+
       return {
         dishName: item.dish?.name || 'Удалённое блюдо',
         quantity: item.quantity,
@@ -512,11 +561,11 @@ export const getAssignedRestaurant = async (req, res, next) => {
     const itemsText = order.items.map(item => {
       const dishName = item.dish?.name || 'Удалённое блюдо';
       const modifiers = item.selectedModifiers ? JSON.parse(item.selectedModifiers) : [];
-      const modifiersText = modifiers.length > 0 
-        ? ` (${modifiers.map(m => m.name).join(', ')})` 
+      const modifiersText = modifiers.length > 0
+        ? ` (${modifiers.map(m => m.name).join(', ')})`
         : '';
       const itemTotal = (item.price * item.quantity).toFixed(2);
-      
+
       return `${item.quantity}x ${dishName}${modifiersText} - ${itemTotal} ${assignedRestaurant.currency || '₽'}`;
     }).join('\n');
 

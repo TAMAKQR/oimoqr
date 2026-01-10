@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
+import { confirmDialog } from '../utils/confirmDialog';
 import DashboardLayout from '../components/DashboardLayout';
 
 const AdminPricingPage = () => {
@@ -148,7 +149,12 @@ const AdminPricingPage = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Вы уверены, что хотите удалить этот тариф?')) return;
+    const confirmed = await confirmDialog('Вы уверены, что хотите удалить этот тариф?', {
+      confirmText: 'Удалить',
+      cancelText: 'Отмена',
+      icon: '🗑️'
+    });
+    if (!confirmed) return;
 
     setSaving(true);
     try {
@@ -220,9 +226,8 @@ const AdminPricingPage = () => {
     <DashboardLayout userData={{ restaurants: [] }} selectedRestaurantId={null}>
       {/* Toast Notification */}
       {notification && (
-        <div className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg text-white ${
-          notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
-        } animate-fade-in-down`}>
+        <div className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg text-white ${notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+          } animate-fade-in-down`}>
           {notification.message}
         </div>
       )}

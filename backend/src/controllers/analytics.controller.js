@@ -12,7 +12,7 @@ export const getRestaurantStats = async (req, res, next) => {
     const orderFilter = {
       OR: [
         { assignedRestaurantId: restaurantId },
-        { 
+        {
           assignedRestaurantId: null,
           restaurantId: restaurantId
         }
@@ -192,7 +192,7 @@ export const getRestaurantStats = async (req, res, next) => {
       const date = new Date();
       date.setDate(date.getDate() - i);
       date.setHours(0, 0, 0, 0);
-      
+
       const nextDate = new Date(date);
       nextDate.setDate(nextDate.getDate() + 1);
 
@@ -268,18 +268,47 @@ export const getRestaurantStats = async (req, res, next) => {
   }
 };
 
-// Получить статистику просмотров (заглушка, пока нет трекинга)
+// Получить статистику просмотров
 export const getRestaurantViews = async (req, res, next) => {
   try {
     const { restaurantId } = req.params;
 
-    // Пока возвращаем mock данные
-    // TODO: Реализовать трекинг просмотров в будущем
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekAgo = new Date(today);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const monthAgo = new Date(today);
+    monthAgo.setMonth(monthAgo.getMonth() - 1);
+
+    const [todayViews, weekViews, monthViews, totalViews] = await Promise.all([
+      prisma.menuView.count({
+        where: {
+          restaurantId,
+          createdAt: { gte: today }
+        }
+      }),
+      prisma.menuView.count({
+        where: {
+          restaurantId,
+          createdAt: { gte: weekAgo }
+        }
+      }),
+      prisma.menuView.count({
+        where: {
+          restaurantId,
+          createdAt: { gte: monthAgo }
+        }
+      }),
+      prisma.menuView.count({
+        where: { restaurantId }
+      })
+    ]);
+
     res.json({
-      today: Math.floor(Math.random() * 100) + 50,
-      week: Math.floor(Math.random() * 500) + 300,
-      month: Math.floor(Math.random() * 2000) + 1000,
-      total: Math.floor(Math.random() * 10000) + 5000
+      today: todayViews,
+      week: weekViews,
+      month: monthViews,
+      total: totalViews
     });
   } catch (error) {
     next(error);

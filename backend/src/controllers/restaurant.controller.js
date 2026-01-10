@@ -30,6 +30,14 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
           where: { isEnabled: true },
           orderBy: { order: 'asc' }
         },
+        categoryGroups: {
+          orderBy: { order: 'asc' },
+          include: {
+            categories: {
+              orderBy: { order: 'asc' }
+            }
+          }
+        },
         categories: {
           orderBy: { order: 'asc' },
           include: {
@@ -61,7 +69,7 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
 
     // Check user subscription (not restaurant subscription)
     const now = new Date();
-    
+
     // Получаем активную подписку владельца ресторана
     const ownerSubscription = await prisma.subscription.findFirst({
       where: {
@@ -91,11 +99,11 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
       const ownerRestaurantsCount = await prisma.restaurant.count({
         where: { ownerId: restaurant.ownerId }
       });
-      
+
       const maxRestaurants = ownerSubscription.pricingTier.maxRestaurants;
-      
+
       if (ownerRestaurantsCount > maxRestaurants) {
-        return res.status(403).json({ 
+        return res.status(403).json({
           error: 'Subscription limit exceeded',
           message: `Превышен лимит ресторанов для текущей подписки (${maxRestaurants})`
         });
@@ -156,6 +164,24 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
     restaurantWithImageUrl.facebook = socialLinks.facebook || '';
     restaurantWithImageUrl.whatsapp = socialLinks.whatsapp || '';
     restaurantWithImageUrl.telegram = socialLinks.telegram || '';
+
+    // Трекинг просмотра меню
+    const ipAddress = req.headers['x-forwarded-for']?.split(',')[0] ||
+      req.connection?.remoteAddress ||
+      req.socket?.remoteAddress ||
+      req.ip;
+    const userAgent = req.headers['user-agent'];
+
+    // Асинхронно записываем просмотр (не блокируем ответ)
+    prisma.menuView.create({
+      data: {
+        restaurantId: restaurant.id,
+        ipAddress,
+        userAgent
+      }
+    }).catch(err => {
+      console.error('Error tracking menu view:', err);
+    });
 
     res.json(restaurantWithImageUrl);
   } catch (error) {
@@ -295,8 +321,8 @@ export const uploadBanner = async (req, res, next) => {
     console.log('🖼️ Uploading banner:', { filename: req.file.filename, path: req.file.path });
 
     // Get image URL (Cloudinary returns full URL, local storage returns filename)
-    const bannerUrl = req.file.path && req.file.path.startsWith('http') 
-      ? req.file.path 
+    const bannerUrl = req.file.path && req.file.path.startsWith('http')
+      ? req.file.path
       : `/uploads/${req.file.filename}`;
 
     console.log('🖼️ Banner URL:', bannerUrl);
@@ -411,8 +437,8 @@ export const uploadLogo = async (req, res, next) => {
     console.log('🏢 Uploading logo:', { filename: req.file.filename, path: req.file.path });
 
     // Get image URL (Cloudinary returns full URL, local storage returns filename)
-    const logoUrl = req.file.path && req.file.path.startsWith('http') 
-      ? req.file.path 
+    const logoUrl = req.file.path && req.file.path.startsWith('http')
+      ? req.file.path
       : `/uploads/${req.file.filename}`;
 
     console.log('🏢 Logo URL:', logoUrl);
@@ -525,7 +551,7 @@ export const createRestaurant = async (req, res, next) => {
         subscriptions: {
           where: {
             OR: [
-              { 
+              {
                 status: 'TRIAL',
                 trialEndsAt: { gt: new Date() }
               },
@@ -541,7 +567,7 @@ export const createRestaurant = async (req, res, next) => {
 
     // Подсчитываем рестораны с активными подписками
     const restaurantsWithActiveSubscriptions = userRestaurants.filter(
-      restaurant => restaurant.subscriptions.some(sub => 
+      restaurant => restaurant.subscriptions.some(sub =>
         (sub.status === 'TRIAL' && new Date(sub.trialEndsAt) > new Date()) ||
         (sub.status === 'ACTIVE' && new Date(sub.currentPeriodEnd) > new Date())
       )
@@ -552,7 +578,7 @@ export const createRestaurant = async (req, res, next) => {
 
     // Если это первый ресторан - разрешаем (TRIAL)
     const isFirstRestaurant = existingCount === 0;
-    
+
     // Проверяем все подписки пользователя
     const userSubscriptions = await prisma.subscription.findMany({
       where: {
@@ -581,7 +607,7 @@ export const createRestaurant = async (req, res, next) => {
         pricingTier: true
       }
     });
-    
+
     // Если это не первый ресторан, проверяем подписки
     if (!isFirstRestaurant) {
       const newRestaurantCount = existingCount + 1;
@@ -597,7 +623,7 @@ export const createRestaurant = async (req, res, next) => {
         if (activeCount === 0 || existingCount > activeCount) {
           const trialSubscription = userSubscriptions.find(sub => sub.status === 'TRIAL');
           const trialDaysRemaining = trialSubscription ? getTrialDaysRemaining(trialSubscription) : 0;
-          
+
           return res.status(403).json({
             error: 'Active subscription required',
             message: 'Для создания дополнительного ресторана требуется активная подписка',
@@ -623,16 +649,16 @@ export const createRestaurant = async (req, res, next) => {
 
     // Используем уже полученную подписку из предыдущей проверки
     // (activeUserSubscription уже загружена выше)
-    
+
     // Определяем максимальное количество ресторанов из тарифа подписки
     const maxRestaurants = activeUserSubscription?.pricingTier?.maxRestaurants || 1;
-    
+
     // Дополнительная проверка перед созданием
     // Если у пользователя больше активных ресторанов чем позволяет подписка
     if (existingCount >= maxRestaurants) {
       const trialSubscription = userSubscriptions.find(sub => sub.status === 'TRIAL');
       const trialDaysRemaining = trialSubscription ? getTrialDaysRemaining(trialSubscription) : 0;
-      
+
       return res.status(403).json({
         error: 'Subscription limit reached',
         message: 'Достигнут лимит ресторанов для текущей подписки',
@@ -725,8 +751,8 @@ export const deleteRestaurant = async (req, res, next) => {
         }
       });
 
-      const hasOtherPaidRestaurants = userRestaurants.some(r => 
-        r.id !== id && r.subscriptions.some(sub => 
+      const hasOtherPaidRestaurants = userRestaurants.some(r =>
+        r.id !== id && r.subscriptions.some(sub =>
           sub.status === 'ACTIVE' && new Date(sub.currentPeriodEnd) > new Date()
         )
       );
@@ -913,6 +939,93 @@ export const getRestaurantCategories = async (req, res, next) => {
     });
 
     res.json(categories);
+  } catch (error) {
+    next(error);
+  }
+};
+/**
+ * Получить список клиентов ресторана
+ */
+export const getRestaurantCustomers = async (req, res, next) => {
+  try {
+    const { restaurantId } = req.params;
+    const userId = req.user.id;
+
+    // Проверяем, что пользователь - владелец ресторана или его сотрудник
+    const restaurant = await prisma.restaurant.findFirst({
+      where: {
+        id: restaurantId,
+        OR: [
+          { ownerId: userId },
+          {
+            staff: {
+              some: { userId }
+            }
+          }
+        ]
+      }
+    });
+
+    if (!restaurant) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Получаем клиентов с их статистикой заказов
+    const customers = await prisma.customer.findMany({
+      where: { restaurantId },
+      include: {
+        orders: {
+          select: {
+            id: true,
+            totalAmount: true,
+            status: true,
+            createdAt: true
+          },
+          orderBy: { createdAt: 'desc' }
+        },
+        favoriteDishes: {
+          select: {
+            dish: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        },
+        savedAddresses: {
+          select: {
+            id: true,
+            address: true,
+            isDefault: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Добавляем статистику для каждого клиента
+    const customersWithStats = customers.map(customer => {
+      const totalOrders = customer.orders.length;
+      const totalSpent = customer.orders.reduce((sum, order) => sum + parseFloat(order.totalAmount || 0), 0);
+      const lastOrderDate = customer.orders[0]?.createdAt || null;
+
+      const { password, ...customerData } = customer;
+
+      return {
+        ...customerData,
+        stats: {
+          totalOrders,
+          totalSpent,
+          lastOrderDate
+        }
+      };
+    });
+
+    res.json({
+      customers: customersWithStats,
+      total: customersWithStats.length
+    });
   } catch (error) {
     next(error);
   }

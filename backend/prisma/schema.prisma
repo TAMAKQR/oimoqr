@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -41,6 +42,9 @@ model Restaurant {
   minOrderAmount    Float?
   defaultLanguage   String    @default("ru")
   
+  // Business type
+  businessType      String    @default("RESTAURANT") // RESTAURANT | ONLINE_STORE
+  
   // Geolocation fields
   latitude          Float?
   longitude         Float?
@@ -62,6 +66,16 @@ model Restaurant {
   languages         RestaurantLanguage[]
   dishTranslations  DishTranslation[]
   categoryTranslations CategoryTranslation[]
+  
+  // Category Groups (мета-категории)
+  categoryGroups    CategoryGroup[]
+  
+  // Online Store relations
+  productCategories ProductCategory[]
+  products          Product[]
+
+  // Customers who registered from this restaurant
+  registeredCustomers Customer[] @relation("CustomerRegisteredRestaurant")
   
   subscriptions     Subscription[]
   
@@ -109,12 +123,35 @@ model Subscription {
   updatedAt         DateTime  @updatedAt
 }
 
+// Группы категорий (мета-категории)
+model CategoryGroup {
+  id                String    @id @default(cuid())
+  name              String
+  description       String?
+  image             String?   // Фото-миниатюра
+  order             Int       @default(0)
+  
+  restaurantId      String
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  
+  categories        Category[]
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  @@index([restaurantId])
+}
+
 model Category {
   id                String    @id @default(cuid())
   name              String
   description       String?
   image             String?
   order             Int       @default(0)
+  
+  // Привязка к группе категорий (опционально)
+  categoryGroupId   String?
+  categoryGroup     CategoryGroup? @relation(fields: [categoryGroupId], references: [id], onDelete: SetNull)
   
   restaurantId      String
   restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
@@ -147,6 +184,7 @@ model Dish {
   modifiers         Modifier[]
   orderItems        OrderItem[]
   translations      DishTranslation[]
+  favoritedBy       CustomerFavorite[]
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -197,16 +235,40 @@ model SocialLink {
 
 model Customer {
   id                String    @id @default(cuid())
-  phone             String    @unique
+  phone             String    @unique // Уникальный номер телефона глобально
   name              String?
   email             String?
+  password          String    // Обязательный пароль
+  avatar            String?   // URL аватара
+  
+  // Preferences (JSON: {vegetarian, allergies, spicyLevel, etc.})
+  preferences       String?   
+
+  // Restaurant where customer registered (optional)
+  registeredRestaurantId String?
+  registeredRestaurant   Restaurant? @relation("CustomerRegisteredRestaurant", fields: [registeredRestaurantId], references: [id])
   
   // Saved addresses
   savedAddresses    CustomerAddress[]
   orders            Order[]
+  favoriteDishes    CustomerFavorite[]
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+}
+
+model CustomerFavorite {
+  id                String    @id @default(cuid())
+  customerId        String
+  customer          Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  
+  dishId            String
+  dish              Dish      @relation(fields: [dishId], references: [id], onDelete: Cascade)
+  
+  createdAt         DateTime  @default(now())
+  
+  @@unique([customerId, dishId])
+  @@index([customerId])
 }
 
 model CustomerAddress {
@@ -215,10 +277,15 @@ model CustomerAddress {
   customer          Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
   
   address           String
-  latitude          Float
-  longitude         Float
+  entrance          String?
+  floor             String?
+  apartment         String?
+  latitude          Float?
+  longitude         Float?
   label             String?   // "Дом", "Работа", etc.
+  comment           String?
   isDefault         Boolean   @default(false)
+  orders            Order[]   @relation("OrderCustomerAddress")
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -236,6 +303,10 @@ model Order {
   totalAmount       Float
   status            String    @default("new")
   notes             String?
+  deliveryType      String    @default("delivery")
+  paymentMethod     String    @default("cash")
+  customerAddressId String?
+  customerAddress   CustomerAddress? @relation("OrderCustomerAddress", fields: [customerAddressId], references: [id], onDelete: SetNull)
   
   customerId        String?
   customer          Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
@@ -260,8 +331,13 @@ model OrderItem {
   orderId           String
   order             Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
   
-  dishId            String
-  dish              Dish      @relation(fields: [dishId], references: [id])
+  // For restaurant orders
+  dishId            String?
+  dish              Dish?     @relation(fields: [dishId], references: [id])
+  
+  // For online store orders
+  productId         String?
+  product           Product?  @relation(fields: [productId], references: [id])
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -345,4 +421,98 @@ model TrialConfig {
   message           String    @default("Вы получите 7 дней бесплатного пробного периода")
   
   updatedAt         DateTime  @updatedAt
+}
+
+// ========================================
+// Online Store Models
+// ========================================
+
+model ProductCategory {
+  id                String    @id @default(cuid())
+  name              String
+  description       String?
+  image             String?
+  order             Int       @default(0)
+  isActive          Boolean   @default(true)
+  
+  restaurantId      String
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  
+  products          Product[]
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model Product {
+  id                String    @id @default(cuid())
+  name              String
+  description       String?
+  sku               String?   // SKU/Артикул
+  price             Float
+  compareAtPrice    Float?    // Цена для сравнения (было)
+  cost              Float?    // Себестоимость
+  images            String?   // JSON массив изображений
+  available         Boolean   @default(true)
+  featured          Boolean   @default(false) // Рекомендуемый товар
+  order             Int       @default(0)
+  
+  // SEO
+  metaTitle         String?
+  metaDescription   String?
+  
+  // Stock
+  trackInventory    Boolean   @default(true)
+  stockQuantity     Int       @default(0)
+  lowStockThreshold Int?
+  
+  // Attributes
+  weight            Float?    // Вес в граммах
+  dimensions        String?   // JSON: {length, width, height}
+  
+  categoryId        String
+  category          ProductCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  restaurantId      String
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  
+  variants          ProductVariant[]
+  orderItems        OrderItem[]
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  @@index([restaurantId, available])
+  @@index([categoryId])
+}
+
+model ProductVariant {
+  id                String    @id @default(cuid())
+  name              String    // Например: "Размер: L, Цвет: Красный"
+  sku               String?
+  price             Float?    // Цена варианта (если отличается от базовой)
+  compareAtPrice    Float?
+  stockQuantity     Int       @default(0)
+  image             String?
+  
+  // Опции варианта (размер, цвет и т.д.)
+  options           String    // JSON: {"size": "L", "color": "Red"}
+  
+  productId         String
+  product           Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  @@index([productId])
+}
+
+model MenuView {
+  id                String    @id @default(cuid())
+  restaurantId      String
+  ipAddress         String?
+  userAgent         String?
+  createdAt         DateTime  @default(now())
+  
+  @@index([restaurantId, createdAt])
 }

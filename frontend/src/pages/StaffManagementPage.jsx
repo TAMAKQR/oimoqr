@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../services/authService';
 import api from '../services/api';
+import toast from 'react-hot-toast';
+import { confirmDialog } from '../utils/confirmDialog';
 import DashboardLayout from '../components/DashboardLayout';
 
 const StaffManagementPage = () => {
@@ -96,7 +98,12 @@ const StaffManagementPage = () => {
   };
 
   const handleRemoveStaff = async (staffId) => {
-    if (!confirm('Вы уверены, что хотите удалить этого сотрудника?')) {
+    const confirmed = await confirmDialog('Вы уверены, что хотите удалить этого сотрудника?', {
+      confirmText: 'Удалить',
+      cancelText: 'Отмена',
+      icon: '🗑️'
+    });
+    if (!confirmed) {
       return;
     }
 

@@ -39,21 +39,33 @@ const Sidebar = ({ userData, selectedRestaurantId }) => {
       show: isOwner
     },
     {
-      path: selectedRestaurantId ? `/staff/${selectedRestaurantId}` : '/dashboard', // Безопасный путь по умолчанию
+      path: selectedRestaurantId ? `/staff/${selectedRestaurantId}` : '/dashboard',
       icon: '👥',
       label: 'Персонал',
       show: isOwner && selectedRestaurantId
     },
     {
+      path: selectedRestaurantId ? `/customers/${selectedRestaurantId}` : '/dashboard',
+      icon: '🧑‍🤝‍🧑',
+      label: 'Клиенты',
+      show: isOwner && selectedRestaurantId
+    },
+    {
+      path: '/pricing',
+      icon: '💳',
+      label: 'Тарифы',
+      show: !isAdmin
+    },
+    {
       path: '/admin',
       icon: '👨‍💼',
       label: 'Админ панель',
-      show: false // Скрываем, так как для админа это избыточно
+      show: false
     },
     {
       path: '/admin/pricing',
       icon: '💰',
-      label: 'Тарифы',
+      label: 'Управление тарифами',
       show: isAdmin
     }
   ];

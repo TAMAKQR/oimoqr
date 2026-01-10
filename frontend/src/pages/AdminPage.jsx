@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
+import { confirmDialog } from '../utils/confirmDialog';
 import DashboardLayout from '../components/DashboardLayout';
 
 const AdminPage = () => {
@@ -36,10 +37,10 @@ const AdminPage = () => {
     } else {
       const query = searchQuery.toLowerCase();
       setFilteredUsers(
-        users.filter(user => 
+        users.filter(user =>
           user.name?.toLowerCase().includes(query) ||
           user.email?.toLowerCase().includes(query) ||
-          user.restaurants?.some(r => 
+          user.restaurants?.some(r =>
             r.name?.toLowerCase().includes(query) ||
             r.subdomain?.toLowerCase().includes(query)
           )
@@ -65,7 +66,7 @@ const AdminPage = () => {
         api.get('/admin/stats/subscriptions'),
         api.get('/admin/pricing-tiers')
       ]);
-      
+
       setUsers(usersRes.data);
       setFilteredUsers(usersRes.data);
       setStats(statsRes.data);
@@ -107,7 +108,7 @@ const AdminPage = () => {
   const handleSubmitSubscription = (e) => {
     e.preventDefault();
     const options = {};
-    
+
     if (subscriptionForm.durationMonths) {
       options.durationMonths = parseInt(subscriptionForm.durationMonths);
     }
@@ -117,7 +118,7 @@ const AdminPage = () => {
     if (subscriptionForm.endDate) {
       options.endDate = subscriptionForm.endDate;
     }
-    
+
     handleUpdateUserSubscription(editingUser.id, subscriptionForm.pricingTierId, options);
   };
 
@@ -134,7 +135,15 @@ const AdminPage = () => {
   };
 
   const handleDeactivateUser = async (user) => {
-    if (!window.confirm(`Вы уверены, что хотите деактивировать пользователя ${user.name} и все его подписки?`)) {
+    const confirmed = await confirmDialog(
+      `Вы уверены, что хотите деактивировать пользователя ${user.name} и все его подписки?`,
+      {
+        confirmText: 'Деактивировать',
+        cancelText: 'Отмена',
+        icon: '⚠️'
+      }
+    );
+    if (!confirmed) {
       return;
     }
 
@@ -150,9 +159,16 @@ const AdminPage = () => {
   };
 
   const handleDeleteUser = async (user) => {
-    if (!window.confirm(
-      `⚠️ ВНИМАНИЕ! Это действие необратимо!\n\nВы действительно хотите удалить пользователя ${user.name} и все его рестораны?\nВсе данные будут удалены без возможности восстановления.`
-    )) {
+    const confirmed = await confirmDialog(
+      `⚠️ ВНИМАНИЕ! Это действие необратимо!\n\nВы действительно хотите удалить пользователя ${user.name} и все его рестораны?\nВсе данные будут удалены без возможности восстановления.`,
+      {
+        confirmText: 'Удалить навсегда',
+        cancelText: 'Отмена',
+        icon: '🗑️',
+        duration: 10000
+      }
+    );
+    if (!confirmed) {
       return;
     }
 
@@ -169,7 +185,7 @@ const AdminPage = () => {
 
   const handleUpdateCredentials = async (e) => {
     e.preventDefault();
-    
+
     if (!editForm.email && !editForm.password) {
       showNotification('Введите email или пароль для изменения', 'error');
       return;
@@ -226,9 +242,8 @@ const AdminPage = () => {
     <DashboardLayout userData={user} selectedRestaurantId={null}>
       {/* Toast Notification */}
       {notification && (
-        <div className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg text-white ${
-          notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
-        } animate-fade-in-down`}>
+        <div className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg text-white ${notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+          } animate-fade-in-down`}>
           {notification.message}
         </div>
       )}
@@ -286,7 +301,7 @@ const AdminPage = () => {
               />
             </div>
           </div>
-          
+
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -321,7 +336,7 @@ const AdminPage = () => {
                             <div className="mt-2 space-y-1 pl-4">
                               {user.restaurants.map((restaurant) => (
                                 <div key={restaurant.id} className="text-xs text-gray-600">
-                                  • {restaurant.name} 
+                                  • {restaurant.name}
                                   <a
                                     href={`/menu/${restaurant.subdomain}`}
                                     target="_blank"
@@ -422,7 +437,7 @@ const AdminPage = () => {
             <p className="text-sm text-gray-600 mb-4">
               Пользователь: <strong>{editingUser?.name}</strong>
             </p>
-            
+
             <form onSubmit={handleUpdateCredentials} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -482,7 +497,7 @@ const AdminPage = () => {
             <p className="text-sm text-gray-600 mb-4">
               Пользователь: <strong>{editingUser?.name}</strong>
             </p>
-            
+
             <form onSubmit={handleSubmitSubscription} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">

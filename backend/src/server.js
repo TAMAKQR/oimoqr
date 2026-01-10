@@ -11,6 +11,7 @@ import { config } from './config/env.js';
 import authRoutes from './routes/auth.routes.js';
 import restaurantRoutes from './routes/restaurant.routes.js';
 import categoryRoutes from './routes/category.routes.js';
+import categoryGroupRoutes from './routes/categoryGroup.routes.js';
 import dishRoutes from './routes/dish.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import ordersRoutes from './routes/orders.routes.js';
@@ -22,6 +23,8 @@ import geolocationRoutes from './routes/geolocation.routes.js';
 import analyticsRoutes from './routes/analytics.routes.js';
 import pricingRoutes from './routes/pricing.routes.js';
 import migrationRoutes from './routes/migration.routes.js';
+import productRoutes from './routes/product.routes.js';
+import customerRoutes from './routes/customer.routes.js';
 
 // Middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -35,8 +38,10 @@ const PORT = process.env.PORT || 5001; // Используем PORT из пер�
 
 app.set('trust proxy', 1);
 
-// Security middleware
-app.use(helmet());
+// Security middleware (allow images to be fetched cross-origin for customer menu)
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
 
 // Расширенное логирование для отладки CORS (до CORS middleware)
 app.use((req, res, next) => {
@@ -56,7 +61,12 @@ app.use((req, res, next) => {
 });
 
 // CORS configuration
-const allowedOrigins = ['https://oimoqr.com', 'https://www.oimoqr.com'];
+const allowedOrigins = [
+  'https://oimoqr.com',
+  'https://www.oimoqr.com',
+  'http://localhost:5173',
+  'http://localhost:5174'
+];
 
 const corsOptions = {
   origin: (origin, callback) => {
@@ -104,11 +114,14 @@ app.use('/uploads', express.static(join(__dirname, '../uploads')));
 app.use('/api', publicRoutes); // Public routes first
 app.use('/api', pricingRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/customers', customerRoutes);
 app.use('/api', deliveryLocationsRoutes);
 app.use('/api/restaurants', restaurantRoutes);
+app.use('/api/restaurants', categoryGroupRoutes);
 app.use('/api/restaurants', staffRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/dishes', dishRoutes);
+app.use('/api/products', productRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/languages', languageRoutes);
