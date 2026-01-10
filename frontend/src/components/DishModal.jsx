@@ -172,7 +172,7 @@ const DishModal = ({
           )}
 
           {dish.modifiers && dish.modifiers.length > 0 && (
-            <div className="mb-6">
+            <div className="mb-4">
               {dish.modifiers.map((modifier) => (
                 modifier.options && modifier.options.length > 0 && (
                   <div key={modifier.id} className="mb-4">
@@ -207,7 +207,13 @@ const DishModal = ({
             </div>
           )}
 
-          <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-0 pt-4 border-t">
+          {/* Padding for fixed bottom bar */}
+          <div className="h-24"></div>
+        </div>
+
+        {/* Fixed bottom bar with buttons */}
+        <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 sm:p-6 shadow-lg">
+          <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-0">
             <div className="flex justify-between sm:block">
               <p className="text-xs sm:text-sm text-gray-600">Итого:</p>
               <p className="text-xl sm:text-2xl font-bold text-primary-600">
