@@ -65,6 +65,8 @@ app.use((req, res, next) => {
 const allowedOrigins = [
   'https://oimoqr.com',
   'https://www.oimoqr.com',
+  'https://oimoqr-frontend.vercel.app',
+  'https://oimoqr-frontend-git-main-dastans-projects-e0330c7f.vercel.app',
   'http://localhost:5173',
   'http://localhost:5174'
 ];
@@ -72,7 +74,8 @@ const allowedOrigins = [
 const corsOptions = {
   origin: (origin, callback) => {
     console.log('CORS CHECK: origin:', origin);
-    if (allowedOrigins.includes(origin) || !origin) {
+    // Allow if origin is in allowedOrigins OR if it's a Vercel preview deployment
+    if (allowedOrigins.includes(origin) || !origin || (origin && origin.includes('.vercel.app'))) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
