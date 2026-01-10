@@ -19,7 +19,7 @@ const DashboardLayout = ({ children, userData, selectedRestaurantId }) => {
       {/* Main Content */}
       <div className="flex-1 lg:ml-20 transition-all duration-300">
         {/* Page Content */}
-        <main className="p-4 sm:p-6 lg:p-8">
+        <main className="py-4 sm:py-6 lg:py-8">
           {children}
         </main>
       </div>

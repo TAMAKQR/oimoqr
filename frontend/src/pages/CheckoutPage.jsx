@@ -20,7 +20,10 @@ const CheckoutPage = () => {
     const [showWaiterModal, setShowWaiterModal] = useState(false);
     const [addresses, setAddresses] = useState([]);
     const [selectedAddressId, setSelectedAddressId] = useState(null);
-    const [deliveryType, setDeliveryType] = useState('delivery'); // delivery | pickup
+    // Set default delivery type based on restaurant settings
+    const [deliveryType, setDeliveryType] = useState(
+        restaurant?.deliveryEnabled ? 'delivery' : 'pickup'
+    ); // delivery | pickup
     const [paymentMethod, setPaymentMethod] = useState('cash'); // cash | card | online
     const [comment, setComment] = useState('');
     const [newAddress, setNewAddress] = useState({
@@ -216,20 +219,22 @@ const CheckoutPage = () => {
                     {/* Тип получения */}
                     <div className="bg-white rounded-lg shadow-sm p-4">
                         <h2 className="font-semibold text-base mb-3">Способ получения</h2>
-                        <div className="grid grid-cols-2 gap-3">
-                            <button
-                                onClick={() => setDeliveryType('delivery')}
-                                className={`p-3 rounded-lg border-2 transition-all ${deliveryType === 'delivery'
-                                    ? 'border-primary-600 bg-primary-50'
-                                    : 'border-gray-200 active:border-gray-300'
-                                    }`}
-                            >
-                                <div className="text-2xl mb-1">🚗</div>
-                                <div className="font-semibold text-sm">Доставка</div>
-                                {restaurant.deliveryFee > 0 && (
-                                    <div className="text-xs text-gray-500">{restaurant.deliveryFee} {currency}</div>
-                                )}
-                            </button>
+                        <div className={`grid ${restaurant?.deliveryEnabled ? 'grid-cols-2' : 'grid-cols-1'} gap-3`}>
+                            {restaurant?.deliveryEnabled && (
+                                <button
+                                    onClick={() => setDeliveryType('delivery')}
+                                    className={`p-3 rounded-lg border-2 transition-all ${deliveryType === 'delivery'
+                                        ? 'border-primary-600 bg-primary-50'
+                                        : 'border-gray-200 active:border-gray-300'
+                                        }`}
+                                >
+                                    <div className="text-2xl mb-1">🚗</div>
+                                    <div className="font-semibold text-sm">Доставка</div>
+                                    {restaurant.deliveryFee > 0 && (
+                                        <div className="text-xs text-gray-500">{restaurant.deliveryFee} {currency}</div>
+                                    )}
+                                </button>
+                            )}
                             <button
                                 onClick={() => setDeliveryType('pickup')}
                                 className={`p-3 rounded-lg border-2 transition-all ${deliveryType === 'pickup'
@@ -242,6 +247,11 @@ const CheckoutPage = () => {
                                 <div className="text-xs text-gray-500">Бесплатно</div>
                             </button>
                         </div>
+                        {!restaurant?.deliveryEnabled && (
+                            <p className="text-sm text-gray-600 mt-3 p-2 bg-blue-50 rounded border border-blue-200">
+                                ℹ️ Доставка временно недоступна. Вы можете забрать заказ самостоятельно.
+                            </p>
+                        )}
                     </div>
 
                     {/* Адрес доставки */}

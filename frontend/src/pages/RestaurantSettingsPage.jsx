@@ -297,9 +297,14 @@ const RestaurantSettingsPage = () => {
       return;
     }
 
+    if (!selectedRestaurantId) {
+      toast.error('Выберите ресторан');
+      return;
+    }
+
     setTestingTelegram(true);
     try {
-      const response = await fetch(`${API_URL}/telegram/test`, {
+      const response = await fetch(`${API_URL}/restaurants/${selectedRestaurantId}/telegram/test`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -401,7 +406,7 @@ const RestaurantSettingsPage = () => {
 
   return (
     <DashboardLayout userData={userData} selectedRestaurantId={selectedRestaurantId}>
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-3xl mx-auto px-4">
         <h1 className="text-2xl sm:text-3xl font-bold mb-6">Настройки ресторана</h1>
 
         {/* Restaurant Selector */}
@@ -833,7 +838,69 @@ const RestaurantSettingsPage = () => {
             </div>
           </div>
 
-          {/* Working Hours */}
+          {/* Delivery Settings */}
+          <div className="card">
+            <h2 className="text-xl font-bold mb-4">🚗 Настройки доставки</h2>
+
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="deliveryEnabled"
+                  checked={deliveryEnabled}
+                  onChange={(e) => setDeliveryEnabled(e.target.checked)}
+                  className="w-5 h-5"
+                />
+                <label htmlFor="deliveryEnabled" className="font-medium text-gray-700">
+                  Включить доставку для этого ресторана
+                </label>
+              </div>
+
+              {deliveryEnabled && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Стоимость доставки</label>
+                    <input
+                      type="number"
+                      value={deliveryFee}
+                      onChange={(e) => setDeliveryFee(e.target.value)}
+                      className="input w-full"
+                      placeholder="0"
+                      step="0.01"
+                      min="0"
+                    />
+                    <p className="text-sm text-gray-500 mt-1">
+                      Оставьте 0 для бесплатной доставки
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Минимальная сумма заказа</label>
+                    <input
+                      type="number"
+                      value={minOrderAmount}
+                      onChange={(e) => setMinOrderAmount(e.target.value)}
+                      className="input w-full"
+                      placeholder="0"
+                      step="0.01"
+                      min="0"
+                    />
+                    <p className="text-sm text-gray-500 mt-1">
+                      Минимальная сумма заказа для оформления доставки
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {!deliveryEnabled && (
+                <p className="text-sm text-gray-600 p-3 bg-gray-50 rounded border border-gray-200">
+                  ℹ️ Доставка отключена. Клиенты смогут только забрать заказ самостоятельно (самовывоз).
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Telegram Notifications */}
           <div className="card">
             <h2 className="text-xl font-bold mb-4">📲 Уведомления Telegram</h2>
 

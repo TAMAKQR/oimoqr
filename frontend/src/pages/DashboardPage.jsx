@@ -376,7 +376,7 @@ const DashboardPage = () => {
   if (!hasRestaurants && !userData?.isAdmin) {
     return (
       <DashboardLayout userData={userData} selectedRestaurantId={null}>
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-3xl mx-auto px-4">
           <div className="text-center py-12">
             <div className="text-6xl mb-6">🏪</div>
             <h2 className="text-3xl font-bold mb-4">Создайте свой первый ресторан</h2>
@@ -462,7 +462,7 @@ const DashboardPage = () => {
 
   return (
     <DashboardLayout userData={userData} selectedRestaurantId={selectedRestaurantId}>
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto px-4">
         <div className="flex flex-wrap justify-between items-center gap-4 mb-6 sm:mb-8">
           <h2 className="text-2xl sm:text-3xl font-bold">Панель управления</h2>
           <button onClick={handleLogout} className="btn-secondary text-red-600 hover:bg-red-50">

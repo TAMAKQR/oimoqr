@@ -248,7 +248,7 @@ const AdminPage = () => {
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto px-4">
         <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
           <h1 className="text-3xl font-bold">Админ-панель</h1>
           <div className="flex items-center gap-4">
