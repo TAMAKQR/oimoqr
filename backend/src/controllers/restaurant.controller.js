@@ -70,7 +70,7 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
     // Check user subscription (not restaurant subscription)
     const now = new Date();
 
-    // Получаем активную подписку владельца ресторана
+    // ÐŸÐ¾Ð»ÑƒÑ‡Ð°ÐµÐ¼ Ð°ÐºÑ‚Ð¸Ð²Ð½ÑƒÑŽ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÑƒ Ð²Ð»Ð°Ð´ÐµÐ»ÑŒÑ†Ð° Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½Ð°
     const ownerSubscription = await prisma.subscription.findFirst({
       where: {
         userId: restaurant.ownerId,
@@ -94,7 +94,7 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
       return res.status(403).json({ error: 'Restaurant subscription is not active' });
     }
 
-    // Проверяем, что количество ресторанов владельца не превышает лимит тарифа
+    // ÐŸÑ€Ð¾Ð²ÐµÑ€ÑÐµÐ¼, Ñ‡Ñ‚Ð¾ ÐºÐ¾Ð»Ð¸Ñ‡ÐµÑÑ‚Ð²Ð¾ Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½Ð¾Ð² Ð²Ð»Ð°Ð´ÐµÐ»ÑŒÑ†Ð° Ð½Ðµ Ð¿Ñ€ÐµÐ²Ñ‹ÑˆÐ°ÐµÑ‚ Ð»Ð¸Ð¼Ð¸Ñ‚ Ñ‚Ð°Ñ€Ð¸Ñ„Ð°
     if (ownerSubscription.pricingTier) {
       const ownerRestaurantsCount = await prisma.restaurant.count({
         where: { ownerId: restaurant.ownerId }
@@ -105,7 +105,7 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
       if (ownerRestaurantsCount > maxRestaurants) {
         return res.status(403).json({
           error: 'Subscription limit exceeded',
-          message: `Превышен лимит ресторанов для текущей подписки (${maxRestaurants})`
+          message: `ÐŸÑ€ÐµÐ²Ñ‹ÑˆÐµÐ½ Ð»Ð¸Ð¼Ð¸Ñ‚ Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½Ð¾Ð² Ð´Ð»Ñ Ñ‚ÐµÐºÑƒÑ‰ÐµÐ¹ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ¸ (${maxRestaurants})`
         });
       }
     }
@@ -123,9 +123,9 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
     restaurant.categories.forEach(cat => {
       cat.dishes.forEach(dish => {
         if (dish.modifiers && dish.modifiers.length > 0) {
-          console.log(`🔍 BEFORE MAP - Dish "${dish.name}":`, dish.modifiers.length, 'modifiers');
+          console.log(`ðŸ” BEFORE MAP - Dish "${dish.name}":`, dish.modifiers.length, 'modifiers');
           dish.modifiers.forEach(mod => {
-            console.log(`  └─ Modifier "${mod.name}": ${mod.options?.length || 0} options`);
+            console.log(`  â””â”€ Modifier "${mod.name}": ${mod.options?.length || 0} options`);
           });
         }
       });
@@ -150,7 +150,7 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
               description: translation?.description || dish.description
             };
             if (dish.modifiers && dish.modifiers.length > 0) {
-              console.log(`🔍 AFTER MAP - Dish "${mappedDish.name}":`, mappedDish.modifiers?.length || 0, 'modifiers');
+              console.log(`ðŸ” AFTER MAP - Dish "${mappedDish.name}":`, mappedDish.modifiers?.length || 0, 'modifiers');
             }
             return mappedDish;
           })
@@ -158,21 +158,21 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
       })
     };
 
-    // Раскладываем socialLinks для консистентности с админ-панелью
+    // Ð Ð°ÑÐºÐ»Ð°Ð´Ñ‹Ð²Ð°ÐµÐ¼ socialLinks Ð´Ð»Ñ ÐºÐ¾Ð½ÑÐ¸ÑÑ‚ÐµÐ½Ñ‚Ð½Ð¾ÑÑ‚Ð¸ Ñ Ð°Ð´Ð¼Ð¸Ð½-Ð¿Ð°Ð½ÐµÐ»ÑŒÑŽ
     const socialLinks = restaurant.socialLinks || {};
     restaurantWithImageUrl.instagram = socialLinks.instagram || '';
     restaurantWithImageUrl.facebook = socialLinks.facebook || '';
     restaurantWithImageUrl.whatsapp = socialLinks.whatsapp || '';
     restaurantWithImageUrl.telegram = socialLinks.telegram || '';
 
-    // Трекинг просмотра меню
+    // Ð¢Ñ€ÐµÐºÐ¸Ð½Ð³ Ð¿Ñ€Ð¾ÑÐ¼Ð¾Ñ‚Ñ€Ð° Ð¼ÐµÐ½ÑŽ
     const ipAddress = req.headers['x-forwarded-for']?.split(',')[0] ||
       req.connection?.remoteAddress ||
       req.socket?.remoteAddress ||
       req.ip;
     const userAgent = req.headers['user-agent'];
 
-    // Асинхронно записываем просмотр (не блокируем ответ)
+    // ÐÑÐ¸Ð½Ñ…Ñ€Ð¾Ð½Ð½Ð¾ Ð·Ð°Ð¿Ð¸ÑÑ‹Ð²Ð°ÐµÐ¼ Ð¿Ñ€Ð¾ÑÐ¼Ð¾Ñ‚Ñ€ (Ð½Ðµ Ð±Ð»Ð¾ÐºÐ¸Ñ€ÑƒÐµÐ¼ Ð¾Ñ‚Ð²ÐµÑ‚)
     prisma.menuView.create({
       data: {
         restaurantId: restaurant.id,
@@ -320,14 +320,14 @@ export const uploadBanner = async (req, res, next) => {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    console.log('🖼️ Uploading banner:', { filename: req.file.filename, path: req.file.path });
+    console.log('ðŸ–¼ï¸ Uploading banner:', { filename: req.file.filename, path: req.file.path });
 
     // Get image URL (Cloudinary returns full URL, local storage returns filename)
     const bannerUrl = req.file.path && req.file.path.startsWith('http')
       ? req.file.path
       : `/uploads/${req.file.filename}`;
 
-    console.log('🖼️ Banner URL:', bannerUrl);
+    console.log('ðŸ–¼ï¸ Banner URL:', bannerUrl);
 
     // Add banner to restaurant
     const restaurant = await prisma.restaurant.findUnique({
@@ -436,21 +436,21 @@ export const uploadLogo = async (req, res, next) => {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    console.log('🏢 Uploading logo:', { filename: req.file.filename, path: req.file.path });
+    console.log('ðŸ¢ Uploading logo:', { filename: req.file.filename, path: req.file.path });
 
     // Get image URL (Cloudinary returns full URL, local storage returns filename)
     const logoUrl = req.file.path && req.file.path.startsWith('http')
       ? req.file.path
       : `/uploads/${req.file.filename}`;
 
-    console.log('🏢 Logo URL:', logoUrl);
+    console.log('ðŸ¢ Logo URL:', logoUrl);
 
     const updatedRestaurant = await prisma.restaurant.update({
       where: { id },
       data: { logo: logoUrl }
     });
 
-    console.log('✅ Logo updated successfully');
+    console.log('âœ… Logo updated successfully');
 
     // Parse banners for response (SQLite compatibility)
     if (updatedRestaurant.banners && typeof updatedRestaurant.banners === 'string') {
@@ -546,7 +546,7 @@ export const createRestaurant = async (req, res, next) => {
       return res.status(400).json({ error: 'Subdomain can only contain lowercase letters, numbers, and hyphens' });
     }
 
-    // Получаем все рестораны пользователя вместе с их подписками
+    // ÐŸÐ¾Ð»ÑƒÑ‡Ð°ÐµÐ¼ Ð²ÑÐµ Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½Ñ‹ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»Ñ Ð²Ð¼ÐµÑÑ‚Ðµ Ñ Ð¸Ñ… Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ°Ð¼Ð¸
     const userRestaurants = await prisma.restaurant.findMany({
       where: { ownerId: req.user.id },
       include: {
@@ -567,7 +567,7 @@ export const createRestaurant = async (req, res, next) => {
       }
     });
 
-    // Подсчитываем рестораны с активными подписками
+    // ÐŸÐ¾Ð´ÑÑ‡Ð¸Ñ‚Ñ‹Ð²Ð°ÐµÐ¼ Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½Ñ‹ Ñ Ð°ÐºÑ‚Ð¸Ð²Ð½Ñ‹Ð¼Ð¸ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ°Ð¼Ð¸
     const restaurantsWithActiveSubscriptions = userRestaurants.filter(
       restaurant => restaurant.subscriptions.some(sub =>
         (sub.status === 'TRIAL' && new Date(sub.trialEndsAt) > new Date()) ||
@@ -578,10 +578,10 @@ export const createRestaurant = async (req, res, next) => {
     const existingCount = userRestaurants.length;
     const activeCount = restaurantsWithActiveSubscriptions.length;
 
-    // Если это первый ресторан - разрешаем (TRIAL)
+    // Ð•ÑÐ»Ð¸ ÑÑ‚Ð¾ Ð¿ÐµÑ€Ð²Ñ‹Ð¹ Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½ - Ñ€Ð°Ð·Ñ€ÐµÑˆÐ°ÐµÐ¼ (TRIAL)
     const isFirstRestaurant = existingCount === 0;
 
-    // Проверяем все подписки пользователя
+    // ÐŸÑ€Ð¾Ð²ÐµÑ€ÑÐµÐ¼ Ð²ÑÐµ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ¸ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»Ñ
     const userSubscriptions = await prisma.subscription.findMany({
       where: {
         userId: req.user.id,
@@ -598,7 +598,7 @@ export const createRestaurant = async (req, res, next) => {
       }
     });
 
-    // Получаем активную подписку пользователя для проверки лимита (проверяем СНАЧАЛА)
+    // ÐŸÐ¾Ð»ÑƒÑ‡Ð°ÐµÐ¼ Ð°ÐºÑ‚Ð¸Ð²Ð½ÑƒÑŽ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÑƒ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»Ñ Ð´Ð»Ñ Ð¿Ñ€Ð¾Ð²ÐµÑ€ÐºÐ¸ Ð»Ð¸Ð¼Ð¸Ñ‚Ð° (Ð¿Ñ€Ð¾Ð²ÐµÑ€ÑÐµÐ¼ Ð¡ÐÐÐ§ÐÐ›Ð)
     const activeUserSubscription = await prisma.subscription.findFirst({
       where: {
         userId: req.user.id,
@@ -610,25 +610,25 @@ export const createRestaurant = async (req, res, next) => {
       }
     });
 
-    // Если это не первый ресторан, проверяем подписки
+    // Ð•ÑÐ»Ð¸ ÑÑ‚Ð¾ Ð½Ðµ Ð¿ÐµÑ€Ð²Ñ‹Ð¹ Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½, Ð¿Ñ€Ð¾Ð²ÐµÑ€ÑÐµÐ¼ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ¸
     if (!isFirstRestaurant) {
       const newRestaurantCount = existingCount + 1;
       const monthlyPrice = await calculateSubscriptionPrice(newRestaurantCount);
 
-      // Если у пользователя есть активная подписка с тарифным планом - используем его лимит
+      // Ð•ÑÐ»Ð¸ Ñƒ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»Ñ ÐµÑÑ‚ÑŒ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð°Ñ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ° Ñ Ñ‚Ð°Ñ€Ð¸Ñ„Ð½Ñ‹Ð¼ Ð¿Ð»Ð°Ð½Ð¾Ð¼ - Ð¸ÑÐ¿Ð¾Ð»ÑŒÐ·ÑƒÐµÐ¼ ÐµÐ³Ð¾ Ð»Ð¸Ð¼Ð¸Ñ‚
       if (activeUserSubscription?.pricingTier) {
-        // Проверяем лимит из тарифа - эта проверка ниже (строка ~575)
-        // Пропускаем старую проверку activeCount
+        // ÐŸÑ€Ð¾Ð²ÐµÑ€ÑÐµÐ¼ Ð»Ð¸Ð¼Ð¸Ñ‚ Ð¸Ð· Ñ‚Ð°Ñ€Ð¸Ñ„Ð° - ÑÑ‚Ð° Ð¿Ñ€Ð¾Ð²ÐµÑ€ÐºÐ° Ð½Ð¸Ð¶Ðµ (ÑÑ‚Ñ€Ð¾ÐºÐ° ~575)
+        // ÐŸÑ€Ð¾Ð¿ÑƒÑÐºÐ°ÐµÐ¼ ÑÑ‚Ð°Ñ€ÑƒÑŽ Ð¿Ñ€Ð¾Ð²ÐµÑ€ÐºÑƒ activeCount
       } else {
-        // Старая логика для пользователей без тарифного плана
-        // Если нет активной подписки или уже есть ресторан в статусе PENDING
+        // Ð¡Ñ‚Ð°Ñ€Ð°Ñ Ð»Ð¾Ð³Ð¸ÐºÐ° Ð´Ð»Ñ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÐµÐ¹ Ð±ÐµÐ· Ñ‚Ð°Ñ€Ð¸Ñ„Ð½Ð¾Ð³Ð¾ Ð¿Ð»Ð°Ð½Ð°
+        // Ð•ÑÐ»Ð¸ Ð½ÐµÑ‚ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾Ð¹ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ¸ Ð¸Ð»Ð¸ ÑƒÐ¶Ðµ ÐµÑÑ‚ÑŒ Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½ Ð² ÑÑ‚Ð°Ñ‚ÑƒÑÐµ PENDING
         if (activeCount === 0 || existingCount > activeCount) {
           const trialSubscription = userSubscriptions.find(sub => sub.status === 'TRIAL');
           const trialDaysRemaining = trialSubscription ? getTrialDaysRemaining(trialSubscription) : 0;
 
           return res.status(403).json({
             error: 'Active subscription required',
-            message: 'Для создания дополнительного ресторана требуется активная подписка',
+            message: 'Ð”Ð»Ñ ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ñ Ð´Ð¾Ð¿Ð¾Ð»Ð½Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ð¾Ð³Ð¾ Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½Ð° Ñ‚Ñ€ÐµÐ±ÑƒÐµÑ‚ÑÑ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð°Ñ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ°',
             requiresPayment: true,
             pricing: {
               monthlyPrice,
@@ -649,21 +649,21 @@ export const createRestaurant = async (req, res, next) => {
     const newRestaurantCount = existingCount + 1;
     const monthlyPrice = await calculateSubscriptionPrice(newRestaurantCount);
 
-    // Используем уже полученную подписку из предыдущей проверки
-    // (activeUserSubscription уже загружена выше)
+    // Ð˜ÑÐ¿Ð¾Ð»ÑŒÐ·ÑƒÐµÐ¼ ÑƒÐ¶Ðµ Ð¿Ð¾Ð»ÑƒÑ‡ÐµÐ½Ð½ÑƒÑŽ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÑƒ Ð¸Ð· Ð¿Ñ€ÐµÐ´Ñ‹Ð´ÑƒÑ‰ÐµÐ¹ Ð¿Ñ€Ð¾Ð²ÐµÑ€ÐºÐ¸
+    // (activeUserSubscription ÑƒÐ¶Ðµ Ð·Ð°Ð³Ñ€ÑƒÐ¶ÐµÐ½Ð° Ð²Ñ‹ÑˆÐµ)
 
-    // Определяем максимальное количество ресторанов из тарифа подписки
+    // ÐžÐ¿Ñ€ÐµÐ´ÐµÐ»ÑÐµÐ¼ Ð¼Ð°ÐºÑÐ¸Ð¼Ð°Ð»ÑŒÐ½Ð¾Ðµ ÐºÐ¾Ð»Ð¸Ñ‡ÐµÑÑ‚Ð²Ð¾ Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½Ð¾Ð² Ð¸Ð· Ñ‚Ð°Ñ€Ð¸Ñ„Ð° Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ¸
     const maxRestaurants = activeUserSubscription?.pricingTier?.maxRestaurants || 1;
 
-    // Дополнительная проверка перед созданием
-    // Если у пользователя больше активных ресторанов чем позволяет подписка
+    // Ð”Ð¾Ð¿Ð¾Ð»Ð½Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ð°Ñ Ð¿Ñ€Ð¾Ð²ÐµÑ€ÐºÐ° Ð¿ÐµÑ€ÐµÐ´ ÑÐ¾Ð·Ð´Ð°Ð½Ð¸ÐµÐ¼
+    // Ð•ÑÐ»Ð¸ Ñƒ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»Ñ Ð±Ð¾Ð»ÑŒÑˆÐµ Ð°ÐºÑ‚Ð¸Ð²Ð½Ñ‹Ñ… Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½Ð¾Ð² Ñ‡ÐµÐ¼ Ð¿Ð¾Ð·Ð²Ð¾Ð»ÑÐµÑ‚ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ°
     if (existingCount >= maxRestaurants) {
       const trialSubscription = userSubscriptions.find(sub => sub.status === 'TRIAL');
       const trialDaysRemaining = trialSubscription ? getTrialDaysRemaining(trialSubscription) : 0;
 
       return res.status(403).json({
         error: 'Subscription limit reached',
-        message: 'Достигнут лимит ресторанов для текущей подписки',
+        message: 'Ð”Ð¾ÑÑ‚Ð¸Ð³Ð½ÑƒÑ‚ Ð»Ð¸Ð¼Ð¸Ñ‚ Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½Ð¾Ð² Ð´Ð»Ñ Ñ‚ÐµÐºÑƒÑ‰ÐµÐ¹ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ¸',
         requiresPayment: true,
         pricing: {
           monthlyPrice: await calculateSubscriptionPrice(existingCount + 1),
@@ -678,7 +678,7 @@ export const createRestaurant = async (req, res, next) => {
       });
     }
 
-    // Создаем ресторан только если все проверки пройдены
+    // Ð¡Ð¾Ð·Ð´Ð°ÐµÐ¼ Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ ÐµÑÐ»Ð¸ Ð²ÑÐµ Ð¿Ñ€Ð¾Ð²ÐµÑ€ÐºÐ¸ Ð¿Ñ€Ð¾Ð¹Ð´ÐµÐ½Ñ‹
     const restaurant = await prisma.restaurant.create({
       data: {
         name,
@@ -762,7 +762,7 @@ export const deleteRestaurant = async (req, res, next) => {
       if (userRestaurants.length === 1 || !hasOtherPaidRestaurants) {
         return res.status(403).json({
           error: 'Cannot delete trial restaurant',
-          message: 'Невозможно удалить пробный ресторан. Сначала создайте новый ресторан с платной подпиской.'
+          message: 'ÐÐµÐ²Ð¾Ð·Ð¼Ð¾Ð¶Ð½Ð¾ ÑƒÐ´Ð°Ð»Ð¸Ñ‚ÑŒ Ð¿Ñ€Ð¾Ð±Ð½Ñ‹Ð¹ Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½. Ð¡Ð½Ð°Ñ‡Ð°Ð»Ð° ÑÐ¾Ð·Ð´Ð°Ð¹Ñ‚Ðµ Ð½Ð¾Ð²Ñ‹Ð¹ Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½ Ñ Ð¿Ð»Ð°Ñ‚Ð½Ð¾Ð¹ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ¾Ð¹.'
         });
       }
 
@@ -818,18 +818,18 @@ export const copyMenu = async (req, res, next) => {
     }
 
     // Log modifiers for debugging
-    console.log('📋 Copying menu from restaurant:', sourceRestaurantId);
+    console.log('ðŸ“‹ Copying menu from restaurant:', sourceRestaurantId);
     sourceRestaurant.categories.forEach(cat => {
       cat.dishes.forEach(dish => {
         if (dish.modifiers && dish.modifiers.length > 0) {
-          console.log(`📦 Dish "${dish.name}" has ${dish.modifiers.length} modifiers`);
+          console.log(`ðŸ“¦ Dish "${dish.name}" has ${dish.modifiers.length} modifiers`);
           dish.modifiers.forEach(mod => {
             const optionsCount = mod.options?.length || 0;
             const hasDirectPrice = mod.price !== null && mod.price !== undefined;
-            console.log(`  ├─ Modifier "${mod.name}": ${optionsCount} options${hasDirectPrice ? ` (legacy price: ${mod.price})` : ''}`);
+            console.log(`  â”œâ”€ Modifier "${mod.name}": ${optionsCount} options${hasDirectPrice ? ` (legacy price: ${mod.price})` : ''}`);
             if (mod.options && mod.options.length > 0) {
               mod.options.forEach(opt => {
-                console.log(`  │  ├─ Option "${opt.name}": ${opt.price} price`);
+                console.log(`  â”‚  â”œâ”€ Option "${opt.name}": ${opt.price} price`);
               });
             }
           });
@@ -946,14 +946,14 @@ export const getRestaurantCategories = async (req, res, next) => {
   }
 };
 /**
- * Получить список клиентов ресторана
+ * ÐŸÐ¾Ð»ÑƒÑ‡Ð¸Ñ‚ÑŒ ÑÐ¿Ð¸ÑÐ¾Ðº ÐºÐ»Ð¸ÐµÐ½Ñ‚Ð¾Ð² Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½Ð°
  */
 export const getRestaurantCustomers = async (req, res, next) => {
   try {
     const { restaurantId } = req.params;
     const userId = req.user.id;
 
-    // Проверяем, что пользователь - владелец ресторана или его сотрудник
+    // ÐŸÑ€Ð¾Ð²ÐµÑ€ÑÐµÐ¼, Ñ‡Ñ‚Ð¾ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÑŒ - Ð²Ð»Ð°Ð´ÐµÐ»ÐµÑ† Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½Ð° Ð¸Ð»Ð¸ ÐµÐ³Ð¾ ÑÐ¾Ñ‚Ñ€ÑƒÐ´Ð½Ð¸Ðº
     const restaurant = await prisma.restaurant.findFirst({
       where: {
         id: restaurantId,
@@ -972,7 +972,7 @@ export const getRestaurantCustomers = async (req, res, next) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    // Получаем клиентов с их статистикой заказов
+    // ÐŸÐ¾Ð»ÑƒÑ‡Ð°ÐµÐ¼ ÐºÐ»Ð¸ÐµÐ½Ñ‚Ð¾Ð² Ñ Ð¸Ñ… ÑÑ‚Ð°Ñ‚Ð¸ÑÑ‚Ð¸ÐºÐ¾Ð¹ Ð·Ð°ÐºÐ°Ð·Ð¾Ð²
     const customers = await prisma.customer.findMany({
       where: { restaurantId },
       include: {
@@ -1006,7 +1006,7 @@ export const getRestaurantCustomers = async (req, res, next) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    // Добавляем статистику для каждого клиента
+    // Ð”Ð¾Ð±Ð°Ð²Ð»ÑÐµÐ¼ ÑÑ‚Ð°Ñ‚Ð¸ÑÑ‚Ð¸ÐºÑƒ Ð´Ð»Ñ ÐºÐ°Ð¶Ð´Ð¾Ð³Ð¾ ÐºÐ»Ð¸ÐµÐ½Ñ‚Ð°
     const customersWithStats = customers.map(customer => {
       const totalOrders = customer.orders.length;
       const totalSpent = customer.orders.reduce((sum, order) => sum + parseFloat(order.totalAmount || 0), 0);
@@ -1032,5 +1032,3 @@ export const getRestaurantCustomers = async (req, res, next) => {
     next(error);
   }
 };
- 
- 
