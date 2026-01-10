@@ -55,6 +55,10 @@ model Restaurant {
   isTemporarilyClosed Boolean @default(false)
   closureReason     String?
   
+  // Telegram notifications
+  telegramGroupId   String?   // ID группы Telegram для уведомлений
+  telegramBotToken  String?   // Опциональный кастомный бот токен
+  
   ownerId           String
   owner             User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   

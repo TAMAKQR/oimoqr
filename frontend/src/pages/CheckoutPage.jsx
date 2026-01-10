@@ -39,12 +39,18 @@ const CheckoutPage = () => {
         // Проверяем наличие корзины и ресторана ТОЛЬКО при первой загрузке
         if (initialLoad && (!restaurant || !cartItems || cartItems.length === 0)) {
             console.log('No restaurant or items, going back');
-            toast.error('Корзина пуста');
-            navigate(-1);
+            window.history.back();
             return;
         }
 
         setInitialLoad(false);
+
+        // Если корзина опустела - используем браузерную навигацию (без индикатора загрузки)
+        if (!initialLoad && cartItems && cartItems.length === 0) {
+            console.log('Cart became empty, going back');
+            window.history.back();
+            return;
+        }
 
         // Если пользователь авторизован - загружаем адреса
         if (customer && customer.id) {

@@ -295,30 +295,32 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
             </div>
           )}
 
-          <div className="p-4 sm:p-6">
-            <h3 className="text-base sm:text-lg font-semibold mb-2 break-words">{dish.name}</h3>
-            {dish.description && (
-              <p className="text-gray-600 text-xs sm:text-sm mb-3 line-clamp-2 break-words">
-                {dish.description}
-              </p>
-            )}
+          <div className="p-4 sm:p-6 flex flex-col h-full">
+            <div className="flex-1">
+              <h3 className="text-base sm:text-lg font-semibold mb-2 break-words">{dish.name}</h3>
+              {dish.description && (
+                <p className="text-gray-600 text-xs sm:text-sm mb-3 line-clamp-2 break-words">
+                  {dish.description}
+                </p>
+              )}
 
-            {/* Аллергены */}
-            {allergens.length > 0 && (
-              <div className="flex flex-wrap gap-1 mb-3">
-                {allergens.map((allergen) => (
-                  <span
-                    key={allergen}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-800 text-xs rounded-full"
-                    title={allergenNames[allergen]}
-                  >
-                    {allergenIcons[allergen]} {allergenNames[allergen]}
-                  </span>
-                ))}
-              </div>
-            )}
+              {/* Аллергены */}
+              {allergens.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-3">
+                  {allergens.map((allergen) => (
+                    <span
+                      key={allergen}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-800 text-xs rounded-full"
+                      title={allergenNames[allergen]}
+                    >
+                      {allergenIcons[allergen]} {allergenNames[allergen]}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
 
-            <div className="flex flex-row justify-between items-center gap-2">
+            <div className="flex flex-row justify-between items-center gap-2 mt-auto">
               <div className="flex items-center gap-2 flex-wrap">
                 {dish.discount ? (
                   <>
@@ -434,30 +436,32 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
         )}
 
         {/* Content */}
-        <div className="p-2">
-          <h3 className="font-semibold text-sm line-clamp-2 mb-1">{dish.name}</h3>
+        <div className="p-2 flex flex-col h-full">
+          <div className="flex-1">
+            <h3 className="font-semibold text-sm line-clamp-2 mb-1">{dish.name}</h3>
 
-          {dish.description && (
-            <p className="text-xs text-gray-600 line-clamp-2 mb-2">{dish.description}</p>
-          )}
+            {dish.description && (
+              <p className="text-xs text-gray-600 line-clamp-2 mb-2">{dish.description}</p>
+            )}
 
-          {/* Allergens */}
-          {allergens.length > 0 && (
-            <div className="flex flex-wrap gap-1 mb-2">
-              {allergens.map((allergen) => (
-                <span
-                  key={allergen}
-                  className="text-xs"
-                  title={allergenNames[allergen]}
-                >
-                  {allergenIcons[allergen]}
-                </span>
-              ))}
-            </div>
-          )}
+            {/* Allergens */}
+            {allergens.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-2">
+                {allergens.map((allergen) => (
+                  <span
+                    key={allergen}
+                    className="text-xs"
+                    title={allergenNames[allergen]}
+                  >
+                    {allergenIcons[allergen]}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Price and Add Button */}
-          <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center justify-between mt-auto">
             <div className="flex flex-col">
               {dish.discount && isAvailable ? (
                 <>

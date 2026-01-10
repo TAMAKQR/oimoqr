@@ -211,7 +211,8 @@ export const updateRestaurant = async (req, res, next) => {
       closureReason,
       latitude,
       longitude,
-      deliveryRadius
+      deliveryRadius,
+      telegramGroupId
     } = req.body;
 
     const restaurant = await prisma.restaurant.update({
@@ -232,6 +233,7 @@ export const updateRestaurant = async (req, res, next) => {
         workingHours: workingHours ? JSON.stringify(workingHours) : null,
         isTemporarilyClosed: isTemporarilyClosed || false,
         closureReason: closureReason || null,
+        telegramGroupId: telegramGroupId || null,
       },
       include: {
         subscriptions: true,
@@ -1030,3 +1032,5 @@ export const getRestaurantCustomers = async (req, res, next) => {
     next(error);
   }
 };
+ 
+ 

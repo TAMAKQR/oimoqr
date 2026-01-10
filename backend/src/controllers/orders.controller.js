@@ -1,4 +1,5 @@
 import { prisma } from '../config/prisma.js';
+import telegramService from '../services/telegram.service.js';
 
 const ALLOWED_STATUSES = [
   'new',
@@ -77,7 +78,11 @@ export const createOrder = async (req, res, next) => {
         }
       },
       include: {
-        items: true, // Включаем созданные товары в ответ
+        items: {
+          include: {
+            dish: true // Включаем информацию о блюде для уведомлений
+          }
+        },
         restaurant: {
           include: {
             socialLinks: true // Явно включаем социальные сети ресторана
@@ -85,6 +90,13 @@ export const createOrder = async (req, res, next) => {
         }
       }
     });
+
+    // 🔔 Отправляем уведомление в Telegram (асинхронно, не блокируем ответ)
+    if (order.restaurant.telegramGroupId) {
+      telegramService.sendNewOrderNotification(order, order.restaurant).catch(err => {
+        console.error('Failed to send Telegram notification:', err);
+      });
+    }
 
     res.status(201).json({
       message: 'Order created successfully',
