@@ -304,11 +304,15 @@ const RestaurantSettingsPage = () => {
 
     setTestingTelegram(true);
     try {
+      // Get token from auth-storage
+      const authStorage = localStorage.getItem('auth-storage');
+      const token = authStorage ? JSON.parse(authStorage).state.token : null;
+
       const response = await fetch(`${API_URL}/restaurants/${selectedRestaurantId}/telegram/test`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ chatId: telegramGroupId })
       });
