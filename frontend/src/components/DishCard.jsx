@@ -377,7 +377,7 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
     <>
       <div
         onClick={handleCardClick}
-        className={`overflow-hidden rounded-lg border border-gray-200 bg-white transition-all duration-200 ${isAvailable
+        className={`overflow-hidden rounded-lg border border-gray-200 bg-white transition-all duration-200 flex flex-col ${isAvailable
           ? 'cursor-pointer hover:shadow-lg active:scale-98'
           : 'opacity-60 cursor-not-allowed'
           }`}
@@ -436,7 +436,7 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
         )}
 
         {/* Content */}
-        <div className="p-2 flex flex-col h-full">
+        <div className="p-2 flex flex-col flex-1">
           <div className="flex-1">
             <h3 className="font-semibold text-sm line-clamp-2 mb-1">{dish.name}</h3>
 
