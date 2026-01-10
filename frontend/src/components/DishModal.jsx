@@ -95,7 +95,7 @@ const DishModal = ({
       className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4"
       onClick={handleBackdropClick}
     >
-      <div className="bg-white rounded-t-2xl sm:rounded-lg w-full max-w-[480px] max-h-[90vh] overflow-y-auto shadow-2xl mx-0 animate-slide-up">
+      <div className="bg-white rounded-t-2xl sm:rounded-lg w-full max-w-[480px] max-h-[90vh] overflow-y-auto shadow-2xl mx-0 animate-slide-up pb-20">
         {dish.image && (
           <div className="relative">
             <img

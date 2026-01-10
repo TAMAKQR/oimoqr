@@ -196,7 +196,7 @@ const CheckoutPage = () => {
     return (
         <div className="min-h-screen bg-gray-100 flex justify-center">
             {/* Mobile Container - максимум 480px */}
-            <div className="w-full max-w-[480px] min-h-screen bg-gray-50 shadow-2xl relative pb-20">
+            <div className={`w-full max-w-[480px] min-h-screen bg-gray-50 shadow-2xl relative ${customer && customer.id ? 'pb-32' : 'pb-24'}`}>
                 {/* Header */}
                 <div className="bg-white shadow-sm sticky top-0 z-10">
                     <div className="px-3 py-3 flex items-center gap-3">
@@ -479,7 +479,7 @@ const CheckoutPage = () => {
                     </div>
 
                     {/* Кнопки оформления */}
-                    <div className="fixed bottom-0 left-0 right-0 bg-white border-t z-50">
+                    <div className={`fixed left-0 right-0 bg-white border-t border-gray-200 ${customer && customer.id ? 'bottom-16 z-40' : 'bottom-0 z-50'}`}>
                         <div className="max-w-[480px] mx-auto p-3 space-y-2">
                             {/* Основная кнопка оформления */}
                             <button

@@ -40,6 +40,7 @@ const MenuPage = () => {
   const [showLanguageSwitcher, setShowLanguageSwitcher] = useState(true);
   const [isCustomerLoggedIn, setIsCustomerLoggedIn] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [isDishModalOpen, setIsDishModalOpen] = useState(false);
   const categoryRefs = useRef({});
   const categoryButtonRefs = useRef({});
   const categoryMenuRef = useRef(null);
@@ -388,7 +389,7 @@ const MenuPage = () => {
         </div>
 
         {/* All Categories with Dishes */}
-        <div className="px-4 py-6 pb-24">
+        <div className="px-4 py-6 pb-20 sm:pb-6">
           {restaurant.categories.map((category) => (
             <div
               key={category.id}
@@ -423,6 +424,7 @@ const MenuPage = () => {
                           setShowLoginModal(true);
                         }
                       }}
+                      onModalStateChange={(isOpen) => setIsDishModalOpen(isOpen)}
                     />
                   ))}
                 </div>
@@ -435,7 +437,7 @@ const MenuPage = () => {
         <Cart restaurant={restaurant} />
 
         {/* Bottom navigation для авторизованных клиентов */}
-        {isCustomerLoggedIn && <CustomerBottomNav />}
+        {isCustomerLoggedIn && !isDishModalOpen && <CustomerBottomNav />}
       </div>
       {/* Закрытие mobile wrapper */}
     </div>
