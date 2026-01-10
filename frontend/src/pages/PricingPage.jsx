@@ -139,7 +139,7 @@ const PricingPage = () => {
 
                                     {/* Price */}
                                     <div className="mb-6">
-                                        <span className="text-4xl font-bold">{tier.price} ₽</span>
+                                        <span className="text-4xl font-bold">${tier.price}</span>
                                         <span className="text-gray-600 ml-2">/месяц</span>
                                     </div>
 
