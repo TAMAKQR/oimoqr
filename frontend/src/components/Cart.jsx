@@ -62,7 +62,7 @@ const Cart = ({ restaurant }) => {
   }
 
   return (
-    <div className="fixed inset-x-0 bottom-[56px] sm:bottom-[64px] z-50 flex justify-center px-0 pb-0">
+    <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center px-0 pb-0">
       <div className="w-full max-w-[480px] rounded-none sm:rounded-2xl bg-white border-t border-gray-200 px-4 py-3 sm:px-6 sm:py-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex flex-col">
