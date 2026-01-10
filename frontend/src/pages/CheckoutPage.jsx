@@ -588,6 +588,9 @@ const CheckoutPage = () => {
                     </div>
                 </div>
             )}
+
+            {/* Bottom Navigation для авторизованных */}
+            {customer && customer.id && <CustomerBottomNav />}
         </div>
     );
 };

@@ -6,7 +6,7 @@ import BannerSlider from '../components/BannerSlider';
 import DishCard from '../components/DishCard';
 import Cart from '../components/Cart';
 import WorkingHoursSection from '../components/WorkingHoursSection';
-import LoadingSpinner from '../components/LoadingSpinner';
+import MenuSkeleton from '../components/MenuSkeleton';
 import CustomerLoginModal from '../components/CustomerLoginModal';
 import CustomerBottomNav from '../components/CustomerBottomNav';
 
@@ -193,7 +193,7 @@ const MenuPage = () => {
   };
 
   if (loading) {
-    return <LoadingSpinner message="Загрузка меню..." />;
+    return <MenuSkeleton />;
   }
 
   if (error) {
