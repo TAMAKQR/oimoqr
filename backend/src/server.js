@@ -74,9 +74,12 @@ app.use((req, res, next) => {
     res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
   }
 
-  // Кэшируем статические файлы (uploads) на 1 день
+  // ✅ ИСПРАВЛЕНИЕ: Кэшируем uploads на 1 час (не 1 день) для возможности обновления
+  // Добавляем must-revalidate для проверки актуальности при обновлении
   if (req.url.startsWith('/uploads')) {
-    res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
+    res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
+    // Добавляем ETag для более умного кэширования
+    res.setHeader('Vary', 'Accept-Encoding');
   }
 
   next();

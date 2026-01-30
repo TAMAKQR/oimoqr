@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import DishModal from './DishModal';
 import { useCartStore } from '../store/cartStore';
 import customerService from '../services/customerService';
+import { cacheBustImage } from '../utils/imageCache';
 
 const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteToggle, onModalStateChange }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -175,7 +176,7 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
             {dish.image && (
               <div className="relative">
                 <img
-                  src={dish.image}
+                  src={cacheBustImage(dish.image)}
                   alt={dish.name}
                   loading="lazy"
                   className={`w-20 h-20 sm:w-28 sm:h-28 object-cover rounded-lg flex-shrink-0 ${!isAvailable ? 'grayscale' : ''
@@ -277,7 +278,7 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
           {dish.image && (
             <div className="relative">
               <img
-                src={dish.image}
+                src={cacheBustImage(dish.image)}
                 alt={dish.name}
                 loading="lazy"
                 className={`w-full h-40 sm:h-48 object-cover ${!isAvailable ? 'grayscale' : ''
@@ -395,7 +396,7 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
         {dish.image && (
           <div className="relative aspect-square">
             <img
-              src={dish.image}
+              src={cacheBustImage(dish.image)}
               alt={dish.name}
               loading="lazy"
               className="w-full h-full object-cover"

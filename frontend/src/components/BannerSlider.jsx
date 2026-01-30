@@ -2,6 +2,7 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, Pagination } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/pagination';
+import { cacheBustImage } from '../utils/imageCache';
 
 const BannerSlider = ({ banners }) => {
   // Parse banners if it's a JSON string (SQLite compatibility)
@@ -38,7 +39,7 @@ const BannerSlider = ({ banners }) => {
       {parsedBanners.map((banner, index) => (
         <SwiperSlide key={index}>
           <img
-            src={banner}
+            src={cacheBustImage(banner)}
             alt={`Banner ${index + 1}`}
             loading={index === 0 ? "eager" : "lazy"}
             className="w-full h-full object-cover"
