@@ -754,14 +754,18 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
   const [imageFile, setImageFile] = useState(null);
   const [currentImageUrl, setCurrentImageUrl] = useState(dish?.imageUrl || null);
   const [modifiers, setModifiers] = useState(dish?.modifiers || []);
-  const [newModifierName, setNewModifierName] = useState('');
-  const [newModifierPrice, setNewModifierPrice] = useState('');
   const [allergens, setAllergens] = useState(dish?.allergens ? JSON.parse(dish.allergens) : []);
   const [discount, setDiscount] = useState(dish?.discount || '');
   const [badge, setBadge] = useState(dish?.badge || '');
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  // Состояние для модификаторов
+  const [editingModifier, setEditingModifier] = useState(null);
+  const [newModifierName, setNewModifierName] = useState('');
+  const [newModifierType, setNewModifierType] = useState('single');
+  const [newModifierRequired, setNewModifierRequired] = useState(false);
 
   const availableAllergens = [
     { id: 'gluten', name: 'Глютен', icon: '🌾' },
@@ -800,51 +804,186 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
     }
   };
 
-  const handleAddModifier = () => {
+  const handleAddModifier = async () => {
     if (!newModifierName.trim()) {
       toast.error('Введите название модификатора');
       return;
     }
 
-    const modifierPrice = parseFloat(newModifierPrice) || 0;
-    if (modifierPrice < 0) {
-      toast.error('Цена модификатора не может быть отрицательной');
-      return;
-    }
-
-    const newModifier = {
-      id: `temp-${Date.now()}`, // Временный ID для новых модификаторов
+    const modifierData = {
       name: newModifierName,
-      price: modifierPrice,
-      type: 'default', // Default type
-      isNew: true
+      type: newModifierType,
+      isRequired: newModifierRequired,
+      options: [] // Пустой массив опций - будут добавляться отдельно
     };
 
-    setModifiers([...modifiers, newModifier]);
+    if (dish?.id) {
+      // Если блюдо уже сохранено - создаем модификатор сразу
+      try {
+        const created = await menuService.createModifier(dish.id, modifierData);
+        setModifiers([...modifiers, created]);
+        toast.success('Модификатор создан');
+      } catch (err) {
+        toast.error('Ошибка при создании модификатора');
+        console.error(err);
+      }
+    } else {
+      // Если блюдо еще не сохранено - добавляем временный модификатор
+      const newModifier = {
+        ...modifierData,
+        id: `temp-${Date.now()}`,
+        isNew: true
+      };
+      setModifiers([...modifiers, newModifier]);
+    }
+
     setNewModifierName('');
-    setNewModifierPrice('');
+    setNewModifierType('single');
+    setNewModifierRequired(false);
   };
 
   const handleDeleteModifier = async (modifier) => {
-    if (modifier.isNew) {
+    const confirmed = await confirmDialog('Удалить модификатор и все его опции?', {
+      confirmText: 'Удалить',
+      cancelText: 'Отмена',
+      icon: '🗑️'
+    });
+    if (!confirmed) return;
+
+    if (modifier.isNew || !dish?.id) {
       // Просто удаляем из локального состояния
       setModifiers(modifiers.filter(m => m.id !== modifier.id));
     } else {
       // Удаляем из базы данных
-      const confirmed = await confirmDialog('Удалить модификатор?', {
-        confirmText: 'Удалить',
-        cancelText: 'Отмена',
-        icon: '🗑️'
-      });
-      if (!confirmed) return;
-
       try {
         await menuService.deleteModifier(modifier.id);
         setModifiers(modifiers.filter(m => m.id !== modifier.id));
+        toast.success('Модификатор удален');
       } catch (err) {
         toast.error('Ошибка при удалении модификатора');
         console.error(err);
       }
+    }
+  };
+
+  // Управление опциями модификатора
+  const handleAddOption = async (modifier) => {
+    const optionName = prompt('Название опции (например: Клубника)');
+    if (!optionName?.trim()) return;
+
+    const optionPriceStr = prompt('Дополнительная цена (0 если без доплаты)');
+    const optionPrice = parseFloat(optionPriceStr) || 0;
+
+    const optionData = {
+      name: optionName.trim(),
+      price: optionPrice
+    };
+
+    if (!modifier.isNew && dish?.id) {
+      // Создаем опцию сразу в базе
+      try {
+        const created = await menuService.createModifierOption(modifier.id, optionData);
+        setModifiers(modifiers.map(m =>
+          m.id === modifier.id
+            ? { ...m, options: [...(m.options || []), created] }
+            : m
+        ));
+        toast.success('Опция добавлена. Теперь можно загрузить фото 📷');
+      } catch (err) {
+        toast.error('Ошибка при добавлении опции');
+        console.error(err);
+      }
+    } else {
+      // Добавляем временную опцию
+      const newOption = {
+        ...optionData,
+        id: `temp-opt-${Date.now()}`,
+        isNew: true
+      };
+      setModifiers(modifiers.map(m =>
+        m.id === modifier.id
+          ? { ...m, options: [...(m.options || []), newOption] }
+          : m
+      ));
+      toast.info('💡 Сохраните блюдо, чтобы добавить фото к опциям');
+    }
+  };
+
+  const handleDeleteOption = async (modifier, option) => {
+    const confirmed = await confirmDialog('Удалить опцию?', {
+      confirmText: 'Удалить',
+      cancelText: 'Отмена',
+      icon: '🗑️'
+    });
+    if (!confirmed) return;
+
+    if (!option.isNew && dish?.id) {
+      try {
+        await menuService.deleteModifierOption(option.id);
+        toast.success('Опция удалена');
+      } catch (err) {
+        toast.error('Ошибка при удалении опции');
+        console.error(err);
+      }
+    }
+
+    setModifiers(modifiers.map(m =>
+      m.id === modifier.id
+        ? { ...m, options: (m.options || []).filter(o => o.id !== option.id) }
+        : m
+    ));
+  };
+
+  const handleUploadOptionImage = async (modifier, option, file) => {
+    if (!file || option.isNew) return;
+
+    try {
+      const result = await menuService.uploadModifierOptionImage(option.id, file, (progress) => {
+        console.log(`Upload progress: ${progress}%`);
+      });
+
+      // Обновляем URL изображения опции с cache-busting
+      setModifiers(modifiers.map(m =>
+        m.id === modifier.id
+          ? {
+            ...m,
+            options: (m.options || []).map(o =>
+              o.id === option.id ? { ...o, image: `${result.imageUrl}?t=${Date.now()}` } : o
+            )
+          }
+          : m
+      ));
+      toast.success('Фото загружено');
+    } catch (err) {
+      toast.error('Ошибка при загрузке фото');
+      console.error(err);
+    }
+  };
+
+  const handleDeleteOptionImage = async (modifier, option) => {
+    const confirmed = await confirmDialog('Удалить фото опции?', {
+      confirmText: 'Удалить',
+      cancelText: 'Отмена',
+      icon: '🖼️'
+    });
+    if (!confirmed) return;
+
+    try {
+      await menuService.deleteModifierOptionImage(option.id);
+      setModifiers(modifiers.map(m =>
+        m.id === modifier.id
+          ? {
+            ...m,
+            options: (m.options || []).map(o =>
+              o.id === option.id ? { ...o, image: null } : o
+            )
+          }
+          : m
+      ));
+      toast.success('Фото удалено');
+    } catch (err) {
+      toast.error('Ошибка при удалении фото');
+      console.error(err);
     }
   };
 
@@ -903,13 +1042,24 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
         }
       }
 
-      // Save new modifiers
+      // Save new modifiers with options
       const newModifiers = modifiers.filter(m => m.isNew);
       for (const modifier of newModifiers) {
-        await menuService.createModifier(savedDish.id, {
+        // Создаем модификатор
+        const createdModifier = await menuService.createModifier(savedDish.id, {
           name: modifier.name,
-          price: modifier.price
+          type: modifier.type,
+          isRequired: modifier.isRequired
         });
+
+        // Создаем опции для модификатора
+        const newOptions = (modifier.options || []).filter(o => o.isNew);
+        for (const option of newOptions) {
+          await menuService.createModifierOption(createdModifier.id, {
+            name: option.name,
+            price: option.price
+          });
+        }
       }
 
       onSave();
@@ -1086,60 +1236,121 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
 
           {/* Модификаторы */}
           <div className="border-t pt-4">
-            <label className="block text-sm font-medium mb-2">Модификаторы (добавки)</label>
+            <label className="block text-sm font-medium mb-2">
+              Модификаторы (размер, добавки, вкусы)
+            </label>
 
             {/* Список модификаторов */}
             {modifiers.length > 0 && (
-              <div className="space-y-2 mb-3">
+              <div className="space-y-4 mb-4">
                 {modifiers.map((modifier) => (
-                  <div
-                    key={modifier.id}
-                    className="flex items-center justify-between p-2 sm:p-3 bg-gray-50 rounded border gap-2"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <span className="font-medium text-sm sm:text-base break-words">{modifier.name}</span>
-                      {modifier.price > 0 && (
-                        <span className="text-gray-600 text-xs sm:text-sm ml-2 whitespace-nowrap">
-                          +{modifier.price} {currency}
-                        </span>
-                      )}
+                  <div key={modifier.id} className="border rounded-lg p-3 bg-gray-50">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex-1">
+                        <div className="font-medium">{modifier.name}</div>
+                        <div className="text-xs text-gray-600">
+                          {modifier.type === 'single' ? '☑️ Один выбор' : '☑️ Множественный выбор'}
+                          {modifier.isRequired && ' • Обязательно'}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteModifier(modifier)}
+                        className="text-red-600 hover:text-red-800 text-sm px-2"
+                      >
+                        🗑️
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteModifier(modifier)}
-                      className="text-red-600 hover:text-red-800 active:text-red-900 text-sm px-2 flex-shrink-0"
-                    >
-                      🗑️
-                    </button>
+
+                    {/* Опции модификатора */}
+                    <div className="space-y-2 mt-2">
+                      {(modifier.options || []).map((option) => (
+                        <div key={option.id} className="bg-white border rounded p-2 flex items-center gap-2">
+                          {/* Фото опции */}
+                          {option.image && (
+                            <div className="relative w-12 h-12 flex-shrink-0">
+                              <img
+                                src={option.image}
+                                alt={option.name}
+                                className="w-full h-full object-cover rounded"
+                              />
+                              {!option.isNew && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteOptionImage(modifier, option);
+                                  }}
+                                  className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-0.5"
+                                  title="Удалить фото"
+                                >
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                </button>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Информация об опции */}
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm">{option.name}</div>
+                            {option.price > 0 && (
+                              <div className="text-xs text-gray-600">+{option.price} {currency}</div>
+                            )}
+                          </div>
+
+                          {/* Кнопки действий */}
+                          <div className="flex gap-1 flex-shrink-0">
+                            {!option.isNew && !option.image && (
+                              <label className="cursor-pointer text-blue-600 hover:text-blue-800 text-sm px-2">
+                                📷
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const file = e.target.files[0];
+                                    if (file) handleUploadOptionImage(modifier, option, file);
+                                  }}
+                                />
+                              </label>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteOption(modifier, option)}
+                              className="text-red-600 hover:text-red-800 text-sm px-2"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Кнопка добавления опции */}
+                      <button
+                        type="button"
+                        onClick={() => handleAddOption(modifier)}
+                        className="w-full text-left text-sm text-blue-600 hover:text-blue-800 p-2 border border-dashed rounded hover:bg-blue-50"
+                      >
+                        + Добавить опцию
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
 
             {/* Форма добавления модификатора */}
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                type="text"
-                value={newModifierName}
-                onChange={(e) => setNewModifierName(e.target.value)}
-                placeholder="Название (например: Сыр)"
-                className="input flex-1 text-sm sm:text-base"
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddModifier();
-                  }
-                }}
-              />
-              <div className="flex gap-2">
+            <div className="border rounded-lg p-3 bg-white">
+              <div className="text-sm font-medium mb-2">Новый модификатор</div>
+              <div className="space-y-2">
                 <input
-                  type="number"
-                  value={newModifierPrice}
-                  onChange={(e) => setNewModifierPrice(e.target.value)}
-                  placeholder="Цена"
-                  className="input flex-1 sm:w-24 text-sm sm:text-base"
-                  step="0.01"
-                  min="0"
+                  type="text"
+                  value={newModifierName}
+                  onChange={(e) => setNewModifierName(e.target.value)}
+                  placeholder="Название (например: Размер)"
+                  className="input w-full text-sm"
                   onKeyPress={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
@@ -1147,17 +1358,35 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
                     }
                   }}
                 />
+                <div className="flex gap-2">
+                  <select
+                    value={newModifierType}
+                    onChange={(e) => setNewModifierType(e.target.value)}
+                    className="input flex-1 text-sm"
+                  >
+                    <option value="single">☑️ Один выбор</option>
+                    <option value="multi">☑️ Несколько вариантов</option>
+                  </select>
+                  <label className="flex items-center gap-1 text-sm whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={newModifierRequired}
+                      onChange={(e) => setNewModifierRequired(e.target.checked)}
+                    />
+                    Обязательно
+                  </label>
+                </div>
                 <button
                   type="button"
                   onClick={handleAddModifier}
-                  className="btn-secondary whitespace-nowrap text-sm sm:text-base px-3 sm:px-4"
+                  className="btn-secondary w-full text-sm"
                 >
-                  + Добавить
+                  + Добавить модификатор
                 </button>
               </div>
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Модификаторы позволяют клиентам добавлять дополнения к блюду
+            <p className="text-xs text-gray-500 mt-2">
+              Модификаторы позволяют клиентам выбирать размер, вкус, добавки и т.д. Вы можете добавить фото для каждой опции.
             </p>
           </div>
 
