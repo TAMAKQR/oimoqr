@@ -86,6 +86,22 @@ export const menuService = {
     return response.data;
   },
 
+  // Modifier Options
+  createModifierOption: async (modifierId, data) => {
+    const response = await api.post(`/dishes/modifiers/${modifierId}/options`, data);
+    return response.data;
+  },
+
+  updateModifierOption: async (optionId, data) => {
+    const response = await api.put(`/dishes/modifiers/options/${optionId}`, data);
+    return response.data;
+  },
+
+  deleteModifierOption: async (optionId) => {
+    const response = await api.delete(`/dishes/modifiers/options/${optionId}`);
+    return response.data;
+  },
+
   reorderCategories: async (restaurantId, categoryIds) => {
     const response = await api.post(`/categories/${restaurantId}/reorder`, { categoryIds });
     return response.data;
