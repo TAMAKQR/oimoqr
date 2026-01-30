@@ -76,7 +76,11 @@ export default function CustomerBottomNav() {
     ];
 
     return (
-        <div ref={navRef} className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div
+            ref={navRef}
+            className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50"
+            style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), var(--visual-bottom-offset, 0px))' }}
+        >
             <div className="max-w-[480px] mx-auto">
                 <div className="grid grid-cols-4 gap-1">
                     {menuItems.map((item) => {
