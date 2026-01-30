@@ -432,7 +432,7 @@ const MenuPage = () => {
         </div>
 
         {/* Cart */}
-        <Cart restaurant={restaurant} />
+        <Cart restaurant={restaurant} isDishModalOpen={isDishModalOpen} />
 
         {/* Bottom navigation для авторизованных клиентов */}
         {isCustomerLoggedIn && !isDishModalOpen && <CustomerBottomNav />}
