@@ -747,20 +747,33 @@ export const uploadModifierOptionImage = async (req, res, next) => {
     }
 
     console.log('✅ [Backend] User has access:', isOwner ? 'as owner' : 'as staff');
-  });
 
-  console.log('✅ [Backend] Modifier option updated successfully:', updatedOption);
+    // Get image URL
+    const imageUrl = req.file.path && req.file.path.startsWith('http')
+      ? req.file.path
+      : `/uploads/${req.file.filename}`;
 
-  res.json({
-    message: 'Modifier option image uploaded successfully',
-    imageUrl,
-    option: updatedOption
-  });
-} catch (error) {
-  console.error('❌ [Backend] Error uploading modifier option image:', error);
-  console.error('❌ [Backend] Error stack:', error.stack);
-  next(error);
-}
+    console.log('📸 [Backend] Generated image URL:', imageUrl);
+
+    // Update option with image
+    console.log('💾 [Backend] Updating modifier option with image...');
+    const updatedOption = await prisma.modifierOption.update({
+      where: { id: optionId },
+      data: { image: imageUrl }
+    });
+
+    console.log('✅ [Backend] Modifier option updated successfully:', updatedOption);
+
+    res.json({
+      message: 'Modifier option image uploaded successfully',
+      imageUrl,
+      option: updatedOption
+    });
+  } catch (error) {
+    console.error('❌ [Backend] Error uploading modifier option image:', error);
+    console.error('❌ [Backend] Error stack:', error.stack);
+    next(error);
+  }
 };
 
 // ✅ Delete image for modifier option
