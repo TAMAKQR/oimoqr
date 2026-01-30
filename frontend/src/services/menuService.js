@@ -114,20 +114,37 @@ export const menuService = {
 
   // ✅ Modifier Options - Image upload/delete
   uploadModifierOptionImage: async (optionId, file, onProgress) => {
+    console.log('📡 [API Service] uploadModifierOptionImage called');
+    console.log('📡 [API Service] Option ID:', optionId);
+    console.log('📡 [API Service] File:', file?.name, file?.size, file?.type);
+
     const formData = new FormData();
     formData.append('image', file);
-    const response = await api.post(`/dishes/modifiers/options/${optionId}/upload-image`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      onUploadProgress: (progressEvent) => {
-        if (onProgress && progressEvent.total) {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          onProgress(percentCompleted);
-        }
-      },
-    });
-    return response.data;
+
+    console.log('📡 [API Service] FormData created');
+    console.log('📡 [API Service] Sending POST to:', `/dishes/modifiers/options/${optionId}/upload-image`);
+
+    try {
+      const response = await api.post(`/dishes/modifiers/options/${optionId}/upload-image`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          if (onProgress && progressEvent.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            console.log(`📡 [API Service] Upload progress: ${percentCompleted}%`);
+            onProgress(percentCompleted);
+          }
+        },
+      });
+
+      console.log('✅ [API Service] Upload successful:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ [API Service] Upload failed:', error);
+      console.error('❌ [API Service] Error response:', error.response);
+      throw error;
+    }
   },
 
   deleteModifierOptionImage: async (optionId) => {
