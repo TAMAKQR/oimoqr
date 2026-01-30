@@ -3,6 +3,7 @@ import DishModal from './DishModal';
 import { useCartStore } from '../store/cartStore';
 import customerService from '../services/customerService';
 import { cacheBustImage } from '../utils/imageCache';
+import ImageWithLoader from './ImageWithLoader';
 
 const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteToggle, onModalStateChange }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -174,13 +175,12 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
           <div className="flex gap-3 sm:gap-4">
             {/* Фото слева */}
             {dish.image && (
-              <div className="relative">
-                <img
+              <div className="relative w-20 h-20 sm:w-28 sm:h-28 flex-shrink-0">
+                <ImageWithLoader
                   src={cacheBustImage(dish.image)}
                   alt={dish.name}
                   loading="lazy"
-                  className={`w-20 h-20 sm:w-28 sm:h-28 object-cover rounded-lg flex-shrink-0 ${!isAvailable ? 'grayscale' : ''
-                    }`}
+                  className={`w-full h-full object-cover rounded-lg ${!isAvailable ? 'grayscale' : ''}`}
                 />
               </div>
             )}
@@ -276,13 +276,12 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
             }`}
         >
           {dish.image && (
-            <div className="relative">
-              <img
+            <div className="relative h-40 sm:h-48">
+              <ImageWithLoader
                 src={cacheBustImage(dish.image)}
                 alt={dish.name}
                 loading="lazy"
-                className={`w-full h-40 sm:h-48 object-cover ${!isAvailable ? 'grayscale' : ''
-                  }`}
+                className={`w-full h-full object-cover ${!isAvailable ? 'grayscale' : ''}`}
               />
               {/* Плашки в правом верхнем углу */}
               <div className="absolute top-2 right-2 z-10 flex flex-col gap-1 items-end">
@@ -395,7 +394,7 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
         {/* Image */}
         {dish.image && (
           <div className="relative aspect-square">
-            <img
+            <ImageWithLoader
               src={cacheBustImage(dish.image)}
               alt={dish.name}
               loading="lazy"

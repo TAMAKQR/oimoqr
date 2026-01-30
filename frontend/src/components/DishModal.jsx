@@ -3,6 +3,7 @@ import { useCartStore } from '../store/cartStore';
 import toast from 'react-hot-toast';
 import { cacheBustImage } from '../utils/imageCache';
 import customerService from '../services/customerService';
+import ImageWithLoader from './ImageWithLoader';
 
 const DishModal = ({
   dish,
@@ -110,12 +111,11 @@ const DishModal = ({
     >
       <div className="bg-white rounded-t-2xl sm:rounded-lg w-full max-w-[480px] max-h-[90vh] overflow-y-auto shadow-2xl mx-0 animate-slide-up">
         {currentImage && (
-          <div className="relative">
-            <img
+          <div className="relative h-56 sm:h-64 md:h-72">
+            <ImageWithLoader
               src={cacheBustImage(currentImage)}
               alt={dish.name}
-              className={`w-full h-56 sm:h-64 md:h-72 object-cover bg-white rounded-t-2xl sm:rounded-t-lg transition-all duration-300 ${!isAvailable ? 'grayscale' : ''
-                }`}
+              className={`w-full h-full object-cover rounded-t-2xl sm:rounded-t-lg transition-all duration-300 ${!isAvailable ? 'grayscale' : ''}`}
             />
             {/* Бейджи и избранное */}
             <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex flex-col gap-2 items-end">
