@@ -68,7 +68,7 @@ const Cart = ({ restaurant }) => {
 
   // Стиль для позиционирования с учетом safe-area на iOS
   const cartStyle = isCustomerLoggedIn
-    ? { bottom: 'calc(3.5rem + env(safe-area-inset-bottom))' }
+    ? { bottom: 'calc(5rem + env(safe-area-inset-bottom))' }
     : { bottom: 'env(safe-area-inset-bottom, 0)' };
 
   return (
