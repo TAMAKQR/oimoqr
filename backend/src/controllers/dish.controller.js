@@ -187,35 +187,75 @@ export const updateDish = async (req, res, next) => {
 export const uploadDishImage = async (req, res, next) => {
   try {
     const { id } = req.params;
+    console.log('🖼️ [Backend] Upload dish image request received');
+    console.log('🖼️ [Backend] Dish ID:', id);
+    console.log('🖼️ [Backend] Request file:', req.file);
+    console.log('🖼️ [Backend] User:', req.user?.id);
 
     if (!req.file) {
+      console.error('❌ [Backend] No file uploaded in request');
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    console.log('📸 Uploading image:', { filename: req.file.filename, path: req.file.path, destination: req.file.destination });
+    console.log('🖼️ [Backend] File details:', {
+      filename: req.file.filename,
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      path: req.file.path,
+      destination: req.file.destination
+    });
 
     // Check if user has access to this dish's restaurant
+    console.log('🔍 [Backend] Looking for dish...');
     const dish = await prisma.dish.findUnique({
       where: { id },
       include: {
-        category: true
+        category: {
+          include: {
+            restaurant: true
+          }
+        }
       }
     });
 
     if (!dish) {
+      console.error('❌ [Backend] Dish not found:', id);
       return res.status(404).json({ error: 'Dish not found' });
+    }
+
+    console.log('✅ [Backend] Dish found:', {
+      dishId: dish.id,
+      dishName: dish.name,
+      categoryId: dish.category.id,
+      restaurantId: dish.category.restaurant.id
+    });
+
+    // Check user access
+    const restaurantId = dish.category.restaurant.id;
+    console.log('🔐 [Backend] Checking user access to restaurant:', restaurantId);
+
+    if (req.user.selectedRestaurantId !== restaurantId) {
+      console.error('❌ [Backend] User does not have access to this restaurant');
+      console.error('❌ [Backend] User restaurant:', req.user.selectedRestaurantId, 'Required:', restaurantId);
+      return res.status(403).json({ error: 'Access denied to this restaurant' });
     }
 
     // Get image URL (Cloudinary returns full URL, local storage returns filename)
     const imageUrl = req.file.path && req.file.path.startsWith('http')
       ? req.file.path
       : `/uploads/${req.file.filename}`;
-    console.log('📸 Image URL:', imageUrl);
 
+    console.log('🖼️ [Backend] Generated image URL:', imageUrl);
+
+    // Update dish with image
+    console.log('💾 [Backend] Updating dish with image...');
     const updatedDish = await prisma.dish.update({
       where: { id },
       data: { image: imageUrl }
     });
+
+    console.log('✅ [Backend] Dish updated successfully:', updatedDish);
 
     res.json({
       message: 'Image uploaded successfully',
@@ -226,6 +266,8 @@ export const uploadDishImage = async (req, res, next) => {
       }
     });
   } catch (error) {
+    console.error('❌ [Backend] Error uploading dish image:', error);
+    console.error('❌ [Backend] Error stack:', error.stack);
     next(error);
   }
 };
