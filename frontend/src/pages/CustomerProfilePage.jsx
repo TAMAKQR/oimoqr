@@ -38,10 +38,27 @@ const getLastRestaurantPath = () => {
     return '/';
 };
 
+const setLastRestaurantFromDish = (dish) => {
+    try {
+        const subdomain = dish?.restaurant?.subdomain;
+        if (!subdomain) return;
+        const payload = {
+            id: dish?.restaurant?.id,
+            subdomain,
+            name: dish?.restaurant?.name,
+            logo: dish?.restaurant?.logo,
+        };
+        localStorage.setItem('customer-last-restaurant', JSON.stringify(payload));
+    } catch (e) {
+        // ignore
+    }
+};
+
 export default function CustomerProfilePage() {
     const navigate = useNavigate();
     const location = useLocation();
     const addItem = useCartStore((state) => state.addItem);
+    const cartItemCount = useCartStore((state) => state.getItemCount());
     const [activeTab, setActiveTab] = useState('profile');
     const [customer, setCustomer] = useState(null);
     const [orders, setOrders] = useState([]);
@@ -124,7 +141,23 @@ export default function CustomerProfilePage() {
         }
 
         addItem({ ...dish, image: imageUrl || dish.image || dish.imageUrl }, []);
-        toast.success('Добавлено в корзину');
+        setLastRestaurantFromDish(dish);
+
+        const target = dish?.restaurant?.subdomain ? `/${dish.restaurant.subdomain}` : getLastRestaurantPath();
+        toast((t) => (
+            <div className="flex items-center gap-3">
+                <span>Добавлено в корзину</span>
+                <button
+                    className="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-semibold text-white"
+                    onClick={() => {
+                        toast.dismiss(t.id);
+                        navigate(target);
+                    }}
+                >
+                    К корзине
+                </button>
+            </div>
+        ));
     };
 
     const handleToggleFavoriteInModal = async () => {
@@ -167,6 +200,18 @@ export default function CustomerProfilePage() {
     return (
         <div className="min-h-screen bg-gray-100 flex justify-center">
             <div className="w-full max-w-[480px] min-h-screen bg-gray-50 shadow-2xl relative pb-20">
+                {/* Quick access to cart from profile/favorites */}
+                {cartItemCount > 0 && (
+                    <button
+                        type="button"
+                        onClick={() => navigate(getLastRestaurantPath())}
+                        className="fixed left-1/2 -translate-x-1/2 z-[70] rounded-2xl bg-primary-600 text-white shadow-lg px-4 py-3 font-semibold"
+                        style={{ bottom: 'calc(var(--customer-bottom-nav-height, 0px) + 12px)' }}
+                    >
+                        Корзина · {cartItemCount}
+                    </button>
+                )}
+
                 {/* Header */}
                 <div className="bg-white shadow">
                     <div className="px-3">
