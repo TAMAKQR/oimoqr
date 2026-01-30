@@ -66,8 +66,13 @@ const Cart = ({ restaurant }) => {
   // Если клиент авторизован - поднимаем корзину выше CustomerBottomNav
   const isCustomerLoggedIn = customer && customer.id;
 
+  // Стиль для позиционирования с учетом safe-area на iOS
+  const cartStyle = isCustomerLoggedIn
+    ? { bottom: 'calc(3.5rem + env(safe-area-inset-bottom))' }
+    : { bottom: 'env(safe-area-inset-bottom, 0)' };
+
   return (
-    <div className={`fixed inset-x-0 ${isCustomerLoggedIn ? 'bottom-14' : 'bottom-0'} z-50 flex justify-center px-0 pb-0`}>
+    <div className="fixed inset-x-0 z-50 flex justify-center px-0 pb-0" style={cartStyle}>
       <div className="w-full max-w-[480px] rounded-none sm:rounded-2xl bg-white border-t border-gray-200 px-4 py-3 sm:px-6 sm:py-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex flex-col">
