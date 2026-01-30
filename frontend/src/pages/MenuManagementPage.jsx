@@ -35,6 +35,7 @@ const MenuManagementPage = () => {
   const [dragOverDishId, setDragOverDishId] = useState(null);
   const [showCategoryGroupsModal, setShowCategoryGroupsModal] = useState(false);
   const [categoryGroups, setCategoryGroups] = useState([]);
+  const [dataTimestamp, setDataTimestamp] = useState(Date.now()); // Для cache-busting изображений
 
   useEffect(() => {
     loadData();
@@ -86,6 +87,7 @@ const MenuManagementPage = () => {
         dishesData[cat.id] = cat.dishes || [];
       }
       setDishes(dishesData);
+      setDataTimestamp(Date.now()); // Обновляем timestamp для cache-busting
     } catch (err) {
       console.error('Error loading categories:', err);
     }
@@ -454,7 +456,7 @@ const MenuManagementPage = () => {
                               <div className="relative w-16 h-16 flex-shrink-0">
                                 {dish.imageUrl ? (
                                   <img
-                                    src={dish.imageUrl}
+                                    src={`${dish.imageUrl}?t=${dataTimestamp}`}
                                     alt={dish.name}
                                     className="w-16 h-16 object-cover rounded border-2 border-green-500"
                                     title="Фото загружено"
