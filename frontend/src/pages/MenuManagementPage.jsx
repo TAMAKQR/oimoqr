@@ -752,7 +752,9 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
   const [description, setDescription] = useState(dish?.description || '');
   const [price, setPrice] = useState(dish?.price || '');
   const [imageFile, setImageFile] = useState(null);
-  const [currentImageUrl, setCurrentImageUrl] = useState(dish?.imageUrl || null);
+  const [currentImageUrl, setCurrentImageUrl] = useState(
+    dish?.imageUrl ? `${dish.imageUrl}?t=${Date.now()}` : null
+  );
   const [modifiers, setModifiers] = useState(dish?.modifiers || []);
   const [allergens, setAllergens] = useState(dish?.allergens ? JSON.parse(dish.allergens) : []);
   const [discount, setDiscount] = useState(dish?.discount || '');
@@ -767,6 +769,13 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
   const [newModifierName, setNewModifierName] = useState('');
   const [newModifierType, setNewModifierType] = useState('single');
   const [newModifierRequired, setNewModifierRequired] = useState(false);
+
+  // Обновляем фото при изменении dish (когда переоткрываем модалку)
+  useEffect(() => {
+    if (dish?.imageUrl) {
+      setCurrentImageUrl(`${dish.imageUrl}?t=${Date.now()}`);
+    }
+  }, [dish?.imageUrl]);
 
   const availableAllergens = [
     { id: 'gluten', name: 'Глютен', icon: '🌾' },
