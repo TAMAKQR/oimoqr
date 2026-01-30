@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useCartStore } from '../store/cartStore';
 import toast from 'react-hot-toast';
+import { cacheBustImage } from '../utils/imageCache';
 
 const DishModal = ({
   dish,
@@ -15,6 +16,16 @@ const DishModal = ({
   const [selectedModifiers, setSelectedModifiers] = useState({});
   const addItem = useCartStore((state) => state.addItem);
   const isAvailable = dish?.available !== false; // По умолчанию true если поле отсутствует
+
+  // ✅ Вычисляем активное изображение на основе выбранных модификаторов
+  const currentImage = useMemo(() => {
+    // Ищем первый выбранный модификатор с изображением
+    const selectedOptions = Object.values(selectedModifiers).flat();
+    const optionWithImage = selectedOptions.find(option => option.image);
+
+    // Если есть модификатор с фото - показываем его, иначе - фото блюда
+    return optionWithImage?.image || dish?.image;
+  }, [selectedModifiers, dish?.image]);
 
   // Lock background scroll only when modal is open
   useEffect(() => {
@@ -96,12 +107,12 @@ const DishModal = ({
       onClick={handleBackdropClick}
     >
       <div className="bg-white rounded-t-2xl sm:rounded-lg w-full max-w-[480px] max-h-[90vh] overflow-y-auto shadow-2xl mx-0 animate-slide-up pb-20">
-        {dish.image && (
+        {currentImage && (
           <div className="relative">
             <img
-              src={dish.image}
+              src={cacheBustImage(currentImage)}
               alt={dish.name}
-              className={`w-full h-56 sm:h-64 md:h-72 object-contain bg-white rounded-t-2xl sm:rounded-t-lg ${!isAvailable ? 'grayscale' : ''
+              className={`w-full h-56 sm:h-64 md:h-72 object-contain bg-white rounded-t-2xl sm:rounded-t-lg transition-all duration-300 ${!isAvailable ? 'grayscale' : ''
                 }`}
             />
             {/* Бейджи и избранное */}
