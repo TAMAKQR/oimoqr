@@ -234,22 +234,23 @@ export const uploadDishImage = async (req, res, next) => {
     // Check user access
     const restaurantId = dish.category.restaurant.id;
     console.log('🔐 [Backend] Checking user access to restaurant:', restaurantId);
+    console.log('🔐 [Backend] User data:', {
+      userId: req.user.id,
+      ownedRestaurants: req.user.restaurants?.map(r => r.id),
+      staffRestaurants: req.user.restaurantStaff?.map(s => s.restaurantId)
+    });
 
-    if (req.user.selectedRestaurantId !== restaurantId) {
+    // Check if user owns this restaurant or is staff member
+    const isOwner = req.user.restaurants?.some(r => r.id === restaurantId);
+    const isStaff = req.user.restaurantStaff?.some(s => s.restaurantId === restaurantId);
+
+    if (!isOwner && !isStaff) {
       console.error('❌ [Backend] User does not have access to this restaurant');
-      console.error('❌ [Backend] User restaurant:', req.user.selectedRestaurantId, 'Required:', restaurantId);
+      console.error('❌ [Backend] Required restaurant:', restaurantId);
       return res.status(403).json({ error: 'Access denied to this restaurant' });
     }
 
-    // Get image URL (Cloudinary returns full URL, local storage returns filename)
-    const imageUrl = req.file.path && req.file.path.startsWith('http')
-      ? req.file.path
-      : `/uploads/${req.file.filename}`;
-
-    console.log('🖼️ [Backend] Generated image URL:', imageUrl);
-
-    // Update dish with image
-    console.log('💾 [Backend] Updating dish with image...');
+    console.log('✅ [Backend] User has access:', isOwner ? 'as owner' : 'as staff');
     const updatedDish = await prisma.dish.update({
       where: { id },
       data: { image: imageUrl }
@@ -729,39 +730,37 @@ export const uploadModifierOptionImage = async (req, res, next) => {
     // Check user access to restaurant
     const restaurantId = option.modifier.dish.category.restaurant.id;
     console.log('🔐 [Backend] Checking user access to restaurant:', restaurantId);
+    console.log('🔐 [Backend] User data:', {
+      userId: req.user.id,
+      ownedRestaurants: req.user.restaurants?.map(r => r.id),
+      staffRestaurants: req.user.restaurantStaff?.map(s => s.restaurantId)
+    });
 
-    if (req.user.selectedRestaurantId !== restaurantId) {
+    // Check if user owns this restaurant or is staff member
+    const isOwner = req.user.restaurants?.some(r => r.id === restaurantId);
+    const isStaff = req.user.restaurantStaff?.some(s => s.restaurantId === restaurantId);
+
+    if (!isOwner && !isStaff) {
       console.error('❌ [Backend] User does not have access to this restaurant');
-      console.error('❌ [Backend] User restaurant:', req.user.selectedRestaurantId, 'Required:', restaurantId);
+      console.error('❌ [Backend] Required restaurant:', restaurantId);
       return res.status(403).json({ error: 'Access denied to this restaurant' });
     }
 
-    // Get image URL
-    const imageUrl = req.file.path && req.file.path.startsWith('http')
-      ? req.file.path
-      : `/uploads/${req.file.filename}`;
+    console.log('✅ [Backend] User has access:', isOwner ? 'as owner' : 'as staff');
+  });
 
-    console.log('📸 [Backend] Generated image URL:', imageUrl);
+  console.log('✅ [Backend] Modifier option updated successfully:', updatedOption);
 
-    // Update option with image
-    console.log('💾 [Backend] Updating modifier option with image...');
-    const updatedOption = await prisma.modifierOption.update({
-      where: { id: optionId },
-      data: { image: imageUrl }
-    });
-
-    console.log('✅ [Backend] Modifier option updated successfully:', updatedOption);
-
-    res.json({
-      message: 'Modifier option image uploaded successfully',
-      imageUrl,
-      option: updatedOption
-    });
-  } catch (error) {
-    console.error('❌ [Backend] Error uploading modifier option image:', error);
-    console.error('❌ [Backend] Error stack:', error.stack);
-    next(error);
-  }
+  res.json({
+    message: 'Modifier option image uploaded successfully',
+    imageUrl,
+    option: updatedOption
+  });
+} catch (error) {
+  console.error('❌ [Backend] Error uploading modifier option image:', error);
+  console.error('❌ [Backend] Error stack:', error.stack);
+  next(error);
+}
 };
 
 // ✅ Delete image for modifier option
