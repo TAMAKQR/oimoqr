@@ -41,7 +41,7 @@ function App() {
           <Route path="/:subdomain" element={<MenuPage />} />
 
           {/* Customer routes */}
-          <Route path="/customer/login" element={<CustomerLoginPage />} />
+          <Route path="/customer/login" element={<WhatsAppLoginPage />} />
           <Route path="/customer/whatsapp-login" element={<WhatsAppLoginPage />} />
           <Route path="/customer/profile" element={<CustomerProfilePage />} />
           <Route path="/customer/restaurants" element={<CustomerRestaurantsPage />} />

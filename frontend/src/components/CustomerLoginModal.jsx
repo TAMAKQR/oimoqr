@@ -1,39 +1,126 @@
-import { useState } from 'react';
-import customerService from '../services/customerService';
+import { useState, useRef, useEffect } from 'react';
+import axios from 'axios';
+import toast from 'react-hot-toast';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 export default function CustomerLoginModal({ isOpen, onClose, onLoginSuccess, restaurantId }) {
-    const [isLogin, setIsLogin] = useState(true); // true = вход, false = регистрация
-    const [phone, setPhone] = useState('');
-    const [name, setName] = useState('');
-    const [password, setPassword] = useState('');
+    const [step, setStep] = useState(1); // 1 = номер, 2 = код
+    const [phoneNumber, setPhoneNumber] = useState('');
+    const [code, setCode] = useState(['', '', '', '']);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
+    const [retryAfter, setRetryAfter] = useState(0);
+    const codeInputs = useRef([]);
 
-    const handleSubmit = async (e) => {
+    // Таймер для повторной отправки
+    useEffect(() => {
+        if (retryAfter > 0) {
+            const interval = setInterval(() => {
+                setRetryAfter(prev => {
+                    if (prev <= 1) {
+                        clearInterval(interval);
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+            return () => clearInterval(interval);
+        }
+    }, [retryAfter]);
+
+    // Отправка кода
+    const handleSendCode = async (e) => {
         e.preventDefault();
-        setError('');
-        setLoading(true);
+        if (!phoneNumber.trim()) {
+            toast.error('Введите номер телефона');
+            return;
+        }
 
+        setLoading(true);
         try {
-            if (isLogin) {
-                // Вход
-                await customerService.login(phone, password, restaurantId);
+            await axios.post(`${API_URL}/api/customers/whatsapp/send-code`, {
+                phoneNumber,
+                restaurantId
+            });
+
+            toast.success('Код отправлен в WhatsApp!');
+            setStep(2);
+            setRetryAfter(60);
+        } catch (error) {
+            if (error.response?.status === 429) {
+                const retry = error.response.data.retryAfter || 60;
+                setRetryAfter(retry);
+                toast.error(`Подождите ${retry} секунд`);
             } else {
-                // Регистрация
-                if (!name) {
-                    setError('Введите имя');
-                    setLoading(false);
-                    return;
-                }
-                await customerService.register(phone, name, password, restaurantId);
+                toast.error(error.response?.data?.error || 'Ошибка отправки кода');
             }
-            onLoginSuccess?.();
-            onClose();
-        } catch (err) {
-            setError(err.response?.data?.error || 'Ошибка');
         } finally {
             setLoading(false);
         }
+    };
+
+    // Верификация кода
+    const handleVerifyCode = async (e) => {
+        e.preventDefault();
+        const fullCode = code.join('');
+        if (fullCode.length !== 4) {
+            toast.error('Введите 4-значный код');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const response = await axios.post(`${API_URL}/api/customers/whatsapp/verify-code`, {
+                phoneNumber,
+                code: fullCode,
+                restaurantId
+            });
+
+            // Сохраняем токен и данные клиента
+            localStorage.setItem('customer-token', response.data.token);
+            localStorage.setItem('customer-data', JSON.stringify(response.data.customer));
+
+            toast.success('Успешный вход!');
+            onLoginSuccess?.();
+            onClose();
+        } catch (error) {
+            toast.error(error.response?.data?.error || 'Неверный код');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Обработка ввода кода
+    const handleCodeChange = (index, value) => {
+        if (!/^\d*$/.test(value)) return;
+
+        const newCode = [...code];
+        newCode[index] = value.slice(-1);
+        setCode(newCode);
+
+        // Автофокус на следующий input
+        if (value && index < 3) {
+            codeInputs.current[index + 1]?.focus();
+        }
+
+        // Автоотправка при заполнении всех 4 цифр
+        if (newCode.every(digit => digit) && index === 3) {
+            setTimeout(() => handleVerifyCode({ preventDefault: () => { } }), 100);
+        }
+    };
+
+    // Обработка Backspace
+    const handleKeyDown = (index, e) => {
+        if (e.key === 'Backspace' && !code[index] && index > 0) {
+            codeInputs.current[index - 1]?.focus();
+        }
+    };
+
+    // Повторная отправка кода
+    const handleResendCode = () => {
+        setCode(['', '', '', '']);
+        setStep(1);
+        setRetryAfter(0);
     };
 
     if (!isOpen) return null;
@@ -45,7 +132,7 @@ export default function CustomerLoginModal({ isOpen, onClose, onLoginSuccess, re
                     {/* Header */}
                     <div className="flex justify-between items-center mb-6">
                         <h2 className="text-2xl font-bold text-gray-800">
-                            {isLogin ? 'Вход' : 'Регистрация'}
+                            Вход через WhatsApp
                         </h2>
                         <button
                             onClick={onClose}
@@ -55,101 +142,86 @@ export default function CustomerLoginModal({ isOpen, onClose, onLoginSuccess, re
                         </button>
                     </div>
 
-                    {/* Form */}
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Номер телефона
-                            </label>
-                            <input
-                                type="tel"
-                                value={phone}
-                                onChange={(e) => setPhone(e.target.value)}
-                                placeholder="+7 (___) ___-__-__"
-                                required
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                            />
-                        </div>
-
-                        {!isLogin && (
+                    {/* Step 1: Номер телефона */}
+                    {step === 1 && (
+                        <form onSubmit={handleSendCode} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Имя
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Номер телефона
                                 </label>
                                 <input
-                                    type="text"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    placeholder="Ваше имя"
-                                    required={!isLogin}
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                    type="tel"
+                                    value={phoneNumber}
+                                    onChange={(e) => setPhoneNumber(e.target.value)}
+                                    placeholder="+7 (___) ___-__-__"
+                                    required
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg"
                                 />
                             </div>
-                        )}
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Пароль
-                            </label>
-                            <input
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder="••••••••"
-                                required
-                                minLength={6}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                            />
-                        </div>
+                            <button
+                                type="submit"
+                                disabled={loading || retryAfter > 0}
+                                className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-lg hover:from-green-600 hover:to-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                            >
+                                {loading ? 'Отправка...' : retryAfter > 0 ? `Повторить через ${retryAfter}с` : 'Получить код'}
+                            </button>
 
-                        {error && (
-                            <div className="text-red-500 text-sm bg-red-50 p-3 rounded">
-                                {error}
+                            <p className="text-xs text-gray-500 text-center mt-3">
+                                Мы отправим код подтверждения в WhatsApp
+                            </p>
+                        </form>
+                    )}
+
+                    {/* Step 2: Ввод кода */}
+                    {step === 2 && (
+                        <form onSubmit={handleVerifyCode} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2 text-center">
+                                    Введите код из WhatsApp
+                                </label>
+                                <p className="text-xs text-gray-500 text-center mb-4">
+                                    Отправлен на {phoneNumber}
+                                </p>
+                                <div className="flex justify-center gap-3 mb-6">
+                                    {code.map((digit, index) => (
+                                        <input
+                                            key={index}
+                                            ref={el => codeInputs.current[index] = el}
+                                            type="text"
+                                            inputMode="numeric"
+                                            maxLength={1}
+                                            value={digit}
+                                            onChange={(e) => handleCodeChange(index, e.target.value)}
+                                            onKeyDown={(e) => handleKeyDown(index, e)}
+                                            className="w-14 h-14 text-center text-2xl font-bold border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                            autoFocus={index === 0}
+                                        />
+                                    ))}
+                                </div>
                             </div>
-                        )}
 
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700 transition disabled:opacity-50"
-                        >
-                            {loading ? 'Загрузка...' : isLogin ? 'Войти' : 'Зарегистрироваться'}
-                        </button>
-                    </form>
+                            <button
+                                type="submit"
+                                disabled={loading || code.some(d => !d)}
+                                className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-lg hover:from-green-600 hover:to-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                            >
+                                {loading ? 'Проверка...' : 'Войти'}
+                            </button>
 
-                    {/* Toggle Login/Register */}
-                    <div className="mt-4 text-center">
-                        <button
-                            onClick={() => {
-                                setIsLogin(!isLogin);
-                                setError('');
-                            }}
-                            className="text-green-600 hover:text-green-700 text-sm"
-                        >
-                            {isLogin ? 'Нет аккаунта? Зарегистрируйтесь' : 'Уже есть аккаунт? Войдите'}
-                        </button>
-                    </div>
-
-                    {/* Benefits */}
-                    <div className="mt-6 pt-6 border-t border-gray-200">
-                        <p className="text-sm text-gray-600 mb-3">После регистрации вы сможете:</p>
-                        <ul className="space-y-2 text-sm text-gray-600">
-                            <li className="flex items-center gap-2">
-                                <span className="text-green-600">✓</span>
-                                Отслеживать свои заказы
-                            </li>
-                            <li className="flex items-center gap-2">
-                                <span className="text-green-600">✓</span>
-                                Сохранять любимые блюда
-                            </li>
-                            <li className="flex items-center gap-2">
-                                <span className="text-green-600">✓</span>
-                                Сохранять адреса доставки
-                            </li>
-                        </ul>
-                    </div>
+                            <button
+                                type="button"
+                                onClick={handleResendCode}
+                                disabled={retryAfter > 0}
+                                className="w-full text-green-600 py-2 text-sm hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {retryAfter > 0 ? `Повторить через ${retryAfter}с` : 'Отправить код повторно'}
+                            </button>
+                        </form>
+                    )}
                 </div>
             </div>
         </div>
     );
+}
 }
