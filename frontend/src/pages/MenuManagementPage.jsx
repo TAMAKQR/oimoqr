@@ -762,7 +762,6 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [imageUploadSuccess, setImageUploadSuccess] = useState(false);
 
   // Состояние для модификаторов
   const [editingModifier, setEditingModifier] = useState(null);
@@ -1069,7 +1068,6 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
 
         setUploadingImage(true);
         setUploadProgress(0);
-        setImageUploadSuccess(false);
         try {
           console.log('📤 [Dish Image] Calling uploadDishImage...');
           const result = await menuService.uploadDishImage(savedDish.id, imageFile, (progress) => {
@@ -1085,18 +1083,16 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
             const newUrl = `${result.imageUrl}?t=${Date.now()}`;
             console.log('🔄 [Dish Image] Setting image URL:', newUrl);
             setCurrentImageUrl(newUrl);
-            setImageUploadSuccess(true);
-            // Скрываем сообщение успеха через 3 секунды
-            setTimeout(() => setImageUploadSuccess(false), 3000);
-            setUploadProgress(0);
-            setImageFile(null);
           }
-        } catch (error) {
-          console.error('❌ [Dish Image] Upload failed:', error);
-          toast.error('Ошибка при загрузке фото');
-          setUploadProgress(0);
+        } catch (err) {
+          console.error('❌ [Dish Image] Upload failed:', err);
+          console.error('❌ [Dish Image] Error message:', err.message);
+          console.error('❌ [Dish Image] Error response:', err.response?.data);
+          toast.error(`Ошибка загрузки фото: ${err.response?.data?.error || err.message}`);
         } finally {
           setUploadingImage(false);
+          setUploadProgress(0);
+          setImageFile(null);
         }
       }
 
@@ -1228,17 +1224,14 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
 
           <div>
             <label className="block text-sm font-medium mb-1">Фото</label>
-
-            {/* Текущее или загруженное фото */}
-            {(currentImageUrl || imageFile) && (
+            {currentImageUrl && !imageFile && (
               <div className="relative mb-2">
                 <img
-                  src={imageFile ? URL.createObjectURL(imageFile) : currentImageUrl}
-                  alt={imageFile ? "Предпросмотр" : (dish?.name || 'Блюдо')}
-                  className="w-full h-48 object-cover rounded border-2 border-gray-200"
+                  src={currentImageUrl}
+                  alt={dish?.name || 'Блюдо'}
+                  className="w-full h-48 object-cover rounded"
                 />
-                {/* Кнопка удаления (только для сохраненных фото) */}
-                {dish && currentImageUrl && !imageFile && (
+                {dish && (
                   <button
                     type="button"
                     onClick={(e) => {
@@ -1253,59 +1246,35 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
                     </svg>
                   </button>
                 )}
-                {/* Бэдж "Новое фото" */}
-                {imageFile && (
-                  <div className="absolute top-2 left-2 bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
-                    📸 Новое фото
-                  </div>
-                )}
               </div>
             )}
-
-            {/* Кнопка выбора файла */}
-            <label className="btn-primary w-full cursor-pointer text-center inline-block">
-              {imageFile ? '📷 Изменить фото' : currentImageUrl ? '📷 Заменить фото' : '📷 Выбрать фото'}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files[0];
-                  if (file) {
-                    setImageFile(file);
-                    setImageUploadSuccess(false);
-                  }
-                }}
-                className="hidden"
-              />
-            </label>
-
-            {/* Информация о выбранном файле */}
-            {imageFile && !uploadingImage && !imageUploadSuccess && (
-              <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-green-800 font-medium truncate">{imageFile.name}</p>
-                    <p className="text-xs text-green-600">{(imageFile.size / 1024 / 1024).toFixed(2)} МБ • Нажмите "Сохранить" для загрузки</p>
-                  </div>
-                </div>
+            {imageFile && (
+              <div className="mb-2">
+                <img
+                  src={URL.createObjectURL(imageFile)}
+                  alt="Предпросмотр"
+                  className="w-full h-48 object-cover rounded"
+                />
               </div>
             )}
-
-            {/* Прогресс загрузки */}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setImageFile(e.target.files[0])}
+              className="input w-full"
+            />
+            {imageFile && !uploadingImage && (
+              <p className="text-sm text-green-600 mt-1">
+                ✓ Выбран файл: {imageFile.name}
+              </p>
+            )}
             {uploadingImage && (
               <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <svg className="w-5 h-5 text-blue-600 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
+                <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-blue-600 font-medium">
-                    Загрузка фото...
+                    Загрузка изображения...
                   </span>
-                  <span className="text-sm text-blue-600 font-bold ml-auto">
+                  <span className="text-sm text-blue-600 font-bold">
                     {uploadProgress}%
                   </span>
                 </div>
@@ -1317,200 +1286,188 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
                 </div>
               </div>
             )}
+          </div>
 
-            {/* Успешная загрузка */}
-            {imageUploadSuccess && (
-              <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg animate-pulse">
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span className="text-sm text-green-800 font-medium">
-                    ✅ Фото успешно загружено!
-                  </span>
-              )}
-                </div>
+          {/* Модификаторы */}
+          <div className="border-t pt-4">
+            <label className="block text-sm font-medium mb-2">
+              Модификаторы (размер, добавки, вкусы)
+            </label>
 
-                {/* Модификаторы */}
-                <div className="border-t pt-4">
-                  <label className="block text-sm font-medium mb-2">
-                    Модификаторы (размер, добавки, вкусы)
-                  </label>
+            {/* Список модификаторов */}
+            {modifiers.length > 0 && (
+              <div className="space-y-4 mb-4">
+                {modifiers.map((modifier) => (
+                  <div key={modifier.id} className="border rounded-lg p-3 bg-gray-50">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex-1">
+                        <div className="font-medium">{modifier.name}</div>
+                        <div className="text-xs text-gray-600">
+                          {modifier.type === 'single' ? '☑️ Один выбор' : '☑️ Множественный выбор'}
+                          {modifier.isRequired && ' • Обязательно'}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteModifier(modifier)}
+                        className="text-red-600 hover:text-red-800 text-sm px-2"
+                      >
+                        🗑️
+                      </button>
+                    </div>
 
-                  {/* Список модификаторов */}
-                  {modifiers.length > 0 && (
-                    <div className="space-y-4 mb-4">
-                      {modifiers.map((modifier) => (
-                        <div key={modifier.id} className="border rounded-lg p-3 bg-gray-50">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex-1">
-                              <div className="font-medium">{modifier.name}</div>
-                              <div className="text-xs text-gray-600">
-                                {modifier.type === 'single' ? '☑️ Один выбор' : '☑️ Множественный выбор'}
-                                {modifier.isRequired && ' • Обязательно'}
-                              </div>
+                    {/* Опции модификатора */}
+                    <div className="space-y-2 mt-2">
+                      {(modifier.options || []).map((option) => (
+                        <div key={option.id} className="bg-white border rounded p-2 flex items-center gap-2">
+                          {/* Фото опции */}
+                          {option.image && (
+                            <div className="relative w-12 h-12 flex-shrink-0">
+                              <img
+                                src={option.image}
+                                alt={option.name}
+                                className="w-full h-full object-cover rounded"
+                              />
+                              {!option.isNew && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteOptionImage(modifier, option);
+                                  }}
+                                  className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-0.5"
+                                  title="Удалить фото"
+                                >
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                </button>
+                              )}
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteModifier(modifier)}
-                              className="text-red-600 hover:text-red-800 text-sm px-2"
-                            >
-                              🗑️
-                            </button>
+                          )}
+
+                          {/* Информация об опции */}
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm">{option.name}</div>
+                            {option.price > 0 && (
+                              <div className="text-xs text-gray-600">+{option.price} {currency}</div>
+                            )}
+                            {option.isNew && (
+                              <div className="text-xs text-orange-600">💡 Сохраните блюдо, чтобы добавить фото</div>
+                            )}
                           </div>
 
-                          {/* Опции модификатора */}
-                          <div className="space-y-2 mt-2">
-                            {(modifier.options || []).map((option) => (
-                              <div key={option.id} className="bg-white border rounded p-2 flex items-center gap-2">
-                                {/* Фото опции */}
-                                {option.image && (
-                                  <div className="relative w-12 h-12 flex-shrink-0">
-                                    <img
-                                      src={option.image}
-                                      alt={option.name}
-                                      className="w-full h-full object-cover rounded"
-                                    />
-                                    {!option.isNew && (
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleDeleteOptionImage(modifier, option);
-                                        }}
-                                        className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-0.5"
-                                        title="Удалить фото"
-                                      >
-                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                      </button>
-                                    )}
-                                  </div>
-                                )}
-
-                                {/* Информация об опции */}
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-medium text-sm">{option.name}</div>
-                                  {option.price > 0 && (
-                                    <div className="text-xs text-gray-600">+{option.price} {currency}</div>
-                                  )}
-                                  {option.isNew && (
-                                    <div className="text-xs text-orange-600">💡 Сохраните блюдо, чтобы добавить фото</div>
-                                  )}
-                                </div>
-
-                                {/* Кнопки действий */}
-                                <div className="flex gap-1 flex-shrink-0">
-                                  {!option.isNew && !option.image && (
-                                    <label className="cursor-pointer text-blue-600 hover:text-blue-800 text-sm px-2">
-                                      📷
-                                      <input
-                                        type="file"
-                                        accept="image/*"
-                                        className="hidden"
-                                        onChange={(e) => {
-                                          const file = e.target.files[0];
-                                          if (file) handleUploadOptionImage(modifier, option, file);
-                                        }}
-                                      />
-                                    </label>
-                                  )}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteOption(modifier, option)}
-                                    className="text-red-600 hover:text-red-800 text-sm px-2"
-                                  >
-                                    ✕
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-
-                            {/* Кнопка добавления опции */}
+                          {/* Кнопки действий */}
+                          <div className="flex gap-1 flex-shrink-0">
+                            {!option.isNew && !option.image && (
+                              <label className="cursor-pointer text-blue-600 hover:text-blue-800 text-sm px-2">
+                                📷
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const file = e.target.files[0];
+                                    if (file) handleUploadOptionImage(modifier, option, file);
+                                  }}
+                                />
+                              </label>
+                            )}
                             <button
                               type="button"
-                              onClick={() => handleAddOption(modifier)}
-                              className="w-full text-left text-sm text-blue-600 hover:text-blue-800 p-2 border border-dashed rounded hover:bg-blue-50"
+                              onClick={() => handleDeleteOption(modifier, option)}
+                              className="text-red-600 hover:text-red-800 text-sm px-2"
                             >
-                              + Добавить опцию
+                              ✕
                             </button>
                           </div>
                         </div>
                       ))}
-                    </div>
-                  )}
 
-                  {/* Форма добавления модификатора */}
-                  <div className="border rounded-lg p-3 bg-white">
-                    <div className="text-sm font-medium mb-2">Новый модификатор</div>
-                    <div className="space-y-2">
-                      <input
-                        type="text"
-                        value={newModifierName}
-                        onChange={(e) => setNewModifierName(e.target.value)}
-                        placeholder="Название (например: Размер)"
-                        className="input w-full text-sm"
-                        onKeyPress={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleAddModifier();
-                          }
-                        }}
-                      />
-                      <div className="flex gap-2">
-                        <select
-                          value={newModifierType}
-                          onChange={(e) => setNewModifierType(e.target.value)}
-                          className="input flex-1 text-sm"
-                        >
-                          <option value="single">☑️ Один выбор</option>
-                          <option value="multi">☑️ Несколько вариантов</option>
-                        </select>
-                        <label className="flex items-center gap-1 text-sm whitespace-nowrap">
-                          <input
-                            type="checkbox"
-                            checked={newModifierRequired}
-                            onChange={(e) => setNewModifierRequired(e.target.checked)}
-                          />
-                          Обязательно
-                        </label>
-                      </div>
+                      {/* Кнопка добавления опции */}
                       <button
                         type="button"
-                        onClick={handleAddModifier}
-                        className="btn-secondary w-full text-sm"
+                        onClick={() => handleAddOption(modifier)}
+                        className="w-full text-left text-sm text-blue-600 hover:text-blue-800 p-2 border border-dashed rounded hover:bg-blue-50"
                       >
-                        + Добавить модификатор
+                        + Добавить опцию
                       </button>
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Модификаторы позволяют клиентам выбирать размер, вкус, добавки и т.д. Вы можете добавить фото для каждой опции.
-                  </p>
-                </div>
+                ))}
+              </div>
+            )}
 
-                <div className="flex gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="btn-secondary flex-1"
-                    disabled={saving || uploadingImage}
+            {/* Форма добавления модификатора */}
+            <div className="border rounded-lg p-3 bg-white">
+              <div className="text-sm font-medium mb-2">Новый модификатор</div>
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={newModifierName}
+                  onChange={(e) => setNewModifierName(e.target.value)}
+                  placeholder="Название (например: Размер)"
+                  className="input w-full text-sm"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddModifier();
+                    }
+                  }}
+                />
+                <div className="flex gap-2">
+                  <select
+                    value={newModifierType}
+                    onChange={(e) => setNewModifierType(e.target.value)}
+                    className="input flex-1 text-sm"
                   >
-                    Отмена
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn-primary flex-1"
-                    disabled={saving || uploadingImage}
-                  >
-                    {uploadingImage ? 'Загрузка фото...' : saving ? 'Сохранение...' : 'Сохранить'}
-                  </button>
+                    <option value="single">☑️ Один выбор</option>
+                    <option value="multi">☑️ Несколько вариантов</option>
+                  </select>
+                  <label className="flex items-center gap-1 text-sm whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={newModifierRequired}
+                      onChange={(e) => setNewModifierRequired(e.target.checked)}
+                    />
+                    Обязательно
+                  </label>
                 </div>
-              </form>
+                <button
+                  type="button"
+                  onClick={handleAddModifier}
+                  className="btn-secondary w-full text-sm"
+                >
+                  + Добавить модификатор
+                </button>
+              </div>
             </div>
-      </div>
-      );
-      };
+            <p className="text-xs text-gray-500 mt-2">
+              Модификаторы позволяют клиентам выбирать размер, вкус, добавки и т.д. Вы можете добавить фото для каждой опции.
+            </p>
+          </div>
 
-      export default MenuManagementPage;
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn-secondary flex-1"
+              disabled={saving || uploadingImage}
+            >
+              Отмена
+            </button>
+            <button
+              type="submit"
+              className="btn-primary flex-1"
+              disabled={saving || uploadingImage}
+            >
+              {uploadingImage ? 'Загрузка фото...' : saving ? 'Сохранение...' : 'Сохранить'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default MenuManagementPage;
