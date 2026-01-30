@@ -1508,9 +1508,9 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
                   </button>
                 </div>
               </form>
-        </div>
+            </div>
       </div>
       );
-  };
+      };
 
       export default MenuManagementPage;
