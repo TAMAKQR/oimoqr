@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { useCustomerAuthStore } from '../store/customerAuthStore';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 export default function CustomerLoginModal({ isOpen, onClose, onLoginSuccess, restaurantId }) {
+    const setAuth = useCustomerAuthStore((state) => state.setAuth);
     const [step, setStep] = useState(1); // 1 = номер, 2 = код
     const [phoneNumber, setPhoneNumber] = useState('');
     const [code, setCode] = useState(['', '', '', '']);
@@ -76,9 +78,8 @@ export default function CustomerLoginModal({ isOpen, onClose, onLoginSuccess, re
                 restaurantId
             });
 
-            // Сохраняем токен и данные клиента
-            localStorage.setItem('customer-token', response.data.token);
-            localStorage.setItem('customer-data', JSON.stringify(response.data.customer));
+            // Сохраняем авторизацию (zustand + localStorage совместимость)
+            setAuth(response.data.customer, response.data.token, restaurantId || null);
 
             toast.success('Успешный вход!');
             onLoginSuccess?.();
