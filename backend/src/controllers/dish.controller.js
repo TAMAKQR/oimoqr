@@ -721,9 +721,6 @@ export const uploadModifierOptionImage = async (req, res, next) => {
     next(error);
   }
 };
-next(error);
-  }
-};
 
 // ✅ Delete image for modifier option
 export const deleteModifierOptionImage = async (req, res, next) => {
