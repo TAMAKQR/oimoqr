@@ -9,8 +9,16 @@ class WhatsAppService {
         if (!this.accountSid || !this.authToken || !this.whatsappNumber) {
             console.warn('⚠️ Twilio WhatsApp credentials not configured');
             this.client = null;
+        } else if (!this.accountSid.startsWith('AC')) {
+            console.warn('⚠️ Twilio WhatsApp configured but TWILIO_ACCOUNT_SID looks invalid (must start with AC)');
+            this.client = null;
         } else {
-            this.client = twilio(this.accountSid, this.authToken);
+            try {
+                this.client = twilio(this.accountSid, this.authToken);
+            } catch (error) {
+                console.warn('⚠️ Failed to initialize Twilio client for WhatsApp:', error?.message || error);
+                this.client = null;
+            }
         }
     }
 

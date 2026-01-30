@@ -5,6 +5,7 @@ const ImageWithLoader = ({
     alt,
     className = '',
     loading = 'lazy',
+    decoding = 'async',
     onError,
     ...props
 }) => {
@@ -48,6 +49,7 @@ const ImageWithLoader = ({
                     alt={alt}
                     className={`${className} ${!imageLoaded ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
                     loading={loading}
+                    decoding={decoding}
                     onLoad={handleLoad}
                     onError={handleError}
                     {...props}
