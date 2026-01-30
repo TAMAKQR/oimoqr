@@ -145,7 +145,8 @@ export const getOrderHistory = async (req, res, next) => {
                         id: true,
                         name: true,
                         subdomain: true,
-                        logo: true
+                        logo: true,
+                        currency: true
                     }
                 },
                 customerAddress: true
