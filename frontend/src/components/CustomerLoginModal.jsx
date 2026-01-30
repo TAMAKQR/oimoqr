@@ -38,7 +38,7 @@ export default function CustomerLoginModal({ isOpen, onClose, onLoginSuccess, re
 
         setLoading(true);
         try {
-            await axios.post(`${API_URL}/api/customers/whatsapp/send-code`, {
+            await axios.post(`${API_URL}/customers/whatsapp/send-code`, {
                 phoneNumber,
                 restaurantId
             });
@@ -70,7 +70,7 @@ export default function CustomerLoginModal({ isOpen, onClose, onLoginSuccess, re
 
         setLoading(true);
         try {
-            const response = await axios.post(`${API_URL}/api/customers/whatsapp/verify-code`, {
+            const response = await axios.post(`${API_URL}/customers/whatsapp/verify-code`, {
                 phoneNumber,
                 code: fullCode,
                 restaurantId
