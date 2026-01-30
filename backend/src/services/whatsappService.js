@@ -22,7 +22,12 @@ class WhatsAppService {
     // Отправка кода верификации через WhatsApp
     async sendVerificationCode(phoneNumber, code) {
         if (!this.client) {
-            throw new Error('Twilio WhatsApp not configured');
+            // В DEV режиме просто выводим код в консоль
+            if (process.env.NODE_ENV === 'development') {
+                console.log(`🔑 DEV MODE - Verification code for ${phoneNumber}: ${code}`);
+                return { success: true, messageSid: 'dev-mode' };
+            }
+            throw new Error('Twilio WhatsApp not configured. Please set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_WHATSAPP_NUMBER in .env');
         }
 
         try {
@@ -39,6 +44,13 @@ class WhatsAppService {
             return { success: true, messageSid: message.sid };
         } catch (error) {
             console.error('❌ Failed to send WhatsApp message:', error);
+
+            // В DEV режиме все равно возвращаем успех и показываем код
+            if (process.env.NODE_ENV === 'development') {
+                console.log(`🔑 DEV MODE (fallback) - Code for ${phoneNumber}: ${code}`);
+                return { success: true, messageSid: 'dev-fallback' };
+            }
+
             throw new Error(`Failed to send WhatsApp verification: ${error.message}`);
         }
     }
