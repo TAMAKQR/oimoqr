@@ -126,8 +126,8 @@ export default function CustomerLoginModal({ isOpen, onClose, onLoginSuccess, re
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl animate-fade-in">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4 pb-24">
+            <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl animate-fade-in max-h-[calc(100vh-8rem)] overflow-y-auto">
                 <div className="p-6">
                     {/* Header */}
                     <div className="flex justify-between items-center mb-6">
