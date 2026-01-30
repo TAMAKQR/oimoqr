@@ -112,8 +112,21 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
     toggleFavorite();
   };
 
-  // Вычисляем цену со скидкой
-  const originalPrice = parseFloat(dish.price) || 0;
+  // Вычисляем отображаемую цену
+  let displayPrice = parseFloat(dish.price) || 0;
+  let pricePrefix = '';
+
+  // Если цена 0 и есть модификаторы - берем цену первой опции первого модификатора
+  if (displayPrice === 0 && hasModifiers) {
+    const firstModifier = dish.modifiers[0];
+    if (firstModifier?.options && firstModifier.options.length > 0) {
+      const firstOption = firstModifier.options[0];
+      displayPrice = parseFloat(firstOption.price) || 0;
+      pricePrefix = 'от ';
+    }
+  }
+
+  const originalPrice = displayPrice;
   const discountedPrice = dish.discount
     ? originalPrice * (1 - dish.discount / 100)
     : originalPrice;
@@ -216,15 +229,15 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
                   {dish.discount ? (
                     <>
                       <span className="text-sm text-gray-400 line-through">
-                        {originalPrice.toFixed(2)} {currency}
+                        {pricePrefix}{originalPrice.toFixed(2)} {currency}
                       </span>
                       <span className="text-lg sm:text-xl font-bold text-red-600 whitespace-nowrap">
-                        {discountedPrice.toFixed(2)} {currency}
+                        {pricePrefix}{discountedPrice.toFixed(2)} {currency}
                       </span>
                     </>
                   ) : (
                     <span className="text-lg sm:text-xl font-bold text-primary-600 whitespace-nowrap">
-                      {originalPrice.toFixed(2)} {currency}
+                      {pricePrefix}{originalPrice.toFixed(2)} {currency}
                     </span>
                   )}
                 </div>
@@ -334,15 +347,15 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
                 {dish.discount ? (
                   <>
                     <span className="text-sm text-gray-400 line-through">
-                      {originalPrice.toFixed(2)} {currency}
+                      {pricePrefix}{originalPrice.toFixed(2)} {currency}
                     </span>
-                    <span className="text-lg sm:text-xl font-bold text-red-600 whitespace-nowrap">
-                      {discountedPrice.toFixed(2)} {currency}
+                    <span className="text-lg font-bold text-red-600">
+                      {pricePrefix}{discountedPrice.toFixed(2)} {currency}
                     </span>
                   </>
                 ) : (
                   <span className="text-lg sm:text-xl font-bold text-primary-600 whitespace-nowrap">
-                    {originalPrice.toFixed(2)} {currency}
+                    {pricePrefix}{originalPrice.toFixed(2)} {currency}
                   </span>
                 )}
               </div>
@@ -476,15 +489,15 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
               {dish.discount && isAvailable ? (
                 <>
                   <span className="text-[10px] text-gray-400 line-through">
-                    {originalPrice.toFixed(2)}
+                    {pricePrefix}{originalPrice.toFixed(2)}
                   </span>
                   <span className="text-sm font-bold text-red-600">
-                    {discountedPrice.toFixed(2)} {currency}
+                    {pricePrefix}{discountedPrice.toFixed(2)} {currency}
                   </span>
                 </>
               ) : (
                 <span className="text-sm font-bold text-primary-600">
-                  {originalPrice.toFixed(2)} {currency}
+                  {pricePrefix}{originalPrice.toFixed(2)} {currency}
                 </span>
               )}
             </div>
