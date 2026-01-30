@@ -32,7 +32,7 @@ export default function CustomerBottomNav() {
     ];
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
             <div className="max-w-[480px] mx-auto">
                 <div className="grid grid-cols-4 gap-1">
                     {menuItems.map((item) => {
