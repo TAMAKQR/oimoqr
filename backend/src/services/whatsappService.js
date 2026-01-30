@@ -22,11 +22,6 @@ class WhatsAppService {
     // Отправка кода верификации через WhatsApp
     async sendVerificationCode(phoneNumber, code) {
         if (!this.client) {
-            // В DEV режиме просто выводим код в консоль
-            if (process.env.NODE_ENV === 'development') {
-                console.log(`🔑 DEV MODE - Verification code for ${phoneNumber}: ${code}`);
-                return { success: true, messageSid: 'dev-mode' };
-            }
             throw new Error('Twilio WhatsApp not configured. Please set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_WHATSAPP_NUMBER in .env');
         }
 
@@ -45,40 +40,30 @@ class WhatsAppService {
         } catch (error) {
             console.error('❌ Failed to send WhatsApp message:', error);
 
-            // В DEV режиме все равно возвращаем успех и показываем код
-            if (process.env.NODE_ENV === 'development') {
-                console.log(`🔑 DEV MODE (fallback) - Code for ${phoneNumber}: ${code}`);
-                return { success: true, messageSid: 'dev-fallback' };
+            // Форматирование номера телефона в международный формат
+            formatPhoneNumber(phoneNumber) {
+                // Убираем все нецифровые символы
+                let cleaned = phoneNumber.replace(/\D/g, '');
+
+                // Если номер начинается с 8 или 7 (Россия/СНГ), заменяем на +7
+                if (cleaned.startsWith('8') || cleaned.startsWith('7')) {
+                    cleaned = '7' + cleaned.substring(1);
+                }
+
+                // Если нет +, добавляем
+                if (!cleaned.startsWith('+')) {
+                    cleaned = '+' + cleaned;
+                }
+
+                return cleaned;
             }
 
-            throw new Error(`Failed to send WhatsApp verification: ${error.message}`);
-        }
-    }
-
-    // Форматирование номера телефона в международный формат
-    formatPhoneNumber(phoneNumber) {
-        // Убираем все нецифровые символы
-        let cleaned = phoneNumber.replace(/\D/g, '');
-
-        // Если номер начинается с 8 или 7 (Россия/СНГ), заменяем на +7
-        if (cleaned.startsWith('8') || cleaned.startsWith('7')) {
-            cleaned = '7' + cleaned.substring(1);
+            // Валидация номера телефона
+            isValidPhoneNumber(phoneNumber) {
+                const cleaned = phoneNumber.replace(/\D/g, '');
+                // Минимум 10 цифр, максимум 15 (международный формат)
+                return cleaned.length >= 10 && cleaned.length <= 15;
+            }
         }
 
-        // Если нет +, добавляем
-        if (!cleaned.startsWith('+')) {
-            cleaned = '+' + cleaned;
-        }
-
-        return cleaned;
-    }
-
-    // Валидация номера телефона
-    isValidPhoneNumber(phoneNumber) {
-        const cleaned = phoneNumber.replace(/\D/g, '');
-        // Минимум 10 цифр, максимум 15 (международный формат)
-        return cleaned.length >= 10 && cleaned.length <= 15;
-    }
-}
-
-export default new WhatsAppService();
+        export default new WhatsAppService();
