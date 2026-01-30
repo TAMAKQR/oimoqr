@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -19,7 +19,7 @@ const WhatsAppLoginPage = () => {
     const [retryAfter, setRetryAfter] = useState(0);
 
     // Обратный отсчет для повторной отправки
-    useState(() => {
+    useEffect(() => {
         if (retryAfter > 0) {
             const interval = setInterval(() => {
                 setRetryAfter(prev => {
@@ -68,12 +68,9 @@ const WhatsAppLoginPage = () => {
         }
     };
 
-    // Верификация кода
-    const handleVerifyCode = async (e) => {
-        e.preventDefault();
-
-        const fullCode = code.join('');
-        if (fullCode.length !== 4) {
+    const verifyCode = async (fullCode) => {
+        if (loading) return;
+        if (!fullCode || fullCode.length !== 4) {
             toast.error('Введите 4-значный код');
             return;
         }
@@ -115,6 +112,12 @@ const WhatsAppLoginPage = () => {
         }
     };
 
+    // Верификация кода
+    const handleVerifyCode = async (e) => {
+        e.preventDefault();
+        await verifyCode(code.join(''));
+    };
+
     // Обработка ввода кода
     const handleCodeChange = (index, value) => {
         if (!/^\d*$/.test(value)) return; // Только цифры
@@ -132,7 +135,7 @@ const WhatsAppLoginPage = () => {
         if (index === 3 && value) {
             const fullCode = newCode.join('');
             if (fullCode.length === 4) {
-                handleVerifyCode(new Event('submit'));
+                verifyCode(fullCode);
             }
         }
     };
