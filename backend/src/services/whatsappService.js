@@ -1,4 +1,4 @@
-const twilio = require('twilio');
+import twilio from 'twilio';
 
 class WhatsAppService {
     constructor() {
@@ -69,4 +69,4 @@ class WhatsAppService {
     }
 }
 
-module.exports = new WhatsAppService();
+export default new WhatsAppService();
