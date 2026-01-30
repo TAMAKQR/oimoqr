@@ -54,7 +54,7 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
   const bottomNavHeight = 'var(--customer-bottom-nav-height, 0px)';
   const cartStyle = isCustomerLoggedIn
     ? { bottom: `calc(${bottomNavHeight} + 12px)` }
-    : { bottom: 'env(safe-area-inset-bottom, 0px)' };
+    : { bottom: 'max(env(safe-area-inset-bottom, 0px), var(--visual-bottom-offset, 0px))' };
 
   return (
     <div className="fixed inset-x-0 z-[60] flex justify-center px-0 pb-0" style={cartStyle}>

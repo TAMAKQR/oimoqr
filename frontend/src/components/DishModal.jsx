@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useCartStore } from '../store/cartStore';
 import toast from 'react-hot-toast';
 import { cacheBustImage } from '../utils/imageCache';
-import customerService from '../services/customerService';
 import ImageWithLoader from './ImageWithLoader';
 
 const DishModal = ({
@@ -18,7 +17,6 @@ const DishModal = ({
   const [selectedModifiers, setSelectedModifiers] = useState({});
   const addItem = useCartStore((state) => state.addItem);
   const isAvailable = dish?.available !== false; // По умолчанию true если поле отсутствует
-  const isAuthenticated = customerService.isAuthenticated();
 
   // ✅ Вычисляем активное изображение на основе выбранных модификаторов
   const currentImage = useMemo(() => {
@@ -104,15 +102,9 @@ const DishModal = ({
     }
   };
 
-  // Стиль отступа снизу - только для авторизованных пользователей
-  const modalPaddingStyle = isAuthenticated
-    ? { paddingBottom: 'max(5rem, calc(5rem + env(safe-area-inset-bottom)))' }
-    : { paddingBottom: '0' };
-
   return (
     <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-[100] p-0 sm:p-4"
-      style={modalPaddingStyle}
       onClick={handleBackdropClick}
     >
       <div className="bg-white rounded-t-2xl sm:rounded-lg w-full max-w-[480px] max-h-[80vh] overflow-y-auto shadow-2xl mx-0 animate-slide-up">

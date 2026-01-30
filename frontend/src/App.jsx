@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { Toaster } from 'react-hot-toast';
@@ -29,6 +30,39 @@ import PrivateRoute from './components/PrivateRoute';
 import AdminRoute from './components/AdminRoute';
 
 function App() {
+  // Keep bottom-fixed UI aligned with the visible viewport on mobile browsers
+  // (e.g. Chrome bottom controls / virtual keyboard changing the visual viewport).
+  useEffect(() => {
+    const root = document.documentElement;
+
+    const update = () => {
+      let offset = 0;
+      const vv = window.visualViewport;
+      if (vv) {
+        offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      }
+      root.style.setProperty('--visual-bottom-offset', `${Math.round(offset)}px`);
+    };
+
+    update();
+    window.addEventListener('resize', update);
+    window.addEventListener('orientationchange', update);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', update);
+      window.visualViewport.addEventListener('scroll', update);
+    }
+
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('orientationchange', update);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', update);
+        window.visualViewport.removeEventListener('scroll', update);
+      }
+      root.style.removeProperty('--visual-bottom-offset');
+    };
+  }, []);
+
   return (
     <ErrorBoundary>
       <Router>
