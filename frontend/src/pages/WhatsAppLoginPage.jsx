@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { useCustomerAuthStore } from '../store/customerAuthStore';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
@@ -9,6 +10,7 @@ const WhatsAppLoginPage = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const restaurantId = searchParams.get('restaurantId');
+    const setAuth = useCustomerAuthStore((state) => state.setAuth);
 
     const [step, setStep] = useState(1); // 1 = номер телефона, 2 = код
     const [phoneNumber, setPhoneNumber] = useState('');
@@ -87,9 +89,8 @@ const WhatsAppLoginPage = () => {
 
             toast.success('Успешный вход!');
 
-            // Сохраняем токен
-            localStorage.setItem('customerToken', response.data.token);
-            localStorage.setItem('customerData', JSON.stringify(response.data.customer));
+            // Сохраняем авторизацию (zustand + localStorage совместимость)
+            setAuth(response.data.customer, response.data.token, restaurantId || null);
 
             // Редирект в меню или профиль
             if (restaurantId) {
