@@ -116,12 +116,21 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
   let displayPrice = parseFloat(dish.price) || 0;
   let pricePrefix = '';
 
-  // Если цена 0 и есть модификаторы - берем цену первой опции первого модификатора
+  // Если цена 0 и есть модификаторы - берем минимальную цену среди всех опций
   if (displayPrice === 0 && hasModifiers) {
-    const firstModifier = dish.modifiers[0];
-    if (firstModifier?.options && firstModifier.options.length > 0) {
-      const firstOption = firstModifier.options[0];
-      displayPrice = parseFloat(firstOption.price) || 0;
+    let minPrice = Infinity;
+    dish.modifiers.forEach(modifier => {
+      if (modifier?.options && modifier.options.length > 0) {
+        modifier.options.forEach(option => {
+          const optionPrice = parseFloat(option.price) || 0;
+          if (optionPrice > 0 && optionPrice < minPrice) {
+            minPrice = optionPrice;
+          }
+        });
+      }
+    });
+    if (minPrice !== Infinity) {
+      displayPrice = minPrice;
       pricePrefix = 'от ';
     }
   }
