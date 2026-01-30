@@ -889,12 +889,17 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
         setUploadingImage(true);
         setUploadProgress(0);
         try {
-          await menuService.uploadDishImage(savedDish.id, imageFile, (progress) => {
+          const result = await menuService.uploadDishImage(savedDish.id, imageFile, (progress) => {
             setUploadProgress(progress);
           });
+          // ✅ Обновляем превью сразу с cache-busting
+          if (result?.imageUrl) {
+            setCurrentImageUrl(`${result.imageUrl}?t=${Date.now()}`);
+          }
         } finally {
           setUploadingImage(false);
           setUploadProgress(0);
+          setImageFile(null);
         }
       }
 
