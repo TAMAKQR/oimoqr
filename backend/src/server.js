@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -61,6 +62,26 @@ app.use((req, res, next) => {
   next();
 });
 
+// ✅ ОПТИМИЗАЦИЯ: HTTP Кэширование для статических данных
+app.use((req, res, next) => {
+  // Кэшируем GET запросы к API ресторанов, категорий и блюд
+  if (req.method === 'GET' && (
+    req.url.startsWith('/api/restaurants/') ||
+    req.url.startsWith('/api/categories') ||
+    req.url.startsWith('/api/dishes')
+  )) {
+    // Кэшируем на 5 минут (300 секунд)
+    res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+  }
+
+  // Кэшируем статические файлы (uploads) на 1 день
+  if (req.url.startsWith('/uploads')) {
+    res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
+  }
+
+  next();
+});
+
 // CORS configuration
 const allowedOrigins = [
   'https://oimoqr.com',
@@ -103,6 +124,17 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+// ✅ ОПТИМИЗАЦИЯ: Gzip/Brotli компрессия ответов (уменьшение на 70-80%)
+app.use(compression({
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    return compression.filter(req, res);
+  },
+  level: 6 // Баланс между скоростью и степенью сжатия
+}));
 
 // Rate limiting
 app.use('/api/', rateLimiter);
