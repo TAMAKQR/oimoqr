@@ -39,31 +39,34 @@ class WhatsAppService {
             return { success: true, messageSid: message.sid };
         } catch (error) {
             console.error('❌ Failed to send WhatsApp message:', error);
+            throw new Error(`Failed to send WhatsApp verification: ${error.message}`);
+        }
+    }
 
-            // Форматирование номера телефона в международный формат
-            formatPhoneNumber(phoneNumber) {
-                // Убираем все нецифровые символы
-                let cleaned = phoneNumber.replace(/\D/g, '');
+    // Форматирование номера телефона в международный формат
+    formatPhoneNumber(phoneNumber) {
+        // Убираем все нецифровые символы
+        let cleaned = phoneNumber.replace(/\D/g, '');
 
-                // Если номер начинается с 8 или 7 (Россия/СНГ), заменяем на +7
-                if (cleaned.startsWith('8') || cleaned.startsWith('7')) {
-                    cleaned = '7' + cleaned.substring(1);
-                }
-
-                // Если нет +, добавляем
-                if (!cleaned.startsWith('+')) {
-                    cleaned = '+' + cleaned;
-                }
-
-                return cleaned;
-            }
-
-            // Валидация номера телефона
-            isValidPhoneNumber(phoneNumber) {
-                const cleaned = phoneNumber.replace(/\D/g, '');
-                // Минимум 10 цифр, максимум 15 (международный формат)
-                return cleaned.length >= 10 && cleaned.length <= 15;
-            }
+        // Если номер начинается с 8 или 7 (Россия/СНГ), заменяем на +7
+        if (cleaned.startsWith('8') || cleaned.startsWith('7')) {
+            cleaned = '7' + cleaned.substring(1);
         }
 
-        export default new WhatsAppService();
+        // Если нет +, добавляем
+        if (!cleaned.startsWith('+')) {
+            cleaned = '+' + cleaned;
+        }
+
+        return cleaned;
+    }
+
+    // Валидация номера телефона
+    isValidPhoneNumber(phoneNumber) {
+        const cleaned = phoneNumber.replace(/\D/g, '');
+        // Минимум 10 цифр, максимум 15 (международный формат)
+        return cleaned.length >= 10 && cleaned.length <= 15;
+    }
+}
+
+export default new WhatsAppService();
