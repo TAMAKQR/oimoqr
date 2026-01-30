@@ -151,3 +151,175 @@ export const getCurrentCustomer = async (req, res, next) => {
         next(error);
     }
 };
+
+/**
+ * WhatsApp авторизация - отправка кода
+ */
+import whatsappService from '../services/whatsappService.js';
+
+// Временное хранилище кодов (в продакшене лучше использовать Redis)
+const verificationCodes = new Map();
+
+// Очистка старых кодов каждые 10 минут
+setInterval(() => {
+    const now = Date.now();
+    for (const [phone, data] of verificationCodes.entries()) {
+        if (now - data.timestamp > 5 * 60 * 1000) { // 5 минут
+            verificationCodes.delete(phone);
+        }
+    }
+}, 10 * 60 * 1000);
+
+export const sendWhatsAppCode = async (req, res, next) => {
+    try {
+        const { phoneNumber } = req.body;
+
+        console.log('📱 Sending WhatsApp verification code to:', phoneNumber);
+
+        if (!phoneNumber) {
+            return res.status(400).json({ error: 'Phone number is required' });
+        }
+
+        // Валидация номера
+        if (!whatsappService.isValidPhoneNumber(phoneNumber)) {
+            return res.status(400).json({ error: 'Invalid phone number format' });
+        }
+
+        // Форматируем номер
+        const formattedPhone = whatsappService.formatPhoneNumber(phoneNumber);
+
+        // Проверяем не отправляли ли код недавно (защита от спама)
+        const existingCode = verificationCodes.get(formattedPhone);
+        if (existingCode && Date.now() - existingCode.timestamp < 60 * 1000) {
+            return res.status(429).json({
+                error: 'Code already sent. Please wait 1 minute before requesting again.',
+                retryAfter: 60 - Math.floor((Date.now() - existingCode.timestamp) / 1000)
+            });
+        }
+
+        // Генерируем код
+        const code = whatsappService.generateCode();
+
+        // Сохраняем код
+        verificationCodes.set(formattedPhone, {
+            code,
+            timestamp: Date.now(),
+            attempts: 0
+        });
+
+        // Отправляем код через WhatsApp
+        try {
+            await whatsappService.sendVerificationCode(formattedPhone, code);
+
+            console.log(`✅ Verification code sent to ${formattedPhone}`);
+
+            res.json({
+                success: true,
+                message: 'Verification code sent via WhatsApp',
+                phoneNumber: formattedPhone
+            });
+        } catch (error) {
+            console.error('❌ Failed to send WhatsApp:', error);
+            // Если WhatsApp не работает, показываем код в консоли для разработки
+            if (process.env.NODE_ENV === 'development') {
+                console.log(`🔑 DEV MODE - Verification code for ${formattedPhone}: ${code}`);
+            }
+            res.status(500).json({
+                error: 'Failed to send verification code',
+                details: error.message
+            });
+        }
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const verifyWhatsAppCode = async (req, res, next) => {
+    try {
+        const { phoneNumber, code, restaurantId } = req.body;
+
+        console.log('🔐 Verifying WhatsApp code for:', phoneNumber);
+
+        if (!phoneNumber || !code) {
+            return res.status(400).json({ error: 'Phone number and code are required' });
+        }
+
+        const formattedPhone = whatsappService.formatPhoneNumber(phoneNumber);
+
+        // Проверяем код
+        const storedData = verificationCodes.get(formattedPhone);
+
+        if (!storedData) {
+            return res.status(400).json({ error: 'Verification code expired or not found' });
+        }
+
+        // Проверяем количество попыток
+        if (storedData.attempts >= 3) {
+            verificationCodes.delete(formattedPhone);
+            return res.status(429).json({ error: 'Too many failed attempts. Please request a new code.' });
+        }
+
+        // Проверяем код
+        if (storedData.code !== code) {
+            storedData.attempts++;
+            return res.status(400).json({
+                error: 'Invalid verification code',
+                attemptsLeft: 3 - storedData.attempts
+            });
+        }
+
+        // Код верный, удаляем из хранилища
+        verificationCodes.delete(formattedPhone);
+
+        // Ищем или создаем клиента
+        let customer = await prisma.customer.findUnique({
+            where: { phone: formattedPhone }
+        });
+
+        if (!customer) {
+            // Создаем нового клиента без пароля (вход только через WhatsApp)
+            customer = await prisma.customer.create({
+                data: {
+                    phone: formattedPhone,
+                    name: `Клиент ${formattedPhone.slice(-4)}`,
+                    password: '', // Пустой пароль для WhatsApp авторизации
+                    registeredRestaurantId: restaurantId || null
+                }
+            });
+            console.log(`✅ New customer created via WhatsApp: ${customer.id}`);
+        } else {
+            // Обновляем ресторан если нужно
+            if (restaurantId && !customer.registeredRestaurantId) {
+                await prisma.customer.update({
+                    where: { id: customer.id },
+                    data: { registeredRestaurantId: restaurantId }
+                });
+            }
+            console.log(`✅ Existing customer logged in via WhatsApp: ${customer.id}`);
+        }
+
+        // Генерируем JWT токен
+        const token = jwt.sign(
+            {
+                customerId: customer.id,
+                phone: customer.phone,
+                type: 'customer'
+            },
+            process.env.JWT_SECRET || 'your-secret-key',
+            { expiresIn: '30d' }
+        );
+
+        // Убираем пароль из ответа
+        const { password: _, ...customerData } = customer;
+
+        res.json({
+            success: true,
+            message: 'Phone number verified successfully',
+            token,
+            customer: customerData
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};

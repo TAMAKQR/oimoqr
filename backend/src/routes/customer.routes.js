@@ -2,7 +2,9 @@ import express from 'express';
 import {
     registerCustomer,
     loginCustomer,
-    getCurrentCustomer
+    getCurrentCustomer,
+    sendWhatsAppCode,
+    verifyWhatsAppCode
 } from '../controllers/customerAuth.controller.js';
 import {
     getProfile,
@@ -32,6 +34,10 @@ router.post('/register', registerCustomer);
 
 // Вход
 router.post('/login', loginCustomer);
+
+// WhatsApp авторизация
+router.post('/whatsapp/send-code', sendWhatsAppCode);
+router.post('/whatsapp/verify-code', verifyWhatsAppCode);
 
 // ============================================
 // Защищенные роуты (требуют авторизации)

@@ -17,6 +17,7 @@ import StaffManagementPage from './pages/StaffManagementPage';
 import AdminPricingPage from './pages/AdminPricingPage';
 import LanguageSettingsPage from './pages/LanguageSettingsPage';
 import CustomerLoginPage from './pages/CustomerLoginPage';
+import WhatsAppLoginPage from './pages/WhatsAppLoginPage';
 import CustomerProfilePage from './pages/CustomerProfilePage';
 import CustomerRestaurantsPage from './pages/CustomerRestaurantsPage';
 import PricingPage from './pages/PricingPage';
@@ -41,6 +42,7 @@ function App() {
 
           {/* Customer routes */}
           <Route path="/customer/login" element={<CustomerLoginPage />} />
+          <Route path="/customer/whatsapp-login" element={<WhatsAppLoginPage />} />
           <Route path="/customer/profile" element={<CustomerProfilePage />} />
           <Route path="/customer/restaurants" element={<CustomerRestaurantsPage />} />
           <Route path="/customer/orders" element={<CustomerProfilePage />} />
