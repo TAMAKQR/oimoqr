@@ -45,22 +45,24 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' }
 }));
 
-// Расширенное логирование для отладки CORS (до CORS middleware)
-app.use((req, res, next) => {
-  console.log(`CORS DEBUG: method=${req.method}, origin=${req.headers.origin}, url=${req.originalUrl}`);
-  console.log('CORS DEBUG: headers:', req.headers);
-  next();
-});
-
-// Timing middleware — логируем время выполнения каждого запроса
-app.use((req, res, next) => {
-  const start = Date.now();
-  res.on('finish', () => {
-    const ms = Date.now() - start;
-    console.log(`TIMING: ${req.method} ${req.originalUrl} ${res.statusCode} ${ms}ms`);
+// Расширенное логирование для отладки CORS + timing (только DEV)
+if (process.env.NODE_ENV !== 'production') {
+  app.use((req, res, next) => {
+    console.log(`CORS DEBUG: method=${req.method}, origin=${req.headers.origin}, url=${req.originalUrl}`);
+    console.log('CORS DEBUG: headers:', req.headers);
+    next();
   });
-  next();
-});
+
+  // Timing middleware — логируем время выполнения каждого запроса
+  app.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+      const ms = Date.now() - start;
+      console.log(`TIMING: ${req.method} ${req.originalUrl} ${res.statusCode} ${ms}ms`);
+    });
+    next();
+  });
+}
 
 // ✅ ОПТИМИЗАЦИЯ: HTTP Кэширование для статических данных
 app.use((req, res, next) => {

@@ -7,12 +7,37 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
     let { language } = req.query;
     const now = new Date();
 
-    // ✅ ОПТИМИЗАЦИЯ: Один запрос вместо 4-х! Загружаем все данные разом
-    const restaurant = await prisma.restaurant.findUnique({
+    // 1) Быстро получаем базовую информацию ресторана (нужно для defaultLanguage)
+    const restaurantBase = await prisma.restaurant.findUnique({
       where: { subdomain },
-      include: {
+      select: {
+        id: true,
+        subdomain: true,
+        name: true,
+        description: true,
+        phone: true,
+        address: true,
+        city: true,
+        country: true,
+        currency: true,
+        banners: true,
+        logo: true,
+        cardStyle: true,
+        defaultLanguage: true,
+        deliveryEnabled: true,
+        deliveryFee: true,
+        minOrderAmount: true,
+        workingHours: true,
+        isTemporarilyClosed: true,
+        closureReason: true,
+        latitude: true,
+        longitude: true,
+        deliveryRadius: true,
+        businessType: true,
+        telegramGroupId: true,
+        telegramBotToken: true,
+        ownerId: true,
         socialLinks: true,
-        subscriptions: true,
         languages: {
           where: { isEnabled: true },
           orderBy: { order: 'asc' }
@@ -20,76 +45,45 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
         categoryGroups: {
           orderBy: { order: 'asc' },
           include: {
-            categories: {
-              orderBy: { order: 'asc' }
-            }
-          }
-        },
-        categories: {
-          orderBy: { order: 'asc' },
-          include: {
-            translations: true, // Загружаем все переводы, фильтруем на клиенте
-            dishes: {
-              where: { available: true },
-              orderBy: { order: 'asc' },
-              include: {
-                modifiers: {
-                  include: {
-                    options: true
-                  }
-                },
-                translations: true // Загружаем все переводы
-              }
-            }
-          }
-        },
-        // ✅ Добавляем owner с подписками в один запрос
-        owner: {
-          include: {
-            subscriptions: {
-              where: {
-                OR: [
-                  {
-                    status: 'TRIAL',
-                    trialEndsAt: { gt: now }
-                  },
-                  {
-                    status: 'ACTIVE',
-                    currentPeriodEnd: { gt: now }
-                  }
-                ]
-              },
-              include: {
-                pricingTier: true
-              },
-              take: 1
-            },
-            restaurants: true // ✅ Загружаем рестораны владельца для подсчета
+            categories: { orderBy: { order: 'asc' } }
           }
         }
       }
     });
 
-    if (!restaurant) {
+    if (!restaurantBase) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
-    // Используем defaultLanguage если язык не указан
     if (!language) {
-      language = restaurant.defaultLanguage;
+      language = restaurantBase.defaultLanguage;
     }
 
-    // Проверка подписки владельца
-    const ownerSubscription = restaurant.owner.subscriptions[0];
+    // 2) Проверка активной подписки именно для этого ресторана
+    const activeSubscription = await prisma.subscription.findFirst({
+      where: {
+        restaurantId: restaurantBase.id,
+        OR: [
+          { status: 'TRIAL', trialEndsAt: { gt: now } },
+          { status: 'ACTIVE', currentPeriodEnd: { gt: now } }
+        ]
+      },
+      include: {
+        pricingTier: true,
+        user: { select: { id: true } }
+      }
+    });
 
-    if (!ownerSubscription) {
+    if (!activeSubscription) {
       return res.status(403).json({ error: 'Restaurant subscription is not active' });
     }
 
-    // ✅ ОПТИМИЗАЦИЯ: Считаем рестораны из уже загруженных данных
-    if (ownerSubscription.pricingTier) {
-      const ownerRestaurantsCount = restaurant.owner.restaurants.length;
-      const maxRestaurants = ownerSubscription.pricingTier.maxRestaurants;
+    // Лимит ресторанов по тарифу (быстрый count вместо include всех ресторанов)
+    if (activeSubscription.pricingTier?.maxRestaurants) {
+      const ownerRestaurantsCount = await prisma.restaurant.count({
+        where: { ownerId: activeSubscription.userId }
+      });
+      const maxRestaurants = activeSubscription.pricingTier.maxRestaurants;
 
       if (ownerRestaurantsCount > maxRestaurants) {
         return res.status(403).json({
@@ -99,66 +93,77 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
       }
     }
 
+    // 3) Загружаем категории/блюда отдельно и фильтруем переводы на уровне БД
+    const categories = await prisma.category.findMany({
+      where: { restaurantId: restaurantBase.id },
+      orderBy: { order: 'asc' },
+      include: {
+        translations: {
+          where: { languageCode: language }
+        },
+        dishes: {
+          where: { available: true },
+          orderBy: { order: 'asc' },
+          include: {
+            translations: {
+              where: { languageCode: language }
+            },
+            modifiers: {
+              orderBy: { order: 'asc' },
+              include: {
+                options: { orderBy: { createdAt: 'asc' } }
+              }
+            }
+          }
+        }
+      }
+    });
+
     // Parse workingHours if it's a JSON string (SQLite compatibility)
-    if (restaurant.workingHours && typeof restaurant.workingHours === 'string') {
+    let workingHours = restaurantBase.workingHours;
+    if (workingHours && typeof workingHours === 'string') {
       try {
-        restaurant.workingHours = JSON.parse(restaurant.workingHours);
+        workingHours = JSON.parse(workingHours);
       } catch (e) {
-        restaurant.workingHours = null;
+        workingHours = null;
       }
     }
 
-    // Debug: log modifiers before mapping
-    restaurant.categories.forEach(cat => {
-      cat.dishes.forEach(dish => {
-        if (dish.modifiers && dish.modifiers.length > 0) {
-          console.log(`🍔 BEFORE MAP - Dish "${dish.name}":`, dish.modifiers.length, 'modifiers');
-          dish.modifiers.forEach(mod => {
-            console.log(`  └─ Modifier "${mod.name}": ${mod.options?.length || 0} options`);
-          });
-        }
-      });
-    });
-
-    // ✅ ОПТИМИЗАЦИЯ: Фильтруем переводы на сервере
     const restaurantWithImageUrl = {
-      ...restaurant,
-      menuCardStyle: restaurant.cardStyle,
-      categories: restaurant.categories.map(category => {
-        // Фильтруем переводы по выбранному языку
-        const categoryTranslation = category.translations.find(t => t.languageCode === language);
+      ...restaurantBase,
+      workingHours,
+      menuCardStyle: restaurantBase.cardStyle,
+      categories: categories.map(category => {
+        const categoryTranslation = category.translations?.[0];
         return {
           ...category,
           name: categoryTranslation?.name || category.name,
           description: categoryTranslation?.description || category.description,
-          translations: undefined, // Удаляем лишние данные перед отправкой клиенту
+          translations: undefined,
           dishes: category.dishes.map(dish => {
-            const translation = dish.translations.find(t => t.languageCode === language);
-            const mappedDish = {
+            const translation = dish.translations?.[0];
+            return {
               ...dish,
               imageUrl: dish.image,
               name: translation?.name || dish.name,
               description: translation?.description || dish.description,
-              translations: undefined // Удаляем лишние данные
+              translations: undefined
             };
-            if (dish.modifiers && dish.modifiers.length > 0) {
-              console.log(`🍔 AFTER MAP - Dish "${mappedDish.name}":`, mappedDish.modifiers?.length || 0, 'modifiers');
-            }
-            return mappedDish;
           })
         };
       })
     };
 
     // Раскладываем socialLinks для консистентности с админ-панелью
-    const socialLinks = restaurant.socialLinks || {};
+    const socialLinks = restaurantBase.socialLinks || {};
     restaurantWithImageUrl.instagram = socialLinks.instagram || '';
     restaurantWithImageUrl.facebook = socialLinks.facebook || '';
     restaurantWithImageUrl.whatsapp = socialLinks.whatsapp || '';
     restaurantWithImageUrl.telegram = socialLinks.telegram || '';
 
-    // ✅ Удаляем owner из ответа (не нужен клиенту)
-    delete restaurantWithImageUrl.owner;
+    // Удаляем лишнее
+    delete restaurantWithImageUrl.ownerId;
+    delete restaurantWithImageUrl.socialLinks;
 
     // Трекинг просмотра меню
     const ipAddress = req.headers['x-forwarded-for']?.split(',')[0] ||
@@ -170,7 +175,7 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
     // Асинхронно записываем просмотр (не блокируем ответ)
     prisma.menuView.create({
       data: {
-        restaurantId: restaurant.id,
+        restaurantId: restaurantBase.id,
         ipAddress,
         userAgent
       }
