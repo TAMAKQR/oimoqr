@@ -251,6 +251,16 @@ export const uploadDishImage = async (req, res, next) => {
     }
 
     console.log('✅ [Backend] User has access:', isOwner ? 'as owner' : 'as staff');
+
+    // Get image URL (Cloudinary returns full URL, local storage returns filename)
+    const imageUrl = req.file.path && req.file.path.startsWith('http')
+      ? req.file.path
+      : `/uploads/${req.file.filename}`;
+
+    console.log('🖼️ [Backend] Generated image URL:', imageUrl);
+
+    // Update dish with image
+    console.log('💾 [Backend] Updating dish with image...');
     const updatedDish = await prisma.dish.update({
       where: { id },
       data: { image: imageUrl }
