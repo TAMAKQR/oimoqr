@@ -630,17 +630,26 @@ export const deleteModifierOption = async (req, res, next) => {
 export const uploadModifierOptionImage = async (req, res, next) => {
   try {
     const { optionId } = req.params;
+    console.log('📸 [Backend] Upload modifier option image request received');
+    console.log('📸 [Backend] Option ID:', optionId);
+    console.log('📸 [Backend] Request file:', req.file);
+    console.log('📸 [Backend] User:', req.user?.id);
 
     if (!req.file) {
+      console.error('❌ [Backend] No file uploaded in request');
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    console.log('📸 Uploading modifier option image:', {
+    console.log('📸 [Backend] File details:', {
       filename: req.file.filename,
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
       path: req.file.path
     });
 
     // Check if option exists
+    console.log('🔍 [Backend] Looking for modifier option...');
     const option = await prisma.modifierOption.findUnique({
       where: { id: optionId },
       include: {
@@ -648,7 +657,11 @@ export const uploadModifierOptionImage = async (req, res, next) => {
           include: {
             dish: {
               include: {
-                category: true
+                category: {
+                  include: {
+                    restaurant: true
+                  }
+                }
               }
             }
           }
@@ -657,7 +670,28 @@ export const uploadModifierOptionImage = async (req, res, next) => {
     });
 
     if (!option) {
+      console.error('❌ [Backend] Modifier option not found:', optionId);
       return res.status(404).json({ error: 'Modifier option not found' });
+    }
+
+    console.log('✅ [Backend] Modifier option found:', {
+      optionId: option.id,
+      optionName: option.name,
+      modifierId: option.modifier.id,
+      modifierName: option.modifier.name,
+      dishId: option.modifier.dish.id,
+      dishName: option.modifier.dish.name,
+      restaurantId: option.modifier.dish.category.restaurant.id
+    });
+
+    // Check user access to restaurant
+    const restaurantId = option.modifier.dish.category.restaurant.id;
+    console.log('🔐 [Backend] Checking user access to restaurant:', restaurantId);
+
+    if (req.user.selectedRestaurantId !== restaurantId) {
+      console.error('❌ [Backend] User does not have access to this restaurant');
+      console.error('❌ [Backend] User restaurant:', req.user.selectedRestaurantId, 'Required:', restaurantId);
+      return res.status(403).json({ error: 'Access denied to this restaurant' });
     }
 
     // Get image URL
@@ -665,12 +699,16 @@ export const uploadModifierOptionImage = async (req, res, next) => {
       ? req.file.path
       : `/uploads/${req.file.filename}`;
 
-    console.log('📸 Modifier option image URL:', imageUrl);
+    console.log('📸 [Backend] Generated image URL:', imageUrl);
 
+    // Update option with image
+    console.log('💾 [Backend] Updating modifier option with image...');
     const updatedOption = await prisma.modifierOption.update({
       where: { id: optionId },
       data: { image: imageUrl }
     });
+
+    console.log('✅ [Backend] Modifier option updated successfully:', updatedOption);
 
     res.json({
       message: 'Modifier option image uploaded successfully',
@@ -678,7 +716,12 @@ export const uploadModifierOptionImage = async (req, res, next) => {
       option: updatedOption
     });
   } catch (error) {
+    console.error('❌ [Backend] Error uploading modifier option image:', error);
+    console.error('❌ [Backend] Error stack:', error.stack);
     next(error);
+  }
+};
+next(error);
   }
 };
 

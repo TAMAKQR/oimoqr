@@ -935,28 +935,56 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
   };
 
   const handleUploadOptionImage = async (modifier, option, file) => {
-    if (!file || option.isNew) return;
+    console.log('📸 [Upload Start] Starting image upload...');
+    console.log('📸 [Upload Start] File:', file?.name, 'Size:', file?.size, 'Type:', file?.type);
+    console.log('📸 [Upload Start] Modifier:', modifier.id, modifier.name);
+    console.log('📸 [Upload Start] Option:', option.id, option.name);
+    console.log('📸 [Upload Start] Option.isNew:', option.isNew);
+
+    if (!file) {
+      console.error('❌ [Upload Error] No file provided');
+      toast.error('Файл не выбран');
+      return;
+    }
+
+    if (option.isNew) {
+      console.error('❌ [Upload Error] Cannot upload image for unsaved option');
+      toast.error('Сначала сохраните блюдо, чтобы добавить фото к опции');
+      return;
+    }
 
     try {
+      console.log('📤 [Upload API] Calling uploadModifierOptionImage...');
       const result = await menuService.uploadModifierOptionImage(option.id, file, (progress) => {
-        console.log(`Upload progress: ${progress}%`);
+        console.log(`📊 [Upload Progress] ${progress}%`);
       });
 
+      console.log('✅ [Upload Success] Result:', result);
+      console.log('✅ [Upload Success] Image URL:', result.imageUrl);
+
       // Обновляем URL изображения опции с cache-busting
+      const newImageUrl = `${result.imageUrl}?t=${Date.now()}`;
+      console.log('🔄 [Update State] Setting new image URL:', newImageUrl);
+
       setModifiers(modifiers.map(m =>
         m.id === modifier.id
           ? {
             ...m,
             options: (m.options || []).map(o =>
-              o.id === option.id ? { ...o, image: `${result.imageUrl}?t=${Date.now()}` } : o
+              o.id === option.id ? { ...o, image: newImageUrl } : o
             )
           }
           : m
       ));
+
+      console.log('✅ [Upload Complete] Image uploaded successfully');
       toast.success('Фото загружено');
     } catch (err) {
-      toast.error('Ошибка при загрузке фото');
-      console.error(err);
+      console.error('❌ [Upload Error] Full error:', err);
+      console.error('❌ [Upload Error] Error message:', err.message);
+      console.error('❌ [Upload Error] Error response:', err.response?.data);
+      console.error('❌ [Upload Error] Error status:', err.response?.status);
+      toast.error(`Ошибка при загрузке фото: ${err.response?.data?.error || err.message}`);
     }
   };
 
