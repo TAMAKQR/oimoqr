@@ -1326,6 +1326,9 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
                             {option.price > 0 && (
                               <div className="text-xs text-gray-600">+{option.price} {currency}</div>
                             )}
+                            {option.isNew && (
+                              <div className="text-xs text-orange-600">💡 Сохраните блюдо, чтобы добавить фото</div>
+                            )}
                           </div>
 
                           {/* Кнопки действий */}
