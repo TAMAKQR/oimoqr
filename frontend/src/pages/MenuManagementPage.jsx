@@ -1053,16 +1053,33 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
 
       // Upload image if selected
       if (imageFile) {
+        console.log('🖼️ [Dish Image] Starting upload...');
+        console.log('🖼️ [Dish Image] File:', imageFile.name, 'Size:', imageFile.size, 'Type:', imageFile.type);
+        console.log('🖼️ [Dish Image] Dish ID:', savedDish.id);
+
         setUploadingImage(true);
         setUploadProgress(0);
         try {
+          console.log('📤 [Dish Image] Calling uploadDishImage...');
           const result = await menuService.uploadDishImage(savedDish.id, imageFile, (progress) => {
+            console.log(`📊 [Dish Image] Progress: ${progress}%`);
             setUploadProgress(progress);
           });
+
+          console.log('✅ [Dish Image] Upload successful:', result);
+          console.log('✅ [Dish Image] Image URL:', result?.imageUrl);
+
           // ✅ Обновляем превью сразу с cache-busting
           if (result?.imageUrl) {
-            setCurrentImageUrl(`${result.imageUrl}?t=${Date.now()}`);
+            const newUrl = `${result.imageUrl}?t=${Date.now()}`;
+            console.log('🔄 [Dish Image] Setting image URL:', newUrl);
+            setCurrentImageUrl(newUrl);
           }
+        } catch (err) {
+          console.error('❌ [Dish Image] Upload failed:', err);
+          console.error('❌ [Dish Image] Error message:', err.message);
+          console.error('❌ [Dish Image] Error response:', err.response?.data);
+          toast.error(`Ошибка загрузки фото: ${err.response?.data?.error || err.message}`);
         } finally {
           setUploadingImage(false);
           setUploadProgress(0);

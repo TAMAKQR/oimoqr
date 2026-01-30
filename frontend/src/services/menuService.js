@@ -44,20 +44,37 @@ export const menuService = {
   },
 
   uploadDishImage: async (dishId, file, onProgress) => {
+    console.log('📡 [API Service] uploadDishImage called');
+    console.log('📡 [API Service] Dish ID:', dishId);
+    console.log('📡 [API Service] File:', file?.name, file?.size, file?.type);
+
     const formData = new FormData();
     formData.append('image', file);
-    const response = await api.post(`/dishes/${dishId}/upload-image`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      onUploadProgress: (progressEvent) => {
-        if (onProgress && progressEvent.total) {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          onProgress(percentCompleted);
-        }
-      },
-    });
-    return response.data;
+
+    console.log('📡 [API Service] FormData created for dish image');
+    console.log('📡 [API Service] Sending POST to:', `/dishes/${dishId}/upload-image`);
+
+    try {
+      const response = await api.post(`/dishes/${dishId}/upload-image`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          if (onProgress && progressEvent.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            console.log(`📡 [API Service] Dish image upload progress: ${percentCompleted}%`);
+            onProgress(percentCompleted);
+          }
+        },
+      });
+
+      console.log('✅ [API Service] Dish image upload successful:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ [API Service] Dish image upload failed:', error);
+      console.error('❌ [API Service] Error response:', error.response);
+      throw error;
+    }
   },
 
   deleteDishImage: async (dishId) => {
