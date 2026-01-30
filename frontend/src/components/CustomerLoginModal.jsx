@@ -224,4 +224,3 @@ export default function CustomerLoginModal({ isOpen, onClose, onLoginSuccess, re
         </div>
     );
 }
-}
