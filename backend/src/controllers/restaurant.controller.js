@@ -5,22 +5,9 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
   try {
     const { subdomain } = req.params;
     let { language } = req.query;
+    const now = new Date();
 
-    // First, get the restaurant to check defaultLanguage
-    const restaurantInfo = await prisma.restaurant.findUnique({
-      where: { subdomain },
-      select: { defaultLanguage: true }
-    });
-
-    if (!restaurantInfo) {
-      return res.status(404).json({ error: 'Restaurant not found' });
-    }
-
-    // Use defaultLanguage if no language is specified
-    if (!language) {
-      language = restaurantInfo.defaultLanguage;
-    }
-
+    // ✅ ОПТИМИЗАЦИЯ: Один запрос вместо 4-х! Загружаем все данные разом
     const restaurant = await prisma.restaurant.findUnique({
       where: { subdomain },
       include: {
@@ -41,9 +28,7 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
         categories: {
           orderBy: { order: 'asc' },
           include: {
-            translations: {
-              where: language ? { languageCode: language } : undefined
-            },
+            translations: true, // Загружаем все переводы, фильтруем на клиенте
             dishes: {
               where: { available: true },
               orderBy: { order: 'asc' },
@@ -53,11 +38,33 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
                     options: true
                   }
                 },
-                translations: {
-                  where: language ? { languageCode: language } : undefined
-                }
+                translations: true // Загружаем все переводы
               }
             }
+          }
+        },
+        // ✅ Добавляем owner с подписками в один запрос
+        owner: {
+          include: {
+            subscriptions: {
+              where: {
+                OR: [
+                  {
+                    status: 'TRIAL',
+                    trialEndsAt: { gt: now }
+                  },
+                  {
+                    status: 'ACTIVE',
+                    currentPeriodEnd: { gt: now }
+                  }
+                ]
+              },
+              include: {
+                pricingTier: true
+              },
+              take: 1
+            },
+            restaurants: true // ✅ Загружаем рестораны владельца для подсчета
           }
         }
       }
@@ -67,45 +74,27 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
-    // Check user subscription (not restaurant subscription)
-    const now = new Date();
+    // Используем defaultLanguage если язык не указан
+    if (!language) {
+      language = restaurant.defaultLanguage;
+    }
 
-    // ÐŸÐ¾Ð»ÑƒÑ‡Ð°ÐµÐ¼ Ð°ÐºÑ‚Ð¸Ð²Ð½ÑƒÑŽ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÑƒ Ð²Ð»Ð°Ð´ÐµÐ»ÑŒÑ†Ð° Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½Ð°
-    const ownerSubscription = await prisma.subscription.findFirst({
-      where: {
-        userId: restaurant.ownerId,
-        OR: [
-          {
-            status: 'TRIAL',
-            trialEndsAt: { gt: now }
-          },
-          {
-            status: 'ACTIVE',
-            currentPeriodEnd: { gt: now }
-          }
-        ]
-      },
-      include: {
-        pricingTier: true
-      }
-    });
+    // Проверка подписки владельца
+    const ownerSubscription = restaurant.owner.subscriptions[0];
 
     if (!ownerSubscription) {
       return res.status(403).json({ error: 'Restaurant subscription is not active' });
     }
 
-    // ÐŸÑ€Ð¾Ð²ÐµÑ€ÑÐµÐ¼, Ñ‡Ñ‚Ð¾ ÐºÐ¾Ð»Ð¸Ñ‡ÐµÑÑ‚Ð²Ð¾ Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½Ð¾Ð² Ð²Ð»Ð°Ð´ÐµÐ»ÑŒÑ†Ð° Ð½Ðµ Ð¿Ñ€ÐµÐ²Ñ‹ÑˆÐ°ÐµÑ‚ Ð»Ð¸Ð¼Ð¸Ñ‚ Ñ‚Ð°Ñ€Ð¸Ñ„Ð°
+    // ✅ ОПТИМИЗАЦИЯ: Считаем рестораны из уже загруженных данных
     if (ownerSubscription.pricingTier) {
-      const ownerRestaurantsCount = await prisma.restaurant.count({
-        where: { ownerId: restaurant.ownerId }
-      });
-
+      const ownerRestaurantsCount = restaurant.owner.restaurants.length;
       const maxRestaurants = ownerSubscription.pricingTier.maxRestaurants;
 
       if (ownerRestaurantsCount > maxRestaurants) {
         return res.status(403).json({
           error: 'Subscription limit exceeded',
-          message: `ÐŸÑ€ÐµÐ²Ñ‹ÑˆÐµÐ½ Ð»Ð¸Ð¼Ð¸Ñ‚ Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½Ð¾Ð² Ð´Ð»Ñ Ñ‚ÐµÐºÑƒÑ‰ÐµÐ¹ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ¸ (${maxRestaurants})`
+          message: `Превышен лимит ресторанов для текущей подписки (${maxRestaurants})`
         });
       }
     }
@@ -123,34 +112,37 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
     restaurant.categories.forEach(cat => {
       cat.dishes.forEach(dish => {
         if (dish.modifiers && dish.modifiers.length > 0) {
-          console.log(`ðŸ” BEFORE MAP - Dish "${dish.name}":`, dish.modifiers.length, 'modifiers');
+          console.log(`🍔 BEFORE MAP - Dish "${dish.name}":`, dish.modifiers.length, 'modifiers');
           dish.modifiers.forEach(mod => {
-            console.log(`  â””â”€ Modifier "${mod.name}": ${mod.options?.length || 0} options`);
+            console.log(`  └─ Modifier "${mod.name}": ${mod.options?.length || 0} options`);
           });
         }
       });
     });
 
-    // Map 'image' field to 'imageUrl' for frontend compatibility and apply translations
+    // ✅ ОПТИМИЗАЦИЯ: Фильтруем переводы на сервере
     const restaurantWithImageUrl = {
       ...restaurant,
       menuCardStyle: restaurant.cardStyle,
       categories: restaurant.categories.map(category => {
-        const categoryTranslation = language && category.translations.length > 0 ? category.translations[0] : null;
+        // Фильтруем переводы по выбранному языку
+        const categoryTranslation = category.translations.find(t => t.languageCode === language);
         return {
           ...category,
           name: categoryTranslation?.name || category.name,
           description: categoryTranslation?.description || category.description,
+          translations: undefined, // Удаляем лишние данные перед отправкой клиенту
           dishes: category.dishes.map(dish => {
-            const translation = language && dish.translations.length > 0 ? dish.translations[0] : null;
+            const translation = dish.translations.find(t => t.languageCode === language);
             const mappedDish = {
               ...dish,
               imageUrl: dish.image,
               name: translation?.name || dish.name,
-              description: translation?.description || dish.description
+              description: translation?.description || dish.description,
+              translations: undefined // Удаляем лишние данные
             };
             if (dish.modifiers && dish.modifiers.length > 0) {
-              console.log(`ðŸ” AFTER MAP - Dish "${mappedDish.name}":`, mappedDish.modifiers?.length || 0, 'modifiers');
+              console.log(`🍔 AFTER MAP - Dish "${mappedDish.name}":`, mappedDish.modifiers?.length || 0, 'modifiers');
             }
             return mappedDish;
           })
@@ -158,21 +150,24 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
       })
     };
 
-    // Ð Ð°ÑÐºÐ»Ð°Ð´Ñ‹Ð²Ð°ÐµÐ¼ socialLinks Ð´Ð»Ñ ÐºÐ¾Ð½ÑÐ¸ÑÑ‚ÐµÐ½Ñ‚Ð½Ð¾ÑÑ‚Ð¸ Ñ Ð°Ð´Ð¼Ð¸Ð½-Ð¿Ð°Ð½ÐµÐ»ÑŒÑŽ
+    // Раскладываем socialLinks для консистентности с админ-панелью
     const socialLinks = restaurant.socialLinks || {};
     restaurantWithImageUrl.instagram = socialLinks.instagram || '';
     restaurantWithImageUrl.facebook = socialLinks.facebook || '';
     restaurantWithImageUrl.whatsapp = socialLinks.whatsapp || '';
     restaurantWithImageUrl.telegram = socialLinks.telegram || '';
 
-    // Ð¢Ñ€ÐµÐºÐ¸Ð½Ð³ Ð¿Ñ€Ð¾ÑÐ¼Ð¾Ñ‚Ñ€Ð° Ð¼ÐµÐ½ÑŽ
+    // ✅ Удаляем owner из ответа (не нужен клиенту)
+    delete restaurantWithImageUrl.owner;
+
+    // Трекинг просмотра меню
     const ipAddress = req.headers['x-forwarded-for']?.split(',')[0] ||
       req.connection?.remoteAddress ||
       req.socket?.remoteAddress ||
       req.ip;
     const userAgent = req.headers['user-agent'];
 
-    // ÐÑÐ¸Ð½Ñ…Ñ€Ð¾Ð½Ð½Ð¾ Ð·Ð°Ð¿Ð¸ÑÑ‹Ð²Ð°ÐµÐ¼ Ð¿Ñ€Ð¾ÑÐ¼Ð¾Ñ‚Ñ€ (Ð½Ðµ Ð±Ð»Ð¾ÐºÐ¸Ñ€ÑƒÐµÐ¼ Ð¾Ñ‚Ð²ÐµÑ‚)
+    // Асинхронно записываем просмотр (не блокируем ответ)
     prisma.menuView.create({
       data: {
         restaurantId: restaurant.id,
