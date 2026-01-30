@@ -1,28 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useCartStore } from '../store/cartStore';
 import { useCustomerAuthStore } from '../store/customerAuthStore';
 
-const Cart = ({ restaurant }) => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+const Cart = ({ restaurant, isDishModalOpen = false }) => {
   const { customer } = useCustomerAuthStore();
-
-  // Следим за открытием модального окна блюда
-  useEffect(() => {
-    const checkModal = () => {
-      // Проверяем наличие активного DishModal в DOM
-      const dishModal = document.querySelector('[class*="animate-slide-up"]');
-      setIsModalOpen(!!dishModal);
-    };
-
-    // Проверяем при монтировании и при изменениях DOM
-    checkModal();
-    const observer = new MutationObserver(checkModal);
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    return () => observer.disconnect();
-  }, []);
   const navigate = useNavigate();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
@@ -59,20 +42,22 @@ const Cart = ({ restaurant }) => {
     setIsCheckingOut(false);
   };
 
-  if (!itemCount || isModalOpen) {
+  if (!itemCount || isDishModalOpen) {
     return null;
   }
 
   // Если клиент авторизован - поднимаем корзину выше CustomerBottomNav
   const isCustomerLoggedIn = customer && customer.id;
 
-  // Стиль для позиционирования с учетом safe-area на iOS
+  // Позиционирование: если есть нижнее меню, поднимаем корзину над ним.
+  // Высоту нижнего меню выставляет CustomerBottomNav в CSS переменную.
+  const bottomNavHeight = 'var(--customer-bottom-nav-height, 0px)';
   const cartStyle = isCustomerLoggedIn
-    ? { bottom: 'calc(5rem + env(safe-area-inset-bottom))' }
-    : { bottom: 'env(safe-area-inset-bottom, 0)' };
+    ? { bottom: `calc(${bottomNavHeight} + 12px)` }
+    : { bottom: 'env(safe-area-inset-bottom, 0px)' };
 
   return (
-    <div className="fixed inset-x-0 z-50 flex justify-center px-0 pb-0" style={cartStyle}>
+    <div className="fixed inset-x-0 z-[60] flex justify-center px-0 pb-0" style={cartStyle}>
       <div className="w-full max-w-[480px] rounded-none sm:rounded-2xl bg-white border-t border-gray-200 px-4 py-3 sm:px-6 sm:py-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex flex-col">

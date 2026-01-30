@@ -1,8 +1,25 @@
+import { useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function CustomerBottomNav() {
     const navigate = useNavigate();
     const location = useLocation();
+    const navRef = useRef(null);
+
+    // Пробрасываем фактическую высоту нижнего меню в CSS переменную
+    useEffect(() => {
+        const update = () => {
+            const height = navRef.current?.getBoundingClientRect?.().height || 0;
+            document.documentElement.style.setProperty('--customer-bottom-nav-height', `${height}px`);
+        };
+
+        update();
+        window.addEventListener('resize', update);
+        return () => {
+            window.removeEventListener('resize', update);
+            document.documentElement.style.setProperty('--customer-bottom-nav-height', '0px');
+        };
+    }, []);
 
     const menuItems = [
         {
@@ -32,7 +49,7 @@ export default function CustomerBottomNav() {
     ];
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div ref={navRef} className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
             <div className="max-w-[480px] mx-auto">
                 <div className="grid grid-cols-4 gap-1">
                     {menuItems.map((item) => {
