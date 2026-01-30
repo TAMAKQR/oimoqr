@@ -13,7 +13,9 @@ import {
   reorderDishes,
   createModifierOption,
   updateModifierOption,
-  deleteModifierOption
+  deleteModifierOption,
+  uploadModifierOptionImage,
+  deleteModifierOptionImage
 } from '../controllers/dish.controller.js';
 import { authenticate, requireRestaurant } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
@@ -41,5 +43,8 @@ router.delete('/modifiers/:id', authenticate, requireRestaurant, deleteModifier)
 router.post('/modifiers/:modifierId/options', authenticate, requireRestaurant, createModifierOption);
 router.put('/modifiers/options/:optionId', authenticate, requireRestaurant, updateModifierOption);
 router.delete('/modifiers/options/:optionId', authenticate, requireRestaurant, deleteModifierOption);
+// ✅ Upload/delete images for modifier options
+router.post('/modifiers/options/:optionId/upload-image', authenticate, requireRestaurant, upload.single('image'), uploadModifierOptionImage);
+router.delete('/modifiers/options/:optionId/image', authenticate, requireRestaurant, deleteModifierOptionImage);
 
 export default router;

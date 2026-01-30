@@ -215,6 +215,7 @@ model ModifierOption {
   id                String    @id @default(cuid())
   name              String
   price             Float     @default(0)
+  image             String?   // ✅ Фото для конкретного модификатора (например, коктейль с клубникой)
   
   modifierId        String
   modifier          Modifier  @relation(fields: [modifierId], references: [id], onDelete: Cascade)

@@ -625,3 +625,86 @@ export const deleteModifierOption = async (req, res, next) => {
     next(error);
   }
 };
+
+// ✅ Upload image for modifier option
+export const uploadModifierOptionImage = async (req, res, next) => {
+  try {
+    const { optionId } = req.params;
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    console.log('📸 Uploading modifier option image:', {
+      filename: req.file.filename,
+      path: req.file.path
+    });
+
+    // Check if option exists
+    const option = await prisma.modifierOption.findUnique({
+      where: { id: optionId },
+      include: {
+        modifier: {
+          include: {
+            dish: {
+              include: {
+                category: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!option) {
+      return res.status(404).json({ error: 'Modifier option not found' });
+    }
+
+    // Get image URL
+    const imageUrl = req.file.path && req.file.path.startsWith('http')
+      ? req.file.path
+      : `/uploads/${req.file.filename}`;
+
+    console.log('📸 Modifier option image URL:', imageUrl);
+
+    const updatedOption = await prisma.modifierOption.update({
+      where: { id: optionId },
+      data: { image: imageUrl }
+    });
+
+    res.json({
+      message: 'Modifier option image uploaded successfully',
+      imageUrl,
+      option: updatedOption
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ✅ Delete image for modifier option
+export const deleteModifierOptionImage = async (req, res, next) => {
+  try {
+    const { optionId } = req.params;
+
+    const option = await prisma.modifierOption.findUnique({
+      where: { id: optionId }
+    });
+
+    if (!option) {
+      return res.status(404).json({ error: 'Modifier option not found' });
+    }
+
+    const updatedOption = await prisma.modifierOption.update({
+      where: { id: optionId },
+      data: { image: null }
+    });
+
+    res.json({
+      message: 'Modifier option image deleted successfully',
+      option: updatedOption
+    });
+  } catch (error) {
+    next(error);
+  }
+};
