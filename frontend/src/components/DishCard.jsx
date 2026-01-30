@@ -177,6 +177,7 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
                 <img
                   src={dish.image}
                   alt={dish.name}
+                  loading="lazy"
                   className={`w-20 h-20 sm:w-28 sm:h-28 object-cover rounded-lg flex-shrink-0 ${!isAvailable ? 'grayscale' : ''
                     }`}
                 />
@@ -278,6 +279,7 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
               <img
                 src={dish.image}
                 alt={dish.name}
+                loading="lazy"
                 className={`w-full h-40 sm:h-48 object-cover ${!isAvailable ? 'grayscale' : ''
                   }`}
               />
@@ -395,6 +397,7 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
             <img
               src={dish.image}
               alt={dish.name}
+              loading="lazy"
               className="w-full h-full object-cover"
             />
 

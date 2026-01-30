@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { restaurantService } from '../services/restaurantService';
 import customerService from '../services/customerService';
@@ -52,18 +52,10 @@ const MenuPage = () => {
     setIsCustomerLoggedIn(customerService.isAuthenticated());
   }, []);
 
-  useEffect(() => {
-    loadRestaurant(selectedLanguage);
-  }, [subdomain]);
-
-  useEffect(() => {
-    if (restaurant && selectedLanguage) {
-      loadRestaurant(selectedLanguage);
-    }
-  }, [selectedLanguage]);
-
-  const loadRestaurant = async (language) => {
+  // ✅ ОПТИМИЗАЦИЯ: useCallback предотвращает лишние перерендеры
+  const loadRestaurant = useCallback(async (language) => {
     try {
+      setLoading(true);
       const data = await restaurantService.getBySubdomain(subdomain, language);
       setRestaurant(data);
       // Сохраняем последний посещенный ресторан для клиентской авторизации
@@ -88,7 +80,13 @@ const MenuPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [subdomain]);
+
+  // ✅ ОПТИМИЗАЦИЯ: Один useEffect для загрузки - избегаем дублирования
+  useEffect(() => {
+    loadRestaurant(selectedLanguage);
+  }, [subdomain, selectedLanguage, loadRestaurant]);
+
 
   // Плавное переключение категорий при скролле с помощью Intersection Observer
   useEffect(() => {

@@ -40,6 +40,7 @@ const BannerSlider = ({ banners }) => {
           <img
             src={banner}
             alt={`Banner ${index + 1}`}
+            loading={index === 0 ? "eager" : "lazy"}
             className="w-full h-full object-cover"
           />
         </SwiperSlide>
