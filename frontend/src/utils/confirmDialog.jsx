@@ -6,7 +6,18 @@ import toast from 'react-hot-toast';
  * @param {Object} options - Дополнительные опции
  * @returns {Promise<boolean>} - Promise который разрешается в true если пользователь подтвердил
  */
+
+// ✅ Защита от множественных вызовов
+let isDialogOpen = false;
+
 export const confirmDialog = (message, options = {}) => {
+    // Если диалог уже открыт, игнорируем повторный вызов
+    if (isDialogOpen) {
+        return new Promise((resolve) => resolve(false));
+    }
+
+    isDialogOpen = true;
+
     return new Promise((resolve) => {
         const {
             confirmText = 'Подтвердить',
@@ -15,7 +26,13 @@ export const confirmDialog = (message, options = {}) => {
             icon = '⚠️'
         } = options;
 
-        toast.custom(
+        const handleResolve = (value) => {
+            toast.dismiss(toastId);
+            isDialogOpen = false;
+            resolve(value);
+        };
+
+        const toastId = toast.custom(
             (t) => (
                 <div
                     className={`${t.visible ? 'animate-enter' : 'animate-leave'
@@ -35,19 +52,13 @@ export const confirmDialog = (message, options = {}) => {
                     </div>
                     <div className="flex border-t border-gray-200">
                         <button
-                            onClick={() => {
-                                toast.dismiss(t.id);
-                                resolve(false);
-                            }}
+                            onClick={() => handleResolve(false)}
                             className="w-full border-r border-gray-200 rounded-none rounded-bl-lg px-4 py-3 flex items-center justify-center text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                         >
                             {cancelText}
                         </button>
                         <button
-                            onClick={() => {
-                                toast.dismiss(t.id);
-                                resolve(true);
-                            }}
+                            onClick={() => handleResolve(true)}
                             className="w-full rounded-none rounded-br-lg px-4 py-3 flex items-center justify-center text-sm font-medium text-blue-600 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                         >
                             {confirmText}

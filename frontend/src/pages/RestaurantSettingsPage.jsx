@@ -601,7 +601,10 @@ const RestaurantSettingsPage = () => {
                       />
                       <button
                         type="button"
-                        onClick={() => handleDeleteBanner(banner)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteBanner(banner);
+                        }}
                         className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-lg transition-all opacity-0 group-hover:opacity-100"
                         title="Удалить баннер"
                       >

@@ -1025,7 +1025,10 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
                 {dish && (
                   <button
                     type="button"
-                    onClick={handleDeleteImage}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteImage();
+                    }}
                     className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-lg transition-colors"
                     title="Удалить изображение"
                   >
