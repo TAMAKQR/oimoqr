@@ -61,11 +61,9 @@ export default function CustomerLoginModal({ isOpen, onClose, onLoginSuccess, re
         }
     };
 
-    // Верификация кода
-    const handleVerifyCode = async (e) => {
-        e.preventDefault();
-        const fullCode = code.join('');
-        if (fullCode.length !== 4) {
+    const verifyCode = async (fullCode) => {
+        if (loading) return;
+        if (!fullCode || fullCode.length !== 4) {
             toast.error('Введите 4-значный код');
             return;
         }
@@ -91,6 +89,12 @@ export default function CustomerLoginModal({ isOpen, onClose, onLoginSuccess, re
         }
     };
 
+    // Верификация кода
+    const handleVerifyCode = async (e) => {
+        e.preventDefault();
+        await verifyCode(code.join(''));
+    };
+
     // Обработка ввода кода
     const handleCodeChange = (index, value) => {
         if (!/^\d*$/.test(value)) return;
@@ -106,7 +110,7 @@ export default function CustomerLoginModal({ isOpen, onClose, onLoginSuccess, re
 
         // Автоотправка при заполнении всех 4 цифр
         if (newCode.every(digit => digit) && index === 3) {
-            setTimeout(() => handleVerifyCode({ preventDefault: () => { } }), 100);
+            verifyCode(newCode.join(''));
         }
     };
 
