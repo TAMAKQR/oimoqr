@@ -292,13 +292,13 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
       <>
         <div
           onClick={handleCardClick}
-          className={`overflow-hidden rounded-lg border border-gray-200 bg-white transition-all duration-200 ${isAvailable
+          className={`overflow-hidden rounded-lg border border-gray-200 bg-white transition-all duration-200 flex flex-col h-full ${isAvailable
             ? 'cursor-pointer hover:shadow-lg active:scale-98'
             : 'opacity-60 cursor-not-allowed'
             }`}
         >
           {dish.image && (
-            <div className="relative h-40 sm:h-48">
+            <div className="relative w-full aspect-[4/3]">
               <ImageWithLoader
                 src={cacheBustImage(dish.image)}
                 alt={dish.name}
@@ -408,7 +408,7 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
     <>
       <div
         onClick={handleCardClick}
-        className={`overflow-hidden rounded-lg border border-gray-200 bg-white transition-all duration-200 flex flex-col ${isAvailable
+        className={`overflow-hidden rounded-lg border border-gray-200 bg-white transition-all duration-200 flex flex-col h-full ${isAvailable
           ? 'cursor-pointer hover:shadow-lg active:scale-98'
           : 'opacity-60 cursor-not-allowed'
           }`}

@@ -568,6 +568,7 @@ const MenuManagementPage = () => {
           onSave={() => {
             setShowCategoryGroupsModal(false);
             loadCategories(selectedRestaurantId);
+            loadCategoryGroups(selectedRestaurantId);
           }}
         />
       )}

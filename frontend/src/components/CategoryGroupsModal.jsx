@@ -66,7 +66,8 @@ const CategoryGroupsModal = ({ restaurantId, categories, onClose, onSave }) => {
         try {
             await categoryGroupService.deleteCategoryGroup(groupId);
             toast.success('Группа удалена');
-            loadGroups();
+            await loadGroups();
+            onSave(); // Уведомляем родительский компонент об изменениях
         } catch (err) {
             console.error('Error deleting group:', err);
             toast.error('Ошибка при удалении группы');
@@ -110,8 +111,12 @@ const CategoryGroupsModal = ({ restaurantId, categories, onClose, onSave }) => {
                 toast.success('Группа создана');
             }
 
+            // Сначала обновляем список групп в модальном окне
+            await loadGroups();
+            // Закрываем форму
             setShowGroupForm(false);
-            loadGroups();
+            // Уведомляем родительский компонент об изменениях (он тоже перезагрузит группы)
+            onSave();
         } catch (err) {
             console.error('Error saving group:', err);
             toast.error(err.response?.data?.message || 'Ошибка при сохранении группы');

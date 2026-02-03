@@ -8,6 +8,7 @@ import Cart from '../components/Cart';
 import WorkingHoursSection from '../components/WorkingHoursSection';
 import MenuSkeleton from '../components/MenuSkeleton';
 import CustomerLoginModal from '../components/CustomerLoginModal';
+import ImageWithLoader from '../components/ImageWithLoader';
 import CustomerBottomNav from '../components/CustomerBottomNav';
 
 const getCurrencySymbol = (currencyCode) => {
@@ -344,11 +345,14 @@ const MenuPage = () => {
                   className="flex flex-col items-center bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden"
                 >
                   {group.image && (
-                    <img
-                      src={group.image}
-                      alt={group.name}
-                      className="w-full h-32 object-cover"
-                    />
+                    <div className="w-full aspect-square">
+                      <ImageWithLoader
+                        src={group.image}
+                        alt={group.name}
+                        loading="lazy"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                   )}
                   <div className="p-3 w-full text-center">
                     <h3 className="font-semibold text-sm">{group.name}</h3>
