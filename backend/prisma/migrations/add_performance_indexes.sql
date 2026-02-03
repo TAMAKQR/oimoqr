@@ -33,7 +33,7 @@ CREATE INDEX IF NOT EXISTS "Category_categoryGroupId_idx" ON "Category"("categor
 CREATE INDEX IF NOT EXISTS "RestaurantLanguage_restaurantId_isEnabled_idx" ON "RestaurantLanguage"("restaurantId", "isEnabled");
 
 -- Индексы для просмотров меню
-CREATE INDEX IF NOT EXISTS "MenuView_restaurantId_viewedAt_idx" ON "MenuView"("restaurantId", "viewedAt");
+CREATE INDEX IF NOT EXISTS "MenuView_restaurantId_createdAt_idx" ON "MenuView"("restaurantId", "createdAt");
 
 -- Индексы для заказов
 CREATE INDEX IF NOT EXISTS "Order_restaurantId_createdAt_idx" ON "Order"("restaurantId", "createdAt");
