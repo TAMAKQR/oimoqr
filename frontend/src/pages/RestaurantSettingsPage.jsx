@@ -16,7 +16,10 @@ const RestaurantSettingsPage = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const [userData, setUserData] = useState(null);
-  const [selectedRestaurantId, setSelectedRestaurantId] = useState(null);
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState(() => {
+    // Восстанавливаем последний выбранный ресторан из localStorage
+    return localStorage.getItem('selectedRestaurantId') || null;
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
@@ -95,16 +98,31 @@ const RestaurantSettingsPage = () => {
   }, [selectedRestaurantId]);
 
   useEffect(() => {
-    if (userData && !selectedRestaurantId) {
+    if (userData && (userData.restaurants?.length > 0 || userData.restaurantStaff?.length > 0)) {
       const allRestaurants = [
         ...(userData.restaurants || []),
         ...(userData.restaurantStaff?.map(s => s.restaurant) || [])
       ];
+
       if (allRestaurants.length > 0) {
-        setSelectedRestaurantId(allRestaurants[0].id);
+        // Проверяем есть ли сохраненный ресторан в доступных
+        const savedRestaurantId = localStorage.getItem('selectedRestaurantId');
+        const savedRestaurantExists = savedRestaurantId && allRestaurants.some(r => r.id === savedRestaurantId);
+
+        if (savedRestaurantExists) {
+          // Если сохраненный ресторан существует - используем его
+          if (selectedRestaurantId !== savedRestaurantId) {
+            setSelectedRestaurantId(savedRestaurantId);
+          }
+        } else if (!selectedRestaurantId) {
+          // Если нет сохраненного или он недоступен - выбираем первый
+          const firstRestaurantId = allRestaurants[0].id;
+          setSelectedRestaurantId(firstRestaurantId);
+          localStorage.setItem('selectedRestaurantId', firstRestaurantId);
+        }
       }
     }
-  }, [userData, selectedRestaurantId]);
+  }, [userData]);
 
   // Валидация размера файла
   const validateFileSize = (file) => {
@@ -421,7 +439,10 @@ const RestaurantSettingsPage = () => {
             <RestaurantSelector
               userData={userData}
               selectedRestaurantId={selectedRestaurantId}
-              onSelectRestaurant={setSelectedRestaurantId}
+              onSelectRestaurant={(id) => {
+                setSelectedRestaurantId(id);
+                localStorage.setItem('selectedRestaurantId', id);
+              }}
             />
           </div>
         )}
