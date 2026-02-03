@@ -1,4 +1,5 @@
 import api from './api';
+import { getFromCache, setToCache, clearCache } from '../utils/cache';
 
 export const restaurantService = {
   createRestaurant: async (data) => {
@@ -21,13 +22,33 @@ export const restaurantService = {
   },
 
   getBySubdomain: async (subdomain, language) => {
+    // Создаем уникальный ключ кэша
+    const cacheKey = `restaurant_${subdomain}_${language || 'default'}`;
+
+    // Проверяем кэш
+    const cached = getFromCache(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    // Если нет в кэше, делаем запрос
+    console.log(`🌐 Loading restaurant from API: ${subdomain}`);
     const params = language ? { language } : {};
     const response = await api.get(`/restaurants/${subdomain}`, { params });
+
+    // Сохраняем в кэш (5 минут)
+    setToCache(cacheKey, response.data);
+
     return response.data;
   },
 
   updateRestaurant: async (id, data) => {
     const response = await api.put(`/restaurants/${id}`, data);
+
+    // Очищаем кэш при обновлении
+    // Не знаем subdomain, поэтому очищаем весь кэш ресторанов
+    clearCache(`restaurant_*`);
+
     return response.data;
   },
 
@@ -47,7 +68,7 @@ export const restaurantService = {
     });
     return response.data;
   },
-  
+
   deleteBanner: async (restaurantId, bannerUrl) => {
     const response = await api.delete(`/restaurants/${restaurantId}/delete-banner`, {
       data: { bannerUrl }
@@ -71,7 +92,7 @@ export const restaurantService = {
     });
     return response.data;
   },
-  
+
   deleteLogo: async (restaurantId) => {
     const response = await api.delete(`/restaurants/${restaurantId}/delete-logo`);
     return response.data;

@@ -3,11 +3,15 @@ import { calculateTrialEndDate, calculateSubscriptionPrice, getTrialDaysRemainin
 
 export const getRestaurantBySubdomain = async (req, res, next) => {
   try {
+    const startTime = Date.now();
     const { subdomain } = req.params;
     let { language } = req.query;
     const now = new Date();
 
+    console.log(`⏱️ [Menu Load] Starting for subdomain: ${subdomain}, language: ${language}`);
+
     // 1) Быстро получаем базовую информацию ресторана (нужно для defaultLanguage)
+    const t1 = Date.now();
     const restaurantBase = await prisma.restaurant.findUnique({
       where: { subdomain },
       select: {
@@ -50,6 +54,7 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
         }
       }
     });
+    console.log(`⏱️ [Menu Load] Restaurant base: ${Date.now() - t1}ms`);
 
     if (!restaurantBase) {
       return res.status(404).json({ error: 'Restaurant not found' });
@@ -60,6 +65,7 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
     }
 
     // 2) Проверка активной подписки именно для этого ресторана
+    const t2 = Date.now();
     const activeSubscription = await prisma.subscription.findFirst({
       where: {
         restaurantId: restaurantBase.id,
@@ -73,6 +79,7 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
         user: { select: { id: true } }
       }
     });
+    console.log(`⏱️ [Menu Load] Subscription check: ${Date.now() - t2}ms`);
 
     if (!activeSubscription) {
       return res.status(403).json({ error: 'Restaurant subscription is not active' });
@@ -94,6 +101,7 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
     }
 
     // 3) Загружаем категории/блюда отдельно и фильтруем переводы на уровне БД
+    const t3 = Date.now();
     const categories = await prisma.category.findMany({
       where: { restaurantId: restaurantBase.id },
       orderBy: { order: 'asc' },
@@ -118,6 +126,7 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
         }
       }
     });
+    console.log(`⏱️ [Menu Load] Categories & dishes: ${Date.now() - t3}ms`);
 
     // Parse workingHours if it's a JSON string (SQLite compatibility)
     let workingHours = restaurantBase.workingHours;
@@ -181,6 +190,9 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
       }
     }).catch(err => {
       console.error('Error tracking menu view:', err);
+      const totalTime = Date.now() - startTime;
+      console.log(`⏱️ [Menu Load] ✅ TOTAL TIME: ${totalTime}ms`);
+
     });
 
     res.json(restaurantWithImageUrl);
