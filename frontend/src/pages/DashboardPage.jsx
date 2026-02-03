@@ -34,7 +34,10 @@ const DashboardPage = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const [userData, setUserData] = useState(null);
-  const [selectedRestaurantId, setSelectedRestaurantId] = useState(null);
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState(() => {
+    // Восстанавливаем последний выбранный ресторан из localStorage
+    return localStorage.getItem('selectedRestaurantId') || null;
+  });
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newRestaurant, setNewRestaurant] = useState({ name: '', subdomain: '' });
@@ -88,17 +91,25 @@ const DashboardPage = () => {
       ];
 
       if (allRestaurants.length > 0) {
-        // Проверяем, существует ли текущий выбранный ресторан в обновленных данных
-        const currentSelectedRestaurantExists = allRestaurants.some(r => r.id === selectedRestaurantId);
+        // Проверяем есть ли сохраненный ресторан в доступных
+        const savedRestaurantId = localStorage.getItem('selectedRestaurantId');
+        const savedRestaurantExists = savedRestaurantId && allRestaurants.some(r => r.id === savedRestaurantId);
 
-        // Если ресторан не выбран или выбранный ресторан больше не существует,
-        // выбираем первый доступный ресторан
-        if (!selectedRestaurantId || !currentSelectedRestaurantExists) {
-          setSelectedRestaurantId(allRestaurants[0].id);
+        if (savedRestaurantExists) {
+          // Если сохраненный ресторан существует - используем его
+          if (selectedRestaurantId !== savedRestaurantId) {
+            setSelectedRestaurantId(savedRestaurantId);
+          }
+        } else if (!selectedRestaurantId || !allRestaurants.some(r => r.id === selectedRestaurantId)) {
+          // Если нет сохраненного или он недоступен - выбираем первый
+          const firstRestaurantId = allRestaurants[0].id;
+          setSelectedRestaurantId(firstRestaurantId);
+          localStorage.setItem('selectedRestaurantId', firstRestaurantId);
         }
       } else {
         // Если ресторанов нет, очищаем выбранный ID
         setSelectedRestaurantId(null);
+        localStorage.removeItem('selectedRestaurantId');
       }
     }
   }, [userData, selectedRestaurantId]); // selectedRestaurantId теперь в зависимостях
@@ -541,7 +552,10 @@ const DashboardPage = () => {
             <RestaurantSelector
               userData={userData}
               selectedRestaurantId={selectedRestaurantId}
-              onSelectRestaurant={setSelectedRestaurantId}
+              onSelectRestaurant={(id) => {
+                setSelectedRestaurantId(id);
+                localStorage.setItem('selectedRestaurantId', id);
+              }}
             />
           </div>
         )}
