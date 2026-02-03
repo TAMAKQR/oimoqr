@@ -163,6 +163,18 @@ const Sidebar = ({ userData, selectedRestaurantId }) => {
                 </p>
               </div>
             </div>
+
+            {/* Logout Button */}
+            <button
+              onClick={() => {
+                useAuthStore.getState().logout();
+                navigate('/login');
+              }}
+              className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+            >
+              <span className="text-lg">🚪</span>
+              <span className="text-sm font-medium">Выход</span>
+            </button>
           </div>
         )}
       </aside>
