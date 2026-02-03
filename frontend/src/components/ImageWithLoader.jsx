@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 const ImageWithLoader = ({
     src,
@@ -11,6 +11,38 @@ const ImageWithLoader = ({
 }) => {
     const [imageLoaded, setImageLoaded] = useState(false);
     const [imageError, setImageError] = useState(false);
+    const [inView, setInView] = useState(false);
+    const imgRef = useRef(null);
+
+    // Intersection Observer для более умной ленивой загрузки
+    useEffect(() => {
+        if (!imgRef.current || loading !== 'lazy') {
+            setInView(true);
+            return;
+        }
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        setInView(true);
+                        observer.disconnect();
+                    }
+                });
+            },
+            {
+                rootMargin: '50px', // Начинаем загружать за 50px до видимости
+            }
+        );
+
+        observer.observe(imgRef.current);
+
+        return () => {
+            if (observer) {
+                observer.disconnect();
+            }
+        };
+    }, [loading]);
 
     const handleLoad = () => {
         setImageLoaded(true);
@@ -23,7 +55,7 @@ const ImageWithLoader = ({
     };
 
     return (
-        <div className="relative w-full h-full">
+        <div ref={imgRef} className="relative w-full h-full">
             {/* Skeleton loader - показывается пока изображение загружается */}
             {!imageLoaded && (
                 <div className={`absolute inset-0 ${className} bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 animate-pulse`}>
@@ -44,16 +76,18 @@ const ImageWithLoader = ({
                     <span className="text-xs">Фото не загрузилось</span>
                 </div>
             ) : (
-                <img
-                    src={src}
-                    alt={alt}
-                    className={`${className} ${!imageLoaded ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
-                    loading={loading}
-                    decoding={decoding}
-                    onLoad={handleLoad}
-                    onError={handleError}
-                    {...props}
-                />
+                (inView || loading === 'eager') && (
+                    <img
+                        src={src}
+                        alt={alt}
+                        className={`${className} ${!imageLoaded ? 'opacity-0' : 'opacity-100'} transition-opacity duration-500`}
+                        loading={loading}
+                        decoding={decoding}
+                        onLoad={handleLoad}
+                        onError={handleError}
+                        {...props}
+                    />
+                )
             )}
         </div>
     );

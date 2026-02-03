@@ -9,6 +9,7 @@ import { confirmDialog } from '../utils/confirmDialog';
 import RestaurantSelector from '../components/RestaurantSelector';
 import DashboardLayout from '../components/DashboardLayout';
 import CategoryGroupsModal from '../components/CategoryGroupsModal';
+import ImageWithLoader from '../components/ImageWithLoader';
 
 const MenuManagementPage = () => {
   const navigate = useNavigate();
@@ -97,6 +98,7 @@ const MenuManagementPage = () => {
     try {
       const { categoryGroupService } = await import('../services/categoryGroupService');
       const groups = await categoryGroupService.getCategoryGroups(restaurantId);
+      console.log('📂 Loaded category groups:', groups);
       setCategoryGroups(groups);
     } catch (err) {
       console.error('Error loading category groups:', err);
@@ -455,11 +457,12 @@ const MenuManagementPage = () => {
                             <div className="flex items-center gap-3 flex-1 min-w-0">
                               <div className="relative w-16 h-16 flex-shrink-0">
                                 {dish.imageUrl ? (
-                                  <img
+                                  <ImageWithLoader
                                     src={`${dish.imageUrl}?t=${dataTimestamp}`}
                                     alt={dish.name}
                                     className="w-16 h-16 object-cover rounded border-2 border-green-500"
                                     title="Фото загружено"
+                                    loading="lazy"
                                   />
                                 ) : (
                                   <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center border-2 border-gray-300" title="Фото отсутствует">
@@ -639,6 +642,14 @@ const CategoryModal = ({ category, restaurantId, onClose, onSave, categoryGroups
   const [categoryGroupId, setCategoryGroupId] = useState(category?.categoryGroupId || '');
   const [saving, setSaving] = useState(false);
 
+  console.log('📝 CategoryModal render:', {
+    categoryId: category?.id,
+    categoryName: category?.name,
+    categoryGroupId: category?.categoryGroupId,
+    currentCategoryGroupId: categoryGroupId,
+    availableGroups: categoryGroups?.length
+  });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log('Attempting to save category with data:', {
@@ -660,8 +671,10 @@ const CategoryModal = ({ category, restaurantId, onClose, onSave, categoryGroups
 
       if (category) {
         await menuService.updateCategory(category.id, data);
+        toast.success('Категория обновлена');
       } else {
         await menuService.createCategory(data);
+        toast.success('Категория создана');
       }
 
       onSave();
@@ -1228,10 +1241,11 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
             <label className="block text-sm font-medium mb-1">Фото</label>
             {currentImageUrl && !imageFile && (
               <div className="relative mb-2">
-                <img
+                <ImageWithLoader
                   src={currentImageUrl}
                   alt={dish?.name || 'Блюдо'}
                   className="w-full h-48 object-cover rounded"
+                  loading="lazy"
                 />
                 {dish && (
                   <button
@@ -1325,10 +1339,11 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
                           {/* Фото опции */}
                           {option.image && (
                             <div className="relative w-12 h-12 flex-shrink-0">
-                              <img
+                              <ImageWithLoader
                                 src={option.image}
                                 alt={option.name}
                                 className="w-full h-full object-cover rounded"
+                                loading="lazy"
                               />
                               {!option.isNew && (
                                 <button

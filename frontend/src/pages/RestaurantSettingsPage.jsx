@@ -8,6 +8,7 @@ import { confirmDialog } from '../utils/confirmDialog';
 import RestaurantSelector from '../components/RestaurantSelector';
 import DashboardLayout from '../components/DashboardLayout';
 import ThemeSwitcher from '../components/ThemeSwitcher';
+import ImageWithLoader from '../components/ImageWithLoader';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -594,10 +595,11 @@ const RestaurantSettingsPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {getSelectedRestaurant().banners.map((banner, index) => (
                     <div key={index} className="relative group">
-                      <img
+                      <ImageWithLoader
                         src={banner}
                         alt={`Banner ${index + 1}`}
                         className="w-full h-32 object-cover rounded"
+                        loading="lazy"
                       />
                       <button
                         type="button"
