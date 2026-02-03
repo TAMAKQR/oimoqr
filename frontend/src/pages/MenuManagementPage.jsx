@@ -538,7 +538,6 @@ const MenuManagementPage = () => {
           categoryGroups={categoryGroups}
           onClose={() => setShowCategoryModal(false)}
           onSave={() => {
-            setShowCategoryModal(false);
             loadCategories(selectedRestaurantId);
             loadCategoryGroups(selectedRestaurantId);
           }}
@@ -553,7 +552,6 @@ const MenuManagementPage = () => {
           currency={currency}
           onClose={() => setShowDishModal(false)}
           onSave={() => {
-            setShowDishModal(false);
             loadCategories(selectedRestaurantId);
           }}
         />
