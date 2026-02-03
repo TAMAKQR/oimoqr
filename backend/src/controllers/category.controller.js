@@ -8,6 +8,7 @@ export const getCategories = async (req, res, next) => {
       where: { restaurantId },
       orderBy: { order: 'asc' },
       include: {
+        categoryGroup: true, // Включаем информацию о группе категорий
         dishes: {
           orderBy: { order: 'asc' },
           include: {
@@ -55,19 +56,30 @@ export const getCategories = async (req, res, next) => {
 
 export const createCategory = async (req, res, next) => {
   try {
-    const { name, description, restaurantId, order } = req.body;
+    const { name, description, restaurantId, order, categoryGroupId } = req.body;
+
+    console.log('📝 Creating category:', {
+      name,
+      description,
+      restaurantId,
+      order: order || 0,
+      categoryGroupId: categoryGroupId || null
+    });
 
     const category = await prisma.category.create({
       data: {
         name,
         description,
         restaurantId,
-        order: order || 0
+        order: order || 0,
+        categoryGroupId: categoryGroupId || null
       }
     });
 
+    console.log('✅ Category created successfully:', category);
     res.status(201).json(category);
   } catch (error) {
+    console.error('❌ Error creating category:', error);
     next(error);
   }
 };
@@ -75,7 +87,16 @@ export const createCategory = async (req, res, next) => {
 export const updateCategory = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, description, order, isActive } = req.body;
+    const { name, description, order, isActive, categoryGroupId } = req.body;
+
+    console.log('📝 Updating category:', {
+      id,
+      name,
+      description,
+      order,
+      isActive,
+      categoryGroupId: categoryGroupId || null
+    });
 
     // Check if user has access to this category's restaurant
     const category = await prisma.category.findUnique({
@@ -92,12 +113,15 @@ export const updateCategory = async (req, res, next) => {
         name,
         description,
         order,
-        isActive
+        isActive,
+        categoryGroupId: categoryGroupId || null
       }
     });
 
+    console.log('✅ Category updated successfully:', updatedCategory);
     res.json(updatedCategory);
   } catch (error) {
+    console.error('❌ Error updating category:', error);
     next(error);
   }
 };
