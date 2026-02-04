@@ -338,11 +338,11 @@ model OrderItem {
   
   // For restaurant orders
   dishId            String?
-  dish              Dish?     @relation(fields: [dishId], references: [id])
+  dish              Dish?     @relation(fields: [dishId], references: [id], onDelete: SetNull)
   
   // For online store orders
   productId         String?
-  product           Product?  @relation(fields: [productId], references: [id])
+  product           Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt

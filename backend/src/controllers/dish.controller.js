@@ -333,6 +333,18 @@ export const deleteDish = async (req, res, next) => {
       return res.status(404).json({ error: 'Dish not found' });
     }
 
+    // Check if dish is used in any orders
+    const ordersCount = await prisma.orderItem.count({
+      where: { dishId: id }
+    });
+
+    if (ordersCount > 0) {
+      return res.status(400).json({
+        error: 'Cannot delete dish that has been ordered',
+        message: `Это блюдо используется в ${ordersCount} заказах. Вместо удаления можно скрыть блюдо, сняв его с публикации.`
+      });
+    }
+
     await prisma.dish.delete({
       where: { id }
     });

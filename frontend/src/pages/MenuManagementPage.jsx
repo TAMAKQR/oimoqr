@@ -218,9 +218,12 @@ const MenuManagementPage = () => {
 
     try {
       await menuService.deleteDish(dishId);
+      toast.success('Блюдо удалено');
       await loadCategories(selectedRestaurantId);
     } catch (err) {
-      toast.error('Ошибка при удалении блюда');
+      // Show more detailed error message if available
+      const errorMessage = err.response?.data?.message || err.response?.data?.error || 'Ошибка при удалении блюда';
+      toast.error(errorMessage);
       console.error(err);
     }
   };

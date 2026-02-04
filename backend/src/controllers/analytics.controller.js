@@ -94,7 +94,8 @@ export const getRestaurantStats = async (req, res, next) => {
       prisma.orderItem.groupBy({
         by: ['dishId'],
         where: {
-          order: orderFilter
+          order: orderFilter,
+          dishId: { not: null } // Исключаем удаленные блюда
         },
         _count: {
           dishId: true
@@ -126,17 +127,20 @@ export const getRestaurantStats = async (req, res, next) => {
 
     // Получаем детали для топ блюд
     const topDishesDetails = await Promise.all(
-      topDishes.map(async (item) => {
-        const dish = await prisma.dish.findUnique({
-          where: { id: item.dishId }
-        });
-        return {
-          ...dish,
-          orderCount: item._count.dishId,
-          totalQuantity: item._sum.quantity
-        };
-      })
-    );
+      topDishes
+        .filter(item => item.dishId !== null) // Исключаем удаленные блюда
+        .map(async (item) => {
+          const dish = await prisma.dish.findUnique({
+            where: { id: item.dishId }
+          });
+          if (!dish) return null; // Блюдо было удалено
+          return {
+            ...dish,
+            orderCount: item._count.dishId,
+            totalQuantity: item._sum.quantity
+          };
+        })
+    ).then(results => results.filter(dish => dish !== null)); // Убираем null значения
 
     // Выручка за сегодня
     const todayRevenue = await prisma.order.aggregate({
