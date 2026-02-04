@@ -341,7 +341,7 @@ export const deleteDish = async (req, res, next) => {
     if (ordersCount > 0) {
       return res.status(400).json({
         error: 'Cannot delete dish that has been ordered',
-        message: `Это блюдо используется в ${ordersCount} заказах. Вместо удаления можно скрыть блюдо, сняв его с публикации.`
+        message: `Это блюдо используется в ${ordersCount} ${ordersCount === 1 ? 'заказе' : 'заказах'}. Удаление невозможно для сохранения истории.\n\n💡 Вместо удаления используйте кнопку ⏸ чтобы скрыть блюдо из меню.`
       });
     }
 
