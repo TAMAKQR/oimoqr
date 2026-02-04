@@ -577,7 +577,12 @@ const MenuManagementPage = () => {
           onClose={() => setShowDishModal(false)}
           onSave={() => {
             setShowDishModal(false); // Закрываем модалку
+            // Автоматически раскрываем категорию после добавления/редактирования блюда
+            if (selectedCategoryId) {
+              setExpandedCategories(prev => new Set([...prev, selectedCategoryId]));
+            }
             loadCategories(selectedRestaurantId); // Обновляем список
+            setDataTimestamp(Date.now()); // Обновляем timestamp для изображений
             toast.success(editingDish ? 'Блюдо обновлено' : 'Блюдо добавлено');
           }}
         />
