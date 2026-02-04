@@ -22,27 +22,26 @@ import { upload } from '../middleware/upload.js';
 
 const router = express.Router();
 
-// Public route
+// Public route - FIRST to avoid conflicts
 router.get('/category/:categoryId', getDishes);
 
-// Protected routes - Dishes
+// Protected routes - Specific paths FIRST (category, modifiers)
 router.post('/', authenticate, requireRestaurant, createDish);
 router.post('/category/:categoryId/reorder', authenticate, requireRestaurant, reorderDishes);
 
-// Protected routes - Modifiers (MUST be before /:id routes to avoid conflicts)
-router.post('/:dishId/modifiers', authenticate, requireRestaurant, createModifier);
+// Modifier routes with 'modifiers' keyword
 router.put('/modifiers/:id', authenticate, requireRestaurant, updateModifier);
 router.delete('/modifiers/:id', authenticate, requireRestaurant, deleteModifier);
 
-// Protected routes - Modifier Options
+// Modifier Options with 'modifiers/options' keyword
 router.post('/modifiers/:modifierId/options', authenticate, requireRestaurant, createModifierOption);
 router.put('/modifiers/options/:optionId', authenticate, requireRestaurant, updateModifierOption);
 router.delete('/modifiers/options/:optionId', authenticate, requireRestaurant, deleteModifierOption);
-// ✅ Upload/delete images for modifier options
 router.post('/modifiers/options/:optionId/upload-image', authenticate, requireRestaurant, upload.single('image'), uploadModifierOptionImage);
 router.delete('/modifiers/options/:optionId/image', authenticate, requireRestaurant, deleteModifierOptionImage);
 
-// Protected routes - Dishes with /:id (MUST be after more specific routes)
+// Dynamic dish routes - AFTER specific routes to avoid conflicts
+router.post('/:dishId/modifiers', authenticate, requireRestaurant, createModifier);
 router.put('/:id', authenticate, requireRestaurant, updateDish);
 router.post('/:id/upload-image', authenticate, requireRestaurant, upload.single('image'), uploadDishImage);
 router.delete('/:id/image', authenticate, requireRestaurant, deleteDishImage);
