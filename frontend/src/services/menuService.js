@@ -3,7 +3,8 @@ import api from './api';
 export const menuService = {
   // Categories
   getCategories: async (restaurantId) => {
-    const response = await api.get(`/restaurants/${restaurantId}/categories`);
+    // Добавляем timestamp для предотвращения кеширования
+    const response = await api.get(`/restaurants/${restaurantId}/categories?t=${Date.now()}`);
     return response.data;
   },
 

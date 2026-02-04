@@ -219,6 +219,7 @@ const MenuManagementPage = () => {
     try {
       await menuService.deleteDish(dishId);
       toast.success('Блюдо удалено');
+      setDataTimestamp(Date.now()); // Обновляем timestamp для cache-busting
       await loadCategories(selectedRestaurantId);
     } catch (err) {
       // Show more detailed error message if available
