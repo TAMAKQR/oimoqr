@@ -223,8 +223,9 @@ const MenuManagementPage = () => {
     } catch (err) {
       // Show more detailed error message if available
       const errorMessage = err.response?.data?.message || err.response?.data?.error || 'Ошибка при удалении блюда';
-      toast.error(errorMessage);
+      toast.error(errorMessage, { duration: 6000 }); // Дольше показываем сообщение
       console.error(err);
+      // Don't reload categories on error to avoid duplicate requests
     }
   };
 
