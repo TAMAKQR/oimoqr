@@ -66,14 +66,20 @@ if (process.env.NODE_ENV !== 'production') {
 
 // ✅ ОПТИМИЗАЦИЯ: HTTP Кэширование для статических данных
 app.use((req, res, next) => {
-  // Кэшируем GET запросы к API ресторанов, категорий и блюд
-  if (req.method === 'GET' && (
+  // Кэшируем GET запросы к API ресторанов, категорий и блюд ТОЛЬКО для публичных запросов
+  // НЕ кэшируем запросы с авторизацией (админка)
+  const isAuthenticated = req.headers.authorization;
+
+  if (req.method === 'GET' && !isAuthenticated && (
     req.url.startsWith('/api/restaurants/') ||
     req.url.startsWith('/api/categories') ||
     req.url.startsWith('/api/dishes')
   )) {
-    // Кэшируем на 5 минут (300 секунд)
+    // Кэшируем на 5 минут (300 секунд) только для публичных запросов
     res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+  } else if (req.method === 'GET' && isAuthenticated) {
+    // Для авторизованных запросов (админка) - НЕ кэшируем
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
   }
 
   // ✅ ИСПРАВЛЕНИЕ: Кэшируем uploads на 1 час (не 1 день) для возможности обновления
