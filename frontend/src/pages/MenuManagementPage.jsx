@@ -561,6 +561,7 @@ const MenuManagementPage = () => {
           categoryGroups={categoryGroups}
           onClose={() => setShowCategoryModal(false)}
           onSave={() => {
+            setShowCategoryModal(false); // Закрываем модалку
             loadCategories(selectedRestaurantId);
             loadCategoryGroups(selectedRestaurantId);
           }}
@@ -575,7 +576,9 @@ const MenuManagementPage = () => {
           currency={currency}
           onClose={() => setShowDishModal(false)}
           onSave={() => {
-            loadCategories(selectedRestaurantId);
+            setShowDishModal(false); // Закрываем модалку
+            loadCategories(selectedRestaurantId); // Обновляем список
+            toast.success(editingDish ? 'Блюдо обновлено' : 'Блюдо добавлено');
           }}
         />
       )}
