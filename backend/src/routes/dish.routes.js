@@ -28,13 +28,8 @@ router.get('/category/:categoryId', getDishes);
 // Protected routes - Dishes
 router.post('/', authenticate, requireRestaurant, createDish);
 router.post('/category/:categoryId/reorder', authenticate, requireRestaurant, reorderDishes);
-router.put('/:id', authenticate, requireRestaurant, updateDish);
-router.post('/:id/upload-image', authenticate, requireRestaurant, upload.single('image'), uploadDishImage);
-router.delete('/:id/image', authenticate, requireRestaurant, deleteDishImage);
-router.patch('/:id/toggle-availability', authenticate, requireRestaurant, toggleDishAvailability);
-router.delete('/:id', authenticate, requireRestaurant, deleteDish);
 
-// Protected routes - Modifiers
+// Protected routes - Modifiers (MUST be before /:id routes to avoid conflicts)
 router.post('/:dishId/modifiers', authenticate, requireRestaurant, createModifier);
 router.put('/modifiers/:id', authenticate, requireRestaurant, updateModifier);
 router.delete('/modifiers/:id', authenticate, requireRestaurant, deleteModifier);
@@ -46,5 +41,12 @@ router.delete('/modifiers/options/:optionId', authenticate, requireRestaurant, d
 // ✅ Upload/delete images for modifier options
 router.post('/modifiers/options/:optionId/upload-image', authenticate, requireRestaurant, upload.single('image'), uploadModifierOptionImage);
 router.delete('/modifiers/options/:optionId/image', authenticate, requireRestaurant, deleteModifierOptionImage);
+
+// Protected routes - Dishes with /:id (MUST be after more specific routes)
+router.put('/:id', authenticate, requireRestaurant, updateDish);
+router.post('/:id/upload-image', authenticate, requireRestaurant, upload.single('image'), uploadDishImage);
+router.delete('/:id/image', authenticate, requireRestaurant, deleteDishImage);
+router.patch('/:id/toggle-availability', authenticate, requireRestaurant, toggleDishAvailability);
+router.delete('/:id', authenticate, requireRestaurant, deleteDish);
 
 export default router;
