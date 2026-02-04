@@ -189,10 +189,10 @@ const RestaurantSettingsPage = () => {
     setAddress(r.address || '');
     setPhone(r.phone || '');
     setWhatsapp(r.whatsapp || '');
-    setInstagram(r.socialLinks?.instagram || '');
+    setInstagram(r.instagram || '');
     setFacebook(r.facebook || '');
     setCurrency(r.currency || '₽');
-    setMenuCardStyle(r.menuCardStyle || 'horizontal');
+    setMenuCardStyle(r.cardStyle || 'horizontal');
     setDeliveryEnabled(r.deliveryEnabled || false);
     setDeliveryFee(r.deliveryFee || '');
     setMinOrderAmount(r.minOrderAmount || '');
