@@ -48,7 +48,7 @@ export const updateUserSubscription = async (req, res, next) => {
       // Проверяем, не превышает ли количество ресторанов лимит нового тарифа
       const restaurantCount = user.restaurants.length;
       if (pricingTier.maxRestaurants && restaurantCount > pricingTier.maxRestaurants) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: `Невозможно применить тариф "${pricingTier.name}". У пользователя ${restaurantCount} ресторанов, а тариф позволяет только ${pricingTier.maxRestaurants}. Сначала нужно удалить лишние рестораны.`
         });
       }
@@ -98,7 +98,7 @@ export const updateUserSubscription = async (req, res, next) => {
     });
 
     // Создаем новые подписки для всех ресторанов пользователя
-    const subscriptions = await Promise.all(user.restaurants.map(restaurant => 
+    const subscriptions = await Promise.all(user.restaurants.map(restaurant =>
       prisma.subscription.create({
         data: {
           userId,
@@ -170,7 +170,7 @@ export const updateSubscription = async (req, res, next) => {
 
       // Проверяем, не превышает ли количество ресторанов лимит нового тарифа
       if (user && pricingTier.maxRestaurants && user.restaurants.length > pricingTier.maxRestaurants) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: `Невозможно применить тариф "${pricingTier.name}". У пользователя ${user.restaurants.length} ресторанов, а тариф позволяет только ${pricingTier.maxRestaurants}. Сначала нужно удалить лишние рестораны.`
         });
       }
@@ -334,7 +334,7 @@ export const updateUserCredentials = async (req, res, next) => {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
-        restaurant: true
+        restaurants: true
       }
     });
 
@@ -371,6 +371,14 @@ export const updateUserCredentials = async (req, res, next) => {
       updateData.password = await bcrypt.hash(password, 10);
     }
 
+    // If nothing to update, return current user
+    if (Object.keys(updateData).length === 0) {
+      return res.json({
+        message: 'No changes to update',
+        user
+      });
+    }
+
     // Update user
     const updatedUser = await prisma.user.update({
       where: { id: userId },
@@ -381,7 +389,7 @@ export const updateUserCredentials = async (req, res, next) => {
         name: true,
         phone: true,
         isAdmin: true,
-        restaurant: {
+        restaurants: {
           select: {
             id: true,
             name: true,
@@ -423,7 +431,7 @@ export const deactivateUser = async (req, res, next) => {
     // Обновляем статус всех подписок пользователя на CANCELLED
     await prisma.subscription.updateMany({
       where: { userId },
-      data: { 
+      data: {
         status: 'CANCELLED',
         currentPeriodEnd: new Date() // Немедленное окончание подписки
       }
