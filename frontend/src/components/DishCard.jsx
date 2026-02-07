@@ -409,7 +409,7 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
       <>
         <div
           onClick={handleCardClick}
-          className={`overflow-hidden rounded-2xl bg-white shadow-[0_10px_30px_rgba(0,0,0,0.06)] transition-all duration-200 flex flex-col h-full ${isAvailable
+          className={`overflow-hidden rounded-2xl bg-white shadow-[0_10px_30px_rgba(0,0,0,0.06)] transition-all duration-200 flex flex-col h-full min-h-[320px] sm:min-h-[360px] ${isAvailable
             ? 'cursor-pointer hover:shadow-[0_12px_36px_rgba(0,0,0,0.08)] active:scale-98'
             : 'opacity-60 cursor-not-allowed'
             }`}
