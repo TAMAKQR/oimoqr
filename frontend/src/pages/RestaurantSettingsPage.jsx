@@ -471,7 +471,7 @@ const RestaurantSettingsPage = () => {
                   onChange={(e) => setDescription(e.target.value)}
                   className="input w-full"
                   rows="3"
-                  placeholder="Краткое описание вашего ресторана"
+                  placeholder="Например: Краткое описание вашего ресторана"
                 />
               </div>
 
@@ -482,7 +482,7 @@ const RestaurantSettingsPage = () => {
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   className="input w-full"
-                  placeholder="г. Алматы, ул. Абая 123"
+                  placeholder="Например: г. Алматы, ул. Абая 123"
                 />
               </div>
 
@@ -493,7 +493,7 @@ const RestaurantSettingsPage = () => {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="input w-full"
-                  placeholder="+7 (777) 123-45-67"
+                  placeholder="Например: +7 (777) 123-45-67"
                 />
               </div>
 
@@ -707,7 +707,7 @@ const RestaurantSettingsPage = () => {
                   value={whatsapp}
                   onChange={(e) => setWhatsapp(e.target.value)}
                   className="input w-full"
-                  placeholder="+77771234567"
+                  placeholder="Например: +77771234567"
                 />
                 <p className="text-sm text-gray-500 mt-1">
                   Номер для приема заказов через WhatsApp
@@ -721,7 +721,7 @@ const RestaurantSettingsPage = () => {
                   value={instagram}
                   onChange={(e) => setInstagram(e.target.value)}
                   className="input w-full"
-                  placeholder="@your_restaurant"
+                  placeholder="Например: @your_restaurant"
                 />
               </div>
 
@@ -732,7 +732,7 @@ const RestaurantSettingsPage = () => {
                   value={facebook}
                   onChange={(e) => setFacebook(e.target.value)}
                   className="input w-full"
-                  placeholder="facebook.com/your-restaurant"
+                  placeholder="Например: facebook.com/your-restaurant"
                 />
               </div>
             </div>
