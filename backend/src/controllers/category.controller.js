@@ -62,16 +62,26 @@ export const createCategory = async (req, res, next) => {
       name,
       description,
       restaurantId,
-      order: order || 0,
+      order: order || 'auto',
       categoryGroupId: categoryGroupId || null
     });
+
+    // ✅ Если order не указан, добавляем категорию в конец списка
+    let categoryOrder = order;
+    if (!categoryOrder && categoryOrder !== 0) {
+      const lastCategory = await prisma.category.findFirst({
+        where: { restaurantId },
+        orderBy: { order: 'desc' }
+      });
+      categoryOrder = lastCategory ? lastCategory.order + 1 : 0;
+    }
 
     const category = await prisma.category.create({
       data: {
         name,
         description,
         restaurantId,
-        order: order || 0,
+        order: categoryOrder,
         categoryGroupId: categoryGroupId || null
       }
     });

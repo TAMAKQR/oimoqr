@@ -78,6 +78,19 @@ const DishModal = ({
     const basePrice = parseFloat(dish.price) || 0;
     const selectedOptions = Object.values(selectedModifiers).flat();
 
+    // ✅ ПРОВЕРКА ОБЯЗАТЕЛЬНЫХ МОДИФИКАТОРОВ
+    const requiredModifiers = dish.modifiers?.filter(m => m.isRequired) || [];
+    for (const modifier of requiredModifiers) {
+      const selected = selectedModifiers[modifier.id];
+      if (!selected || selected.length === 0) {
+        toast.error(`Пожалуйста, выберите "${modifier.name}" (обязательно)`, {
+          duration: 3000,
+          icon: '⚠️'
+        });
+        return;
+      }
+    }
+
     // Если базовая цена = 0 и нет выбранных модификаторов - показываем ошибку
     if (basePrice === 0 && selectedOptions.length === 0) {
       toast.error('Пожалуйста, выберите опции для этого блюда');
@@ -187,7 +200,12 @@ const DishModal = ({
               {dish.modifiers.map((modifier) => (
                 modifier.options && modifier.options.length > 0 && (
                   <div key={modifier.id} className="mb-4">
-                    <h3 className="text-base sm:text-lg font-semibold mb-2">{modifier.name}</h3>
+                    <h3 className="text-base sm:text-lg font-semibold mb-2 flex items-center gap-2">
+                      {modifier.name}
+                      {modifier.isRequired && (
+                        <span className="text-red-500 text-sm font-normal">(обязательно)</span>
+                      )}
+                    </h3>
                     <div className="space-y-2">
                       {modifier.options.map((option) => (
                         <label
