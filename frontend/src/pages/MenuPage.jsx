@@ -381,25 +381,6 @@ const MenuPage = () => {
               </div>
             )}
           </div>
-          <div className="px-4 pb-4">
-            <button
-              onClick={() => setIsSearchOpen(true)}
-              className="w-full flex items-center justify-between rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-700 shadow-inner hover:border-primary-200 hover:bg-white transition"
-            >
-              <span className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
-                </svg>
-                Поиск по блюдам
-              </span>
-              <span className="text-xs text-gray-500">Открыть снизу</span>
-            </button>
-            {isSearching && (
-              <p className="text-xs text-gray-500 mt-2">
-                Найдено категорий: {filteredCategories.length}
-              </p>
-            )}
-          </div>
         </div>
 
         {/* Category Groups - отображаются в 2 ряда с фото */}
@@ -555,7 +536,7 @@ const MenuPage = () => {
         {/* Floating Search */}
         <div
           className="fixed inset-x-0 z-50 pointer-events-none"
-          style={{ bottom: 'calc(var(--customer-bottom-nav-height, 0px) + env(safe-area-inset-bottom, 0px) + 24px)' }}
+          style={{ top: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}
         >
           <div className="mx-auto w-full max-w-[480px] px-4 flex flex-col gap-3">
             <div
@@ -608,16 +589,15 @@ const MenuPage = () => {
             <div className="flex gap-2 pointer-events-auto">
               <button
                 onClick={() => setIsSearchOpen((prev) => !prev)}
-                className={`flex items-center gap-2 rounded-full px-4 py-3 text-sm font-semibold shadow-lg transition ${isSearchOpen
+                className={`flex items-center justify-center rounded-full p-3 text-sm font-semibold shadow-lg transition ${isSearchOpen
                   ? 'bg-primary-600 text-white'
                   : 'bg-white text-gray-800 border border-gray-200 hover:shadow-md'
                   }`}
-                aria-label="Открыть поиск"
+                aria-label={isSearchOpen ? 'Закрыть поиск' : 'Открыть поиск'}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
                 </svg>
-                {isSearchOpen ? 'Закрыть поиск' : 'Поиск'}
               </button>
               {searchTerm && (
                 <span className="flex items-center text-xs text-gray-500 px-3 py-2 bg-white border border-gray-200 rounded-full shadow-sm">
