@@ -10,7 +10,6 @@ import MenuSkeleton from '../components/MenuSkeleton';
 import CustomerLoginModal from '../components/CustomerLoginModal';
 import ImageWithLoader from '../components/ImageWithLoader';
 import CustomerBottomNav from '../components/CustomerBottomNav';
-import { useCartStore } from '../store/cartStore';
 
 const getCurrencySymbol = (currencyCode) => {
   const currencySymbols = {
@@ -53,7 +52,6 @@ const MenuPage = () => {
   const lastScrollY = useRef(0);
 
   const isSearching = Boolean(searchTerm.trim());
-  const addItem = useCartStore((state) => state.addItem);
 
   const filteredCategories = useMemo(() => {
     if (!restaurant) return [];
@@ -309,7 +307,7 @@ const MenuPage = () => {
             )}
             <button
               onClick={() => setIsSearchOpen(true)}
-              className="p-2 rounded-full text-gray-700 hover:bg-gray-100 transition"
+              className="bg-white rounded-full p-3 shadow-md border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
               aria-label="Открыть поиск"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -623,38 +621,27 @@ const MenuPage = () => {
                 )}
 
                 {isSearching && searchResults.length > 0 && (
-                  <div className="divide-y divide-gray-100 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                  <div className={`${restaurant.menuCardStyle === 'gallery' ? 'grid grid-cols-2 gap-2 sm:gap-3 items-stretch' : 'gap-4'} ${restaurant.menuCardStyle === 'vertical'
+                    ? 'grid grid-cols-1'
+                    : restaurant.menuCardStyle === 'grid'
+                      ? 'grid grid-cols-2'
+                      : restaurant.menuCardStyle === 'gallery'
+                        ? 'grid grid-cols-2'
+                        : 'flex flex-col'
+                    }`}>
                     {searchResults.map((dish) => (
-                      <div key={dish.id} className="p-4 flex gap-3 items-center">
-                        {dish.image && (
-                          <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                            <ImageWithLoader
-                              src={dish.image}
-                              alt={dish.name}
-                              loading="lazy"
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-semibold text-gray-900 break-words">{dish.name}</div>
-                          <div className="text-xs text-gray-500 mt-1 break-words">{dish.categoryName}</div>
-                          {dish.description && (
-                            <div className="text-xs text-gray-500 mt-1 line-clamp-2 break-words">{dish.description}</div>
-                          )}
-                        </div>
-                        <div className="flex flex-col items-end gap-2 flex-shrink-0 text-right">
-                          <div className="text-sm font-semibold text-gray-900 whitespace-nowrap">
-                            {dish.price != null ? `${dish.price} ${getCurrencySymbol(restaurant.currency)}` : ''}
-                          </div>
-                          <button
-                            onClick={() => addItem(dish, [])}
-                            className="px-3 py-1.5 text-xs font-semibold rounded-full bg-primary-600 text-white shadow hover:bg-primary-700 transition"
-                          >
-                            В корзину
-                          </button>
-                        </div>
-                      </div>
+                      <DishCard
+                        key={dish.id}
+                        dish={dish}
+                        currency={getCurrencySymbol(restaurant.currency)}
+                        style={restaurant.menuCardStyle || 'horizontal'}
+                        onFavoriteToggle={(action) => {
+                          if (action === 'login') {
+                            setShowLoginModal(true);
+                          }
+                        }}
+                        onModalStateChange={(isOpen) => setIsDishModalOpen(isOpen)}
+                      />
                     ))}
                   </div>
                 )}
