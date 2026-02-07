@@ -393,22 +393,16 @@ const MenuPage = () => {
           </div>
         </div>
 
-        {/* Search (pinned pill opens full overlay) */}
-        <div className="px-4 pb-4">
+        {/* Search trigger (icon only, unobtrusive) */}
+        <div className="px-4 pb-4 flex justify-end">
           <button
             onClick={() => setIsSearchOpen(true)}
-            className="w-full flex items-center gap-3 rounded-3xl border border-gray-200 bg-gray-50 px-4 py-3 text-left shadow-inner hover:bg-white transition"
+            className="p-2 rounded-full text-gray-700 hover:bg-gray-100 transition"
             aria-label="Открыть поиск"
           >
-            <span className="text-gray-600">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
-              </svg>
-            </span>
-            <span className="flex-1 text-sm text-gray-700">Поиск по блюдам и напиткам</span>
-            {isSearching && (
-              <span className="text-xs text-gray-500">{searchResults.length} найдено</span>
-            )}
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
+            </svg>
           </button>
         </div>
 
@@ -569,7 +563,10 @@ const MenuPage = () => {
               <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 pt-4 pb-3 shadow-sm">
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => setIsSearchOpen(false)}
+                    onClick={() => {
+                      setIsSearchOpen(false);
+                      setSearchTerm('');
+                    }}
                     className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition"
                     aria-label="Закрыть поиск"
                   >
