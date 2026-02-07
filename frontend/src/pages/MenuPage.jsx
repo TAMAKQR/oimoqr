@@ -383,6 +383,62 @@ const MenuPage = () => {
           </div>
         </div>
 
+        {/* Search (compact trigger + expandable input) */}
+        <div className="px-4 pb-4">
+          <div className="flex justify-end">
+            <button
+              onClick={() => setIsSearchOpen((prev) => !prev)}
+              className={`flex items-center justify-center rounded-full p-3 text-sm font-semibold shadow-inner border border-gray-200 bg-gray-50 hover:bg-white transition ${isSearchOpen ? 'ring-2 ring-primary-200' : ''}`}
+              aria-label={isSearchOpen ? 'Закрыть поиск' : 'Открыть поиск'}
+            >
+              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
+              </svg>
+            </button>
+          </div>
+          {isSearchOpen && (
+            <div className="mt-3 rounded-2xl border border-gray-200 bg-white shadow-lg p-3 flex items-center gap-3">
+              <span className="text-gray-500">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
+                </svg>
+              </span>
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Найти блюдо или описание"
+                className="flex-1 bg-transparent text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="text-gray-400 hover:text-gray-600 transition"
+                  aria-label="Очистить поиск"
+                >
+                  ✕
+                </button>
+              )}
+              <button
+                onClick={() => setIsSearchOpen(false)}
+                className="text-gray-500 hover:text-gray-700 transition"
+                aria-label="Закрыть поиск"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+          )}
+          {isSearching && (
+            <p className="text-xs text-gray-500 mt-2">
+              Найдено категорий: {filteredCategories.length}
+            </p>
+          )}
+        </div>
+
         {/* Category Groups - отображаются в 2 ряда с фото */}
         {restaurant.categoryGroups && restaurant.categoryGroups.length > 0 && (
           <div className="px-4 py-6">
@@ -532,81 +588,6 @@ const MenuPage = () => {
 
         {/* Cart */}
         <Cart restaurant={restaurant} isDishModalOpen={isDishModalOpen} />
-
-        {/* Floating Search */}
-        <div
-          className="fixed inset-x-0 z-50 pointer-events-none"
-          style={{ top: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}
-        >
-          <div className="mx-auto w-full max-w-[480px] px-4 flex flex-col gap-3">
-            <div
-              className={`w-full transform transition-all duration-300 ${isSearchOpen
-                ? 'opacity-100 translate-y-0 pointer-events-auto'
-                : 'opacity-0 translate-y-2 pointer-events-none'
-                }`}
-            >
-              <div className="rounded-2xl border border-gray-200 bg-white shadow-xl p-3 flex items-center gap-3">
-                <span className="text-gray-500">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
-                  </svg>
-                </span>
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Найти блюдо или описание"
-                  className="flex-1 bg-transparent text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm('')}
-                    className="text-gray-400 hover:text-gray-600 transition"
-                    aria-label="Очистить поиск"
-                  >
-                    ✕
-                  </button>
-                )}
-                <button
-                  onClick={() => setIsSearchOpen(false)}
-                  className="text-gray-500 hover:text-gray-700 transition"
-                  aria-label="Закрыть поиск"
-                >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </button>
-              </div>
-              {isSearching && (
-                <p className="text-[11px] text-gray-500 mt-2">
-                  Найдено категорий: {filteredCategories.length}
-                </p>
-              )}
-            </div>
-
-            <div className="flex gap-2 pointer-events-auto">
-              <button
-                onClick={() => setIsSearchOpen((prev) => !prev)}
-                className={`flex items-center justify-center rounded-full p-3 text-sm font-semibold shadow-lg transition ${isSearchOpen
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-white text-gray-800 border border-gray-200 hover:shadow-md'
-                  }`}
-                aria-label={isSearchOpen ? 'Закрыть поиск' : 'Открыть поиск'}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
-                </svg>
-              </button>
-              {searchTerm && (
-                <span className="flex items-center text-xs text-gray-500 px-3 py-2 bg-white border border-gray-200 rounded-full shadow-sm">
-                  “{searchTerm}”
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
 
         {/* Bottom navigation для авторизованных клиентов */}
         {isCustomerLoggedIn && !isDishModalOpen && <CustomerBottomNav />}
