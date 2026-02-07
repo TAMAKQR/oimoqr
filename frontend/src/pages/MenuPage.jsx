@@ -391,7 +391,7 @@ const MenuPage = () => {
         </div>
 
         {/* All Categories with Dishes */}
-        <div className="px-4 py-6 pb-20 sm:pb-6">
+        <div className={`${restaurant.menuCardStyle === 'gallery' ? 'px-2 sm:px-3' : 'px-4'} py-6 pb-20 sm:pb-6`}>
           {restaurant.categories.map((category) => (
             <div
               key={category.id}
@@ -409,11 +409,13 @@ const MenuPage = () => {
                   В этой категории пока нет блюд
                 </p>
               ) : (
-                <div className={`gap-4 ${restaurant.menuCardStyle === 'vertical'
+                <div className={`${restaurant.menuCardStyle === 'gallery' ? 'grid grid-cols-2 gap-2 sm:gap-3' : 'gap-4'} ${restaurant.menuCardStyle === 'vertical'
                   ? 'grid grid-cols-1'
                   : restaurant.menuCardStyle === 'grid'
                     ? 'grid grid-cols-2'
-                    : 'flex flex-col'
+                    : restaurant.menuCardStyle === 'gallery'
+                      ? 'grid grid-cols-2'
+                      : 'flex flex-col'
                   }`}>
                   {category.dishes.map((dish) => (
                     <DishCard

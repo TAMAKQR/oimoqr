@@ -403,6 +403,137 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
     );
   }
 
+  // Галерея 2 колонки (минимальные отступы, акцент на фото)
+  if (style === 'gallery') {
+    return (
+      <>
+        <div
+          onClick={handleCardClick}
+          className={`overflow-hidden rounded-2xl bg-white shadow-[0_10px_30px_rgba(0,0,0,0.06)] transition-all duration-200 flex flex-col h-full ${isAvailable
+            ? 'cursor-pointer hover:shadow-[0_12px_36px_rgba(0,0,0,0.08)] active:scale-98'
+            : 'opacity-60 cursor-not-allowed'
+            }`}
+        >
+          {dish.image && (
+            <div className="relative w-full aspect-[3/4]">
+              <ImageWithLoader
+                src={cacheBustImage(dish.image)}
+                alt={dish.name}
+                loading="lazy"
+                className={`w-full h-full object-cover ${!isAvailable ? 'grayscale' : ''}`}
+              />
+
+              {/* Favorite + badge */}
+              <div className="absolute top-2 left-2 flex flex-col gap-1">
+                {dish.badge && (
+                  <span className="px-2 py-0.5 bg-orange-500 text-white text-[11px] font-semibold rounded-full shadow">
+                    {dish.badge}
+                  </span>
+                )}
+                {dish.discount && isAvailable && (
+                  <span className="px-2 py-0.5 bg-green-500 text-white text-[11px] font-semibold rounded-full shadow">
+                    -{dish.discount}%
+                  </span>
+                )}
+                {!isAvailable && (
+                  <span className="px-2 py-0.5 bg-red-500 text-white text-[11px] font-semibold rounded-full shadow">
+                    Нет
+                  </span>
+                )}
+              </div>
+
+              <button
+                onClick={handleFavoriteClick}
+                disabled={favoriteLoading}
+                className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm rounded-full p-2 shadow-md hover:bg-white transition"
+              >
+                {favoriteLoading ? (
+                  <svg className="w-4 h-4 text-gray-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : (
+                  <svg
+                    className={`w-4 h-4 transition-colors ${isFavorite ? 'text-red-500 fill-current' : 'text-gray-400'}`}
+                    fill={isFavorite ? 'currentColor' : 'none'}
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                )}
+              </button>
+            </div>
+          )}
+
+          <div className="p-3 flex flex-col flex-1 gap-2">
+            <div className="flex-1">
+              <h3 className="font-semibold text-sm leading-snug line-clamp-2">{dish.name}</h3>
+              {dish.description && (
+                <p className="text-xs text-gray-600 line-clamp-2 mt-1">{dish.description}</p>
+              )}
+
+              {allergens.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {allergens.slice(0, 4).map((allergen) => (
+                    <span key={allergen} className="text-xs" title={allergenNames[allergen]}>
+                      {allergenIcons[allergen]}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col leading-tight">
+                {dish.discount && isAvailable ? (
+                  <>
+                    <span className="text-[11px] text-gray-400 line-through">
+                      {pricePrefix}{originalPrice.toFixed(2)}
+                    </span>
+                    <span className="text-sm font-bold text-red-600">
+                      {pricePrefix}{discountedPrice.toFixed(2)} {currency}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-sm font-bold text-primary-600">
+                    {pricePrefix}{originalPrice.toFixed(2)} {currency}
+                  </span>
+                )}
+              </div>
+
+              {isAvailable ? (
+                <button
+                  onClick={handleAddClick}
+                  className={`w-9 h-9 flex items-center justify-center bg-primary-600 hover:bg-primary-700 text-white rounded-full text-xl font-light transition-all shadow-md active:scale-95 ${isAdding ? 'animate-spin-once' : ''}`}
+                >
+                  +
+                </button>
+              ) : (
+                <button
+                  disabled
+                  className="w-9 h-9 flex items-center justify-center bg-gray-300 text-gray-500 rounded-full text-xl cursor-not-allowed"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <DishModal
+          dish={dish}
+          currency={currency}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          isFavorite={isFavorite}
+          onToggleFavorite={toggleFavorite}
+          favoriteLoading={favoriteLoading}
+        />
+      </>
+    );
+  }
+
   // Стиль сетки 2 колонки (компактный)
   return (
     <>
