@@ -174,8 +174,9 @@ const RestaurantSettingsPage = () => {
   const loadData = async () => {
     try {
       const data = await authService.getMe();
+      console.log('✅ Loaded data from API:', data);
+      console.log('✅ Restaurant data:', data.restaurants?.[0]);
       setUserData(data);
-      updateUser(data); // Обновляем данные в authStore (localStorage)
     } catch (err) {
       console.error('Error loading data:', err);
     } finally {
@@ -184,6 +185,7 @@ const RestaurantSettingsPage = () => {
   };
 
   const loadRestaurantData = async (restaurant) => {
+    console.log('📝 Loading restaurant data into form:', restaurant);
     const r = restaurant;
     setName(r.name || '');
     setDescription(r.description || '');
