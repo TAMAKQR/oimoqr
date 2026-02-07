@@ -84,13 +84,23 @@ export const createDish = async (req, res, next) => {
       return res.status(404).json({ error: 'Category not found' });
     }
 
+    // ✅ Если order не указан, добавляем блюдо в конец списка
+    let dishOrder = order;
+    if (!dishOrder && dishOrder !== 0) {
+      const lastDish = await prisma.dish.findFirst({
+        where: { categoryId },
+        orderBy: { order: 'desc' }
+      });
+      dishOrder = lastDish ? lastDish.order + 1 : 0;
+    }
+
     const dishData = {
       name,
       description,
       price: parsedPrice,
       categoryId,
       restaurantId: category.restaurantId,
-      order: order || 0,
+      order: dishOrder,
       allergens: allergens || null,
       discount: parsedDiscount,
       badge: badge || null
