@@ -39,6 +39,12 @@ const Sidebar = ({ userData, selectedRestaurantId }) => {
       show: isOwner
     },
     {
+      path: '/modifier-templates',
+      icon: '📋',
+      label: 'Библиотека модификаторов',
+      show: isOwner
+    },
+    {
       path: selectedRestaurantId ? `/staff/${selectedRestaurantId}` : '/dashboard',
       icon: '👥',
       label: 'Персонал',
