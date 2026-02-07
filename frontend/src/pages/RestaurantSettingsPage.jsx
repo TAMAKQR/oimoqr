@@ -14,7 +14,7 @@ const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 const RestaurantSettingsPage = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const { user, logout, updateUser } = useAuthStore();
   const [userData, setUserData] = useState(null);
   const [selectedRestaurantId, setSelectedRestaurantId] = useState(() => {
     // Восстанавливаем последний выбранный ресторан из localStorage
@@ -33,7 +33,7 @@ const RestaurantSettingsPage = () => {
   const [whatsapp, setWhatsapp] = useState('');
   const [instagram, setInstagram] = useState('');
   const [facebook, setFacebook] = useState('');
-  const [currency, setCurrency] = useState('₽');
+  const [currency, setCurrency] = useState('KGS');
   const [menuCardStyle, setMenuCardStyle] = useState('horizontal');
   const [deliveryEnabled, setDeliveryEnabled] = useState(false);
   const [deliveryFee, setDeliveryFee] = useState('');
@@ -175,6 +175,7 @@ const RestaurantSettingsPage = () => {
     try {
       const data = await authService.getMe();
       setUserData(data);
+      updateUser(data); // Обновляем данные в authStore (localStorage)
     } catch (err) {
       console.error('Error loading data:', err);
     } finally {
@@ -191,7 +192,7 @@ const RestaurantSettingsPage = () => {
     setWhatsapp(r.whatsapp || '');
     setInstagram(r.instagram || '');
     setFacebook(r.facebook || '');
-    setCurrency(r.currency || '₽');
+    setCurrency(r.currency || 'KGS');
     setMenuCardStyle(r.cardStyle || 'horizontal');
     setDeliveryEnabled(r.deliveryEnabled || false);
     setDeliveryFee(r.deliveryFee || '');
