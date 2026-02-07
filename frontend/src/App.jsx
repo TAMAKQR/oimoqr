@@ -24,6 +24,7 @@ import CustomerRestaurantsPage from './pages/CustomerRestaurantsPage';
 import PricingPage from './pages/PricingPage';
 import CustomersPage from './pages/CustomersPage';
 import CheckoutPage from './pages/CheckoutPage';
+import ModifierTemplatesPage from './pages/ModifierTemplatesPage';
 
 // Components
 import PrivateRoute from './components/PrivateRoute';
@@ -114,6 +115,14 @@ function App() {
             element={
               <PrivateRoute>
                 <LanguageSettingsPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/modifier-templates"
+            element={
+              <PrivateRoute>
+                <ModifierTemplatesPage />
               </PrivateRoute>
             }
           />
