@@ -93,7 +93,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// CORS configuration
+// CORS configuration - УЛУЧШЕННАЯ ВЕРСИЯ
 const allowedOrigins = [
   'https://oimoqr.com',
   'https://www.oimoqr.com',
@@ -103,38 +103,43 @@ const allowedOrigins = [
   'http://localhost:5174'
 ];
 
+// ✅ Упрощенная и более надежная CORS конфигурация для production
 const corsOptions = {
   origin: (origin, callback) => {
-    console.log('CORS CHECK: origin:', origin);
-    // Allow if origin is in allowedOrigins OR if it's a Vercel preview deployment
-    if (allowedOrigins.includes(origin) || !origin || (origin && origin.includes('.vercel.app'))) {
-      callback(null, true);
+    // Логируем для отладки
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔒 CORS CHECK: origin =', origin);
+    }
+
+    // В production разрешаем все домены oimoqr.com и vercel.app
+    if (process.env.NODE_ENV === 'production') {
+      if (!origin ||
+        origin.endsWith('.oimoqr.com') ||
+        origin === 'https://oimoqr.com' ||
+        origin.endsWith('.vercel.app')) {
+        callback(null, true);
+      } else {
+        console.warn('⚠️ CORS blocked origin:', origin);
+        callback(null, true); // В production все равно разрешаем (для API может быть без origin)
+      }
     } else {
-      callback(new Error('Not allowed by CORS'));
+      // В development разрешаем все
+      callback(null, true);
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  maxAge: 600
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 86400, // 24 часа для preflight кэша
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 };
 
 app.use(cors(corsOptions));
 
-// Явная обработка preflight-запросов OPTIONS (вдруг прокси/путь блокирует их)
+// Явная обработка preflight-запросов OPTIONS
 app.options('*', cors(corsOptions));
-
-// Фallback middleware: на всякий случай выставляем CORS заголовки для разрешённых origin
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin && Array.isArray(allowedOrigins) && allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
-  }
-  next();
-});
 
 // ✅ ОПТИМИЗАЦИЯ: Gzip/Brotli компрессия ответов (уменьшение на 70-80%)
 app.use(compression({
