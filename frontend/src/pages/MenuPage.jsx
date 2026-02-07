@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { restaurantService } from '../services/restaurantService';
 import customerService from '../services/customerService';
@@ -42,6 +42,7 @@ const MenuPage = () => {
   const [isCustomerLoggedIn, setIsCustomerLoggedIn] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isDishModalOpen, setIsDishModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const categoryRefs = useRef({});
   const categoryButtonRefs = useRef({});
   const categoryMenuRef = useRef(null);
@@ -206,6 +207,28 @@ const MenuPage = () => {
     );
   }
 
+  const isSearching = Boolean(searchTerm.trim());
+
+  const filteredCategories = useMemo(() => {
+    if (!restaurant) return [];
+    if (!isSearching) return restaurant.categories;
+
+    const query = searchTerm.trim().toLowerCase();
+
+    return restaurant.categories
+      .map((category) => {
+        const dishes = category.dishes.filter((dish) => {
+          const name = dish.name?.toLowerCase() || '';
+          const desc = dish.description?.toLowerCase() || '';
+          return name.includes(query) || desc.includes(query);
+        });
+        return { ...category, dishes };
+      })
+      .filter((category) => category.dishes.length > 0);
+  }, [restaurant, searchTerm, isSearching]);
+
+  const categoriesToRender = isSearching ? filteredCategories : restaurant.categories;
+
   return (
     <div className="min-h-screen bg-gray-100 flex justify-center">
       {/* Mobile Container - максимум 480px (фиксируем мобильный вид на десктопе) */}
@@ -327,6 +350,37 @@ const MenuPage = () => {
               </div>
             )}
           </div>
+          {/* Search */}
+          <div className="px-4 pb-4">
+            <div className="relative">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Поиск по блюдам"
+                className="w-full rounded-2xl border border-gray-200 bg-gray-50 py-3 pl-12 pr-10 text-sm shadow-inner focus:border-green-500 focus:bg-white focus:ring-2 focus:ring-green-100 transition"
+              />
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
+                </svg>
+              </span>
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  aria-label="Очистить поиск"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            {isSearching && (
+              <p className="text-xs text-gray-500 mt-2">
+                Найдено категорий: {filteredCategories.length}
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Category Groups - отображаются в 2 ряда с фото */}
@@ -392,7 +446,7 @@ const MenuPage = () => {
 
         {/* All Categories with Dishes */}
         <div className={`${restaurant.menuCardStyle === 'gallery' ? 'px-2 sm:px-3' : 'px-4'} py-6 pb-20 sm:pb-6`}>
-          {restaurant.categories.map((category) => (
+          {!isSearching && restaurant.categories.map((category) => (
             <div
               key={category.id}
               ref={(el) => (categoryRefs.current[category.id] = el)}
@@ -435,6 +489,45 @@ const MenuPage = () => {
               )}
             </div>
           ))}
+
+          {isSearching && (
+            <div className="space-y-10">
+              {categoriesToRender.length === 0 && (
+                <div className="text-center text-gray-500 py-10">
+                  Ничего не найдено
+                </div>
+              )}
+
+              {categoriesToRender.map((category) => (
+                <div key={category.id} className="mb-4">
+                  <h2 className="text-lg font-semibold mb-3 break-words">{category.name}</h2>
+                  <div className={`${restaurant.menuCardStyle === 'gallery' ? 'grid grid-cols-2 gap-2 sm:gap-3 items-stretch' : 'gap-4'} ${restaurant.menuCardStyle === 'vertical'
+                    ? 'grid grid-cols-1'
+                    : restaurant.menuCardStyle === 'grid'
+                      ? 'grid grid-cols-2'
+                      : restaurant.menuCardStyle === 'gallery'
+                        ? 'grid grid-cols-2'
+                        : 'flex flex-col'
+                    }`}>
+                    {category.dishes.map((dish) => (
+                      <DishCard
+                        key={dish.id}
+                        dish={dish}
+                        currency={getCurrencySymbol(restaurant.currency)}
+                        style={restaurant.menuCardStyle || 'horizontal'}
+                        onFavoriteToggle={(action) => {
+                          if (action === 'login') {
+                            setShowLoginModal(true);
+                          }
+                        }}
+                        onModalStateChange={(isOpen) => setIsDishModalOpen(isOpen)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Cart */}
