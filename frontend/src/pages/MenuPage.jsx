@@ -49,6 +49,28 @@ const MenuPage = () => {
   const isUserClick = useRef(false);
   const lastScrollY = useRef(0);
 
+  const isSearching = Boolean(searchTerm.trim());
+
+  const filteredCategories = useMemo(() => {
+    if (!restaurant) return [];
+    if (!isSearching) return restaurant.categories;
+
+    const query = searchTerm.trim().toLowerCase();
+
+    return restaurant.categories
+      .map((category) => {
+        const dishes = category.dishes.filter((dish) => {
+          const name = dish.name?.toLowerCase() || '';
+          const desc = dish.description?.toLowerCase() || '';
+          return name.includes(query) || desc.includes(query);
+        });
+        return { ...category, dishes };
+      })
+      .filter((category) => category.dishes.length > 0);
+  }, [restaurant, searchTerm, isSearching]);
+
+  const categoriesToRender = isSearching ? filteredCategories : restaurant?.categories || [];
+
   // Check customer login status
   useEffect(() => {
     setIsCustomerLoggedIn(customerService.isAuthenticated());
@@ -206,28 +228,6 @@ const MenuPage = () => {
       </div>
     );
   }
-
-  const isSearching = Boolean(searchTerm.trim());
-
-  const filteredCategories = useMemo(() => {
-    if (!restaurant) return [];
-    if (!isSearching) return restaurant.categories;
-
-    const query = searchTerm.trim().toLowerCase();
-
-    return restaurant.categories
-      .map((category) => {
-        const dishes = category.dishes.filter((dish) => {
-          const name = dish.name?.toLowerCase() || '';
-          const desc = dish.description?.toLowerCase() || '';
-          return name.includes(query) || desc.includes(query);
-        });
-        return { ...category, dishes };
-      })
-      .filter((category) => category.dishes.length > 0);
-  }, [restaurant, searchTerm, isSearching]);
-
-  const categoriesToRender = isSearching ? filteredCategories : restaurant.categories;
 
   return (
     <div className="min-h-screen bg-gray-100 flex justify-center">
