@@ -409,7 +409,7 @@ const MenuPage = () => {
                   В этой категории пока нет блюд
                 </p>
               ) : (
-                <div className={`${restaurant.menuCardStyle === 'gallery' ? 'grid grid-cols-2 gap-2 sm:gap-3' : 'gap-4'} ${restaurant.menuCardStyle === 'vertical'
+                <div className={`${restaurant.menuCardStyle === 'gallery' ? 'grid grid-cols-2 gap-2 sm:gap-3 items-stretch' : 'gap-4'} ${restaurant.menuCardStyle === 'vertical'
                   ? 'grid grid-cols-1'
                   : restaurant.menuCardStyle === 'grid'
                     ? 'grid grid-cols-2'
