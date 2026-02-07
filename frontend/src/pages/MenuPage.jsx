@@ -43,9 +43,11 @@ const MenuPage = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isDishModalOpen, setIsDishModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const categoryRefs = useRef({});
   const categoryButtonRefs = useRef({});
   const categoryMenuRef = useRef(null);
+  const searchInputRef = useRef(null);
   const isUserClick = useRef(false);
   const lastScrollY = useRef(0);
 
@@ -74,6 +76,23 @@ const MenuPage = () => {
   // Check customer login status
   useEffect(() => {
     setIsCustomerLoggedIn(customerService.isAuthenticated());
+  }, []);
+
+  useEffect(() => {
+    if (isSearchOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isSearchOpen]);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setIsSearchOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // ✅ ОПТИМИЗАЦИЯ: useCallback предотвращает лишние перерендеры
@@ -316,15 +335,20 @@ const MenuPage = () => {
             </div>
             {/* Social Links */}
             {(restaurant.instagram || restaurant.facebook || restaurant.whatsapp) && (
-              <div className="flex flex-wrap gap-3 mt-3">
+              <div className="flex flex-wrap gap-2 mt-3">
                 {restaurant.instagram && (
                   <a
                     href={`https://instagram.com/${restaurant.instagram}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-pink-600 hover:text-pink-700 transition-colors"
+                    className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 shadow-sm text-gray-700 hover:-translate-y-0.5 hover:shadow transition-transform"
                   >
-                    📷 Instagram
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="5" ry="5" />
+                      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+                    </svg>
+                    <span className="text-sm font-medium">Instagram</span>
                   </a>
                 )}
                 {restaurant.facebook && (
@@ -332,9 +356,12 @@ const MenuPage = () => {
                     href={`https://facebook.com/${restaurant.facebook}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-blue-600 hover:text-blue-700 transition-colors"
+                    className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 shadow-sm text-gray-700 hover:-translate-y-0.5 hover:shadow transition-transform"
                   >
-                    👥 Facebook
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M13 10h2.5l.5-3H13V5.5c0-.9.3-1.5 1.6-1.5H16V1.2C15.3 1.1 14.1 1 13 1c-2.7 0-4 1.6-4 4.3V7H7v3h2v9h4z" />
+                    </svg>
+                    <span className="text-sm font-medium">Facebook</span>
                   </a>
                 )}
                 {restaurant.whatsapp && (
@@ -342,39 +369,31 @@ const MenuPage = () => {
                     href={`https://wa.me/${restaurant.whatsapp.replace(/\D/g, '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-green-600 hover:text-green-700 transition-colors"
+                    className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 shadow-sm text-gray-700 hover:-translate-y-0.5 hover:shadow transition-transform"
                   >
-                    💬 WhatsApp
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 20l1.3-4.7A8 8 0 1 1 5 6.5 8 8 0 0 1 3 20z" />
+                      <path d="M8.9 8.9c.2-.5.4-.5.7-.5h.6c.2 0 .5 0 .5.4s-.2.6-.3.8c-.1.1-.2.3 0 .6s.7 1.1 1.5 1.7 1.7.8 1.9.9.4 0 .5-.2l.7-.9c.2-.3.4-.2.7-.1l.6.3c.2.1.5.2.5.4s-.1.5-.3.8-.8.8-1.6.8-2.2-.5-3.3-1.4c-.9-.8-1.8-2.1-2.1-3.3-.2-.6-.2-1 0-1.3z" />
+                    </svg>
+                    <span className="text-sm font-medium">WhatsApp</span>
                   </a>
                 )}
               </div>
             )}
           </div>
-          {/* Search */}
           <div className="px-4 pb-4">
-            <div className="relative">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Поиск по блюдам"
-                className="w-full rounded-2xl border border-gray-200 bg-gray-50 py-3 pl-12 pr-10 text-sm shadow-inner focus:border-green-500 focus:bg-white focus:ring-2 focus:ring-green-100 transition"
-              />
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button
+              onClick={() => setIsSearchOpen(true)}
+              className="w-full flex items-center justify-between rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-700 shadow-inner hover:border-primary-200 hover:bg-white transition"
+            >
+              <span className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
                 </svg>
+                Поиск по блюдам
               </span>
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  aria-label="Очистить поиск"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
+              <span className="text-xs text-gray-500">Открыть снизу</span>
+            </button>
             {isSearching && (
               <p className="text-xs text-gray-500 mt-2">
                 Найдено категорий: {filteredCategories.length}
@@ -532,6 +551,82 @@ const MenuPage = () => {
 
         {/* Cart */}
         <Cart restaurant={restaurant} isDishModalOpen={isDishModalOpen} />
+
+        {/* Floating Search */}
+        <div
+          className="fixed inset-x-0 z-50 pointer-events-none"
+          style={{ bottom: 'calc(var(--customer-bottom-nav-height, 0px) + env(safe-area-inset-bottom, 0px) + 24px)' }}
+        >
+          <div className="mx-auto w-full max-w-[480px] px-4 flex flex-col gap-3">
+            <div
+              className={`w-full transform transition-all duration-300 ${isSearchOpen
+                ? 'opacity-100 translate-y-0 pointer-events-auto'
+                : 'opacity-0 translate-y-2 pointer-events-none'
+                }`}
+            >
+              <div className="rounded-2xl border border-gray-200 bg-white shadow-xl p-3 flex items-center gap-3">
+                <span className="text-gray-500">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
+                  </svg>
+                </span>
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Найти блюдо или описание"
+                  className="flex-1 bg-transparent text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="text-gray-400 hover:text-gray-600 transition"
+                    aria-label="Очистить поиск"
+                  >
+                    ✕
+                  </button>
+                )}
+                <button
+                  onClick={() => setIsSearchOpen(false)}
+                  className="text-gray-500 hover:text-gray-700 transition"
+                  aria-label="Закрыть поиск"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+              {isSearching && (
+                <p className="text-[11px] text-gray-500 mt-2">
+                  Найдено категорий: {filteredCategories.length}
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-2 pointer-events-auto">
+              <button
+                onClick={() => setIsSearchOpen((prev) => !prev)}
+                className={`flex items-center gap-2 rounded-full px-4 py-3 text-sm font-semibold shadow-lg transition ${isSearchOpen
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-white text-gray-800 border border-gray-200 hover:shadow-md'
+                  }`}
+                aria-label="Открыть поиск"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
+                </svg>
+                {isSearchOpen ? 'Закрыть поиск' : 'Поиск'}
+              </button>
+              {searchTerm && (
+                <span className="flex items-center text-xs text-gray-500 px-3 py-2 bg-white border border-gray-200 rounded-full shadow-sm">
+                  “{searchTerm}”
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
 
         {/* Bottom navigation для авторизованных клиентов */}
         {isCustomerLoggedIn && !isDishModalOpen && <CustomerBottomNav />}
