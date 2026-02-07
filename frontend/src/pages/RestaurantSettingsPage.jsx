@@ -95,7 +95,7 @@ const RestaurantSettingsPage = () => {
         loadRestaurantData(restaurant);
       }
     }
-  }, [selectedRestaurantId]);
+  }, [selectedRestaurantId, userData]);
 
   useEffect(() => {
     if (userData && (userData.restaurants?.length > 0 || userData.restaurantStaff?.length > 0)) {
