@@ -417,23 +417,19 @@ const MenuPage = () => {
                       ? 'grid grid-cols-2'
                       : 'flex flex-col'
                   }`}>
-                  {category.dishes.map((dish, index) => (
-                    <div
+                  {category.dishes.map((dish) => (
+                    <DishCard
                       key={dish.id}
-                      className={`${restaurant.menuCardStyle === 'gallery' && index % 2 === 1 ? 'pt-6 sm:pt-8' : ''}`}
-                    >
-                      <DishCard
-                        dish={dish}
-                        currency={getCurrencySymbol(restaurant.currency)}
-                        style={restaurant.menuCardStyle || 'horizontal'}
-                        onFavoriteToggle={(action) => {
-                          if (action === 'login') {
-                            setShowLoginModal(true);
-                          }
-                        }}
-                        onModalStateChange={(isOpen) => setIsDishModalOpen(isOpen)}
-                      />
-                    </div>
+                      dish={dish}
+                      currency={getCurrencySymbol(restaurant.currency)}
+                      style={restaurant.menuCardStyle || 'horizontal'}
+                      onFavoriteToggle={(action) => {
+                        if (action === 'login') {
+                          setShowLoginModal(true);
+                        }
+                      }}
+                      onModalStateChange={(isOpen) => setIsDishModalOpen(isOpen)}
+                    />
                   ))}
                 </div>
               )}
