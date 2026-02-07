@@ -74,6 +74,9 @@ model Restaurant {
   // Category Groups (мета-категории)
   categoryGroups    CategoryGroup[]
   
+  // Modifier Templates (шаблоны модификаторов)
+  modifierTemplates ModifierTemplate[]
+  
   // Online Store relations
   productCategories ProductCategory[]
   products          Product[]
@@ -205,10 +208,16 @@ model Modifier {
   dishId            String
   dish              Dish      @relation(fields: [dishId], references: [id], onDelete: Cascade)
   
+  // Связь с шаблоном (если модификатор создан из шаблона)
+  templateId        String?
+  template          ModifierTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  
   options           ModifierOption[]
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  
+  @@index([templateId])
 }
 
 model ModifierOption {
@@ -222,6 +231,43 @@ model ModifierOption {
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+}
+
+// ========================================
+// Шаблоны модификаторов (библиотека ресторана)
+// ========================================
+
+model ModifierTemplate {
+  id                String    @id @default(cuid())
+  name              String
+  type              String    // single | multi
+  isRequired        Boolean   @default(false)
+  
+  restaurantId      String
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  
+  options           ModifierTemplateOption[]
+  usedInModifiers   Modifier[] // Модификаторы, созданные из этого шаблона
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  @@index([restaurantId])
+}
+
+model ModifierTemplateOption {
+  id                String    @id @default(cuid())
+  name              String
+  price             Float     @default(0)
+  image             String?
+  
+  templateId        String
+  template          ModifierTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  @@index([templateId])
 }
 
 model SocialLink {

@@ -27,6 +27,7 @@ import migrationRoutes from './routes/migration.routes.js';
 import productRoutes from './routes/product.routes.js';
 import customerRoutes from './routes/customer.routes.js';
 import telegramRoutes from './routes/telegram.routes.js';
+import modifierTemplateRoutes from './routes/modifierTemplate.routes.js';
 
 // Middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -174,6 +175,7 @@ app.use('/api/restaurants', staffRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/dishes', dishRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/modifiers', modifierTemplateRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/languages', languageRoutes);
