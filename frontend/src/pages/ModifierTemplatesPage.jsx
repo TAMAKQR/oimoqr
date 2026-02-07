@@ -1,20 +1,22 @@
 import { useState, useEffect } from 'react';
-import { useAuthStore } from '../store/authStore';
+import { authService } from '../services/authService';
 import DashboardLayout from '../components/DashboardLayout';
 import modifierTemplateService from '../services/modifierTemplateService';
 import toast from 'react-hot-toast';
 import { confirmDialog } from '../utils/confirmDialog';
+import RestaurantSelector from '../components/RestaurantSelector';
 
 const ModifierTemplatesPage = () => {
     const [templates, setTemplates] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [pageLoading, setPageLoading] = useState(true);
+    const [userData, setUserData] = useState(null);
+    const [selectedRestaurantId, setSelectedRestaurantId] = useState(() => {
+        return localStorage.getItem('selectedRestaurantId') || null;
+    });
     const [showModal, setShowModal] = useState(false);
     const [editingTemplate, setEditingTemplate] = useState(null);
     const [syncingId, setSyncingId] = useState(null);
-
-    const user = useAuthStore((state) => state.user);
-    const restaurantId = user?.restaurant?.id;
-    const currency = user?.restaurant?.currency || '₽';
 
     // Форма шаблона
     const [formData, setFormData] = useState({
@@ -25,15 +27,94 @@ const ModifierTemplatesPage = () => {
     });
 
     useEffect(() => {
-        if (restaurantId) {
-            loadTemplates();
+        loadUserData();
+    }, []);
+
+    useEffect(() => {
+        if (!userData) return;
+
+        const allRestaurants = [
+            ...(userData.restaurants || []),
+            ...(userData.restaurantStaff?.map((s) => s.restaurant) || [])
+        ];
+
+        if (allRestaurants.length === 0) {
+            setSelectedRestaurantId(null);
+            localStorage.removeItem('selectedRestaurantId');
+            return;
         }
-    }, [restaurantId]);
+
+        const savedRestaurantId = localStorage.getItem('selectedRestaurantId');
+        const savedExists = savedRestaurantId && allRestaurants.some((r) => r.id === savedRestaurantId);
+
+        if (savedExists) {
+            if (selectedRestaurantId !== savedRestaurantId) {
+                setSelectedRestaurantId(savedRestaurantId);
+            }
+        } else if (!selectedRestaurantId || !allRestaurants.some((r) => r.id === selectedRestaurantId)) {
+            const firstRestaurantId = allRestaurants[0].id;
+            setSelectedRestaurantId(firstRestaurantId);
+            localStorage.setItem('selectedRestaurantId', firstRestaurantId);
+        }
+    }, [userData, selectedRestaurantId]);
+
+    useEffect(() => {
+        if (selectedRestaurantId) {
+            loadTemplates();
+        } else {
+            setLoading(false);
+        }
+    }, [selectedRestaurantId]);
+
+    const loadUserData = async () => {
+        try {
+            setPageLoading(true);
+            const data = await authService.getMe();
+            setUserData(data);
+
+            const allRestaurants = [
+                ...(data.restaurants || []),
+                ...(data.restaurantStaff?.map((s) => s.restaurant) || [])
+            ];
+
+            if (allRestaurants.length > 0) {
+                const savedRestaurantId = localStorage.getItem('selectedRestaurantId');
+                const savedExists = savedRestaurantId && allRestaurants.some((r) => r.id === savedRestaurantId);
+                const targetId = savedExists ? savedRestaurantId : allRestaurants[0].id;
+                setSelectedRestaurantId(targetId);
+                localStorage.setItem('selectedRestaurantId', targetId);
+            } else {
+                setSelectedRestaurantId(null);
+                localStorage.removeItem('selectedRestaurantId');
+            }
+        } catch (error) {
+            console.error('Error loading user data:', error);
+            toast.error('Не удалось загрузить данные профиля');
+        } finally {
+            setPageLoading(false);
+        }
+    };
+
+    const getSelectedRestaurant = () => {
+        if (!userData || !selectedRestaurantId) return null;
+
+        const owned = userData.restaurants?.find((r) => r.id === selectedRestaurantId);
+        if (owned) return owned;
+
+        const staffRestaurant = userData.restaurantStaff?.find((s) => s.restaurant.id === selectedRestaurantId);
+        return staffRestaurant?.restaurant || null;
+    };
+
+    const currency = getSelectedRestaurant()?.currency || 'KGS';
 
     const loadTemplates = async () => {
         try {
             setLoading(true);
-            const data = await modifierTemplateService.getTemplates(restaurantId);
+            if (!selectedRestaurantId) {
+                setTemplates([]);
+                return;
+            }
+            const data = await modifierTemplateService.getTemplates(selectedRestaurantId);
             setTemplates(data);
         } catch (error) {
             console.error('Error loading templates:', error);
@@ -114,7 +195,7 @@ const ModifierTemplatesPage = () => {
         try {
             const data = {
                 ...formData,
-                restaurantId
+                restaurantId: selectedRestaurantId
             };
 
             if (editingTemplate) {
@@ -181,16 +262,33 @@ const ModifierTemplatesPage = () => {
         }
     };
 
-    if (loading) {
+    const hasRestaurants = !!(
+        (userData?.restaurants?.length || 0) + (userData?.restaurantStaff?.length || 0)
+    );
+
+    if (pageLoading || loading) {
         return (
-            <DashboardLayout>
+            <DashboardLayout userData={userData} selectedRestaurantId={selectedRestaurantId}>
                 <div className="flex items-center justify-center min-h-screen">
                     <div className="text-center">
                         <svg className="animate-spin h-12 w-12 text-primary-600 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        <p className="text-gray-600">Загрузка шаблонов...</p>
+                        <p className="text-gray-600">Загрузка данных...</p>
+                    </div>
+                </div>
+            </DashboardLayout>
+        );
+    }
+
+    if (!hasRestaurants) {
+        return (
+            <DashboardLayout userData={userData} selectedRestaurantId={selectedRestaurantId}>
+                <div className="flex items-center justify-center min-h-screen">
+                    <div className="text-center">
+                        <p className="text-xl font-semibold text-gray-800">Нет доступных ресторанов</p>
+                        <p className="text-gray-600 mt-2">Создайте ресторан, чтобы работать с библиотекой модификаторов.</p>
                     </div>
                 </div>
             </DashboardLayout>
@@ -198,23 +296,33 @@ const ModifierTemplatesPage = () => {
     }
 
     return (
-        <DashboardLayout>
+        <DashboardLayout userData={userData} selectedRestaurantId={selectedRestaurantId}>
             <div className="max-w-6xl mx-auto p-6">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900">📚 Библиотека модификаторов</h1>
                         <p className="text-gray-600 mt-1">Создавайте шаблоны модификаторов и применяйте их к блюдам</p>
                     </div>
-                    <button
-                        onClick={() => handleOpenModal()}
-                        className="btn-primary flex items-center gap-2"
-                    >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                        Создать шаблон
-                    </button>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
+                        <RestaurantSelector
+                            userData={userData}
+                            selectedRestaurantId={selectedRestaurantId}
+                            onSelectRestaurant={(id) => {
+                                setSelectedRestaurantId(id);
+                                localStorage.setItem('selectedRestaurantId', id);
+                            }}
+                        />
+                        <button
+                            onClick={() => handleOpenModal()}
+                            className="btn-primary flex items-center gap-2 justify-center"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            Создать шаблон
+                        </button>
+                    </div>
                 </div>
 
                 {/* Templates List */}

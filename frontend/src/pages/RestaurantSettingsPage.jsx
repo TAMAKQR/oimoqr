@@ -528,6 +528,7 @@ const RestaurantSettingsPage = () => {
                   <option value="horizontal">Горизонтальный (фото слева)</option>
                   <option value="vertical">Вертикальный (фото сверху)</option>
                   <option value="grid">Сетка 2 колонки (компактный)</option>
+                  <option value="gallery">Галерея 2 колонки (минимальные отступы)</option>
                 </select>
                 <p className="text-sm text-gray-500 mt-1">
                   Выберите, как будут отображаться карточки блюд в публичном меню
