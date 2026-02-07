@@ -10,6 +10,7 @@ import MenuSkeleton from '../components/MenuSkeleton';
 import CustomerLoginModal from '../components/CustomerLoginModal';
 import ImageWithLoader from '../components/ImageWithLoader';
 import CustomerBottomNav from '../components/CustomerBottomNav';
+import { useCartStore } from '../store/cartStore';
 
 const getCurrencySymbol = (currencyCode) => {
   const currencySymbols = {
@@ -52,6 +53,7 @@ const MenuPage = () => {
   const lastScrollY = useRef(0);
 
   const isSearching = Boolean(searchTerm.trim());
+  const addItem = useCartStore((state) => state.addItem);
 
   const filteredCategories = useMemo(() => {
     if (!restaurant) return [];
@@ -98,6 +100,7 @@ const MenuPage = () => {
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
         setIsSearchOpen(false);
+        setSearchTerm('');
       }
     };
 
@@ -282,27 +285,38 @@ const MenuPage = () => {
 
         {/* Customer Profile Button - Top Right */}
         <div className={`fixed top-4 right-4 z-40 transition-all duration-300 ${showLanguageSwitcher ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'}`}>
-          {isCustomerLoggedIn ? (
+          <div className="flex flex-col items-end gap-2">
+            {isCustomerLoggedIn ? (
+              <button
+                onClick={() => navigate('/customer/profile')}
+                className="bg-white rounded-full p-3 shadow-md border border-gray-200 hover:bg-gray-50 transition-colors"
+                title="Личный кабинет"
+              >
+                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowLoginModal(true)}
+                className="bg-green-600 text-white rounded-full px-4 py-2 shadow-md hover:bg-green-700 transition-colors text-sm font-medium flex items-center space-x-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                </svg>
+                <span>Войти</span>
+              </button>
+            )}
             <button
-              onClick={() => navigate('/customer/profile')}
-              className="bg-white rounded-full p-3 shadow-md border border-gray-200 hover:bg-gray-50 transition-colors"
-              title="Личный кабинет"
+              onClick={() => setIsSearchOpen(true)}
+              className="p-2 rounded-full text-gray-700 hover:bg-gray-100 transition"
+              aria-label="Открыть поиск"
             >
-              <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
               </svg>
             </button>
-          ) : (
-            <button
-              onClick={() => setShowLoginModal(true)}
-              className="bg-green-600 text-white rounded-full px-4 py-2 shadow-md hover:bg-green-700 transition-colors text-sm font-medium flex items-center space-x-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-              </svg>
-              <span>Войти</span>
-            </button>
-          )}
+          </div>
         </div>
 
         {/* Login Modal */}
@@ -391,19 +405,6 @@ const MenuPage = () => {
               </div>
             )}
           </div>
-        </div>
-
-        {/* Search trigger (icon only, unobtrusive) */}
-        <div className="px-4 pb-4 flex justify-end">
-          <button
-            onClick={() => setIsSearchOpen(true)}
-            className="p-2 rounded-full text-gray-700 hover:bg-gray-100 transition"
-            aria-label="Открыть поиск"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
-            </svg>
-          </button>
         </div>
 
         {/* Category Groups - отображаются в 2 ряда с фото */}
@@ -601,9 +602,11 @@ const MenuPage = () => {
                     )}
                   </div>
                 </div>
-                <div className="mt-3 text-xs text-gray-500">
-                  {isSearching ? `Найдено блюд: ${searchResults.length}` : 'Введите название блюда или описание'}
-                </div>
+                {isSearching && (
+                  <div className="mt-3 text-xs text-gray-500">
+                    Найдено блюд: {searchResults.length}
+                  </div>
+                )}
               </div>
 
               <div className="flex-1 px-4 pb-6">
@@ -622,7 +625,7 @@ const MenuPage = () => {
                 {isSearching && searchResults.length > 0 && (
                   <div className="divide-y divide-gray-100 bg-white rounded-2xl border border-gray-100 shadow-sm">
                     {searchResults.map((dish) => (
-                      <div key={dish.id} className="p-4 flex gap-3">
+                      <div key={dish.id} className="p-4 flex gap-3 items-center">
                         {dish.image && (
                           <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                             <ImageWithLoader
@@ -640,8 +643,16 @@ const MenuPage = () => {
                             <div className="text-xs text-gray-500 mt-1 line-clamp-2 break-words">{dish.description}</div>
                           )}
                         </div>
-                        <div className="text-sm font-semibold text-gray-900 whitespace-nowrap">
-                          {dish.price != null ? `${dish.price} ${getCurrencySymbol(restaurant.currency)}` : ''}
+                        <div className="flex flex-col items-end gap-2 flex-shrink-0 text-right">
+                          <div className="text-sm font-semibold text-gray-900 whitespace-nowrap">
+                            {dish.price != null ? `${dish.price} ${getCurrencySymbol(restaurant.currency)}` : ''}
+                          </div>
+                          <button
+                            onClick={() => addItem(dish, [])}
+                            className="px-3 py-1.5 text-xs font-semibold rounded-full bg-primary-600 text-white shadow hover:bg-primary-700 transition"
+                          >
+                            В корзину
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -653,7 +664,7 @@ const MenuPage = () => {
         )}
 
         {/* Bottom navigation для авторизованных клиентов */}
-        {isCustomerLoggedIn && !isDishModalOpen && <CustomerBottomNav />}
+        {isCustomerLoggedIn && !isDishModalOpen && !isSearchOpen && <CustomerBottomNav />}
       </div>
       {/* Закрытие mobile wrapper */}
     </div>
