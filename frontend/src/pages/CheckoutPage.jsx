@@ -16,7 +16,6 @@ const CheckoutPage = () => {
 
     const [loading, setLoading] = useState(false);
     const [showLoginModal, setShowLoginModal] = useState(false);
-    const [showWaiterModal, setShowWaiterModal] = useState(false);
     const [addresses, setAddresses] = useState([]);
     const [selectedAddressId, setSelectedAddressId] = useState(null);
     const [deliveryType, setDeliveryType] = useState(restaurant?.deliveryEnabled ? 'delivery' : 'pickup');
@@ -379,14 +378,6 @@ const CheckoutPage = () => {
                         <button onClick={() => setCheckoutStep(2)} className="btn-primary w-full py-3 text-base shadow-lg">
                             Далее
                         </button>
-                        {(!customer || !customer.id) && (
-                            <button
-                                onClick={() => setShowWaiterModal(true)}
-                                className="w-full py-2.5 text-sm border-2 border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition"
-                            >
-                                👨‍🍳 Показать заказ официанту
-                            </button>
-                        )}
                     </div>
                 </div>
             ) : (
@@ -399,14 +390,6 @@ const CheckoutPage = () => {
                         >
                             {loading ? 'Оформление...' : `Оформить на ${finalTotal} ${currency}`}
                         </button>
-                        {(!customer || !customer.id) && (
-                            <button
-                                onClick={() => setShowWaiterModal(true)}
-                                className="w-full py-2.5 text-sm border-2 border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition"
-                            >
-                                👨‍🍳 Показать заказ официанту
-                            </button>
-                        )}
                     </div>
                 </div>
             )}
@@ -421,56 +404,6 @@ const CheckoutPage = () => {
                 }}
                 restaurantId={restaurant?.id}
             />
-
-            {showWaiterModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
-                    <div className="bg-white rounded-2xl max-w-md w-full max-h-[80vh] overflow-y-auto shadow-2xl">
-                        <div className="sticky top-0 bg-gradient-to-r from-primary-600 to-primary-700 text-white p-4 rounded-t-2xl">
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-xl font-bold flex items-center gap-2">👨‍🍳 Мой заказ</h2>
-                                <button onClick={() => setShowWaiterModal(false)} className="text-white hover:bg-white/20 rounded-full p-1">
-                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="p-4 space-y-3">
-                            <p className="text-sm text-gray-600 mb-4">📱 Покажите этот экран официанту для оформления заказа</p>
-                            {cartItems.map((item, index) => (
-                                <div key={index} className="border-b pb-3 last:border-b-0">
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex-1">
-                                            <h3 className="font-semibold text-gray-900">{item.dish.name}</h3>
-                                            {item.modifiers?.length > 0 && (
-                                                <p className="text-xs text-gray-500 mt-1">{item.modifiers.map((m) => m.name).join(', ')}</p>
-                                            )}
-                                            <p className="text-sm text-gray-600 mt-1">Количество: <span className="font-medium">{item.quantity}</span></p>
-                                        </div>
-                                        <div className="text-right ml-4">
-                                            <p className="font-bold text-primary-600">{item.totalPrice} {currency}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-
-                            <div className="border-t-2 border-primary-200 pt-3 mt-4">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-lg font-bold text-gray-900">Итого:</span>
-                                    <span className="text-2xl font-bold text-primary-600">{finalTotal} {currency}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="sticky bottom-0 bg-white border-t p-4 rounded-b-2xl">
-                            <button onClick={() => setShowWaiterModal(false)} className="w-full bg-primary-600 text-white py-3 rounded-xl font-semibold hover:bg-primary-700 transition">
-                                Закрыть
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {customer?.id && <CustomerBottomNav />}
         </div>
