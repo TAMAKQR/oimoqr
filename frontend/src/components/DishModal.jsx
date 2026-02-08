@@ -11,7 +11,8 @@ const DishModal = ({
   currency = '₽',
   isFavorite = false,
   onToggleFavorite,
-  favoriteLoading = false
+  favoriteLoading = false,
+  onDishClick
 }) => {
   // Используем объект для хранения выбранных опций для каждого модификатора
   const [selectedModifiers, setSelectedModifiers] = useState({});
@@ -268,11 +269,15 @@ const DishModal = ({
                   <div
                     key={rec.id}
                     onClick={() => {
-                      onClose();
-                      setTimeout(() => {
-                        const dishCard = document.querySelector(`[data-dish-id="${rec.id}"]`);
-                        dishCard?.click();
-                      }, 300);
+                      if (onDishClick) {
+                        onDishClick(rec);
+                      } else {
+                        onClose();
+                        setTimeout(() => {
+                          const dishCard = document.querySelector(`[data-dish-id="${rec.id}"]`);
+                          dishCard?.click();
+                        }, 300);
+                      }
                     }}
                     className="cursor-pointer group"
                   >

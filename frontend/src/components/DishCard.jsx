@@ -7,6 +7,7 @@ import ImageWithLoader from './ImageWithLoader';
 
 const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteToggle, onModalStateChange }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentDish, setCurrentDish] = useState(dish);
   const [isAdding, setIsAdding] = useState(false);
   const [isFavorite, setIsFavorite] = useState(Boolean(dish?.isFavorite));
   const [favoriteLoading, setFavoriteLoading] = useState(false);
@@ -42,7 +43,14 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
 
   useEffect(() => {
     setIsFavorite(Boolean(dish?.isFavorite));
+    setCurrentDish(dish);
   }, [dish?.id, dish?.isFavorite]);
+
+  // Обработчик клика на рекомендацию - открывает модалку с новым блюдом
+  const handleRecommendationClick = (recommendedDish) => {
+    setCurrentDish(recommendedDish);
+    setIsFavorite(Boolean(recommendedDish?.isFavorite));
+  };
 
   // Уведомляем родительский компонент об изменении состояния модалки
   useEffect(() => {
@@ -275,13 +283,14 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
         </div>
 
         <DishModal
-          dish={dish}
+          dish={currentDish}
           currency={currency}
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           isFavorite={isFavorite}
           onToggleFavorite={toggleFavorite}
           favoriteLoading={favoriteLoading}
+          onDishClick={handleRecommendationClick}
         />
       </>
     );
@@ -393,13 +402,14 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
         </div>
 
         <DishModal
-          dish={dish}
+          dish={currentDish}
           currency={currency}
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           isFavorite={isFavorite}
           onToggleFavorite={toggleFavorite}
           favoriteLoading={favoriteLoading}
+          onDishClick={handleRecommendationClick}
         />
       </>
     );
@@ -524,13 +534,14 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
         </div>
 
         <DishModal
-          dish={dish}
+          dish={currentDish}
           currency={currency}
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           isFavorite={isFavorite}
           onToggleFavorite={toggleFavorite}
           favoriteLoading={favoriteLoading}
+          onDishClick={handleRecommendationClick}
         />
       </>
     );
@@ -664,13 +675,14 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
       </div>
 
       <DishModal
-        dish={dish}
+        dish={currentDish}
         currency={currency}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         isFavorite={isFavorite}
         onToggleFavorite={toggleFavorite}
         favoriteLoading={favoriteLoading}
+        onDishClick={handleRecommendationClick}
       />
     </>
   );
