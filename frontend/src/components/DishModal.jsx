@@ -208,7 +208,7 @@ const DishModal = ({
           </div>
         )}
 
-        <div className="p-4 sm:p-6">
+        <div className="p-3 sm:p-5">
           <div className="flex items-center gap-3 mb-2">
             <h2 className="text-xl sm:text-2xl font-bold break-words">{dish.name}</h2>
             {!isAvailable && !dish.image && (
@@ -221,47 +221,14 @@ const DishModal = ({
             <p className="text-gray-600 text-sm sm:text-base mb-4 break-words">{dish.description}</p>
           )}
 
-          {/* Рекомендации */}
-          {recommendations.length > 0 && (
-            <div className="mb-3 border-t pt-2">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                {recommendations.map((rec) => (
-                  <div
-                    key={rec.id}
-                    onClick={() => {
-                      onClose();
-                      setTimeout(() => {
-                        const dishCard = document.querySelector(`[data-dish-id="${rec.id}"]`);
-                        dishCard?.click();
-                      }, 300);
-                    }}
-                    className="cursor-pointer group"
-                  >
-                    {rec.image && (
-                      <ImageWithLoader
-                        src={rec.image}
-                        alt={rec.name}
-                        className="w-full aspect-square object-cover rounded-lg mb-1.5 group-hover:scale-105 transition-transform duration-200"
-                        loading="lazy"
-                      />
-                    )}
-                    <div className="text-xs font-medium line-clamp-2 mb-0.5 leading-tight">{rec.name}</div>
-                    <div className="text-xs font-bold text-primary-600">
-                      {parseFloat(rec.price).toFixed(2)} {currency}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {dish.modifiers && dish.modifiers.length > 0 && (
             <div className="mb-4">
               {dish.modifiers.map((modifier) => (
                 modifier.options && modifier.options.length > 0 && (
-                  <div key={modifier.id} className="mb-3">
+                  <div key={modifier.id} className="mb-4">
                     <h3 className="text-base sm:text-lg font-semibold mb-2">
                       {modifier.name}
+                      {modifier.isRequired && <span className="text-red-500 ml-1">*</span>}
                     </h3>
                     <div className="space-y-2">
                       {modifier.options.map((option) => (
@@ -290,6 +257,40 @@ const DishModal = ({
                   </div>
                 )
               ))}
+            </div>
+          )}
+
+          {/* Рекомендации */}
+          {recommendations.length > 0 && (
+            <div className="mb-4 border-t pt-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                {recommendations.map((rec) => (
+                  <div
+                    key={rec.id}
+                    onClick={() => {
+                      onClose();
+                      setTimeout(() => {
+                        const dishCard = document.querySelector(`[data-dish-id="${rec.id}"]`);
+                        dishCard?.click();
+                      }, 300);
+                    }}
+                    className="cursor-pointer group"
+                  >
+                    {rec.image && (
+                      <ImageWithLoader
+                        src={rec.image}
+                        alt={rec.name}
+                        className="w-full aspect-square object-cover rounded-lg mb-1.5 group-hover:scale-105 transition-transform duration-200"
+                        loading="lazy"
+                      />
+                    )}
+                    <div className="text-xs font-medium line-clamp-2 mb-0.5 leading-tight">{rec.name}</div>
+                    <div className="text-xs font-bold text-primary-600">
+                      {parseFloat(rec.price).toFixed(2)} {currency}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
