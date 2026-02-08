@@ -113,7 +113,7 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
       )}
       <div className="fixed inset-x-0 z-[60] flex justify-center px-0 pb-0" style={cartStyle}>
         <div className="w-full max-w-[480px] rounded-none sm:rounded-2xl bg-white border-t border-gray-200 px-4 py-3 sm:px-6 sm:py-4">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col gap-2">
             <div className="flex flex-col">
               <span className="text-lg sm:text-xl font-semibold text-gray-900">
                 {total.toFixed(2)} {currency}
@@ -132,7 +132,7 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
               onPointerUp={handlePointerEnd}
               onPointerCancel={handlePointerEnd}
               disabled={isCheckingOut || isBelowMinimum}
-              className="flex items-center gap-2 rounded-xl bg-primary-600 px-4 py-2.5 text-white font-semibold shadow-md hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed transition touch-action-none select-none"
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 py-3 text-white font-semibold shadow-md hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed transition touch-action-none select-none"
               style={{ transform: `translateX(${dragOffset}px)`, transition: isDragging ? 'none' : 'transform 0.15s ease' }}
             >
               {isCheckingOut ? '…' : '⇠  ⇢'}
