@@ -16,7 +16,8 @@ import {
   deleteModifierOption,
   uploadModifierOptionImage,
   deleteModifierOptionImage,
-  getDishRecommendations
+  getDishRecommendations,
+  getRestaurantDishes
 } from '../controllers/dish.controller.js';
 import { authenticate, requireRestaurant } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
@@ -28,6 +29,7 @@ router.get('/category/:categoryId', getDishes);
 router.get('/:dishId/recommendations', getDishRecommendations);
 
 // Protected routes - Specific paths FIRST (category, modifiers)
+router.get('/restaurant/:restaurantId/all', authenticate, requireRestaurant, getRestaurantDishes);
 router.post('/', authenticate, requireRestaurant, createDish);
 router.post('/category/:categoryId/reorder', authenticate, requireRestaurant, reorderDishes);
 
