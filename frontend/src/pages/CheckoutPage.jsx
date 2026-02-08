@@ -164,12 +164,6 @@ const CheckoutPage = () => {
                                 </button>
                             </div>
                             <div className="font-medium text-sm whitespace-nowrap">{(item.totalPrice * item.quantity).toFixed(2)} {currency}</div>
-                            <button
-                                onClick={() => removeItem(item.itemId)}
-                                className="text-xs text-red-500 hover:text-red-600"
-                            >
-                                Удалить
-                            </button>
                         </div>
                     </div>
                 ))}
@@ -218,28 +212,14 @@ const CheckoutPage = () => {
                         <div className="space-y-4">
                             <div className="bg-white rounded-lg shadow-sm p-4">
                                 <h2 className="font-semibold text-base mb-3">Способ получения</h2>
-                                <div className={`grid ${restaurant?.deliveryEnabled ? 'grid-cols-2' : 'grid-cols-1'} gap-3`}>
-                                    {restaurant?.deliveryEnabled && (
-                                        <button
-                                            onClick={() => setDeliveryType('delivery')}
-                                            className={`p-3 rounded-lg border-2 transition-all ${deliveryType === 'delivery' ? 'border-primary-600 bg-primary-50' : 'border-gray-200 active:border-gray-300'}`}
-                                        >
-                                            <div className="text-2xl mb-1">🚗</div>
-                                            <div className="font-semibold text-sm">Доставка</div>
-                                            {restaurant.deliveryFee > 0 && (
-                                                <div className="text-xs text-gray-500">{restaurant.deliveryFee} {currency}</div>
-                                            )}
-                                        </button>
-                                    )}
-                                    <button
-                                        onClick={() => setDeliveryType('pickup')}
-                                        className={`p-3 rounded-lg border-2 transition-all ${deliveryType === 'pickup' ? 'border-primary-600 bg-primary-50' : 'border-gray-200 active:border-gray-300'}`}
-                                    >
-                                        <div className="text-2xl mb-1">🏃</div>
-                                        <div className="font-semibold text-sm">Самовывоз</div>
-                                        <div className="text-xs text-gray-500">Бесплатно</div>
-                                    </button>
-                                </div>
+                                <select
+                                    value={deliveryType}
+                                    onChange={(e) => setDeliveryType(e.target.value)}
+                                    className="input-field w-full text-sm"
+                                >
+                                    {restaurant?.deliveryEnabled && <option value="delivery">Доставка{restaurant.deliveryFee > 0 ? ` (+${restaurant.deliveryFee} ${currency})` : ''}</option>}
+                                    <option value="pickup">Самовывоз (бесплатно)</option>
+                                </select>
                                 {!restaurant?.deliveryEnabled && (
                                     <p className="text-sm text-gray-600 mt-3 p-2 bg-blue-50 rounded border border-blue-200">
                                         ℹ️ Доставка временно недоступна. Вы можете забрать заказ самостоятельно.
@@ -354,32 +334,14 @@ const CheckoutPage = () => {
 
                             <div className="bg-white rounded-lg shadow-sm p-4">
                                 <h2 className="font-semibold text-base mb-3">Способ оплаты</h2>
-                                <div className="space-y-2">
-                                    <button
-                                        onClick={() => setPaymentMethod('cash')}
-                                        className={`w-full text-left p-3 rounded-lg border-2 transition-all ${paymentMethod === 'cash' ? 'border-primary-600 bg-primary-50' : 'border-gray-200 active:border-gray-300'}`}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-xl">💵</span>
-                                            <div>
-                                                <div className="font-medium text-sm">Наличными</div>
-                                                <div className="text-xs text-gray-500">При получении</div>
-                                            </div>
-                                        </div>
-                                    </button>
-                                    <button
-                                        onClick={() => setPaymentMethod('card')}
-                                        className={`w-full text-left p-3 rounded-lg border-2 transition-all ${paymentMethod === 'card' ? 'border-primary-600 bg-primary-50' : 'border-gray-200 active:border-gray-300'}`}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-xl">💳</span>
-                                            <div>
-                                                <div className="font-medium text-sm">Картой курьеру</div>
-                                                <div className="text-xs text-gray-500">При получении</div>
-                                            </div>
-                                        </div>
-                                    </button>
-                                </div>
+                                <select
+                                    value={paymentMethod}
+                                    onChange={(e) => setPaymentMethod(e.target.value)}
+                                    className="input-field w-full text-sm"
+                                >
+                                    <option value="cash">Наличными</option>
+                                    <option value="card">Картой курьеру</option>
+                                </select>
                             </div>
 
                             <div className="bg-white rounded-lg shadow-sm p-4">
@@ -393,7 +355,7 @@ const CheckoutPage = () => {
                                 />
                             </div>
 
-                            {orderSection}
+                            {/* На втором шаге оставляем только параметры доставки и оплаты для минимализма */}
                         </div>
                     )}
                 </div>
