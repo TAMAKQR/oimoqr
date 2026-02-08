@@ -855,7 +855,10 @@ export const getDishRecommendations = async (req, res, next) => {
     // Get the dish
     const dish = await prisma.dish.findUnique({
       where: { id: dishId },
-      include: {
+      select: {
+        id: true,
+        categoryId: true,
+        recommendationIds: true,
         category: {
           select: {
             id: true,
@@ -913,6 +916,14 @@ export const getDishRecommendations = async (req, res, next) => {
           available: true,
           id: { notIn: recommendations.map(r => r.id) }
         },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          price: true,
+          image: true,
+          categoryId: true
+        },
         take: limit - recommendations.length
       });
 
@@ -935,6 +946,14 @@ export const getDishRecommendations = async (req, res, next) => {
           id: {
             notIn: [dishId, ...recommendations.map(r => r.id)]
           }
+        },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          price: true,
+          image: true,
+          categoryId: true
         },
         take: limit - recommendations.length,
         orderBy: [
@@ -964,6 +983,14 @@ export const getDishRecommendations = async (req, res, next) => {
           id: {
             notIn: [dishId, ...recommendations.map(r => r.id)]
           }
+        },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          price: true,
+          image: true,
+          categoryId: true
         },
         take: limit - recommendations.length,
         orderBy: [
