@@ -402,36 +402,63 @@ const MenuPage = () => {
           </div>
         </div>
 
-        {/* Category Groups - горизонтальный скролл */}
+        {/* Category Groups - Stories стиль с градиентом */}
         {restaurant.categoryGroups && restaurant.categoryGroups.length > 0 && (
-          <div className="px-4 py-4">
-            <div className="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth pb-2">
-              {restaurant.categoryGroups.map((group) => (
-                <button
-                  key={group.id}
-                  onClick={() => {
-                    // Прокрутка к первой категории в группе
-                    if (group.categories && group.categories.length > 0) {
-                      handleCategoryClick(group.categories[0].id);
-                    }
-                  }}
-                  className="flex flex-col items-center flex-shrink-0 w-24"
-                >
-                  {group.image && (
-                    <div className="w-20 h-20 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow mb-2">
-                      <ImageWithLoader
-                        src={group.image}
-                        alt={group.name}
-                        loading="lazy"
-                        className="w-full h-full object-cover"
-                      />
+          <div className="px-4 py-5 bg-gradient-to-b from-gray-50 to-white">
+            <div className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-2">
+              {restaurant.categoryGroups.map((group) => {
+                const dishCount = group.categories?.reduce((sum, cat) =>
+                  sum + (cat.dishes?.length || 0), 0
+                ) || 0;
+
+                return (
+                  <button
+                    key={group.id}
+                    onClick={() => {
+                      // Прокрутка к первой категории в группе
+                      if (group.categories && group.categories.length > 0) {
+                        handleCategoryClick(group.categories[0].id);
+                      }
+                    }}
+                    className="flex flex-col items-center flex-shrink-0 w-20 group"
+                  >
+                    {group.image ? (
+                      <div className="relative mb-2">
+                        {/* Градиентное кольцо */}
+                        <div className="w-[72px] h-[72px] rounded-full bg-gradient-to-tr from-primary-500 via-primary-400 to-primary-300 p-[2.5px] group-active:scale-95 transition-transform">
+                          <div className="w-full h-full rounded-full bg-white p-[2px]">
+                            <div className="w-full h-full rounded-full overflow-hidden">
+                              <ImageWithLoader
+                                src={group.image}
+                                alt={group.name}
+                                loading="lazy"
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Бейдж с количеством блюд */}
+                        {dishCount > 0 && (
+                          <div className="absolute -bottom-1 -right-1 bg-primary-600 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-lg border-2 border-white">
+                            {dishCount}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="w-[72px] h-[72px] rounded-full bg-gradient-to-tr from-gray-200 to-gray-300 flex items-center justify-center mb-2 group-active:scale-95 transition-transform">
+                        <span className="text-2xl">📂</span>
+                      </div>
+                    )}
+
+                    <div className="text-center w-full">
+                      <h3 className="font-medium text-[11px] leading-tight text-gray-800 line-clamp-2 px-1">
+                        {group.name}
+                      </h3>
                     </div>
-                  )}
-                  <div className="text-center">
-                    <h3 className="font-medium text-xs leading-tight">{group.name}</h3>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
