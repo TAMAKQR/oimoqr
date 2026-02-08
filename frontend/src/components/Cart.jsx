@@ -21,8 +21,8 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
 
-  const SWIPE_THRESHOLD = 60;
-  const MAX_OFFSET = 110;
+  const SWIPE_THRESHOLD = 80;
+  const MAX_OFFSET = 140;
   const [isTrackVisible, setIsTrackVisible] = useState(false);
 
   useEffect(() => {
@@ -57,8 +57,8 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
   };
 
   const resetDrag = () => {
-    setDragOffset(0);
     setIsDragging(false);
+    setDragOffset(0);
   };
 
   const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
@@ -72,7 +72,8 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
   const handlePointerMove = (e) => {
     if (!isDragging) return;
     const delta = e.clientX - startXRef.current;
-    setDragOffset(clamp(delta, -MAX_OFFSET, MAX_OFFSET));
+    const eased = delta * 0.85;
+    setDragOffset(clamp(eased, -MAX_OFFSET, MAX_OFFSET));
   };
 
   const handlePointerEnd = async () => {
