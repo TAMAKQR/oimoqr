@@ -149,15 +149,25 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
               }}
             >
               <div
-                className="absolute inset-y-0 left-3 flex items-center text-primary-300 text-lg select-none pointer-events-none transition-opacity duration-150"
+                className="absolute inset-y-0 left-3 flex items-center gap-1 text-red-500 text-lg select-none pointer-events-none transition-opacity duration-150"
                 style={{ opacity: leftArrowOpacity }}
               >
                 ⇠
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l1 7h13l1-5H6" />
+                  <circle cx="9" cy="19" r="2" />
+                  <circle cx="17" cy="19" r="2" />
+                </svg>
               </div>
               <div
-                className="absolute inset-y-0 right-3 flex items-center text-primary-300 text-lg select-none pointer-events-none transition-opacity duration-150"
+                className="absolute inset-y-0 right-3 flex items-center gap-1 text-primary-400 text-lg select-none pointer-events-none transition-opacity duration-150"
                 style={{ opacity: rightArrowOpacity }}
               >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l1 7h13l1-5H6" />
+                  <circle cx="9" cy="19" r="2" />
+                  <circle cx="17" cy="19" r="2" />
+                </svg>
                 ⇢
               </div>
               <button
