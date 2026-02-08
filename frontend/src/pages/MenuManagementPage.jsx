@@ -873,9 +873,17 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
       console.log('📡 Response status:', response.status);
 
       if (response.ok) {
-        const data = await response.json();
-        console.log(`✅ Loaded ${data.length} dishes`);
-        setAllDishes(data);
+        const text = await response.text();
+        console.log('📄 Response text (first 500 chars):', text.substring(0, 500));
+
+        try {
+          const data = JSON.parse(text);
+          console.log(`✅ Loaded ${data.length} dishes`);
+          setAllDishes(data);
+        } catch (parseError) {
+          console.error('❌ JSON Parse Error:', parseError);
+          console.log('Full response:', text);
+        }
       } else {
         const text = await response.text();
         console.error('❌ Failed to load dishes, status:', response.status, 'Response:', text.substring(0, 200));
