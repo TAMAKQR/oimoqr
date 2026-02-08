@@ -280,7 +280,7 @@ const DishModal = ({
                       <ImageWithLoader
                         src={rec.image}
                         alt={rec.name}
-                        className="w-full aspect-square object-cover rounded-lg mb-2 group-hover:scale-105 transition-transform duration-200"
+                        className="w-full aspect-square object-cover rounded-lg mb-1 group-hover:scale-105 transition-transform duration-200"
                         loading="lazy"
                       />
                     )}
