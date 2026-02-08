@@ -145,6 +145,7 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
     return (
       <>
         <div
+          data-dish-id={dish.id}
           onClick={handleCardClick}
           className={`card transition-all duration-200 relative ${isAvailable
             ? 'cursor-pointer hover:shadow-lg active:scale-98'
@@ -291,6 +292,7 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
     return (
       <>
         <div
+          data-dish-id={dish.id}
           onClick={handleCardClick}
           className={`overflow-hidden rounded-lg border border-gray-200 bg-white transition-all duration-200 flex flex-col h-full ${isAvailable
             ? 'cursor-pointer hover:shadow-lg active:scale-98'
