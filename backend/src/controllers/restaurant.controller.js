@@ -112,7 +112,21 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
         dishes: {
           where: { available: true },
           orderBy: { order: 'asc' },
-          include: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            price: true,
+            image: true,
+            available: true,
+            order: true,
+            allergens: true,
+            discount: true,
+            badge: true,
+            categoryId: true,
+            restaurantId: true,
+            createdAt: true,
+            updatedAt: true,
             translations: {
               where: { languageCode: language }
             },
