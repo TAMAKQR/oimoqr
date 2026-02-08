@@ -272,7 +272,7 @@ const DishModal = ({
                   return (
                     <div
                       key={rec.id}
-                      className="relative"
+                      className="relative overflow-hidden"
                     >
                       {rec.image && (
                         <ImageWithLoader
@@ -282,9 +282,9 @@ const DishModal = ({
                           loading="lazy"
                         />
                       )}
-                      <div className="text-sm font-medium line-clamp-2 mb-1 leading-tight">{rec.name}</div>
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm font-bold text-primary-600">
+                      <div className="text-sm font-medium line-clamp-2 mb-1 leading-tight break-words">{rec.name}</div>
+                      <div className="flex items-center justify-between gap-1">
+                        <div className="text-sm font-bold text-primary-600 flex-shrink-0">
                           {parseFloat(rec.price).toFixed(2)} {currency}
                         </div>
                         {quantity === 0 ? (
@@ -293,12 +293,12 @@ const DishModal = ({
                               e.stopPropagation();
                               addItem(rec, []);
                             }}
-                            className="w-8 h-8 flex items-center justify-center bg-primary-600 text-white rounded-full hover:bg-primary-700 active:scale-95 transition-all shadow-md"
+                            className="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-primary-600 text-white rounded-full hover:bg-primary-700 active:scale-95 transition-all shadow-md"
                           >
                             <span className="text-lg leading-none">+</span>
                           </button>
                         ) : (
-                          <div className="flex items-center gap-1 bg-primary-600 rounded-full px-1 py-1">
+                          <div className="flex items-center gap-1 bg-primary-600 rounded-full px-1 py-1 flex-shrink-0">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
