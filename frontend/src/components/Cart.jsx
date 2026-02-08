@@ -129,16 +129,11 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
       <div className="fixed inset-x-0 z-[60] flex justify-center px-0 pb-0" style={cartStyle}>
         <div className="w-full max-w-[480px] rounded-none sm:rounded-2xl bg-white border-t border-gray-200 px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex flex-col gap-3">
-            <div className="flex flex-col">
-              <span className="text-lg sm:text-xl font-semibold text-gray-900">
-                {total.toFixed(2)} {currency}
+            {isBelowMinimum && (
+              <span className="text-xs text-yellow-700">
+                Минимальный заказ {minAmount} {currency}. Добавьте {(minAmount - total).toFixed(2)} {currency}
               </span>
-              {isBelowMinimum && (
-                <span className="text-xs text-yellow-700 mt-1">
-                  Минимальный заказ {minAmount} {currency}. Добавьте {(minAmount - total).toFixed(2)} {currency}
-                </span>
-              )}
-            </div>
+            )}
 
             <div
               className="relative w-full h-12 rounded-xl bg-primary-50 border border-primary-100 overflow-hidden"
@@ -178,14 +173,20 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
                 onPointerUp={handlePointerEnd}
                 onPointerCancel={handlePointerEnd}
                 disabled={isCheckingOut || isBelowMinimum}
-                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-10 rounded-full bg-primary-600 text-white font-semibold hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed touch-action-none select-none flex items-center justify-center"
+                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-10 rounded-full bg-primary-600 text-white font-semibold hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed touch-action-none select-none flex items-center justify-center px-3"
                 style={{
                   transform: `translate(-50%, -50%) translateX(${dragOffset}px) scale(${handleScale})`,
                   transition: isDragging ? 'none' : 'transform 200ms cubic-bezier(0.22, 1, 0.36, 1)',
                   boxShadow: handleShadow
                 }}
               >
-                {isCheckingOut ? '…' : '⇠  ⇢'}
+                {isCheckingOut ? '…' : (
+                  <div className="flex items-center gap-2 w-full justify-center">
+                    <span className="text-xs opacity-80">⇠</span>
+                    <span className="text-sm font-semibold whitespace-nowrap">{total.toFixed(2)} {currency}</span>
+                    <span className="text-xs opacity-80">⇢</span>
+                  </div>
+                )}
               </button>
             </div>
           </div>
