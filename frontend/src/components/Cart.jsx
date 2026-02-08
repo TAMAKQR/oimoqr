@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useCartStore } from '../store/cartStore';
@@ -9,13 +9,20 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
   const navigate = useNavigate();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
-  const { items, getTotal, getItemCount } = useCartStore();
+  const { items, getTotal, getItemCount, clearCart } = useCartStore();
   const currency = restaurant?.currency || '₽';
 
   const total = getTotal();
   const itemCount = getItemCount();
   const minAmount = restaurant?.minOrderAmount;
   const isBelowMinimum = minAmount && total < minAmount;
+
+  const startXRef = useRef(0);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const SWIPE_THRESHOLD = 60;
+  const MAX_OFFSET = 120;
 
   const handleCheckout = async () => {
     if (!items.length) return;
@@ -40,6 +47,44 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
     });
 
     setIsCheckingOut(false);
+  };
+
+  const resetDrag = () => {
+    setDragOffset(0);
+    setIsDragging(false);
+  };
+
+  const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+  const handlePointerDown = (e) => {
+    if (!items.length) return;
+    startXRef.current = e.clientX;
+    setIsDragging(true);
+  };
+
+  const handlePointerMove = (e) => {
+    if (!isDragging) return;
+    const delta = e.clientX - startXRef.current;
+    setDragOffset(clamp(delta, -MAX_OFFSET, MAX_OFFSET));
+  };
+
+  const handlePointerEnd = async () => {
+    if (!isDragging) return;
+    const offset = dragOffset;
+    resetDrag();
+
+    if (offset > SWIPE_THRESHOLD) {
+      await handleCheckout();
+      return;
+    }
+
+    if (offset < -SWIPE_THRESHOLD) {
+      const confirmClear = window.confirm('Очистить корзину?');
+      if (confirmClear) {
+        clearCart();
+      }
+      return;
+    }
   };
 
   if (!itemCount || isDishModalOpen) {
@@ -81,11 +126,17 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
               )}
             </div>
             <button
-              onClick={handleCheckout}
+              type="button"
+              onClick={(e) => e.preventDefault()}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerEnd}
+              onPointerCancel={handlePointerEnd}
               disabled={isCheckingOut || isBelowMinimum}
-              className="flex items-center gap-2 rounded-xl bg-primary-600 px-4 py-2.5 text-white font-semibold shadow-md hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
+              className="flex items-center gap-2 rounded-xl bg-primary-600 px-4 py-2.5 text-white font-semibold shadow-md hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed transition touch-action-none select-none"
+              style={{ transform: `translateX(${dragOffset}px)`, transition: isDragging ? 'none' : 'transform 0.15s ease' }}
             >
-              {isCheckingOut ? 'Оформляем...' : 'Оформить'}
+              {isCheckingOut ? 'Оформляем...' : 'Свайп → оформить / ← очистить'}
             </button>
           </div>
         </div>
