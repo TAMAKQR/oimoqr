@@ -846,6 +846,11 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
     }
   }, [dish?.imageUrl]);
 
+  // Обновляем recommendationIds при изменении dish
+  useEffect(() => {
+    setRecommendationIds(dish?.recommendationIds || []);
+  }, [dish?.id]);
+
   // Загрузка всех блюд ресторана (для выбора рекомендаций)
   useEffect(() => {
     if (restaurantId) {
@@ -856,7 +861,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
   const loadAllDishes = async () => {
     setLoadingDishes(true);
     try {
-      const response = await fetch(`/api/restaurants/${restaurantId}/dishes`, {
+      const response = await fetch(`/api/dishes/restaurant/${restaurantId}/all`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -864,6 +869,8 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
       if (response.ok) {
         const data = await response.json();
         setAllDishes(data);
+      } else {
+        console.error('Failed to load dishes, status:', response.status);
       }
     } catch (err) {
       console.error('Error loading dishes:', err);
@@ -1674,8 +1681,8 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
                       <label
                         key={availableDish.id}
                         className={`flex items-center gap-3 p-2 border rounded cursor-pointer transition-colors ${isSelected
-                            ? 'bg-primary-50 border-primary-300'
-                            : 'bg-white border-gray-200 hover:bg-gray-50'
+                          ? 'bg-primary-50 border-primary-300'
+                          : 'bg-white border-gray-200 hover:bg-gray-50'
                           }`}
                       >
                         <input
