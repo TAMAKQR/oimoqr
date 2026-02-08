@@ -12,7 +12,7 @@ const RecommendationCard = ({ dish, currency, addItem, removeItem }) => {
 
   return (
     <div className="relative">
-      <div className="relative mb-2">
+      <div className="relative mb-1">
         {dish.image && (
           <ImageWithLoader
             src={dish.image}
@@ -58,7 +58,7 @@ const RecommendationCard = ({ dish, currency, addItem, removeItem }) => {
           )}
         </div>
       </div>
-      <div className="text-sm font-medium line-clamp-2 mb-1 leading-snug text-gray-900">{dish.name}</div>
+      <div className="text-sm font-medium line-clamp-2 mb-1 leading-tight text-gray-900">{dish.name}</div>
       <div className="text-sm font-bold text-primary-600">
         {parseFloat(dish.price).toFixed(2)} {currency}
       </div>
@@ -325,8 +325,8 @@ const DishModal = ({
 
           {/* Рекомендации */}
           {recommendations.length > 0 && (
-            <div className="border-t pt-2 pb-1">
-              <div className="grid grid-cols-2 gap-2.5">
+            <div className="border-t pt-1 pb-1">
+              <div className="grid grid-cols-2 gap-2">
                 {recommendations.map((rec) => {
                   return <RecommendationCard key={rec.id} dish={rec} currency={currency} addItem={addItem} removeItem={removeItem} />;
                 })}
@@ -335,7 +335,7 @@ const DishModal = ({
           )}
 
           {/* Padding for fixed bottom bar */}
-          <div className="h-24"></div>
+          <div className="h-10"></div>
         </div>
 
         {/* Fixed bottom bar with buttons */}
