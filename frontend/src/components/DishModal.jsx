@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useCartStore } from '../store/cartStore';
 import toast from 'react-hot-toast';
 import { cacheBustImage } from '../utils/imageCache';
@@ -126,16 +126,29 @@ const DishModal = ({
   }, [selectedModifiers, dish?.image]);
 
   // Lock background scroll only when modal is open
+  const scrollPositionRef = useRef(0);
   useEffect(() => {
-    if (!isOpen) return;
-    const originalOverflow = document?.body?.style?.overflow;
-    if (document?.body) {
-      document.body.style.overflow = 'hidden';
-    }
+    if (!isOpen || !document?.body) return;
+
+    // Save current scroll and lock body to prevent background scrolling
+    scrollPositionRef.current = window.scrollY || 0;
+    const { body } = document;
+    const prevOverflow = body.style.overflow;
+    const prevPosition = body.style.position;
+    const prevWidth = body.style.width;
+    const prevTop = body.style.top;
+
+    body.style.overflow = 'hidden';
+    body.style.position = 'fixed';
+    body.style.width = '100%';
+    body.style.top = `-${scrollPositionRef.current}px`;
+
     return () => {
-      if (document?.body) {
-        document.body.style.overflow = originalOverflow || '';
-      }
+      body.style.overflow = prevOverflow || '';
+      body.style.position = prevPosition || '';
+      body.style.width = prevWidth || '';
+      body.style.top = prevTop || '';
+      window.scrollTo(0, scrollPositionRef.current);
     };
   }, [isOpen]);
 
