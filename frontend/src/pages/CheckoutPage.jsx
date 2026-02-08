@@ -212,19 +212,27 @@ const CheckoutPage = () => {
                         <div className="space-y-4">
                             <div className="bg-white rounded-lg shadow-sm p-4">
                                 <h2 className="font-semibold text-base mb-3">Способ получения</h2>
-                                <select
-                                    value={deliveryType}
-                                    onChange={(e) => setDeliveryType(e.target.value)}
-                                    className="input-field w-full text-sm"
-                                >
-                                    {restaurant?.deliveryEnabled && <option value="delivery">Доставка{restaurant.deliveryFee > 0 ? ` (+${restaurant.deliveryFee} ${currency})` : ''}</option>}
-                                    <option value="pickup">Самовывоз (бесплатно)</option>
-                                </select>
-                                {!restaurant?.deliveryEnabled && (
-                                    <p className="text-sm text-gray-600 mt-3 p-2 bg-blue-50 rounded border border-blue-200">
-                                        ℹ️ Доставка временно недоступна. Вы можете забрать заказ самостоятельно.
-                                    </p>
-                                )}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        disabled={!restaurant?.deliveryEnabled}
+                                        onClick={() => restaurant?.deliveryEnabled && setDeliveryType('delivery')}
+                                        className={`p-3 rounded-lg border-2 transition-all ${deliveryType === 'delivery' ? 'border-primary-600 bg-primary-50' : 'border-gray-200 active:border-gray-300'} ${!restaurant?.deliveryEnabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    >
+                                        <div className="text-2xl mb-1">🚗</div>
+                                        <div className="font-semibold text-sm">Доставка</div>
+                                        {restaurant?.deliveryFee > 0 && (
+                                            <div className="text-xs text-gray-500">{restaurant.deliveryFee} {currency}</div>
+                                        )}
+                                    </button>
+                                    <button
+                                        onClick={() => setDeliveryType('pickup')}
+                                        className={`p-3 rounded-lg border-2 transition-all ${deliveryType === 'pickup' ? 'border-primary-600 bg-primary-50' : 'border-gray-200 active:border-gray-300'}`}
+                                    >
+                                        <div className="text-2xl mb-1">🏃</div>
+                                        <div className="font-semibold text-sm">Самовывоз</div>
+                                        <div className="text-xs text-gray-500">Бесплатно</div>
+                                    </button>
+                                </div>
                             </div>
 
                             {deliveryType === 'delivery' && (
