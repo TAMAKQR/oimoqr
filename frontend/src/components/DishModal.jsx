@@ -262,8 +262,8 @@ const DishModal = ({
 
           {/* Рекомендации */}
           {recommendations.length > 0 && (
-            <div className="mb-4 border-t pt-3">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <div className="border-t pt-3 pb-2">
+              <div className="grid grid-cols-2 gap-3">
                 {recommendations.map((rec) => (
                   <div
                     key={rec.id}
@@ -280,12 +280,12 @@ const DishModal = ({
                       <ImageWithLoader
                         src={rec.image}
                         alt={rec.name}
-                        className="w-full aspect-square object-cover rounded-lg mb-1.5 group-hover:scale-105 transition-transform duration-200"
+                        className="w-full aspect-square object-cover rounded-lg mb-2 group-hover:scale-105 transition-transform duration-200"
                         loading="lazy"
                       />
                     )}
-                    <div className="text-xs font-medium line-clamp-2 mb-0.5 leading-tight">{rec.name}</div>
-                    <div className="text-xs font-bold text-primary-600">
+                    <div className="text-sm font-medium line-clamp-2 mb-1 leading-snug">{rec.name}</div>
+                    <div className="text-sm font-bold text-primary-600">
                       {parseFloat(rec.price).toFixed(2)} {currency}
                     </div>
                   </div>
