@@ -15,15 +15,17 @@ import {
   updateModifierOption,
   deleteModifierOption,
   uploadModifierOptionImage,
-  deleteModifierOptionImage
+  deleteModifierOptionImage,
+  getDishRecommendations
 } from '../controllers/dish.controller.js';
 import { authenticate, requireRestaurant } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
 
 const router = express.Router();
 
-// Public route - FIRST to avoid conflicts
+// Public routes - FIRST to avoid conflicts
 router.get('/category/:categoryId', getDishes);
+router.get('/:dishId/recommendations', getDishRecommendations);
 
 // Protected routes - Specific paths FIRST (category, modifiers)
 router.post('/', authenticate, requireRestaurant, createDish);

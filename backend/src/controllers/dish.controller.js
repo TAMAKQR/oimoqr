@@ -171,6 +171,7 @@ export const updateDish = async (req, res, next) => {
     if (allergens !== undefined) updateData.allergens = allergens;
     if (parsedDiscount !== undefined) updateData.discount = parsedDiscount;
     if (badge !== undefined) updateData.badge = badge;
+    if (req.body.recommendationIds !== undefined) updateData.recommendationIds = req.body.recommendationIds;
 
     console.log('📝 Update data:', updateData);
 
@@ -831,6 +832,162 @@ export const deleteModifierOptionImage = async (req, res, next) => {
       option: updatedOption
     });
   } catch (error) {
+    next(error);
+  }
+};
+
+// ========================================
+// Dish Recommendations
+// ========================================
+
+/**
+ * Get recommendations for a specific dish
+ * Uses hybrid approach:
+ * 1. Statistics-based (from order history)
+ * 2. Manual recommendations (set by restaurant owner)
+ * 3. Category-based fallback (similar dishes)
+ */
+export const getDishRecommendations = async (req, res, next) => {
+  try {
+    const { dishId } = req.params;
+    const limit = parseInt(req.query.limit) || 4;
+
+    // Get the dish
+    const dish = await prisma.dish.findUnique({
+      where: { id: dishId },
+      include: {
+        category: {
+          select: {
+            id: true,
+            restaurantId: true
+          }
+        }
+      }
+    });
+
+    if (!dish) {
+      return res.status(404).json({ error: 'Dish not found' });
+    }
+
+    let recommendations = [];
+
+    // PRIORITY 1: Statistics-based recommendations (dishes often ordered together)
+    try {
+      const coOrderedDishes = await prisma.$queryRaw`
+        SELECT 
+          d.id,
+          d.name,
+          d.description,
+          d.price,
+          d.image,
+          d."categoryId",
+          COUNT(*) as order_count
+        FROM "Dish" d
+        INNER JOIN "OrderItem" oi1 ON d.id = oi1."dishId"
+        INNER JOIN "OrderItem" oi2 ON oi1."orderId" = oi2."orderId"
+        WHERE oi2."dishId" = ${dishId}
+          AND d.id != ${dishId}
+          AND d.available = true
+        GROUP BY d.id
+        HAVING COUNT(*) >= 3
+        ORDER BY order_count DESC
+        LIMIT ${limit}
+      `;
+
+      if (coOrderedDishes && coOrderedDishes.length > 0) {
+        recommendations = coOrderedDishes.map(d => ({
+          ...d,
+          imageUrl: d.image,
+          recommendationType: 'statistics'
+        }));
+      }
+    } catch (error) {
+      console.log('Statistics-based recommendations failed:', error.message);
+    }
+
+    // PRIORITY 2: Manual recommendations (if not enough from statistics)
+    if (recommendations.length < limit && dish.recommendationIds && dish.recommendationIds.length > 0) {
+      const manualRecommendations = await prisma.dish.findMany({
+        where: {
+          id: { in: dish.recommendationIds },
+          available: true,
+          id: { notIn: recommendations.map(r => r.id) }
+        },
+        take: limit - recommendations.length
+      });
+
+      recommendations = [
+        ...recommendations,
+        ...manualRecommendations.map(d => ({
+          ...d,
+          imageUrl: d.image,
+          recommendationType: 'manual'
+        }))
+      ];
+    }
+
+    // PRIORITY 3: Category-based fallback (similar dishes from same category)
+    if (recommendations.length < limit) {
+      const categoryDishes = await prisma.dish.findMany({
+        where: {
+          categoryId: dish.categoryId,
+          available: true,
+          id: {
+            notIn: [dishId, ...recommendations.map(r => r.id)]
+          }
+        },
+        take: limit - recommendations.length,
+        orderBy: [
+          { order: 'asc' },
+          { createdAt: 'desc' }
+        ]
+      });
+
+      recommendations = [
+        ...recommendations,
+        ...categoryDishes.map(d => ({
+          ...d,
+          imageUrl: d.image,
+          recommendationType: 'category'
+        }))
+      ];
+    }
+
+    // PRIORITY 4: Popular dishes from restaurant (if still not enough)
+    if (recommendations.length < limit) {
+      const popularDishes = await prisma.dish.findMany({
+        where: {
+          category: {
+            restaurantId: dish.category.restaurantId
+          },
+          available: true,
+          id: {
+            notIn: [dishId, ...recommendations.map(r => r.id)]
+          }
+        },
+        take: limit - recommendations.length,
+        orderBy: [
+          { order: 'asc' },
+          { createdAt: 'desc' }
+        ]
+      });
+
+      recommendations = [
+        ...recommendations,
+        ...popularDishes.map(d => ({
+          ...d,
+          imageUrl: d.image,
+          recommendationType: 'popular'
+        }))
+      ];
+    }
+
+    res.json({
+      dishId,
+      recommendations: recommendations.slice(0, limit)
+    });
+  } catch (error) {
+    console.error('Error getting dish recommendations:', error);
     next(error);
   }
 };

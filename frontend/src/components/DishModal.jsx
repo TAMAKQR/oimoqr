@@ -15,6 +15,8 @@ const DishModal = ({
 }) => {
   // Используем объект для хранения выбранных опций для каждого модификатора
   const [selectedModifiers, setSelectedModifiers] = useState({});
+  const [recommendations, setRecommendations] = useState([]);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
   const addItem = useCartStore((state) => state.addItem);
   const isAvailable = dish?.available !== false; // По умолчанию true если поле отсутствует
 
@@ -41,6 +43,28 @@ const DishModal = ({
       }
     };
   }, [isOpen]);
+
+  // Load recommendations when modal opens
+  useEffect(() => {
+    if (isOpen && dish?.id) {
+      loadRecommendations();
+    }
+  }, [isOpen, dish?.id]);
+
+  const loadRecommendations = async () => {
+    setLoadingRecommendations(true);
+    try {
+      const response = await fetch(`/api/dishes/${dish.id}/recommendations?limit=4`);
+      if (response.ok) {
+        const data = await response.json();
+        setRecommendations(data.recommendations || []);
+      }
+    } catch (error) {
+      console.error('Error loading recommendations:', error);
+    } finally {
+      setLoadingRecommendations(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -193,6 +217,44 @@ const DishModal = ({
           </div>
           {dish.description && (
             <p className="text-gray-600 text-sm sm:text-base mb-4 break-words">{dish.description}</p>
+          )}
+
+          {/* Рекомендации */}
+          {recommendations.length > 0 && (
+            <div className="mb-6 border-t pt-4">
+              <h3 className="text-base sm:text-lg font-semibold mb-3">
+                💡 С этим блюдом часто заказывают:
+              </h3>
+              <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+                {recommendations.map((rec) => (
+                  <div
+                    key={rec.id}
+                    onClick={() => {
+                      onClose();
+                      // Небольшая задержка чтобы закрылась текущая модалка
+                      setTimeout(() => {
+                        const dishCard = document.querySelector(`[data-dish-id="${rec.id}"]`);
+                        dishCard?.click();
+                      }, 300);
+                    }}
+                    className="flex-shrink-0 w-28 cursor-pointer group"
+                  >
+                    {rec.image && (
+                      <ImageWithLoader
+                        src={rec.image}
+                        alt={rec.name}
+                        className="w-full h-24 object-cover rounded-lg mb-2 group-hover:opacity-80 transition-opacity"
+                        loading="lazy"
+                      />
+                    )}
+                    <div className="text-xs font-medium line-clamp-2 mb-1">{rec.name}</div>
+                    <div className="text-xs font-bold text-primary-600">
+                      {parseFloat(rec.price).toFixed(2)} {currency}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
 
           {dish.modifiers && dish.modifiers.length > 0 && (

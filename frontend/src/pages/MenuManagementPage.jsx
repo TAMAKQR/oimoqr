@@ -834,12 +834,43 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
   const [templates, setTemplates] = useState([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
 
+  // Состояние для рекомендаций
+  const [recommendationIds, setRecommendationIds] = useState(dish?.recommendationIds || []);
+  const [allDishes, setAllDishes] = useState([]);
+  const [loadingDishes, setLoadingDishes] = useState(false);
+
   // Обновляем фото при изменении dish (когда переоткрываем модалку)
   useEffect(() => {
     if (dish?.imageUrl) {
       setCurrentImageUrl(`${dish.imageUrl}?t=${Date.now()}`);
     }
   }, [dish?.imageUrl]);
+
+  // Загрузка всех блюд ресторана (для выбора рекомендаций)
+  useEffect(() => {
+    if (restaurantId) {
+      loadAllDishes();
+    }
+  }, [restaurantId]);
+
+  const loadAllDishes = async () => {
+    setLoadingDishes(true);
+    try {
+      const response = await fetch(`/api/restaurants/${restaurantId}/dishes`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAllDishes(data);
+      }
+    } catch (err) {
+      console.error('Error loading dishes:', err);
+    } finally {
+      setLoadingDishes(false);
+    }
+  };
 
   // Загрузка шаблонов модификаторов
   useEffect(() => {
@@ -1154,6 +1185,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
         allergens: allergens.length > 0 ? JSON.stringify(allergens) : null,
         discount: parsedDiscount,
         badge: badge || null,
+        recommendationIds,
       };
 
       let savedDish;
@@ -1618,6 +1650,71 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
             <p className="text-xs text-gray-500 mt-2">
               Модификаторы позволяют клиентам выбирать размер, вкус, добавки и т.д. Вы можете добавить фото для каждой опции.
             </p>
+          </div>
+
+          {/* Рекомендации */}
+          <div className="border-t pt-4">
+            <label className="block text-sm font-medium mb-2">
+              💡 Рекомендации (что предложить с этим блюдом?)
+            </label>
+            <p className="text-xs text-gray-500 mb-3">
+              Выберите блюда, которые будут показаны как рекомендации при просмотре этого блюда.
+              Это увеличит средний чек! 🚀
+            </p>
+
+            {loadingDishes ? (
+              <div className="text-center py-4 text-gray-500 text-sm">Загрузка блюд...</div>
+            ) : (
+              <div className="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-2 bg-gray-50">
+                {allDishes
+                  .filter(d => d.id !== dish?.id) // Исключаем текущее блюдо
+                  .map((availableDish) => {
+                    const isSelected = recommendationIds.includes(availableDish.id);
+                    return (
+                      <label
+                        key={availableDish.id}
+                        className={`flex items-center gap-3 p-2 border rounded cursor-pointer transition-colors ${isSelected
+                            ? 'bg-primary-50 border-primary-300'
+                            : 'bg-white border-gray-200 hover:bg-gray-50'
+                          }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setRecommendationIds([...recommendationIds, availableDish.id]);
+                            } else {
+                              setRecommendationIds(recommendationIds.filter(id => id !== availableDish.id));
+                            }
+                          }}
+                          className="w-4 h-4"
+                        />
+                        {availableDish.image && (
+                          <ImageWithLoader
+                            src={availableDish.image}
+                            alt={availableDish.name}
+                            className="w-12 h-12 object-cover rounded"
+                            loading="lazy"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm">{availableDish.name}</div>
+                          <div className="text-xs text-gray-500">
+                            {availableDish.category?.name} • {availableDish.price} {currency}
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })}
+              </div>
+            )}
+
+            {recommendationIds.length > 0 && (
+              <div className="mt-2 text-xs text-green-600">
+                ✓ Выбрано блюд: {recommendationIds.length}
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3 pt-4">

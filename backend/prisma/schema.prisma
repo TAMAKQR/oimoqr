@@ -182,6 +182,9 @@ model Dish {
   discount          Int?
   badge             String?
   
+  // Recommendations (manual cross-selling)
+  recommendationIds String[]  @default([])
+  
   categoryId        String
   category          Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   
