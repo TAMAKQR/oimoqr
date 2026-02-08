@@ -31,6 +31,7 @@ export const getDishes = async (req, res, next) => {
 export const getRestaurantDishes = async (req, res, next) => {
   try {
     const { restaurantId } = req.params;
+    console.log('🍽️ [getRestaurantDishes] Loading dishes for restaurant:', restaurantId);
 
     const dishes = await prisma.dish.findMany({
       where: {
@@ -57,8 +58,10 @@ export const getRestaurantDishes = async (req, res, next) => {
       orderBy: { name: 'asc' }
     });
 
+    console.log(`✅ [getRestaurantDishes] Found ${dishes.length} dishes`);
     res.json(dishes);
   } catch (error) {
+    console.error('❌ [getRestaurantDishes] Error:', error);
     next(error);
   }
 };

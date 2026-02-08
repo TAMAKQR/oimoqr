@@ -24,12 +24,14 @@ import { upload } from '../middleware/upload.js';
 
 const router = express.Router();
 
-// Public routes - FIRST to avoid conflicts
+// Protected routes with specific paths - FIRST to avoid conflicts with dynamic params
+router.get('/restaurant/:restaurantId/all', authenticate, requireRestaurant, getRestaurantDishes);
+
+// Public routes
 router.get('/category/:categoryId', getDishes);
 router.get('/:dishId/recommendations', getDishRecommendations);
 
-// Protected routes - Specific paths FIRST (category, modifiers)
-router.get('/restaurant/:restaurantId/all', authenticate, requireRestaurant, getRestaurantDishes);
+// More protected routes
 router.post('/', authenticate, requireRestaurant, createDish);
 router.post('/category/:categoryId/reorder', authenticate, requireRestaurant, reorderDishes);
 
