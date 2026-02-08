@@ -58,9 +58,11 @@ const DishModal = ({
       if (response.ok) {
         const data = await response.json();
         setRecommendations(data.recommendations || []);
+      } else {
+        console.log(`⚠️ Recommendations API returned ${response.status}, feature not available yet`);
       }
     } catch (error) {
-      console.error('Error loading recommendations:', error);
+      console.log('ℹ️ Recommendations not available:', error.message);
     } finally {
       setLoadingRecommendations(false);
     }
