@@ -136,52 +136,56 @@ const CheckoutPage = () => {
     const finalTotal = (total + deliveryFee).toFixed(2);
 
     const orderSection = (
-        <div className="bg-white rounded-lg shadow-sm p-4">
-            <h2 className="font-semibold text-base mb-3">Ваш заказ</h2>
-            <div className="space-y-3">
+        <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm space-y-3">
+            <div className="flex items-center justify-between">
+                <h2 className="font-semibold text-base">Ваш заказ</h2>
+                <span className="text-xs text-gray-500">{cartItems.length} поз.</span>
+            </div>
+
+            <div className="divide-y divide-gray-100">
                 {cartItems.map((item) => (
-                    <div key={item.itemId} className="flex justify-between items-start gap-3">
-                        <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm break-words">{item.dish.name}</div>
+                    <div key={item.itemId} className="py-3 flex justify-between items-start gap-3">
+                        <div className="flex-1 min-w-0 space-y-1">
+                            <div className="font-medium text-sm text-gray-900 break-words">{item.dish.name}</div>
                             {item.modifiers?.length > 0 && (
                                 <div className="text-xs text-gray-500 break-words">{item.modifiers.map((m) => m.name).join(', ')}</div>
                             )}
                         </div>
                         <div className="flex flex-col items-end gap-2">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 rounded-full border border-gray-200 px-2 py-1 bg-gray-50">
                                 <button
                                     onClick={() => updateQuantity(item.itemId, item.quantity - 1)}
-                                    className="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-base hover:bg-gray-200 active:scale-95 transition"
+                                    className="w-7 h-7 rounded-full flex items-center justify-center text-base text-gray-700 hover:bg-gray-200 active:scale-95 transition"
                                 >
                                     -
                                 </button>
-                                <span className="min-w-[32px] text-center text-sm font-semibold">{item.quantity}</span>
+                                <span className="min-w-[28px] text-center text-sm font-semibold">{item.quantity}</span>
                                 <button
                                     onClick={() => updateQuantity(item.itemId, item.quantity + 1)}
-                                    className="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-base hover:bg-gray-200 active:scale-95 transition"
+                                    className="w-7 h-7 rounded-full flex items-center justify-center text-base text-gray-700 hover:bg-gray-200 active:scale-95 transition"
                                 >
                                     +
                                 </button>
                             </div>
-                            <div className="font-medium text-sm whitespace-nowrap">{(item.totalPrice * item.quantity).toFixed(2)} {currency}</div>
+                            <div className="text-sm font-semibold text-gray-900 whitespace-nowrap">{(item.totalPrice * item.quantity).toFixed(2)} {currency}</div>
                         </div>
                     </div>
                 ))}
             </div>
 
-            <div className="mt-3 pt-3 border-t space-y-1.5">
-                <div className="flex justify-between text-gray-600 text-sm">
-                    <span>Сумма заказа:</span>
+            <div className="pt-3 space-y-1.5 text-sm">
+                <div className="flex justify-between text-gray-600">
+                    <span>Сумма заказа</span>
                     <span>{total.toFixed(2)} {currency}</span>
                 </div>
                 {deliveryFee > 0 && (
-                    <div className="flex justify-between text-gray-600 text-sm">
-                        <span>Доставка:</span>
+                    <div className="flex justify-between text-gray-600">
+                        <span>Доставка</span>
                         <span>{deliveryFee.toFixed(2)} {currency}</span>
                     </div>
                 )}
-                <div className="flex justify-between text-base font-bold">
-                    <span>Итого:</span>
+                <div className="flex justify-between text-base font-bold text-gray-900">
+                    <span>Итого</span>
                     <span>{finalTotal} {currency}</span>
                 </div>
             </div>
