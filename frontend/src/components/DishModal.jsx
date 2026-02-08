@@ -16,11 +16,11 @@ const RecommendationCard = ({ dish, currency, addItem, removeItem }) => {
         <ImageWithLoader
           src={dish.image}
           alt={dish.name}
-          className="w-full aspect-square object-cover rounded-lg mb-1"
+          className="w-full aspect-square object-cover rounded-lg mb-1.5"
           loading="lazy"
         />
       )}
-      <div className="text-sm font-medium line-clamp-2 mb-1 leading-tight break-words">{dish.name}</div>
+      <div className="text-sm font-medium line-clamp-2 mb-1.5 leading-snug break-words">{dish.name}</div>
       <div className="flex items-center justify-between gap-1">
         <div className="text-sm font-bold text-primary-600 flex-shrink-0">
           {parseFloat(dish.price).toFixed(2)} {currency}
