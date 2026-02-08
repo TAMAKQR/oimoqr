@@ -5,11 +5,17 @@ import { cacheBustImage } from '../utils/imageCache';
 import ImageWithLoader from './ImageWithLoader';
 
 // Отдельный компонент для карточки рекомендации, чтобы реагировать на изменения корзины
-const RecommendationCard = ({ dish, currency, addItem, removeItem }) => {
+const RecommendationCard = ({ dish, currency, addItem, removeItem, onOpenDish }) => {
   const items = useCartStore((state) => state.items);
   const updateQuantity = useCartStore((state) => state.updateQuantity);
   const itemInCart = items.find(item => item.dish.id === dish.id);
   const quantity = itemInCart?.quantity || 0;
+
+  const hasRequiredModifiers = dish.modifiers?.some((m) => m.isRequired) || false;
+  const hasModifiers = Array.isArray(dish.modifiers) && dish.modifiers.length > 0;
+  const basePrice = parseFloat(dish.price) || 0;
+
+  const requireSelection = hasRequiredModifiers || (hasModifiers && basePrice === 0);
 
   return (
     <div className="relative">
@@ -28,6 +34,10 @@ const RecommendationCard = ({ dish, currency, addItem, removeItem }) => {
             <button
               onClick={(e) => {
                 e.stopPropagation();
+                if (requireSelection) {
+                  onOpenDish?.(dish);
+                  return;
+                }
                 addItem(dish, []);
               }}
               className="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-primary-600 text-white rounded-full hover:bg-primary-700 active:scale-95 transition-all shadow-md"
@@ -54,6 +64,10 @@ const RecommendationCard = ({ dish, currency, addItem, removeItem }) => {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (requireSelection) {
+                    onOpenDish?.(dish);
+                    return;
+                  }
                   addItem(dish, []);
                 }}
                 className="w-6 h-6 flex items-center justify-center text-white hover:bg-primary-700 rounded-full active:scale-95 transition-all"
@@ -64,7 +78,7 @@ const RecommendationCard = ({ dish, currency, addItem, removeItem }) => {
           )}
         </div>
       </div>
-      <div className="text-sm font-medium line-clamp-2 mb-1 leading-tight text-gray-900">{dish.name}</div>
+      <div className="text-sm font-medium line-clamp-2 mb-2 leading-tight text-gray-900">{dish.name}</div>
       <div className="text-sm font-bold text-primary-600">
         {parseFloat(dish.price).toFixed(2)} {currency}
       </div>
@@ -73,7 +87,7 @@ const RecommendationCard = ({ dish, currency, addItem, removeItem }) => {
 };
 
 const DishModal = ({
-  dish,
+  dish: initialDish,
   isOpen,
   onClose,
   currency = '₽',
@@ -81,6 +95,7 @@ const DishModal = ({
   onToggleFavorite,
   favoriteLoading = false
 }) => {
+  const [dish, setDish] = useState(initialDish);
   // Используем объект для хранения выбранных опций для каждого модификатора
   const [selectedModifiers, setSelectedModifiers] = useState({});
   const [recommendations, setRecommendations] = useState([]);
@@ -88,6 +103,17 @@ const DishModal = ({
   const addItem = useCartStore((state) => state.addItem);
   const removeItem = useCartStore((state) => state.removeItem);
   const isAvailable = dish?.available !== false; // По умолчанию true если поле отсутствует
+
+  useEffect(() => {
+    setDish(initialDish);
+    setSelectedModifiers({});
+  }, [initialDish]);
+
+  const openDishFromRecommendation = (nextDish) => {
+    if (!nextDish) return;
+    setSelectedModifiers({});
+    setDish(nextDish);
+  };
 
   // ✅ Вычисляем активное изображение на основе выбранных модификаторов
   const currentImage = useMemo(() => {
@@ -331,17 +357,26 @@ const DishModal = ({
 
           {/* Рекомендации */}
           {recommendations.length > 0 && (
-            <div className="border-t pt-1 pb-1">
-              <div className="grid grid-cols-2 gap-2">
+            <div className="border-t pt-2 pb-2">
+              <div className="grid grid-cols-2 gap-2.5">
                 {recommendations.map((rec) => {
-                  return <RecommendationCard key={rec.id} dish={rec} currency={currency} addItem={addItem} removeItem={removeItem} />;
+                  return (
+                    <RecommendationCard
+                      key={rec.id}
+                      dish={rec}
+                      currency={currency}
+                      addItem={addItem}
+                      removeItem={removeItem}
+                      onOpenDish={openDishFromRecommendation}
+                    />
+                  );
                 })}
               </div>
             </div>
           )}
 
           {/* Padding for fixed bottom bar */}
-          <div className="h-10"></div>
+          <div className="h-24"></div>
         </div>
 
         {/* Fixed bottom bar with buttons */}
