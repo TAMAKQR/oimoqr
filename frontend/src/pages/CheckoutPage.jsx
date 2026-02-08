@@ -490,7 +490,7 @@ const CheckoutPage = () => {
                 </div>
             )}
 
-            <CustomerBottomNav />
+            {customer?.id && <CustomerBottomNav />}
         </div>
     );
 };
