@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useCartStore } from '../store/cartStore';
@@ -21,8 +21,15 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
 
-  const SWIPE_THRESHOLD = 70;
-  const MAX_OFFSET = 90;
+  const SWIPE_THRESHOLD = 60;
+  const MAX_OFFSET = 110;
+  const [isTrackVisible, setIsTrackVisible] = useState(false);
+
+  useEffect(() => {
+    // Smoothly reveal the bar on mount
+    const timer = setTimeout(() => setIsTrackVisible(true), 10);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleCheckout = async () => {
     if (!items.length) return;
@@ -102,6 +109,14 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
     ? { bottom: `calc(${bottomNavHeight} + 12px)` }
     : { bottom: guestBottomOffset };
 
+  const progress = Math.min(Math.abs(dragOffset) / MAX_OFFSET, 1);
+  const leftArrowOpacity = 0.35 + (dragOffset < 0 ? progress * 0.45 : 0);
+  const rightArrowOpacity = 0.35 + (dragOffset > 0 ? progress * 0.45 : 0);
+  const handleShadow = isDragging
+    ? '0 12px 28px rgba(0,0,0,0.15)'
+    : '0 10px 22px rgba(16, 185, 129, 0.28)';
+  const handleScale = 1 + progress * 0.05;
+
   return (
     <>
       {/* Fill the bottom gap on mobile browsers (Chrome) with a white background */}
@@ -125,11 +140,24 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
               )}
             </div>
 
-            <div className="relative w-full h-12 rounded-xl bg-primary-50 border border-primary-100 overflow-hidden">
-              <div className="absolute inset-y-0 left-3 flex items-center text-primary-300 text-lg select-none pointer-events-none">
+            <div
+              className="relative w-full h-12 rounded-xl bg-primary-50 border border-primary-100 overflow-hidden"
+              style={{
+                opacity: isTrackVisible ? 1 : 0,
+                transform: isTrackVisible ? 'translateY(0)' : 'translateY(8px)',
+                transition: 'opacity 200ms ease, transform 220ms ease'
+              }}
+            >
+              <div
+                className="absolute inset-y-0 left-3 flex items-center text-primary-300 text-lg select-none pointer-events-none transition-opacity duration-150"
+                style={{ opacity: leftArrowOpacity }}
+              >
                 ⇠
               </div>
-              <div className="absolute inset-y-0 right-3 flex items-center text-primary-300 text-lg select-none pointer-events-none">
+              <div
+                className="absolute inset-y-0 right-3 flex items-center text-primary-300 text-lg select-none pointer-events-none transition-opacity duration-150"
+                style={{ opacity: rightArrowOpacity }}
+              >
                 ⇢
               </div>
               <button
@@ -140,8 +168,12 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
                 onPointerUp={handlePointerEnd}
                 onPointerCancel={handlePointerEnd}
                 disabled={isCheckingOut || isBelowMinimum}
-                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-10 rounded-full bg-primary-600 text-white font-semibold shadow-md hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed transition touch-action-none select-none flex items-center justify-center"
-                style={{ transform: `translate(-50%, -50%) translateX(${dragOffset}px)`, transition: isDragging ? 'none' : 'transform 0.15s ease' }}
+                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-10 rounded-full bg-primary-600 text-white font-semibold hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed touch-action-none select-none flex items-center justify-center"
+                style={{
+                  transform: `translate(-50%, -50%) translateX(${dragOffset}px) scale(${handleScale})`,
+                  transition: isDragging ? 'none' : 'transform 200ms cubic-bezier(0.22, 1, 0.36, 1)',
+                  boxShadow: handleShadow
+                }}
               >
                 {isCheckingOut ? '…' : '⇠  ⇢'}
               </button>
