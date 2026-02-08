@@ -1,4 +1,4 @@
-# 🎯 Начало работы с QR Menu SaaS
+﻿# 🎯 Начало работы с QR Menu SaaS
 
 > Простое пошаговое руководство для абсолютных новичков
 
@@ -370,7 +370,7 @@ Frontend running on http://localhost:5173
 - [DEPLOYMENT.md](./DEPLOYMENT.md) - Полное руководство по деплою
 - Vercel для frontend (бесплатно)
 - Render для backend (бесплатно)
-- Supabase для базы данных (бесплатно)
+- Render PostgreSQL для базы данных (бесплатно)
 
 ---
 

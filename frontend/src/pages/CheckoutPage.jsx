@@ -459,12 +459,6 @@ const CheckoutPage = () => {
                                         <div className="font-medium text-sm whitespace-nowrap">
                                             {(item.totalPrice * item.quantity).toFixed(2)} {currency}
                                         </div>
-                                        <button
-                                            onClick={() => removeItem(item.itemId)}
-                                            className="text-xs text-red-600 hover:text-red-700"
-                                        >
-                                            Удалить
-                                        </button>
                                     </div>
                                 </div>
                             ))}

@@ -21,7 +21,7 @@ api.oimoqr.com                → Backend API
 
 - **Frontend**: Vercel (с поддержкой wildcard доменов)
 - **Backend**: Render или Railway
-- **Database**: Supabase (PostgreSQL)
+- **Database**: Render PostgreSQL (PostgreSQL)
 
 ---
 
@@ -153,7 +153,7 @@ Vercel автоматически поддерживает wildcard домены
 ```
 Name: oimoqr-backend
 Environment: Node
-Region: Frankfurt (ближайший к вашим пользователям)
+Region: Ohio (ближайший к вашим пользователям)
 Branch: main
 Root Directory: backend
 Build Command: npm install && npx prisma generate
@@ -168,7 +168,7 @@ Start Command: npm start
 NODE_ENV=production
 PORT=5000
 
-# Database (из Supabase)
+# Database (из Render PostgreSQL)
 DATABASE_URL=postgresql://postgres:[PASSWORD]@[HOST]:[PORT]/postgres?pgbouncer=true&connection_limit=1
 
 # JWT
@@ -187,7 +187,7 @@ SMTP_PASS=your-app-password
 
 **Важно**:
 
-- Используйте `pgbouncer=true` для Supabase
+- Используйте `pgbouncer=true` для Render PostgreSQL
 - `connection_limit=1` для бесплатного плана Render
 
 ### 3.3 Настройка кастомного домена на Render
@@ -200,15 +200,15 @@ SMTP_PASS=your-app-password
 
 ---
 
-## 🗄️ Шаг 4: Настройка базы данных Supabase
+## 🗄️ Шаг 4: Настройка базы данных Render PostgreSQL
 
 ### 4.1 Создание проекта
 
-1. Зайдите на [supabase.com](https://supabase.com)
+1. Зайдите на [Render PostgreSQL.com](https://Render PostgreSQL.com)
 2. Создайте новый проект:
    - Name: `oimoqr`
    - Database Password: (сохраните надежно!)
-   - Region: Frankfurt
+   - Region: Ohio
 
 ### 4.2 Получение DATABASE_URL
 
@@ -233,7 +233,7 @@ postgresql://postgres:[YOUR-PASSWORD]@[HOST]:[PORT]/postgres?pgbouncer=true&conn
 ```powershell
 Set-Location "d:\QR MENU\backend"
 
-# Установите DATABASE_URL из Supabase
+# Установите DATABASE_URL из Render PostgreSQL
 $env:DATABASE_URL="postgresql://postgres:..."
 
 # Запустите миграции
@@ -354,9 +354,9 @@ const corsOptions = {
 2. Мониторьте ошибки и запросы
 3. Настройте алерты при ошибках
 
-### 7.3 Supabase Monitoring
+### 7.3 Render PostgreSQL Monitoring
 
-1. В Supabase перейдите в **Database → Usage**
+1. В Render PostgreSQL перейдите в **Database → Usage**
 2. Отслеживайте:
    - Размер БД (лимит 500MB на free tier)
    - Количество подключений
@@ -428,7 +428,7 @@ const corsOptions = {
   - Засыпает через 15 минут
   - **Стоимость**: $0
 
-- **Supabase**: Free tier
+- **Render PostgreSQL**: Free tier
   - 500MB database
   - 2GB bandwidth/месяц
   - Unlimited API requests
@@ -450,7 +450,7 @@ const corsOptions = {
   - 512MB RAM
   - Faster performance
 
-- **Supabase Pro**: $25/месяц
+- **Render PostgreSQL Pro**: $25/месяц
   - 8GB database
   - 50GB bandwidth
   - Daily backups
@@ -481,7 +481,7 @@ const corsOptions = {
   □ SSL сертификат выпущен
 
 □ База данных настроена
-  □ Supabase проект создан
+  □ Render PostgreSQL проект создан
   □ DATABASE_URL получен
   □ Миграции запущены
   □ Админ создан
@@ -502,7 +502,7 @@ const corsOptions = {
 □ Мониторинг
   □ Vercel Analytics включен
   □ Render Logs проверяются
-  □ Supabase Usage отслеживается
+  □ Render PostgreSQL Usage отслеживается
 ```
 
 ---
@@ -524,7 +524,7 @@ const corsOptions = {
 
 - [Vercel Domains Documentation](https://vercel.com/docs/concepts/projects/domains)
 - [Render Custom Domains](https://render.com/docs/custom-domains)
-- [Supabase Connection Pooling](https://supabase.com/docs/guides/database/connecting-to-postgres#connection-pooler)
+- [Render PostgreSQL Connection Pooling](https://Render PostgreSQL.com/docs/guides/database/connecting-to-postgres#connection-pooler)
 - [Wildcard DNS Setup](https://vercel.com/docs/concepts/projects/domains/wildcard-domains)
 
 ---

@@ -65,10 +65,10 @@ https://vercel.com/dashboard
 - История деплоев
 - Analytics
 
-### Supabase (Database)
+### Render PostgreSQL (Database)
 
 ```
-https://supabase.com/dashboard
+https://Render PostgreSQL.com/dashboard
 ```
 
 **Что здесь:**
@@ -223,10 +223,10 @@ https://vercel.com/dashboard → Logs
 - Function logs - API routes (если есть)
 - Edge logs - CDN
 
-### Database Logs (Supabase)
+### Database Logs (Render PostgreSQL)
 
 ```
-https://supabase.com/dashboard → Logs → Explorer
+https://Render PostgreSQL.com/dashboard → Logs → Explorer
 ```
 
 **Что смотреть:**
@@ -305,7 +305,7 @@ EMAIL_PASSWORD=tflgfblrgijvfutc
 
 - [Render Dashboard](https://dashboard.render.com)
 - [Vercel Dashboard](https://vercel.com/dashboard)
-- [Supabase Dashboard](https://supabase.com/dashboard)
+- [Render PostgreSQL Dashboard](https://Render PostgreSQL.com/dashboard)
 - [Cloudinary Console](https://cloudinary.com/console)
 
 ### Документация
@@ -318,7 +318,7 @@ EMAIL_PASSWORD=tflgfblrgijvfutc
 
 - [Render Status](https://status.render.com)
 - [Vercel Status](https://www.vercel-status.com)
-- [Supabase Status](https://status.supabase.com)
+- [Render PostgreSQL Status](https://status.Render PostgreSQL.com)
 
 ---
 
@@ -338,7 +338,7 @@ EMAIL_PASSWORD=tflgfblrgijvfutc
 ```
 Vercel:     $0/месяц (Free)
 Render:     $0/месяц (Free)
-Supabase:   $0/месяц (Free)
+Render PostgreSQL:   $0/месяц (Free)
 Cloudinary: $0/месяц (Free)
 UptimeRobot: $0/месяц (Free)
 ────────────────────────────
@@ -349,7 +349,7 @@ UptimeRobot: $0/месяц (Free)
 
 - Render Paid: $7/мес - backend не спит
 - Vercel Pro: $20/мес - больше bandwidth
-- Supabase Pro: $25/мес - больше storage
+- Render PostgreSQL Pro: $25/мес - больше storage
 
 ---
 

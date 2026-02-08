@@ -1,4 +1,4 @@
-# 🔒 Настройка безопасности для Production
+﻿# 🔒 Настройка безопасности для Production
 
 > **⚠️ КРИТИЧЕСКИ ВАЖНО:** Следуйте этим инструкциям перед деплоем!
 
@@ -25,23 +25,23 @@ a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2g3h4i5j6k7l8m9n0
 
 ---
 
-### ✅ 2. Настройка Supabase Database
+### ✅ 2. Настройка Render PostgreSQL Database
 
 Ваш текущий DATABASE_URL:
 
 ```
-postgresql://postgres:DAS230411Alina%40@db.lsqssdpsozjtmvzfqtws.supabase.co:5432/postgres?sslmode=require
+postgresql://postgres:DAS230411Alina%40@db.lsqssdpsozjtmvzfqtws.Render PostgreSQL.co:5432/postgres?sslmode=require
 ```
 
 **Проверьте:**
 
 - ✅ Пароль правильно закодирован (`@` = `%40`)
-- ✅ Хост правильный: `db.lsqssdpsozjtmvzfqtws.supabase.co`
+- ✅ Хост правильный: `db.lsqssdpsozjtmvzfqtws.Render PostgreSQL.co`
 - ✅ SSL включен: `sslmode=require`
 
 **Где найти правильный URL:**
 
-1. Откройте: https://supabase.com/dashboard
+1. Откройте: https://Render PostgreSQL.com/dashboard
 2. Выберите проект
 3. Settings → Database → Connection string → URI
 4. Скопируйте и замените `[YOUR-PASSWORD]` на ваш пароль
@@ -143,7 +143,7 @@ FRONTEND_URL=https://oimoqr.com
 В Render Dashboard → Environment:
 
 ```env
-DATABASE_URL=postgresql://postgres:DAS230411Alina%40@db.lsqssdpsozjtmvzfqtws.supabase.co:5432/postgres?sslmode=require
+DATABASE_URL=postgresql://postgres:DAS230411Alina%40@db.lsqssdpsozjtmvzfqtws.Render PostgreSQL.co:5432/postgres?sslmode=require
 
 JWT_SECRET=<СГЕНЕРИРОВАННЫЙ_64_СИМВОЛА>
 JWT_EXPIRES_IN=7d
@@ -217,7 +217,7 @@ FRONTEND_URL=https://oimoqr-frontend.vercel.app
 ### ✅ Чеклист перед запуском:
 
 - [ ] JWT_SECRET сгенерирован (64+ символа)
-- [ ] DATABASE_URL правильный (Supabase)
+- [ ] DATABASE_URL правильный (Render PostgreSQL)
 - [ ] Cloudinary настроен (обязательно!)
 - [ ] Gmail App Password создан
 - [ ] FRONTEND_URL обновлен на реальный
@@ -263,7 +263,7 @@ curl https://oimoqr-backend.onrender.com/api/health
 
 1. Проверьте DATABASE_URL в Render
 2. Убедитесь, что пароль правильно закодирован (`@` → `%40`)
-3. Проверьте, что Supabase проект активен
+3. Проверьте, что Render PostgreSQL проект активен
 
 ### Проблема: "CORS error"
 
@@ -296,7 +296,7 @@ curl https://oimoqr-backend.onrender.com/api/health
 
 ## 📚 Дополнительные ресурсы
 
-- **Supabase Docs:** https://supabase.com/docs
+- **Render PostgreSQL Docs:** https://Render PostgreSQL.com/docs
 - **Render Docs:** https://render.com/docs
 - **Vercel Docs:** https://vercel.com/docs
 - **Cloudinary Docs:** https://cloudinary.com/documentation

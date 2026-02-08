@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import { authService } from '../services/authService';
 import { menuService } from '../services/menuService';
 import { restaurantService } from '../services/restaurantService';
+import modifierTemplateService from '../services/modifierTemplateService';
 import toast from 'react-hot-toast';
 import { confirmDialog } from '../utils/confirmDialog';
 import RestaurantSelector from '../components/RestaurantSelector';
@@ -575,6 +576,7 @@ const MenuManagementPage = () => {
           dish={editingDish}
           categoryId={selectedCategoryId}
           currency={currency}
+          restaurantId={selectedRestaurantId}
           onClose={() => setShowDishModal(false)}
           onSave={() => {
             setShowDishModal(false); // Закрываем модалку
@@ -805,7 +807,7 @@ const CategoryModal = ({ category, restaurantId, onClose, onSave, categoryGroups
 };
 
 // Dish Modal Component
-const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
+const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restaurantId }) => {
   const [name, setName] = useState(dish?.name || '');
   const [description, setDescription] = useState(dish?.description || '');
   const [price, setPrice] = useState(dish?.price || '');
@@ -827,12 +829,37 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
   const [newModifierType, setNewModifierType] = useState('single');
   const [newModifierRequired, setNewModifierRequired] = useState(false);
 
+  // Состояние для библиотеки модификаторов
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [templates, setTemplates] = useState([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+
   // Обновляем фото при изменении dish (когда переоткрываем модалку)
   useEffect(() => {
     if (dish?.imageUrl) {
       setCurrentImageUrl(`${dish.imageUrl}?t=${Date.now()}`);
     }
   }, [dish?.imageUrl]);
+
+  // Загрузка шаблонов модификаторов
+  useEffect(() => {
+    if (restaurantId && showTemplates) {
+      loadTemplates();
+    }
+  }, [restaurantId, showTemplates]);
+
+  const loadTemplates = async () => {
+    setLoadingTemplates(true);
+    try {
+      const data = await modifierTemplateService.getTemplates(restaurantId);
+      setTemplates(data);
+    } catch (err) {
+      console.error('Error loading templates:', err);
+      toast.error('Ошибка загрузки шаблонов');
+    } finally {
+      setLoadingTemplates(false);
+    }
+  };
 
   const availableAllergens = [
     { id: 'gluten', name: 'Глютен', icon: '🌾' },
@@ -930,6 +957,24 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
         toast.error('Ошибка при удалении модификатора');
         console.error(err);
       }
+    }
+  };
+
+  const handleApplyTemplate = async (template) => {
+    if (!dish?.id) {
+      toast.error('Сначала сохраните блюдо, чтобы применить шаблон');
+      return;
+    }
+
+    try {
+      await modifierTemplateService.applyToDish(template.id, dish.id);
+      toast.success(`Шаблон "${template.name}" применен к блюду`);
+      setShowTemplates(false);
+      // Перезагружаем данные блюда
+      onSave();
+    } catch (err) {
+      console.error('Error applying template:', err);
+      toast.error('Ошибка при применении шаблона');
     }
   };
 
@@ -1505,15 +1550,71 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
                     Обязательно
                   </label>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleAddModifier}
-                  className="btn-secondary w-full text-sm"
-                >
-                  + Добавить модификатор
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleAddModifier}
+                    className="btn-secondary flex-1 text-sm"
+                  >
+                    + Добавить модификатор
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowTemplates(!showTemplates)}
+                    className="btn-secondary text-sm px-3 whitespace-nowrap"
+                    title="Выбрать из библиотеки"
+                  >
+                    📚 Из библиотеки
+                  </button>
+                </div>
               </div>
             </div>
+
+            {/* Список шаблонов модификаторов */}
+            {showTemplates && (
+              <div className="border rounded-lg p-3 bg-gray-50 mt-2">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-sm font-medium">Шаблоны модификаторов</div>
+                  <button
+                    onClick={() => setShowTemplates(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    ✕
+                  </button>
+                </div>
+                {loadingTemplates ? (
+                  <div className="text-center py-4 text-gray-500 text-sm">Загрузка...</div>
+                ) : templates.length === 0 ? (
+                  <div className="text-center py-4 text-gray-500 text-sm">
+                    Нет доступных шаблонов. Создайте их в разделе "Модификаторы"
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {templates.map((template) => (
+                      <div key={template.id} className="bg-white border rounded p-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="font-medium text-sm">{template.name}</div>
+                            <div className="text-xs text-gray-600">
+                              {template.modifiers?.length || 0} модификаторов
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleApplyTemplate(template)}
+                            disabled={!dish?.id}
+                            className="btn-primary text-xs px-3 py-1 disabled:opacity-50"
+                            title={!dish?.id ? 'Сначала сохраните блюдо' : 'Применить шаблон'}
+                          >
+                            Применить
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <p className="text-xs text-gray-500 mt-2">
               Модификаторы позволяют клиентам выбирать размер, вкус, добавки и т.д. Вы можете добавить фото для каждой опции.
             </p>
@@ -1536,9 +1637,9 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave }) => {
               {uploadingImage ? 'Загрузка фото...' : saving ? 'Сохранение...' : 'Сохранить'}
             </button>
           </div>
-        </form>
-      </div>
-    </div>
+        </form >
+      </div >
+    </div >
   );
 };
 

@@ -29,7 +29,7 @@
          │                    ▼                   ▼
          │            ┌──────────────┐   ┌──────────────┐
          │            │  DATABASE    │   │   STORAGE    │
-         │            │  Supabase    │   │  Cloudinary  │
+         │            │  Render PostgreSQL    │   │  Cloudinary  │
          │            │  PostgreSQL  │   │   Images     │
          │            └──────────────┘   └──────────────┘
          │                    │
@@ -76,7 +76,7 @@ Backend (Render)
     │
     │ 2. Проверяет credentials
     ▼
-Database (Supabase)
+Database (Render PostgreSQL)
     │
     │ 3. SELECT * FROM users WHERE email = ?
     ▼
@@ -196,7 +196,7 @@ Frontend
 ┌─────────────────────────────────────────────────────────┐
 │  Layer 5: Infrastructure Security                       │
 │  - Environment Variables (secrets)                      │
-│  - Database Encryption (Supabase)                      │
+│  - Database Encryption (Render PostgreSQL)                      │
 │  - Secure Storage (Cloudinary)                         │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -277,11 +277,11 @@ npm start
 
 **Hosting:**
 
-- Region: Frankfurt (EU)
+- Region: Ohio (EU)
 - Build time: ~3-5 минут
 - Cold start: ~30-60 секунд (Free tier)
 
-### Database (Supabase)
+### Database (Render PostgreSQL)
 
 **Technology:**
 
@@ -290,7 +290,7 @@ npm start
 
 **Configuration:**
 
-- Region: Singapore
+- Region: Ohio
 - Connection Pooling: Port 6543
 - Direct Connection: Port 5432
 
@@ -559,7 +559,7 @@ Storage:   Cloudinary API status
 - 512 MB RAM (shared)
 - ~1,000 concurrent users
 
-**Database (Supabase Free):**
+**Database (Render PostgreSQL Free):**
 
 - 500 MB storage
 - ~10,000 ресторанов
@@ -586,7 +586,7 @@ Storage:   Cloudinary API status
    - Analytics
    - Team features
 
-3. **Supabase Pro ($25/мес):**
+3. **Render PostgreSQL Pro ($25/мес):**
 
    - 8 GB storage
    - 50 GB bandwidth
