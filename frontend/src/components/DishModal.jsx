@@ -7,6 +7,7 @@ import ImageWithLoader from './ImageWithLoader';
 // Отдельный компонент для карточки рекомендации, чтобы реагировать на изменения корзины
 const RecommendationCard = ({ dish, currency, addItem, removeItem }) => {
   const items = useCartStore((state) => state.items);
+  const updateQuantity = useCartStore((state) => state.updateQuantity);
   const itemInCart = items.find(item => item.dish.id === dish.id);
   const quantity = itemInCart?.quantity || 0;
 
@@ -38,7 +39,12 @@ const RecommendationCard = ({ dish, currency, addItem, removeItem }) => {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  removeItem(dish.id);
+                  if (!itemInCart) return;
+                  if (quantity <= 1) {
+                    removeItem(itemInCart.itemId);
+                  } else {
+                    updateQuantity(itemInCart.itemId, quantity - 1);
+                  }
                 }}
                 className="w-6 h-6 flex items-center justify-center text-white hover:bg-primary-700 rounded-full active:scale-95 transition-all"
               >
