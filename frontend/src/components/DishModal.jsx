@@ -223,11 +223,8 @@ const DishModal = ({
 
           {/* Рекомендации */}
           {recommendations.length > 0 && (
-            <div className="mb-6 border-t pt-4">
-              <h3 className="text-base sm:text-lg font-semibold mb-3">
-                💡 С этим блюдом часто заказывают:
-              </h3>
-              <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+            <div className="mb-4 border-t pt-4">
+              <div className="flex gap-4 overflow-x-auto pb-3 -mx-2 px-2 snap-x snap-mandatory scroll-smooth scrollbar-hide">
                 {recommendations.map((rec) => (
                   <div
                     key={rec.id}
@@ -239,18 +236,18 @@ const DishModal = ({
                         dishCard?.click();
                       }, 300);
                     }}
-                    className="flex-shrink-0 w-28 cursor-pointer group"
+                    className="flex-shrink-0 w-32 cursor-pointer group snap-start"
                   >
                     {rec.image && (
                       <ImageWithLoader
                         src={rec.image}
                         alt={rec.name}
-                        className="w-full h-24 object-cover rounded-lg mb-2 group-hover:opacity-80 transition-opacity"
+                        className="w-full h-28 object-cover rounded-xl mb-2 group-hover:scale-105 transition-transform duration-200"
                         loading="lazy"
                       />
                     )}
-                    <div className="text-xs font-medium line-clamp-2 mb-1">{rec.name}</div>
-                    <div className="text-xs font-bold text-primary-600">
+                    <div className="text-sm font-medium line-clamp-2 mb-1 leading-tight">{rec.name}</div>
+                    <div className="text-sm font-bold text-primary-600">
                       {parseFloat(rec.price).toFixed(2)} {currency}
                     </div>
                   </div>

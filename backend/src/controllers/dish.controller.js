@@ -863,13 +863,14 @@ export const getDishRecommendations = async (req, res, next) => {
     const { dishId } = req.params;
     const limit = parseInt(req.query.limit) || 4;
 
-    // Get the dish
+    console.log(`🔍 [Recommendations] Getting recommendations for dish: ${dishId}`);
+
+    // Get the dish with safe field selection
     const dish = await prisma.dish.findUnique({
       where: { id: dishId },
       select: {
         id: true,
         categoryId: true,
-        recommendationIds: true,
         category: {
           select: {
             id: true,
@@ -881,6 +882,18 @@ export const getDishRecommendations = async (req, res, next) => {
 
     if (!dish) {
       return res.status(404).json({ error: 'Dish not found' });
+    }
+
+    // Try to get manual recommendations if field exists
+    let manualRecommendationIds = [];
+    try {
+      const dishWithRecommendations = await prisma.dish.findUnique({
+        where: { id: dishId },
+        select: { recommendationIds: true }
+      });
+      manualRecommendationIds = dishWithRecommendations?.recommendationIds || [];
+    } catch (err) {
+      console.log('⚠️ [Recommendations] recommendationIds field not available yet');
     }
 
     let recommendations = [];
@@ -920,10 +933,10 @@ export const getDishRecommendations = async (req, res, next) => {
     }
 
     // PRIORITY 2: Manual recommendations (if not enough from statistics)
-    if (recommendations.length < limit && dish.recommendationIds && dish.recommendationIds.length > 0) {
+    if (recommendations.length < limit && manualRecommendationIds.length > 0) {
       const manualRecommendations = await prisma.dish.findMany({
         where: {
-          id: { in: dish.recommendationIds },
+          id: { in: manualRecommendationIds },
           available: true,
           id: { notIn: recommendations.map(r => r.id) }
         },
