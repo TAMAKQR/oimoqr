@@ -4,6 +4,65 @@ import toast from 'react-hot-toast';
 import { cacheBustImage } from '../utils/imageCache';
 import ImageWithLoader from './ImageWithLoader';
 
+// Отдельный компонент для карточки рекомендации, чтобы реагировать на изменения корзины
+const RecommendationCard = ({ dish, currency, addItem, removeItem }) => {
+  const items = useCartStore((state) => state.items);
+  const itemInCart = items.find(item => item.dish.id === dish.id);
+  const quantity = itemInCart?.quantity || 0;
+
+  return (
+    <div className="relative overflow-hidden">
+      {dish.image && (
+        <ImageWithLoader
+          src={dish.image}
+          alt={dish.name}
+          className="w-full aspect-square object-cover rounded-lg mb-1"
+          loading="lazy"
+        />
+      )}
+      <div className="text-sm font-medium line-clamp-2 mb-1 leading-tight break-words">{dish.name}</div>
+      <div className="flex items-center justify-between gap-1">
+        <div className="text-sm font-bold text-primary-600 flex-shrink-0">
+          {parseFloat(dish.price).toFixed(2)} {currency}
+        </div>
+        {quantity === 0 ? (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              addItem(dish, []);
+            }}
+            className="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-primary-600 text-white rounded-full hover:bg-primary-700 active:scale-95 transition-all shadow-md"
+          >
+            <span className="text-lg leading-none">+</span>
+          </button>
+        ) : (
+          <div className="flex items-center gap-1 bg-primary-600 rounded-full px-1 py-1 flex-shrink-0">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                removeItem(dish.id);
+              }}
+              className="w-6 h-6 flex items-center justify-center text-white hover:bg-primary-700 rounded-full active:scale-95 transition-all"
+            >
+              <span className="text-lg leading-none">−</span>
+            </button>
+            <span className="text-white font-bold text-sm min-w-[20px] text-center">{quantity}</span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                addItem(dish, []);
+              }}
+              className="w-6 h-6 flex items-center justify-center text-white hover:bg-primary-700 rounded-full active:scale-95 transition-all"
+            >
+              <span className="text-lg leading-none">+</span>
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const DishModal = ({
   dish,
   isOpen,
@@ -266,63 +325,7 @@ const DishModal = ({
             <div className="border-t pt-2 pb-1">
               <div className="grid grid-cols-2 gap-2.5">
                 {recommendations.map((rec) => {
-                  const itemInCart = useCartStore.getState().items.find(item => item.dish.id === rec.id);
-                  const quantity = itemInCart?.quantity || 0;
-
-                  return (
-                    <div
-                      key={rec.id}
-                      className="relative overflow-hidden"
-                    >
-                      {rec.image && (
-                        <ImageWithLoader
-                          src={rec.image}
-                          alt={rec.name}
-                          className="w-full aspect-square object-cover rounded-lg mb-1"
-                          loading="lazy"
-                        />
-                      )}
-                      <div className="text-sm font-medium line-clamp-2 mb-1 leading-tight break-words">{rec.name}</div>
-                      <div className="flex items-center justify-between gap-1">
-                        <div className="text-sm font-bold text-primary-600 flex-shrink-0">
-                          {parseFloat(rec.price).toFixed(2)} {currency}
-                        </div>
-                        {quantity === 0 ? (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              addItem(rec, []);
-                            }}
-                            className="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-primary-600 text-white rounded-full hover:bg-primary-700 active:scale-95 transition-all shadow-md"
-                          >
-                            <span className="text-lg leading-none">+</span>
-                          </button>
-                        ) : (
-                          <div className="flex items-center gap-1 bg-primary-600 rounded-full px-1 py-1 flex-shrink-0">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                removeItem(rec.id);
-                              }}
-                              className="w-6 h-6 flex items-center justify-center text-white hover:bg-primary-700 rounded-full active:scale-95 transition-all"
-                            >
-                              <span className="text-lg leading-none">−</span>
-                            </button>
-                            <span className="text-white font-bold text-sm min-w-[20px] text-center">{quantity}</span>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                addItem(rec, []);
-                              }}
-                              className="w-6 h-6 flex items-center justify-center text-white hover:bg-primary-700 rounded-full active:scale-95 transition-all"
-                            >
-                              <span className="text-lg leading-none">+</span>
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
+                  return <RecommendationCard key={rec.id} dish={rec} currency={currency} addItem={addItem} removeItem={removeItem} />;
                 })}
               </div>
             </div>
