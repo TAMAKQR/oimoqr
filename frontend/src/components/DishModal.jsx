@@ -12,52 +12,55 @@ const RecommendationCard = ({ dish, currency, addItem, removeItem }) => {
 
   return (
     <div className="relative">
-      {dish.image && (
-        <ImageWithLoader
-          src={dish.image}
-          alt={dish.name}
-          className="w-full aspect-square object-cover rounded-lg mb-2"
-          loading="lazy"
-        />
-      )}
-      <div className="text-sm font-medium line-clamp-2 mb-2 leading-snug text-gray-900">{dish.name}</div>
-      <div className="flex items-center justify-between gap-2">
-        <div className="text-sm font-bold text-primary-600 flex-shrink-0">
-          {parseFloat(dish.price).toFixed(2)} {currency}
-        </div>
-        {quantity === 0 ? (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              addItem(dish, []);
-            }}
-            className="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-primary-600 text-white rounded-full hover:bg-primary-700 active:scale-95 transition-all shadow-md"
-          >
-            <span className="text-lg leading-none">+</span>
-          </button>
-        ) : (
-          <div className="flex items-center gap-1 bg-primary-600 rounded-full px-1 py-1 flex-shrink-0">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                removeItem(dish.id);
-              }}
-              className="w-6 h-6 flex items-center justify-center text-white hover:bg-primary-700 rounded-full active:scale-95 transition-all"
-            >
-              <span className="text-lg leading-none">−</span>
-            </button>
-            <span className="text-white font-bold text-sm min-w-[20px] text-center">{quantity}</span>
+      <div className="relative mb-2">
+        {dish.image && (
+          <ImageWithLoader
+            src={dish.image}
+            alt={dish.name}
+            className="w-full aspect-square object-cover rounded-lg"
+            loading="lazy"
+          />
+        )}
+        {/* Кнопка внутри фото в правом нижнем углу */}
+        <div className="absolute bottom-2 right-2">
+          {quantity === 0 ? (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 addItem(dish, []);
               }}
-              className="w-6 h-6 flex items-center justify-center text-white hover:bg-primary-700 rounded-full active:scale-95 transition-all"
+              className="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-primary-600 text-white rounded-full hover:bg-primary-700 active:scale-95 transition-all shadow-md"
             >
               <span className="text-lg leading-none">+</span>
             </button>
-          </div>
-        )}
+          ) : (
+            <div className="flex items-center gap-1 bg-primary-600 rounded-full px-1 py-1 flex-shrink-0 shadow-md">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeItem(dish.id);
+                }}
+                className="w-6 h-6 flex items-center justify-center text-white hover:bg-primary-700 rounded-full active:scale-95 transition-all"
+              >
+                <span className="text-lg leading-none">−</span>
+              </button>
+              <span className="text-white font-bold text-sm min-w-[20px] text-center">{quantity}</span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  addItem(dish, []);
+                }}
+                className="w-6 h-6 flex items-center justify-center text-white hover:bg-primary-700 rounded-full active:scale-95 transition-all"
+              >
+                <span className="text-lg leading-none">+</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="text-sm font-medium line-clamp-2 mb-1 leading-snug text-gray-900">{dish.name}</div>
+      <div className="text-sm font-bold text-primary-600">
+        {parseFloat(dish.price).toFixed(2)} {currency}
       </div>
     </div>
   );
