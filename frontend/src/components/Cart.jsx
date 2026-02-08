@@ -115,9 +115,8 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
         <div className="w-full max-w-[480px] rounded-none sm:rounded-2xl bg-white border-t border-gray-200 px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex flex-col">
-              <span className="text-xs uppercase tracking-wide text-gray-500">Корзина</span>
               <span className="text-lg sm:text-xl font-semibold text-gray-900">
-                {itemCount} {itemCount === 1 ? 'блюдо' : itemCount < 5 ? 'блюда' : 'блюд'} · {total.toFixed(2)} {currency}
+                {total.toFixed(2)} {currency}
               </span>
               {isBelowMinimum && (
                 <span className="text-xs text-yellow-700 mt-1">
@@ -136,7 +135,7 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
               className="flex items-center gap-2 rounded-xl bg-primary-600 px-4 py-2.5 text-white font-semibold shadow-md hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed transition touch-action-none select-none"
               style={{ transform: `translateX(${dragOffset}px)`, transition: isDragging ? 'none' : 'transform 0.15s ease' }}
             >
-              {isCheckingOut ? 'Оформляем...' : 'Свайп → оформить / ← очистить'}
+              {isCheckingOut ? '…' : '⇠  ⇢'}
             </button>
           </div>
         </div>
