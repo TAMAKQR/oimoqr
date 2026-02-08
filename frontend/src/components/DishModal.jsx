@@ -11,8 +11,7 @@ const DishModal = ({
   currency = '₽',
   isFavorite = false,
   onToggleFavorite,
-  favoriteLoading = false,
-  onDishClick
+  favoriteLoading = false
 }) => {
   // Используем объект для хранения выбранных опций для каждого модификатора
   const [selectedModifiers, setSelectedModifiers] = useState({});
@@ -265,36 +264,45 @@ const DishModal = ({
           {recommendations.length > 0 && (
             <div className="border-t pt-3 pb-2">
               <div className="grid grid-cols-2 gap-3">
-                {recommendations.map((rec) => (
-                  <div
-                    key={rec.id}
-                    onClick={() => {
-                      if (onDishClick) {
-                        onDishClick(rec);
-                      } else {
-                        onClose();
-                        setTimeout(() => {
-                          const dishCard = document.querySelector(`[data-dish-id="${rec.id}"]`);
-                          dishCard?.click();
-                        }, 300);
-                      }
-                    }}
-                    className="cursor-pointer group"
-                  >
-                    {rec.image && (
-                      <ImageWithLoader
-                        src={rec.image}
-                        alt={rec.name}
-                        className="w-full aspect-square object-cover rounded-lg mb-1 group-hover:scale-105 transition-transform duration-200"
-                        loading="lazy"
-                      />
-                    )}
-                    <div className="text-sm font-medium line-clamp-2 mb-1 leading-snug">{rec.name}</div>
-                    <div className="text-sm font-bold text-primary-600">
-                      {parseFloat(rec.price).toFixed(2)} {currency}
+                {recommendations.map((rec) => {
+                  const itemInCart = useCartStore.getState().items.find(item => item.dish.id === rec.id);
+                  const quantity = itemInCart?.quantity || 0;
+
+                  return (
+                    <div
+                      key={rec.id}
+                      className="relative"
+                    >
+                      {rec.image && (
+                        <ImageWithLoader
+                          src={rec.image}
+                          alt={rec.name}
+                          className="w-full aspect-square object-cover rounded-lg mb-1.5"
+                          loading="lazy"
+                        />
+                      )}
+                      <div className="text-sm font-medium line-clamp-2 mb-0.5 leading-tight">{rec.name}</div>
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm font-bold text-primary-600">
+                          {parseFloat(rec.price).toFixed(2)} {currency}
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addItem(rec, []);
+                          }}
+                          className="w-8 h-8 flex items-center justify-center bg-primary-600 text-white rounded-full hover:bg-primary-700 active:scale-95 transition-all shadow-md"
+                        >
+                          {quantity > 0 ? (
+                            <span className="text-xs font-bold">-{quantity}+</span>
+                          ) : (
+                            <span className="text-lg leading-none">+</span>
+                          )}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
