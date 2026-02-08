@@ -363,10 +363,18 @@ const CheckoutPage = () => {
 
             {checkoutStep === 1 ? (
                 <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
-                    <div className="max-w-[480px] mx-auto p-3">
+                    <div className="max-w-[480px] mx-auto p-3 space-y-2">
                         <button onClick={() => setCheckoutStep(2)} className="btn-primary w-full py-3 text-base shadow-lg">
                             Далее
                         </button>
+                        {(!customer || !customer.id) && (
+                            <button
+                                onClick={() => setShowWaiterModal(true)}
+                                className="w-full py-2.5 text-sm border-2 border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition"
+                            >
+                                👨‍🍳 Показать заказ официанту
+                            </button>
+                        )}
                     </div>
                 </div>
             ) : (
