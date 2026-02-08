@@ -41,7 +41,7 @@ const Sidebar = ({ userData, selectedRestaurantId }) => {
     {
       path: '/modifier-templates',
       icon: '📋',
-      label: 'Библиотека модификаторов',
+      label: 'Модификаторы',
       show: isOwner
     },
     {

@@ -301,7 +301,7 @@ const ModifierTemplatesPage = () => {
                 {/* Header */}
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">📚 Библиотека модификаторов</h1>
+                        <h1 className="text-3xl font-bold text-gray-900">📚 Модификаторы</h1>
                         <p className="text-gray-600 mt-1">Создавайте шаблоны модификаторов и применяйте их к блюдам</p>
                     </div>
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">

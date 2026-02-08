@@ -8,7 +8,7 @@
 | ------------ | -------------------------- | ------------- |
 | **Frontend** | https://oimoqr.com         | ✅ Vercel     |
 | **Backend**  | https://backend.oimoqr.com | ✅ Render     |
-| **Database** | Supabase (Singapore)       | ✅ PostgreSQL |
+| **Database** | Render PostgreSQL (Ohio)       | ✅ PostgreSQL |
 | **Storage**  | Cloudinary                 | ✅ Активен    |
 | **Email**    | Gmail SMTP                 | ✅ Настроен   |
 

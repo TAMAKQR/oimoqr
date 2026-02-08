@@ -297,12 +297,12 @@ const MenuPage = () => {
             ) : (
               <button
                 onClick={() => setShowLoginModal(true)}
-                className="bg-green-600 text-white rounded-full px-4 py-2 shadow-md hover:bg-green-700 transition-colors text-sm font-medium flex items-center space-x-2"
+                className="bg-white rounded-full p-3 shadow-md border border-gray-200 hover:bg-gray-50 transition-colors"
+                title="Войти"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
-                <span>Войти</span>
               </button>
             )}
             <button
@@ -363,14 +363,13 @@ const MenuPage = () => {
                     href={`https://instagram.com/${restaurant.instagram}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 shadow-sm text-gray-700 hover:-translate-y-0.5 hover:shadow transition-transform"
+                    className="flex items-center justify-center rounded-full border border-gray-200 bg-white w-10 h-10 shadow-sm text-gray-700 hover:-translate-y-0.5 hover:shadow transition-transform"
                   >
                     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <rect x="3" y="3" width="18" height="18" rx="5" ry="5" />
                       <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
                       <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
                     </svg>
-                    <span className="text-sm font-medium">Instagram</span>
                   </a>
                 )}
                 {restaurant.facebook && (
@@ -378,12 +377,11 @@ const MenuPage = () => {
                     href={`https://facebook.com/${restaurant.facebook}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 shadow-sm text-gray-700 hover:-translate-y-0.5 hover:shadow transition-transform"
+                    className="flex items-center justify-center rounded-full border border-gray-200 bg-white w-10 h-10 shadow-sm text-gray-700 hover:-translate-y-0.5 hover:shadow transition-transform"
                   >
                     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M13 10h2.5l.5-3H13V5.5c0-.9.3-1.5 1.6-1.5H16V1.2C15.3 1.1 14.1 1 13 1c-2.7 0-4 1.6-4 4.3V7H7v3h2v9h4z" />
                     </svg>
-                    <span className="text-sm font-medium">Facebook</span>
                   </a>
                 )}
                 {restaurant.whatsapp && (
@@ -391,13 +389,12 @@ const MenuPage = () => {
                     href={`https://wa.me/${restaurant.whatsapp.replace(/\D/g, '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 shadow-sm text-gray-700 hover:-translate-y-0.5 hover:shadow transition-transform"
+                    className="flex items-center justify-center rounded-full border border-gray-200 bg-white w-10 h-10 shadow-sm text-gray-700 hover:-translate-y-0.5 hover:shadow transition-transform"
                   >
                     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M3 20l1.3-4.7A8 8 0 1 1 5 6.5 8 8 0 0 1 3 20z" />
                       <path d="M8.9 8.9c.2-.5.4-.5.7-.5h.6c.2 0 .5 0 .5.4s-.2.6-.3.8c-.1.1-.2.3 0 .6s.7 1.1 1.5 1.7 1.7.8 1.9.9.4 0 .5-.2l.7-.9c.2-.3.4-.2.7-.1l.6.3c.2.1.5.2.5.4s-.1.5-.3.8-.8.8-1.6.8-2.2-.5-3.3-1.4c-.9-.8-1.8-2.1-2.1-3.3-.2-.6-.2-1 0-1.3z" />
                     </svg>
-                    <span className="text-sm font-medium">WhatsApp</span>
                   </a>
                 )}
               </div>
@@ -405,10 +402,10 @@ const MenuPage = () => {
           </div>
         </div>
 
-        {/* Category Groups - отображаются в 2 ряда с фото */}
+        {/* Category Groups - горизонтальный скролл */}
         {restaurant.categoryGroups && restaurant.categoryGroups.length > 0 && (
-          <div className="px-4 py-6">
-            <div className="grid grid-cols-2 gap-3">
+          <div className="px-4 py-4">
+            <div className="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth pb-2">
               {restaurant.categoryGroups.map((group) => (
                 <button
                   key={group.id}
@@ -418,10 +415,10 @@ const MenuPage = () => {
                       handleCategoryClick(group.categories[0].id);
                     }
                   }}
-                  className="flex flex-col items-center bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+                  className="flex flex-col items-center flex-shrink-0 w-24"
                 >
                   {group.image && (
-                    <div className="w-full aspect-square">
+                    <div className="w-20 h-20 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow mb-2">
                       <ImageWithLoader
                         src={group.image}
                         alt={group.name}
@@ -430,11 +427,8 @@ const MenuPage = () => {
                       />
                     </div>
                   )}
-                  <div className="p-3 w-full text-center">
-                    <h3 className="font-semibold text-sm">{group.name}</h3>
-                    {group.description && (
-                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">{group.description}</p>
-                    )}
+                  <div className="text-center">
+                    <h3 className="font-medium text-xs leading-tight">{group.name}</h3>
                   </div>
                 </button>
               ))}

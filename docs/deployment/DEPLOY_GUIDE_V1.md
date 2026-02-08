@@ -3,7 +3,7 @@
 ## 📋 Что мы будем делать
 
 1. ✅ Подготовим код к деплою
-2. 🗄️ Развернем базу данных на Supabase (бесплатно)
+2. 🗄️ Развернем базу данных на Render PostgreSQL (бесплатно)
 3. 🔧 Развернем Backend на Render (бесплатно)
 4. 🎨 Развернем Frontend на Vercel (бесплатно)
 5. 🌐 Настроим домен oimoqr.com с поддоменами
@@ -62,11 +62,11 @@ git push -u origin main
 
 ---
 
-## 🗄️ Шаг 2: База данных на Supabase (10 минут)
+## 🗄️ Шаг 2: База данных на Render PostgreSQL (10 минут)
 
 ### 2.1 Создайте аккаунт
 
-1. Перейдите на https://supabase.com
+1. Перейдите на https://Render PostgreSQL.com
 2. Нажмите "Start your project"
 3. Войдите через GitHub (рекомендуется)
 
@@ -76,7 +76,7 @@ git push -u origin main
 2. Заполните:
    - **Name:** oimoqr-db
    - **Database Password:** Придумайте надежный пароль (сохраните его!)
-   - **Region:** Frankfurt (Europe) - ближайший к СНГ
+   - **Region:** Ohio (Europe) - ближайший к СНГ
    - **Pricing Plan:** Free
 3. Нажмите "Create new project"
 4. Подождите 2-3 минуты (создается база данных)
@@ -93,14 +93,14 @@ git push -u origin main
 Пример:
 
 ```
-postgresql://postgres.xxxxx:ВАШ_ПАРОЛЬ@aws-0-eu-central-1.pooler.supabase.com:5432/postgres
+postgresql://postgres.xxxxx:ВАШ_ПАРОЛЬ@aws-0-eu-central-1.pooler.Render PostgreSQL.com:5432/postgres
 ```
 
 ### 2.4 Примените миграции
 
 ```powershell
 # Установите временную переменную окружения
-$env:DATABASE_URL="postgresql://postgres.xxxxx:ВАШ_ПАРОЛЬ@aws-0-eu-central-1.pooler.supabase.com:5432/postgres"
+$env:DATABASE_URL="postgresql://postgres.xxxxx:ВАШ_ПАРОЛЬ@aws-0-eu-central-1.pooler.Render PostgreSQL.com:5432/postgres"
 
 # Перейдите в backend
 Set-Location "d:\QR MENU\backend"
@@ -143,7 +143,7 @@ npm run create-admin admin@yourdomain.com SecurePassword123 "Admin Name"
 Заполните форму:
 
 - **Name:** `qr-menu-backend` (или любое имя)
-- **Region:** Frankfurt (EU) или ближайший
+- **Region:** Ohio (EU) или ближайший
 - **Branch:** `main`
 - **Root Directory:** `backend`
 - **Runtime:** Node
@@ -162,7 +162,7 @@ npm run create-admin admin@yourdomain.com SecurePassword123 "Admin Name"
 Прокрутите вниз до **Environment Variables** и добавьте:
 
 ```env
-DATABASE_URL=postgresql://postgres.xxxxx:ВАШ_ПАРОЛЬ@aws-0-eu-central-1.pooler.supabase.com:5432/postgres
+DATABASE_URL=postgresql://postgres.xxxxx:ВАШ_ПАРОЛЬ@aws-0-eu-central-1.pooler.Render PostgreSQL.com:5432/postgres
 
 JWT_SECRET=your-super-secret-jwt-key-minimum-32-characters-long-please
 
@@ -184,7 +184,7 @@ MAX_FILE_SIZE=5242880
 **⚠️ Важно:**
 
 - `JWT_SECRET` - придумайте случайную строку минимум 32 символа
-- `DATABASE_URL` - вставьте вашу строку из Supabase
+- `DATABASE_URL` - вставьте вашу строку из Render PostgreSQL
 - `FRONTEND_URL` - пока оставьте временный, обновим позже
 
 ### 3.5 Деплой
@@ -307,7 +307,7 @@ https://ваш-сайт.vercel.app
 ```
 Frontend:  https://ваш-сайт.vercel.app
 Backend:   https://ваш-backend.onrender.com
-Database:  Supabase Dashboard
+Database:  Render PostgreSQL Dashboard
 GitHub:    https://github.com/ваш-username/qr-menu-saas
 
 Admin Email:    admin@yourdomain.com
@@ -334,7 +334,7 @@ Admin Password: SecurePassword123
 
 1. Проверьте пароль в `DATABASE_URL`
 2. Убедитесь, что используете URI (не Session mode)
-3. Попробуйте пересоздать строку подключения в Supabase
+3. Попробуйте пересоздать строку подключения в Render PostgreSQL
 
 ### Загрузка изображений не работает
 
@@ -367,7 +367,7 @@ Admin Password: SecurePassword123
 
 4. **Настройте backup**
 
-   - Supabase делает автоматический backup
+   - Render PostgreSQL делает автоматический backup
    - Можно настроить дополнительный через pg_dump
 
 5. **Оптимизируйте производительность**
@@ -390,7 +390,7 @@ Admin Password: SecurePassword123
 - Неограниченные деплои
 - Автоматический SSL
 
-### Supabase (Database)
+### Render PostgreSQL (Database)
 
 - 500 MB хранилища
 - 2 GB bandwidth/месяц
