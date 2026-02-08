@@ -11,17 +11,17 @@ const RecommendationCard = ({ dish, currency, addItem, removeItem }) => {
   const quantity = itemInCart?.quantity || 0;
 
   return (
-    <div className="relative overflow-hidden">
+    <div className="relative">
       {dish.image && (
         <ImageWithLoader
           src={dish.image}
           alt={dish.name}
-          className="w-full aspect-square object-cover rounded-lg mb-1.5"
+          className="w-full aspect-square object-cover rounded-lg mb-2"
           loading="lazy"
         />
       )}
-      <div className="text-sm font-medium line-clamp-2 mb-1.5 leading-snug break-words">{dish.name}</div>
-      <div className="flex items-center justify-between gap-1">
+      <div className="text-sm font-medium line-clamp-2 mb-2 leading-snug text-gray-900">{dish.name}</div>
+      <div className="flex items-center justify-between gap-2">
         <div className="text-sm font-bold text-primary-600 flex-shrink-0">
           {parseFloat(dish.price).toFixed(2)} {currency}
         </div>
