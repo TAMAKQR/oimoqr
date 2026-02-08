@@ -38,15 +38,23 @@ export const getRestaurantDishes = async (req, res, next) => {
           restaurantId
         }
       },
-      orderBy: { name: 'asc' },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        price: true,
+        image: true,
+        available: true,
+        order: true,
+        categoryId: true,
         category: {
           select: {
             id: true,
             name: true
           }
         }
-      }
+      },
+      orderBy: { name: 'asc' }
     });
 
     res.json(dishes);
