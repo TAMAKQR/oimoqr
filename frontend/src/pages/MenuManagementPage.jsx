@@ -861,19 +861,27 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
   const loadAllDishes = async () => {
     setLoadingDishes(true);
     try {
-      const response = await fetch(`/api/dishes/restaurant/${restaurantId}/all`, {
+      const url = `/api/dishes/restaurant/${restaurantId}/all`;
+      console.log('🔄 Loading dishes from:', url);
+
+      const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
+
+      console.log('📡 Response status:', response.status);
+
       if (response.ok) {
         const data = await response.json();
+        console.log(`✅ Loaded ${data.length} dishes`);
         setAllDishes(data);
       } else {
-        console.error('Failed to load dishes, status:', response.status);
+        const text = await response.text();
+        console.error('❌ Failed to load dishes, status:', response.status, 'Response:', text.substring(0, 200));
       }
     } catch (err) {
-      console.error('Error loading dishes:', err);
+      console.error('❌ Error loading dishes:', err);
     } finally {
       setLoadingDishes(false);
     }
