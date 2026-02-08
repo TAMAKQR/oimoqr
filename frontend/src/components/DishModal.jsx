@@ -223,8 +223,8 @@ const DishModal = ({
 
           {/* Рекомендации */}
           {recommendations.length > 0 && (
-            <div className="mb-4 border-t pt-3">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="mb-3 border-t pt-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 {recommendations.map((rec) => (
                   <div
                     key={rec.id}
@@ -259,12 +259,9 @@ const DishModal = ({
             <div className="mb-4">
               {dish.modifiers.map((modifier) => (
                 modifier.options && modifier.options.length > 0 && (
-                  <div key={modifier.id} className="mb-4">
-                    <h3 className="text-base sm:text-lg font-semibold mb-2 flex items-center gap-2">
+                  <div key={modifier.id} className="mb-3">
+                    <h3 className="text-base sm:text-lg font-semibold mb-2">
                       {modifier.name}
-                      {modifier.isRequired && (
-                        <span className="text-red-500 text-sm font-normal">(обязательно)</span>
-                      )}
                     </h3>
                     <div className="space-y-2">
                       {modifier.options.map((option) => (
