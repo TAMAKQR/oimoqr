@@ -965,15 +965,19 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
       options: [] // Пустой массив опций - будут добавляться отдельно
     };
 
+    let createdModifier = null;
+
     if (dish?.id) {
       // Если блюдо уже сохранено - создаем модификатор сразу
       try {
         const created = await menuService.createModifier(dish.id, modifierData);
-        setModifiers([...modifiers, created]);
+        createdModifier = created;
+        setModifiers(prev => [...prev, created]);
         toast.success('Модификатор создан');
       } catch (err) {
         toast.error('Ошибка при создании модификатора');
         console.error(err);
+        return;
       }
     } else {
       // Если блюдо еще не сохранено - добавляем временный модификатор
@@ -982,12 +986,18 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
         id: `temp-${Date.now()}`,
         isNew: true
       };
-      setModifiers([...modifiers, newModifier]);
+      createdModifier = newModifier;
+      setModifiers(prev => [...prev, newModifier]);
     }
 
     setNewModifierName('');
     setNewModifierType('single');
     setNewModifierRequired(false);
+
+    // Сразу предлагаем создать первую опцию с ценой
+    if (createdModifier) {
+      await handleAddOption(createdModifier);
+    }
   };
 
   const handleDeleteModifier = async (modifier) => {
@@ -1049,7 +1059,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
       // Создаем опцию сразу в базе
       try {
         const created = await menuService.createModifierOption(modifier.id, optionData);
-        setModifiers(modifiers.map(m =>
+        setModifiers(prev => prev.map(m =>
           m.id === modifier.id
             ? { ...m, options: [...(m.options || []), created] }
             : m
@@ -1066,7 +1076,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
         id: `temp-opt-${Date.now()}`,
         isNew: true
       };
-      setModifiers(modifiers.map(m =>
+      setModifiers(prev => prev.map(m =>
         m.id === modifier.id
           ? { ...m, options: [...(m.options || []), newOption] }
           : m
