@@ -10,6 +10,98 @@ import MenuSkeleton from '../components/MenuSkeleton';
 import CustomerLoginModal from '../components/CustomerLoginModal';
 import ImageWithLoader from '../components/ImageWithLoader';
 import CustomerBottomNav from '../components/CustomerBottomNav';
+import { useTheme } from '../theme/ThemeProvider';
+
+const clamp = (value, min = 0, max = 1) => Math.min(Math.max(value, min), max);
+
+const hexToHsl = (hex) => {
+  const normalized = hex.replace('#', '');
+  const bigint = parseInt(normalized, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  const rNorm = r / 255;
+  const gNorm = g / 255;
+  const bNorm = b / 255;
+  const max = Math.max(rNorm, gNorm, bNorm);
+  const min = Math.min(rNorm, gNorm, bNorm);
+  const delta = max - min;
+
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+
+  if (delta !== 0) {
+    s = delta / (1 - Math.abs(2 * l - 1));
+    switch (max) {
+      case rNorm:
+        h = ((gNorm - bNorm) / delta) % 6;
+        break;
+      case gNorm:
+        h = (bNorm - rNorm) / delta + 2;
+        break;
+      default:
+        h = (rNorm - gNorm) / delta + 4;
+    }
+    h *= 60;
+  }
+
+  return { h: (h + 360) % 360, s: Math.min(Math.max(s, 0), 1), l: Math.min(Math.max(l, 0), 1) };
+};
+
+const hslToHex = ({ h, s, l }) => {
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l - c / 2;
+
+  let r = 0;
+  let g = 0;
+  let b = 0;
+
+  if (0 <= h && h < 60) {
+    r = c; g = x; b = 0;
+  } else if (60 <= h && h < 120) {
+    r = x; g = c; b = 0;
+  } else if (120 <= h && h < 180) {
+    r = 0; g = c; b = x;
+  } else if (180 <= h && h < 240) {
+    r = 0; g = x; b = c;
+  } else if (240 <= h && h < 300) {
+    r = x; g = 0; b = c;
+  } else {
+    r = c; g = 0; b = x;
+  }
+
+  const toHex = (v) => {
+    const val = Math.round((v + m) * 255);
+    return val.toString(16).padStart(2, '0');
+  };
+
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+};
+
+const buildPaletteFromBase = (baseHex = '#009e47') => {
+  const hsl = hexToHsl(baseHex);
+  const steps = {
+    50: 0.38,
+    100: 0.32,
+    200: 0.26,
+    300: 0.2,
+    400: 0.14,
+    500: 0,
+    600: -0.06,
+    700: -0.12,
+    800: -0.18,
+    900: -0.24,
+  };
+
+  const palette = {};
+  Object.entries(steps).forEach(([tone, delta]) => {
+    const lightness = clamp(hsl.l + delta, 0.05, 0.95);
+    palette[tone] = hslToHex({ h: hsl.h, s: hsl.s, l: lightness });
+  });
+  return palette;
+};
 
 const getCurrencySymbol = (currencyCode) => {
   const currencySymbols = {
@@ -32,6 +124,7 @@ const getCurrencySymbol = (currencyCode) => {
 const MenuPage = () => {
   const { subdomain } = useParams();
   const navigate = useNavigate();
+  const { setTheme, themes, setCustomColors } = useTheme();
   const [restaurant, setRestaurant] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -112,6 +205,14 @@ const MenuPage = () => {
       setLoading(true);
       const data = await restaurantService.getBySubdomain(subdomain, language);
       setRestaurant(data);
+      if (data.primaryColor) {
+        const palette = buildPaletteFromBase(data.primaryColor);
+        setCustomColors(palette);
+        setTheme('custom');
+      } else if (themes?.custom?.colors) {
+        setTheme('default');
+        setCustomColors(themes.custom.colors);
+      }
       // Сохраняем последний посещенный ресторан для клиентской авторизации
       if (data?.id) {
         const payload = {
@@ -134,7 +235,7 @@ const MenuPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [subdomain]);
+  }, [subdomain, setCustomColors, setTheme, themes]);
 
   // ✅ ОПТИМИЗАЦИЯ: Один useEffect для загрузки - избегаем дублирования
   useEffect(() => {

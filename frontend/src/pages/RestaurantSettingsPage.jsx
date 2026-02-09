@@ -37,6 +37,7 @@ const RestaurantSettingsPage = () => {
   const [facebook, setFacebook] = useState('');
   const [currency, setCurrency] = useState('KGS');
   const [menuCardStyle, setMenuCardStyle] = useState('horizontal');
+  const [primaryColor, setPrimaryColor] = useState('#009e47');
   const [deliveryEnabled, setDeliveryEnabled] = useState(false);
   const [deliveryFee, setDeliveryFee] = useState('');
   const [minOrderAmount, setMinOrderAmount] = useState('');
@@ -175,6 +176,7 @@ const RestaurantSettingsPage = () => {
     setFacebook(r.facebook || '');
     setCurrency(r.currency || 'KGS');
     setMenuCardStyle(r.cardStyle || 'horizontal');
+    setPrimaryColor(r.primaryColor || '#009e47');
     setDeliveryEnabled(r.deliveryEnabled || false);
     setDeliveryFee(r.deliveryFee || '');
     setMinOrderAmount(r.minOrderAmount || '');
@@ -347,6 +349,7 @@ const RestaurantSettingsPage = () => {
         facebook,
         currency,
         menuCardStyle,
+        primaryColor: primaryColor || null,
         deliveryEnabled,
         deliveryFee: deliveryFee ? parseFloat(deliveryFee) : null,
         minOrderAmount: minOrderAmount ? parseFloat(minOrderAmount) : null,
@@ -672,8 +675,24 @@ const RestaurantSettingsPage = () => {
           <div className="card">
             <h2 className="text-xl font-bold mb-2">Тема оформления меню</h2>
             <p className="text-sm text-gray-600 mb-4">Выберите цветовую гамму для клиентского меню.</p>
+
+            <div className="flex flex-wrap items-center gap-4 mb-4">
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-gray-700">Основной цвет</label>
+                <input
+                  type="color"
+                  value={primaryColor}
+                  onChange={(e) => setPrimaryColor(e.target.value)}
+                  className="h-10 w-12 border border-gray-200 rounded cursor-pointer bg-white"
+                  aria-label="Основной цвет меню"
+                />
+                <span className="text-sm font-mono text-gray-700">{primaryColor}</span>
+              </div>
+              <p className="text-xs text-gray-500">Цвет сохранится для этого ресторана и будет применяться в меню.</p>
+            </div>
+
             <ThemeSwitcher inline />
-            <p className="text-xs text-gray-500 mt-3">Сохранение происходит локально (в браузере). Для каждого устройства можно выбрать свою тему предпросмотра.</p>
+            <p className="text-xs text-gray-500 mt-3">Переключатель ниже используется для предпросмотра темы на этом устройстве.</p>
           </div>
 
           {/* Social Media */}

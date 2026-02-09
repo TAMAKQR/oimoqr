@@ -36,6 +36,8 @@ model Restaurant {
   banners           String?
   logo              String?
   cardStyle         String    @default("grid")
+  primaryColor      String?
+  themePalette      Json?
   isTrialDefault    Boolean   @default(false)
   deliveryEnabled   Boolean   @default(false)
   deliveryFee       Float?
