@@ -30,6 +30,11 @@ import ModifierTemplatesPage from './pages/ModifierTemplatesPage';
 import PrivateRoute from './components/PrivateRoute';
 import AdminRoute from './components/AdminRoute';
 
+const CACHE_VERSION =
+  import.meta.env.VITE_APP_CACHE_VERSION ||
+  import.meta.env.VITE_COMMIT_SHA ||
+  '2026-02-09-1';
+
 function App() {
   // Keep bottom-fixed UI aligned with the visible viewport on mobile browsers
   // (e.g. Chrome bottom controls / virtual keyboard changing the visual viewport).
@@ -62,6 +67,31 @@ function App() {
       }
       root.style.removeProperty('--visual-bottom-offset');
     };
+  }, []);
+
+  // Force-refresh assets when cache version changes to avoid stale config for returning users
+  useEffect(() => {
+    const storedVersion = localStorage.getItem('app-cache-version');
+    if (storedVersion === CACHE_VERSION) return;
+
+    localStorage.setItem('app-cache-version', CACHE_VERSION);
+
+    (async () => {
+      try {
+        if (window.caches?.keys) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((key) => caches.delete(key)));
+        }
+        if (navigator.serviceWorker?.getRegistrations) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          regs.forEach((reg) => reg.update());
+        }
+      } catch (e) {
+        console.warn('Cache clear/update failed', e);
+      } finally {
+        window.location.reload();
+      }
+    })();
   }, []);
 
   return (
