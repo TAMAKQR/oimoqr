@@ -219,7 +219,7 @@ const CheckoutPage = () => {
                                     <button
                                         disabled={!restaurant?.deliveryEnabled}
                                         onClick={() => restaurant?.deliveryEnabled && setDeliveryType('delivery')}
-                                        className={`p-3 rounded-lg border-2 transition-all ${deliveryType === 'delivery' ? 'border-primary-600 bg-primary-50' : 'border-gray-200 active:border-gray-300'} ${!restaurant?.deliveryEnabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        className={`p-3 rounded-lg border-2 transition-all ${deliveryType === 'delivery' ? 'border-primary-600 bg-primary-50' : 'border-primary-200 active:border-primary-300'} ${!restaurant?.deliveryEnabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     >
                                         <div className="text-2xl mb-1">🚗</div>
                                         <div className="font-semibold text-sm">Доставка</div>
@@ -229,7 +229,7 @@ const CheckoutPage = () => {
                                     </button>
                                     <button
                                         onClick={() => setDeliveryType('pickup')}
-                                        className={`p-3 rounded-lg border-2 transition-all ${deliveryType === 'pickup' ? 'border-primary-600 bg-primary-50' : 'border-gray-200 active:border-gray-300'}`}
+                                        className={`p-3 rounded-lg border-2 transition-all ${deliveryType === 'pickup' ? 'border-primary-600 bg-primary-50' : 'border-primary-200 active:border-primary-300'}`}
                                     >
                                         <div className="text-2xl mb-1">🏃</div>
                                         <div className="font-semibold text-sm">Самовывоз</div>
@@ -310,7 +310,7 @@ const CheckoutPage = () => {
                                             addresses.map((addr) => (
                                                 <div
                                                     key={addr.id}
-                                                    className={`relative p-3 rounded-lg border-2 transition-all ${selectedAddressId === addr.id ? 'border-primary-600 bg-primary-50' : 'border-gray-200'}`}
+                                                    className={`relative p-3 rounded-lg border-2 transition-all ${selectedAddressId === addr.id ? 'border-primary-600 bg-primary-50' : 'border-primary-200'}`}
                                                 >
                                                     <button onClick={() => setSelectedAddressId(addr.id)} className="w-full text-left pr-8">
                                                         <div className="font-medium text-sm">{addr.address}</div>
