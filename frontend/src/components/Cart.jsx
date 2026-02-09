@@ -82,7 +82,7 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
         />
       )}
       <div className="fixed inset-x-0 z-[60] flex justify-center px-0 pb-0" style={cartStyle}>
-        <div className="w-full max-w-none rounded-none sm:rounded-2xl bg-white border-t border-gray-200 px-4 py-3 sm:px-6 sm:py-4">
+        <div className="w-full max-w-[480px] rounded-none sm:rounded-2xl bg-white border-t border-gray-200 px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex flex-col gap-3">
             {isBelowMinimum && (
               <span className="text-xs text-yellow-700">
