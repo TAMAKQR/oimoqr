@@ -6,13 +6,25 @@ const ImageWithLoader = ({
     className = '',
     loading = 'lazy',
     decoding = 'async',
+    fallbackSrc,
+    maxRetries = 2,
+    retryDelay = 400,
     onError,
     ...props
 }) => {
     const [imageLoaded, setImageLoaded] = useState(false);
     const [imageError, setImageError] = useState(false);
+    const [retryCount, setRetryCount] = useState(0);
+    const [usingFallback, setUsingFallback] = useState(false);
     const [inView, setInView] = useState(false);
     const imgRef = useRef(null);
+    const retryTimer = useRef(null);
+
+    useEffect(() => () => {
+        if (retryTimer.current) {
+            clearTimeout(retryTimer.current);
+        }
+    }, []);
 
     // Intersection Observer для более умной ленивой загрузки
     useEffect(() => {
@@ -31,16 +43,18 @@ const ImageWithLoader = ({
                 });
             },
             {
-                rootMargin: '50px', // Начинаем загружать за 50px до видимости
+                rootMargin: '200px', // Загружаем заранее
             }
         );
 
         observer.observe(imgRef.current);
 
+        // страховка: если observer не сработает, грузим через 1с
+        const fallbackTimer = setTimeout(() => setInView(true), 1000);
+
         return () => {
-            if (observer) {
-                observer.disconnect();
-            }
+            clearTimeout(fallbackTimer);
+            observer.disconnect();
         };
     }, [loading]);
 
@@ -49,10 +63,31 @@ const ImageWithLoader = ({
     };
 
     const handleError = () => {
+        if (retryCount < maxRetries) {
+            retryTimer.current = setTimeout(() => {
+                setRetryCount((c) => c + 1);
+                setImageError(false);
+                setImageLoaded(false);
+                setInView(true);
+            }, retryDelay);
+            return;
+        }
+
+        if (!usingFallback && fallbackSrc) {
+            setUsingFallback(true);
+            setRetryCount(0);
+            setImageError(false);
+            setImageLoaded(false);
+            setInView(true);
+            return;
+        }
+
         setImageError(true);
         setImageLoaded(true);
         onError?.();
     };
+
+    const effectiveSrc = usingFallback ? fallbackSrc : `${src}${retryCount > 0 ? `?rb=${retryCount}` : ''}`;
 
     return (
         <div ref={imgRef} className="relative w-full h-full">
@@ -78,11 +113,12 @@ const ImageWithLoader = ({
             ) : (
                 (inView || loading === 'eager') && (
                     <img
-                        src={src}
+                        src={effectiveSrc}
                         alt={alt}
                         className={`${className} ${!imageLoaded ? 'opacity-0' : 'opacity-100'} transition-opacity duration-500`}
                         loading={loading}
                         decoding={decoding}
+                        fetchpriority={loading === 'eager' ? 'high' : 'auto'}
                         onLoad={handleLoad}
                         onError={handleError}
                         {...props}
