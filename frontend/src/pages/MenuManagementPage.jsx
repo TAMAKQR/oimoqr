@@ -965,13 +965,10 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
       options: [] // Пустой массив опций - будут добавляться отдельно
     };
 
-    let createdModifier = null;
-
     if (dish?.id) {
       // Если блюдо уже сохранено - создаем модификатор сразу
       try {
         const created = await menuService.createModifier(dish.id, modifierData);
-        createdModifier = created;
         setModifiers(prev => [...prev, created]);
         toast.success('Модификатор создан');
       } catch (err) {
@@ -986,18 +983,12 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
         id: `temp-${Date.now()}`,
         isNew: true
       };
-      createdModifier = newModifier;
       setModifiers(prev => [...prev, newModifier]);
     }
 
     setNewModifierName('');
     setNewModifierType('single');
     setNewModifierRequired(false);
-
-    // Сразу предлагаем создать первую опцию с ценой
-    if (createdModifier) {
-      await handleAddOption(createdModifier);
-    }
   };
 
   const handleDeleteModifier = async (modifier) => {
