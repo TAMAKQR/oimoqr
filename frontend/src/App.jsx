@@ -35,7 +35,7 @@ const CACHE_VERSION =
   import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA ||
   import.meta.env.VERCEL_GIT_COMMIT_SHA ||
   import.meta.env.VITE_COMMIT_SHA ||
-  'dev-local';
+  'v2026-02-09-cachebust';
 
 function App() {
   // Keep bottom-fixed UI aligned with the visible viewport on mobile browsers
