@@ -32,8 +32,10 @@ import AdminRoute from './components/AdminRoute';
 
 const CACHE_VERSION =
   import.meta.env.VITE_APP_CACHE_VERSION ||
+  import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA ||
+  import.meta.env.VERCEL_GIT_COMMIT_SHA ||
   import.meta.env.VITE_COMMIT_SHA ||
-  '2026-02-09-1';
+  'dev-local';
 
 function App() {
   // Keep bottom-fixed UI aligned with the visible viewport on mobile browsers

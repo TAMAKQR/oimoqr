@@ -27,19 +27,16 @@ const safeParse = (value) => {
 
 const computeScopeKey = () => {
     const parts = window.location.pathname.split('/').filter(Boolean);
-    let slug = 'global';
 
     if (parts[0] === 'menu' && parts[1]) {
-        slug = `rest-${parts[1]}`;
-    } else if (parts[0] && !IGNORED_SCOPES.has(parts[0])) {
-        slug = `rest-${parts[0]}`;
-    } else {
-        const last = safeParse(localStorage.getItem('customer-last-restaurant'));
-        if (last?.subdomain) slug = `rest-${last.subdomain}`;
-        else if (last?.id) slug = `restid-${last.id}`;
+        return `rest-${parts[1]}`;
     }
 
-    return slug;
+    if (parts[0] && !IGNORED_SCOPES.has(parts[0])) {
+        return `rest-${parts[0]}`;
+    }
+
+    return 'global';
 };
 
 const ThemeContext = createContext({
@@ -87,6 +84,12 @@ export const ThemeProvider = ({ children }) => {
 
     // Load scoped theme when scope changes
     useEffect(() => {
+        if (scopeKey === 'global') {
+            setTheme('default');
+            setCustomColors(themes.default.colors);
+            return;
+        }
+
         const themeKey = `${scopeKey}-app-theme`;
         const colorsKey = `${scopeKey}-custom-theme-colors`;
 
@@ -118,7 +121,7 @@ export const ThemeProvider = ({ children }) => {
         Object.entries(palette).forEach(([shade, hex]) => {
             root.style.setProperty(`--primary-${shade}`, hex);
         });
-        if (theme === 'custom') {
+        if (theme === 'custom' && scopeKey !== 'global') {
             const colorsKey = `${scopeKey}-custom-theme-colors`;
             localStorage.setItem(colorsKey, JSON.stringify(customColors));
         }
