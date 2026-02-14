@@ -10,7 +10,7 @@ import DashboardLayout from '../components/DashboardLayout';
 import ThemeSwitcher from '../components/ThemeSwitcher';
 import ImageWithLoader from '../components/ImageWithLoader';
 import ImageUploader from '../components/ImageUploader';
-import { formatFileSize } from '../utils/imageCompression';
+import { compressImage, formatFileSize, validateImage, shouldCompress } from '../utils/imageCompression';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -526,30 +526,76 @@ const RestaurantSettingsPage = () => {
           <div className="bg-white rounded-xl border border-gray-100 p-5">
             <h2 className="text-xl font-bold mb-4">Логотип ресторана</h2>
 
-            <div className={`flex ${getSelectedRestaurant()?.logo ? 'items-start gap-5' : ''}`}>
-              {/* Current logo with delete */}
-              {getSelectedRestaurant()?.logo && (
-                <div className="relative group flex-shrink-0">
-                  <img
-                    src={getSelectedRestaurant().logo}
-                    alt="Логотип"
-                    className="w-24 h-24 object-contain rounded-lg border border-gray-200 bg-white p-1.5"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleDeleteLogo}
-                    className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 shadow-lg transition-all opacity-0 group-hover:opacity-100"
-                    title="Удалить логотип"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+            {getSelectedRestaurant()?.logo ? (
+              /* Compact view when logo exists */
+              <div>
+                <div className="flex items-center gap-4">
+                  <div className="relative group flex-shrink-0">
+                    <img
+                      src={getSelectedRestaurant().logo}
+                      alt="Логотип"
+                      className="w-20 h-20 object-contain rounded-lg border border-gray-200 bg-white p-1.5"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      ref={(el) => { if (el) el._logoInput = true; }}
+                      className="hidden"
+                      id="logo-replace-input"
+                      onChange={async (e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        const validation = validateImage(file, { maxSizeMB: 10 });
+                        if (!validation.valid) { toast.error(validation.error); return; }
+                        if (shouldCompress(file, 0.5)) {
+                          try {
+                            const compressed = await compressImage(file, { maxWidth: 800, maxHeight: 800, quality: 0.9, maxSizeMB: 0.5 });
+                            toast.success(`Сжато: ${formatFileSize(file.size)} → ${formatFileSize(compressed.size)}`);
+                            handleLogoFileSelect(compressed);
+                          } catch { handleLogoFileSelect(file); }
+                        } else { handleLogoFileSelect(file); }
+                        e.target.value = '';
+                      }}
+                    />
+                    {!uploadingLogo ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => document.getElementById('logo-replace-input').click()}
+                          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+                          </svg>
+                          Заменить
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleDeleteLogo}
+                          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                          Удалить
+                        </button>
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <div className="w-32 bg-blue-200 rounded-full h-2">
+                          <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${logoUploadProgress}%` }}></div>
+                        </div>
+                        <span className="text-sm text-blue-600 font-bold">{logoUploadProgress}%</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
-
-              {/* Upload zone */}
-              <div className="flex-1 min-w-0">
+              </div>
+            ) : (
+              /* Full uploader when no logo */
+              <div>
                 {!uploadingLogo ? (
                   <ImageUploader
                     onFileSelect={handleLogoFileSelect}
@@ -560,7 +606,7 @@ const RestaurantSettingsPage = () => {
                       quality: 0.9,
                       maxSizeMB: 0.5
                     }}
-                    label={getSelectedRestaurant()?.logo ? 'Заменить логотип' : 'Загрузите логотип'}
+                    label="Загрузите логотип"
                     showPreview={true}
                     currentImage={null}
                     disabled={uploadingLogo}
@@ -578,7 +624,7 @@ const RestaurantSettingsPage = () => {
                 )}
                 <p className="text-xs text-gray-500 mt-1.5">200×200 px, авто-сжатие до 0.5 МБ</p>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Banner */}
