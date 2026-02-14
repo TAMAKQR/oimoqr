@@ -20,27 +20,121 @@
     "language": "Dil"
   },
   "home": {
-    "title": "Restoranınız için Dijital Menü",
-    "subtitle": "5 dakikada modern QR menü oluşturun. Programcı veya tasarımcıya ihtiyaç yok.",
     "cta": "7 Gün Ücretsiz Deneyin",
+    "nav": {
+      "features": "Özellikler",
+      "solutions": "Çözümler",
+      "howItWorks": "Nasıl Çalışır",
+      "pricing": "Fiyatlar"
+    },
+    "hero": {
+      "badge": "Orta Asya'nın 1 Numaralı QR Menü Platformu",
+      "title": "İşletmeniz için Dijital Menü",
+      "subtitle": "5 dakikada modern QR menü oluşturun. Restoranlar, mağazalar ve oteller — tek platformda. Kodlama gerektirmez.",
+      "demo": "Nasıl Çalışır"
+    },
+    "stats": {
+      "businesses": "işletme",
+      "scans": "tarama",
+      "minutes": "dk kurulum"
+    },
+    "business": {
+      "title": "Tek Platform — Üç Çözüm",
+      "subtitle": "OimoQR işletme türünüze uyum sağlar",
+      "restaurant": {
+        "title": "Restoranlar ve Kafeler",
+        "desc": "Her masada QR menü. Konuklar tarar — menüyü görür, WhatsApp'tan sipariş verir.",
+        "point1": "Her masa için QR kod",
+        "point2": "WhatsApp'a doğrudan sipariş",
+        "point3": "Promosyonlar için afişler"
+      },
+      "store": {
+        "title": "Online Mağazalar",
+        "desc": "Sepet ve WhatsApp ile sipariş imkanı sunan ürün kataloğu.",
+        "point1": "Fotoğraflı ürün kataloğu",
+        "point2": "Sepet ve sipariş verme",
+        "point3": "Stok ve fiyat yönetimi"
+      },
+      "hotel": {
+        "title": "Oteller",
+        "desc": "Oda servisi için QR menü. Her odada QR kod — konuklar aramadan sipariş verir.",
+        "point1": "Her oda için QR kod",
+        "point2": "WhatsApp ile oda servisi",
+        "point3": "Özel hizmet menüsü"
+      }
+    },
     "features": {
+      "title": "İşletmenizin İhtiyacı Olan Her Şey",
+      "subtitle": "Basit arayüzde güçlü araçlar",
       "qrmenu": "QR Menü",
-      "qrmenuDesc": "Konuklar QR kodu tarayarak kendi telefonlarında menünüzü görürler",
+      "qrmenuDesc": "Konuklar QR kodu tarayarak telefonlarında menünüzü görür. Güzel, hızlı, uygulama gerektirmez.",
       "whatsapp": "WhatsApp Siparişleri",
-      "whatsappDesc": "Müşteriler menüden doğrudan sipariş verir ve WhatsApp'a gönderirler",
-      "realtime": "Gerçek Zamanlı Güncelleme",
-      "realtimeDesc": "Yeni menüleri bastırmadan fiyatları ve yemekleri gerçek zamanlı olarak değiştirin"
+      "whatsappDesc": "Müşteriler menüden doğrudan sipariş verir ve tek dokunuşla WhatsApp'ınıza gönderir.",
+      "realtime": "Anlık Güncellemeler",
+      "realtimeDesc": "Fiyatları, yemekleri ve açıklamaları gerçek zamanlı değiştirin. Artık yeniden baskı yok.",
+      "customization": "Markalaşma",
+      "customizationDesc": "Renkleriniz, logonuz, afişleriniz ve alt alan adınız. Menü markanızın bir parçası gibi görünür.",
+      "analytics": "Analitik",
+      "analyticsDesc": "Tarama sayılarını, popüler yemekleri ve müşteri etkinliğini takip edin.",
+      "multilang": "Çok Dilli",
+      "multilangDesc": "Rusça, İngilizce, Kırgızca ve Türkçe arayüz. Daha fazla müşteriye ulaşın."
+    },
+    "how": {
+      "title": "3 Adımda Başlayın",
+      "subtitle": "Kayıttan ilk siparişe — 5 dakikadan az",
+      "step1": {
+        "title": "Kaydolun",
+        "desc": "Hesap oluşturun ve işletme türünüzü seçin. 7 gün ücretsiz."
+      },
+      "step2": {
+        "title": "Menünüzü Ekleyin",
+        "desc": "Fotoğraf yükleyin, fiyatları belirleyin ve kategorileri düzenleyin."
+      },
+      "step3": {
+        "title": "QR Kodunuzu Paylaşın",
+        "desc": "QR kodu yazdırın ve masalara, tezgaha veya odalara yerleştirin."
+      }
     },
     "capabilities": {
-      "title": "Özellikler",
+      "title": "Tam Araç Seti",
       "banner": "Promosyonlar ve özel teklifler için afiş kaydırıcı",
-      "categories": "Fotoğraf ve açıklama içeren yemek kategorileri",
+      "categories": "Fotoğraf ve açıklama içeren kategoriler",
       "modifiers": "Değiştiriciler (boyutlar, ekstralar, soslar)",
-      "social": "Sosyal medya entegrasyonu",
-      "subdomain": "Restoranınız için benzersiz alt alan adı",
+      "social": "Instagram, Telegram, Facebook entegrasyonu",
+      "subdomain": "İşletmeniz için benzersiz alt alan adı",
       "trial": "7 günlük ücretsiz deneme süresi"
     },
-    "footer": "© 2024 OimoQR. Tüm hakları saklıdır."
+    "faq": {
+      "title": "Sık Sorulan Sorular",
+      "faq1": {
+        "q": "Kurulum için teknik bilgi gerekiyor mu?",
+        "a": "Hayır. Arayüz sezgiseldir — yemekleri ekleyin, fotoğrafları yükleyin ve QR kodu yazdırın. Herkes yapabilir."
+      },
+      "faq2": {
+        "q": "Müşteriler nasıl sipariş veriyor?",
+        "a": "Müşteri QR kodu tarar, menüden ürünleri seçer ve 'Sipariş Ver' düğmesine basar. Sipariş otomatik olarak WhatsApp'ınıza gönderilir."
+      },
+      "faq3": {
+        "q": "Ücretsiz deneyebilir miyim?",
+        "a": "Evet! Kaydolduğunuzda tüm özelliklere tam erişimle 7 günlük ücretsiz deneme süresi alırsınız."
+      },
+      "faq4": {
+        "q": "Birden fazla dili destekliyor musunuz?",
+        "a": "Evet, arayüz Rusça, İngilizce, Kırgızca ve Türkçe dillerinde mevcuttur."
+      },
+      "faq5": {
+        "q": "Restoran yerine mağaza için kullanabilir miyim?",
+        "a": "Kesinlikle! OimoQR restoranları, online mağazaları ve otelleri destekler. Kaydolurken işletme türünüzü seçin."
+      }
+    },
+    "finalCta": {
+      "title": "İşletmenizi Dijitalleştirmeye Hazır mısınız?",
+      "subtitle": "OimoQR kullanan yüzlerce işletmeye katılın"
+    },
+    "footer": {
+      "tagline": "İşletmeniz için dijital menü",
+      "copy": "© 2026 OimoQR. Tüm hakları saklıdır."
+    }
   },
   "auth": {
     "email": "Email",

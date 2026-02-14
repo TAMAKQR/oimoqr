@@ -20,27 +20,121 @@
     "language": "Language"
   },
   "home": {
-    "title": "Digital Menu for Your Restaurant",
-    "subtitle": "Create a modern QR menu in 5 minutes. No programmers or designers needed.",
     "cta": "Try Free for 7 Days",
+    "nav": {
+      "features": "Features",
+      "solutions": "Solutions",
+      "howItWorks": "How It Works",
+      "pricing": "Pricing"
+    },
+    "hero": {
+      "badge": "#1 QR Menu Platform in Central Asia",
+      "title": "Digital Menu for Your Business",
+      "subtitle": "Create a modern QR menu in 5 minutes. Restaurants, stores, and hotels — all in one platform. No coding required.",
+      "demo": "How It Works"
+    },
+    "stats": {
+      "businesses": "businesses",
+      "scans": "scans",
+      "minutes": "min to launch"
+    },
+    "business": {
+      "title": "One Platform — Three Solutions",
+      "subtitle": "OimoQR adapts to your business type",
+      "restaurant": {
+        "title": "Restaurants & Cafés",
+        "desc": "QR menu on every table. Guests scan — see the menu, order via WhatsApp.",
+        "point1": "QR code for each table",
+        "point2": "Orders directly to WhatsApp",
+        "point3": "Banners for promotions and deals"
+      },
+      "store": {
+        "title": "Online Stores",
+        "desc": "Product catalog with cart and checkout via WhatsApp.",
+        "point1": "Product catalog with photos",
+        "point2": "Cart and order placement",
+        "point3": "Inventory and price management"
+      },
+      "hotel": {
+        "title": "Hotels & Hospitality",
+        "desc": "QR menu for room service. QR code in every room — guests order without calling.",
+        "point1": "QR code for each room",
+        "point2": "Room service via WhatsApp",
+        "point3": "Custom service menu"
+      }
+    },
     "features": {
+      "title": "Everything Your Business Needs",
+      "subtitle": "Powerful tools in a simple interface",
       "qrmenu": "QR Menu",
-      "qrmenuDesc": "Guests scan the QR code and see your menu on their phones",
+      "qrmenuDesc": "Guests scan the QR code and see your menu on their phones. Beautiful, fast, no app needed.",
       "whatsapp": "WhatsApp Orders",
-      "whatsappDesc": "Customers place orders directly from the menu and send via WhatsApp",
-      "realtime": "Real-time Updates",
-      "realtimeDesc": "Change prices and dishes in real-time without printing new menus"
+      "whatsappDesc": "Customers place orders directly from the menu and send to your WhatsApp in one tap.",
+      "realtime": "Instant Updates",
+      "realtimeDesc": "Change prices, dishes, and descriptions in real-time. No more reprinting menus.",
+      "customization": "Branding",
+      "customizationDesc": "Your colors, logo, banners, and subdomain. The menu looks like part of your brand.",
+      "analytics": "Analytics",
+      "analyticsDesc": "Track scan counts, popular dishes, and customer activity.",
+      "multilang": "Multilingual",
+      "multilangDesc": "Interface in Russian, English, Kyrgyz, and Turkish. Reach more customers."
+    },
+    "how": {
+      "title": "Launch in 3 Steps",
+      "subtitle": "From sign-up to first order — less than 5 minutes",
+      "step1": {
+        "title": "Sign Up",
+        "desc": "Create an account and select your business type. Get 7 days free."
+      },
+      "step2": {
+        "title": "Add Your Menu",
+        "desc": "Upload photos, set prices, and organize categories. All from a simple dashboard."
+      },
+      "step3": {
+        "title": "Share Your QR",
+        "desc": "Print the QR code and place it on tables, at the counter, or in rooms."
+      }
     },
     "capabilities": {
-      "title": "Features",
+      "title": "Complete Toolkit",
       "banner": "Banner slider for promotions and special offers",
-      "categories": "Dish categories with photos and descriptions",
+      "categories": "Categories with photos and descriptions",
       "modifiers": "Modifiers (sizes, add-ons, sauces)",
-      "social": "Social media integration",
-      "subdomain": "Unique subdomain for your restaurant",
+      "social": "Integration with Instagram, Telegram, Facebook",
+      "subdomain": "Unique subdomain for your business",
       "trial": "7 days of free trial period"
     },
-    "footer": "© 2024 OimoQR. All rights reserved."
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "faq1": {
+        "q": "Do I need technical skills to set up?",
+        "a": "No. The interface is intuitive — just add dishes, upload photos, and print the QR code. Anyone can do it."
+      },
+      "faq2": {
+        "q": "How do customers place orders?",
+        "a": "The customer scans the QR code, selects items from the menu, and taps 'Order'. The order is automatically sent to your WhatsApp."
+      },
+      "faq3": {
+        "q": "Can I try it for free?",
+        "a": "Yes! When you sign up, you get 7 days of free trial with full access to all features."
+      },
+      "faq4": {
+        "q": "Do you support multiple languages?",
+        "a": "Yes, the interface is available in Russian, English, Kyrgyz, and Turkish."
+      },
+      "faq5": {
+        "q": "Can I use this for a store instead of a restaurant?",
+        "a": "Absolutely! OimoQR supports restaurants, online stores, and hotels. Choose your business type when signing up."
+      }
+    },
+    "finalCta": {
+      "title": "Ready to Digitize Your Business?",
+      "subtitle": "Join hundreds of businesses already using OimoQR"
+    },
+    "footer": {
+      "tagline": "Digital menu for your business",
+      "copy": "© 2026 OimoQR. All rights reserved."
+    }
   },
   "auth": {
     "email": "Email",
