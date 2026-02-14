@@ -365,13 +365,15 @@ const MenuManagementPage = () => {
 
   return (
     <DashboardLayout userData={userData} selectedRestaurantId={selectedRestaurantId}>
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex items-center gap-4 mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold">Управление меню</h1>
+      <div className="max-w-6xl mx-auto">
+        {/* Page header */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Управление меню</h1>
+          <p className="text-gray-500 text-sm mt-1">Категории, блюда и модификаторы</p>
         </div>
         {/* Restaurant Selector */}
         {userData && (
-          <div className="mb-8">
+          <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">Выберите ресторан</label>
             <RestaurantSelector
               userData={userData}
@@ -385,165 +387,180 @@ const MenuManagementPage = () => {
         )}
 
         {/* Add Category Button */}
-        <div className="mb-6 flex justify-between items-center gap-2 flex-wrap">
-          <h2 className="text-2xl font-bold">Категории и блюда</h2>
+        <div className="mb-4 flex justify-between items-center gap-2 flex-wrap">
+          <h2 className="text-lg font-semibold text-gray-900">Категории и блюда</h2>
           <div className="flex gap-2 flex-wrap">
-            <button onClick={() => setShowCategoryGroupsModal(true)} className="btn-secondary">
-              📂 Группы категорий
+            <button onClick={() => setShowCategoryGroupsModal(true)} className="inline-flex items-center gap-1.5 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+              <svg className="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" /></svg>
+              Группы категорий
             </button>
-            <button onClick={() => setShowCopyModal(true)} className="btn-secondary">
-              📋 Копировать меню
+            <button onClick={() => setShowCopyModal(true)} className="inline-flex items-center gap-1.5 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+              <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.5a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>
+              Копировать меню
             </button>
-            <button onClick={handleAddCategory} className="btn-primary">
-              + Добавить категорию
+            <button onClick={handleAddCategory} className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+              Добавить категорию
             </button>
           </div>
         </div>
 
         {/* Categories List */}
         {categories.length === 0 ? (
-          <div className="card text-center py-12">
-            <div className="text-6xl mb-4">📝</div>
-            <h3 className="text-xl font-semibold mb-2">Меню пусто</h3>
-            <p className="text-gray-600 mb-4">Начните с создания первой категории</p>
-            <button onClick={handleAddCategory} className="btn-primary">
+          <div className="bg-white rounded-xl border border-gray-100 text-center py-16">
+            <div className="w-16 h-16 bg-gray-100 rounded-2xl mx-auto mb-4 flex items-center justify-center">
+              <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">Меню пусто</h3>
+            <p className="text-gray-500 text-sm mb-4">Начните с создания первой категории</p>
+            <button onClick={handleAddCategory} className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
               Создать категорию
             </button>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {categories.map((category) => (
               <div
                 key={category.id}
-                className={`card cursor-move transition-all ${draggedCategoryId === category.id ? 'opacity-50' : ''} ${dragOverCategoryId === category.id ? 'border-2 border-blue-500 bg-blue-50' : ''}`}
+                className={`bg-white rounded-xl border transition-all ${draggedCategoryId === category.id ? 'opacity-50' : ''} ${dragOverCategoryId === category.id ? 'border-blue-400 bg-blue-50' : 'border-gray-100'}`}
                 draggable
                 onDragStart={(e) => handleCategoryDragStart(e, category.id)}
                 onDragOver={(e) => handleCategoryDragOver(e, category.id)}
                 onDragLeave={handleCategoryDragLeave}
                 onDrop={(e) => handleCategoryDrop(e, category.id)}
               >
-                {/* Category Header - Desktop: flex row, Mobile: flex column */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <button
-                      onClick={() => toggleCategory(category.id)}
-                      className="text-2xl hover:bg-gray-100 rounded p-1 flex-shrink-0"
-                    >
-                      {expandedCategories.has(category.id) ? '▼' : '▶'}
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-xl font-semibold break-words">{category.name}</h3>
-                      <p className="text-sm text-gray-600">
+                {/* Category Header */}
+                <div className="flex items-center justify-between px-5 py-4 cursor-move">
+                  <div className="flex items-center gap-3 flex-1 min-w-0" onClick={() => toggleCategory(category.id)}>
+                    <svg className={`w-4 h-4 text-gray-400 transition-transform duration-200 flex-shrink-0 ${expandedCategories.has(category.id) ? 'rotate-90' : ''}`} fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <div className="min-w-0">
+                      <h3 className="text-base font-semibold text-gray-900 break-words">{category.name}</h3>
+                      <p className="text-xs text-gray-400 mt-0.5">
                         {dishes[category.id]?.length || 0} блюд
                       </p>
                     </div>
                   </div>
-                  {/* Action Buttons - Below on mobile, Right on desktop */}
-                  <div className="flex gap-2 sm:flex-shrink-0">
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
                     <button
                       onClick={() => handleAddDish(category.id)}
-                      className="btn-secondary text-sm flex-1 sm:flex-initial whitespace-nowrap"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
                     >
-                      + Блюдо
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                      Блюдо
                     </button>
                     <button
                       onClick={() => handleEditCategory(category)}
-                      className="btn-secondary text-sm flex-1 sm:flex-initial"
+                      className="p-1.5 border border-gray-200 rounded-lg text-gray-400 hover:text-orange-500 hover:border-orange-200 bg-white hover:bg-orange-50 transition-colors"
+                      title="Редактировать"
                     >
-                      ✏️
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
                     </button>
                     <button
                       onClick={() => handleDeleteCategory(category.id)}
-                      className="btn-secondary text-sm text-red-600 hover:bg-red-50 flex-1 sm:flex-initial"
+                      className="p-1.5 border border-gray-200 rounded-lg text-gray-400 hover:text-red-500 hover:border-red-200 bg-white hover:bg-red-50 transition-colors"
+                      title="Удалить"
                     >
-                      🗑️
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
                     </button>
                   </div>
                 </div>
 
                 {/* Dishes List */}
                 {expandedCategories.has(category.id) && (
-                  <div className="ml-12 space-y-2">
+                  <div className="border-t border-gray-100">
                     {dishes[category.id]?.length === 0 ? (
-                      <p className="text-gray-500 text-sm py-4">Нет блюд в этой категории</p>
+                      <p className="text-gray-400 text-sm py-6 text-center">Нет блюд в этой категории</p>
                     ) : (
-                      dishes[category.id]?.map((dish) => (
+                      dishes[category.id]?.map((dish, idx) => (
                         <div
                           key={dish.id}
-                          className={`p-3 rounded-lg cursor-move transition-all ${draggedDishId === dish.id ? 'opacity-50' : ''} ${dragOverDishId === dish.id ? 'bg-blue-100 border-2 border-blue-400' : 'bg-gray-50 hover:bg-gray-100'}`}
+                          className={`flex items-center gap-4 px-5 py-3 cursor-move transition-colors ${draggedDishId === dish.id ? 'opacity-50' : ''} ${dragOverDishId === dish.id ? 'bg-blue-50' : 'hover:bg-gray-50'} ${idx > 0 ? 'border-t border-gray-50' : ''}`}
                           draggable
                           onDragStart={(e) => handleDishDragStart(e, dish.id)}
                           onDragOver={(e) => handleDishDragOver(e, dish.id)}
                           onDragLeave={handleDishDragLeave}
                           onDrop={(e) => handleDishDrop(e, dish.id, category.id)}
                         >
-                          {/* Desktop: flex row, Mobile: flex column */}
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                            {/* Dish Info */}
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <div className="relative w-16 h-16 flex-shrink-0">
-                                {dish.imageUrl ? (
-                                  <ImageWithLoader
-                                    src={`${dish.imageUrl}?t=${dataTimestamp}`}
-                                    alt={dish.name}
-                                    className="w-16 h-16 object-cover rounded border-2 border-green-500"
-                                    title="Фото загружено"
-                                    loading="lazy"
-                                  />
-                                ) : (
-                                  <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center border-2 border-gray-300" title="Фото отсутствует">
-                                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                    </svg>
-                                  </div>
-                                )}
-                                {dish.badge && (
-                                  <div className="absolute top-0 left-0 bg-gradient-to-br from-orange-400 to-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-tl rounded-br shadow-lg">
-                                    {dish.badge}
-                                  </div>
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <h4 className="font-medium break-words">{dish.name}</h4>
-                                  {!dish.available && (
-                                    <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded whitespace-nowrap">
-                                      СТОП
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-sm text-gray-600 line-clamp-1">
-                                  {dish.description}
-                                </p>
-                                <p className="text-primary-600 font-semibold">
-                                  {dish.price} {currency}
-                                </p>
-                              </div>
-                            </div>
+                          {/* Drag handle */}
+                          <div className="flex-shrink-0 text-gray-300 hidden sm:block">
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M7 2a2 2 0 10.001 4.001A2 2 0 007 2zm0 6a2 2 0 10.001 4.001A2 2 0 007 8zm0 6a2 2 0 10.001 4.001A2 2 0 007 14zm6-8a2 2 0 10-.001-4.001A2 2 0 0013 6zm0 2a2 2 0 10.001 4.001A2 2 0 0013 8zm0 6a2 2 0 10.001 4.001A2 2 0 0013 14z" /></svg>
+                          </div>
 
-                            {/* Action Buttons - Below on mobile, Right on desktop */}
-                            <div className="flex gap-2 sm:flex-shrink-0">
-                              <button
-                                onClick={() => handleToggleAvailability(dish.id)}
-                                className={`btn-secondary text-sm flex-1 sm:flex-initial ${!dish.available ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'
-                                  }`}
-                                title={dish.available ? 'Поставить на стоп' : 'Вернуть в меню'}
-                              >
-                                {dish.available ? '✓' : '⏸'}
-                              </button>
-                              <button
-                                onClick={() => handleEditDish(dish)}
-                                className="btn-secondary text-sm flex-1 sm:flex-initial"
-                              >
-                                ✏️
-                              </button>
-                              <button
-                                onClick={() => handleDeleteDish(dish.id)}
-                                className="btn-secondary text-sm text-red-600 hover:bg-red-50 flex-1 sm:flex-initial"
-                              >
-                                🗑️
-                              </button>
+                          {/* Image */}
+                          <div className="relative w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden">
+                            {dish.imageUrl ? (
+                              <ImageWithLoader
+                                src={`${dish.imageUrl}?t=${dataTimestamp}`}
+                                alt={dish.name}
+                                className="w-12 h-12 object-cover"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="w-12 h-12 bg-gray-100 flex items-center justify-center">
+                                <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5a2.25 2.25 0 002.25-2.25V5.25a2.25 2.25 0 00-2.25-2.25H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
+                                </svg>
+                              </div>
+                            )}
+                            {dish.badge && (
+                              <div className="absolute top-0 left-0 bg-orange-500 text-white text-[9px] font-bold px-1 py-0.5 rounded-br">
+                                {dish.badge}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-sm font-medium text-gray-900 truncate">{dish.name}</h4>
+                              {!dish.available && (
+                                <span className="px-1.5 py-0.5 bg-red-100 text-red-600 text-[10px] font-semibold rounded">
+                                  СТОП
+                                </span>
+                              )}
                             </div>
+                            {dish.description && (
+                              <p className="text-xs text-gray-400 truncate mt-0.5">{dish.description}</p>
+                            )}
+                          </div>
+
+                          {/* Price */}
+                          <div className="flex-shrink-0 text-sm font-semibold text-gray-900 tabular-nums">
+                            {dish.price} {currency}
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <button
+                              onClick={() => handleToggleAvailability(dish.id)}
+                              className={`p-1.5 rounded-lg transition-colors ${!dish.available ? 'text-red-500 hover:bg-red-50' : 'text-green-500 hover:bg-green-50'}`}
+                              title={dish.available ? 'Поставить на стоп' : 'Вернуть в меню'}
+                            >
+                              {dish.available ? (
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                              ) : (
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" /></svg>
+                              )}
+                            </button>
+                            <button
+                              onClick={() => handleEditDish(dish)}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-orange-500 hover:bg-orange-50 transition-colors"
+                              title="Редактировать"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteDish(dish.id)}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                              title="Удалить"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                            </button>
                           </div>
                         </div>
                       ))
