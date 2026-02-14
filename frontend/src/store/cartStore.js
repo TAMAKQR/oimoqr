@@ -5,6 +5,13 @@ export const useCartStore = create(persist((set, get) => ({
   items: [],
   restaurantId: null,
   restaurantName: null,
+  orderMode: null, // 'dine_in' | 'delivery' | null
+  tableNumber: null, // номер стола для заказов в зале
+
+  // Установить режим заказа
+  setOrderMode: (mode, tableNumber = null) => {
+    set({ orderMode: mode, tableNumber });
+  },
 
   // Проверить, принадлежит ли корзина другому ресторану
   isOtherRestaurant: (restaurantId) => {
@@ -14,7 +21,7 @@ export const useCartStore = create(persist((set, get) => ({
 
   // Переключиться на другой ресторан (очищает корзину)
   switchRestaurant: (restaurantId, restaurantName) => {
-    set({ items: [], restaurantId, restaurantName });
+    set({ items: [], restaurantId, restaurantName, orderMode: null, tableNumber: null });
   },
 
   addItem: (dish, modifiers = [], restaurantId = null, restaurantName = null) => {
@@ -82,7 +89,7 @@ export const useCartStore = create(persist((set, get) => ({
     });
   },
 
-  clearCart: () => set({ items: [], restaurantId: null, restaurantName: null }),
+  clearCart: () => set({ items: [], restaurantId: null, restaurantName: null, orderMode: null, tableNumber: null }),
 
   getTotal: () => {
     const total = get().items.reduce((sum, item) => {

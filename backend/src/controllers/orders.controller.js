@@ -28,7 +28,10 @@ export const createOrder = async (req, res, next) => {
       customerEmail,
       deliveryAddress,
       deliveryLatitude,
-      deliveryLongitude
+      deliveryLongitude,
+      deliveryType,
+      tableNumber,
+      paymentMethod
     } = req.body;
 
     if (!restaurantId || !items || total === undefined) {
@@ -68,6 +71,9 @@ export const createOrder = async (req, res, next) => {
         deliveryAddress: deliveryAddress || null,
         deliveryLatitude: deliveryLatitude ? parseFloat(deliveryLatitude) : null,
         deliveryLongitude: deliveryLongitude ? parseFloat(deliveryLongitude) : null,
+        deliveryType: deliveryType || 'delivery',
+        tableNumber: tableNumber || null,
+        paymentMethod: paymentMethod || 'cash',
         items: {
           create: validItems.map(item => ({
             dishId: item.id,

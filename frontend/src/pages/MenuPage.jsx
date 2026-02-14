@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { restaurantService } from '../services/restaurantService';
 import customerService from '../services/customerService';
+import { useCartStore } from '../store/cartStore';
 import BannerSlider from '../components/BannerSlider';
 import DishCard from '../components/DishCard';
 import Cart from '../components/Cart';
@@ -123,6 +124,9 @@ const getCurrencySymbol = (currencyCode) => {
 const MenuPage = () => {
   const { subdomain } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const tableFromUrl = searchParams.get('table');
+  const setOrderMode = useCartStore((state) => state.setOrderMode);
   const { setTheme, themes, setCustomColors } = useTheme();
   const [restaurant, setRestaurant] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -179,6 +183,13 @@ const MenuPage = () => {
   useEffect(() => {
     setIsCustomerLoggedIn(customerService.isAuthenticated());
   }, []);
+
+  // Определяем режим: заказ в зале (?table=X) или доставка
+  useEffect(() => {
+    if (tableFromUrl) {
+      setOrderMode('dine_in', tableFromUrl);
+    }
+  }, [tableFromUrl, setOrderMode]);
 
   useEffect(() => {
     if (isSearchOpen && searchInputRef.current) {
