@@ -702,7 +702,7 @@ export const getPricingTiers = async (req, res, next) => {
 
 export const createPricingTier = async (req, res, next) => {
   try {
-    const { name, price, description, features, maxRestaurants, order } = req.body;
+    const { name, price, description, features, maxRestaurants, businessType, order } = req.body;
 
     if (!name || price === undefined) {
       return res.status(400).json({ error: 'Name and price are required' });
@@ -719,6 +719,7 @@ export const createPricingTier = async (req, res, next) => {
         description,
         features,
         maxRestaurants: maxRestaurants ? parseInt(maxRestaurants) : null,
+        businessType: businessType || 'RESTAURANT',
         order: order || 0
       }
     });
@@ -735,7 +736,7 @@ export const createPricingTier = async (req, res, next) => {
 export const updatePricingTier = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, price, description, features, maxRestaurants, order, isActive } = req.body;
+    const { name, price, description, features, maxRestaurants, businessType, order, isActive } = req.body;
 
     if (!name || price === undefined) {
       return res.status(400).json({ error: 'Name and price are required' });
@@ -753,6 +754,7 @@ export const updatePricingTier = async (req, res, next) => {
         description,
         features,
         maxRestaurants: maxRestaurants ? parseInt(maxRestaurants) : null,
+        businessType: businessType || 'RESTAURANT',
         order: order || 0,
         isActive
       }
