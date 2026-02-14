@@ -633,18 +633,18 @@ const DashboardPage = () => {
                 <div className="bg-white p-2 rounded-lg border border-gray-200">
                   <QRCodeSVG
                     id="dashboard-general-qr"
-                    value={`${window.location.origin}/menu/${getSelectedRestaurant().subdomain}`}
+                    value={`${window.location.origin}/${getSelectedRestaurant()?.businessType === 'ONLINE_STORE' ? 'shop' : 'menu'}/${getSelectedRestaurant().subdomain}`}
                     size={80}
                     level="M"
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-500 mb-1">QR-код меню</p>
-                  <p className="text-xs text-gray-400 truncate">{window.location.origin}/menu/{getSelectedRestaurant().subdomain}</p>
+                  <p className="text-xs text-gray-500 mb-1">{getSelectedRestaurant()?.businessType === 'ONLINE_STORE' ? 'QR-код магазина' : 'QR-код меню'}</p>
+                  <p className="text-xs text-gray-400 truncate">{window.location.origin}/{getSelectedRestaurant()?.businessType === 'ONLINE_STORE' ? 'shop' : 'menu'}/{getSelectedRestaurant().subdomain}</p>
                   <button
                     onClick={() => {
                       const printWindow = window.open('', '_blank');
-                      const url = `${window.location.origin}/menu/${getSelectedRestaurant().subdomain}`;
+                      const url = `${window.location.origin}/${getSelectedRestaurant()?.businessType === 'ONLINE_STORE' ? 'shop' : 'menu'}/${getSelectedRestaurant().subdomain}`;
                       const qrSvg = document.getElementById('dashboard-general-qr');
                       printWindow.document.write(`
                         <html><head><title>QR - ${getSelectedRestaurant().name}</title>
