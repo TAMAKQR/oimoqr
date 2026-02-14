@@ -5,12 +5,14 @@ import customerService from '../services/customerService';
 import { cacheBustImage } from '../utils/imageCache';
 import ImageWithLoader from './ImageWithLoader';
 
-const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteToggle, onModalStateChange }) => {
+const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteToggle, onModalStateChange, restaurantId, restaurantName }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [isFavorite, setIsFavorite] = useState(Boolean(dish?.isFavorite));
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const addItem = useCartStore((state) => state.addItem);
+  const isOtherRestaurant = useCartStore((state) => state.isOtherRestaurant);
+  const switchRestaurant = useCartStore((state) => state.switchRestaurant);
   const isAvailable = dish.isAvailable !== false; // По умолчанию true если поле отсутствует
   const hasModifiers = dish.modifiers && dish.modifiers.length > 0;
 
@@ -83,13 +85,22 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
 
     const dishPrice = parseFloat(dish.price) || 0;
 
+    // Проверяем, не из другого ли ресторана
+    if (restaurantId && isOtherRestaurant(restaurantId)) {
+      if (window.confirm('В корзине блюда из другого ресторана. Очистить корзину и добавить это блюдо?')) {
+        switchRestaurant(restaurantId, restaurantName);
+      } else {
+        return;
+      }
+    }
+
     // Если есть модификаторы ИЛИ цена блюда = 0 (обязательный выбор модификаторов) - открываем модальное окно
     if (hasModifiers || dishPrice === 0) {
       setIsModalOpen(true);
     } else {
       // Если нет модификаторов И цена > 0 - сразу добавляем в корзину с анимацией
       setIsAdding(true);
-      addItem(dish, []);
+      addItem(dish, [], restaurantId, restaurantName);
 
       // Сбрасываем анимацию через 600ms (время вращения)
       setTimeout(() => {
@@ -282,7 +293,8 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
           isFavorite={isFavorite}
           onToggleFavorite={toggleFavorite}
           favoriteLoading={favoriteLoading}
-          
+          restaurantId={restaurantId}
+          restaurantName={restaurantName}
         />
       </>
     );
@@ -401,7 +413,8 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
           isFavorite={isFavorite}
           onToggleFavorite={toggleFavorite}
           favoriteLoading={favoriteLoading}
-          
+          restaurantId={restaurantId}
+          restaurantName={restaurantName}
         />
       </>
     );
@@ -533,7 +546,8 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
           isFavorite={isFavorite}
           onToggleFavorite={toggleFavorite}
           favoriteLoading={favoriteLoading}
-          
+          restaurantId={restaurantId}
+          restaurantName={restaurantName}
         />
       </>
     );
@@ -674,7 +688,8 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
         isFavorite={isFavorite}
         onToggleFavorite={toggleFavorite}
         favoriteLoading={favoriteLoading}
-        
+        restaurantId={restaurantId}
+        restaurantName={restaurantName}
       />
     </>
   );

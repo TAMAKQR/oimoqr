@@ -3,9 +3,29 @@ import { persist } from 'zustand/middleware';
 
 export const useCartStore = create(persist((set, get) => ({
   items: [],
+  restaurantId: null,
+  restaurantName: null,
 
-  addItem: (dish, modifiers = []) => {
-    const items = get().items;
+  // Проверить, принадлежит ли корзина другому ресторану
+  isOtherRestaurant: (restaurantId) => {
+    const current = get().restaurantId;
+    return current && current !== restaurantId && get().items.length > 0;
+  },
+
+  // Переключиться на другой ресторан (очищает корзину)
+  switchRestaurant: (restaurantId, restaurantName) => {
+    set({ items: [], restaurantId, restaurantName });
+  },
+
+  addItem: (dish, modifiers = [], restaurantId = null, restaurantName = null) => {
+    const state = get();
+    const items = state.items;
+
+    // Если корзина пуста — запомнить ресторан
+    if (items.length === 0 && restaurantId) {
+      set({ restaurantId, restaurantName });
+    }
+
     // Защита от undefined/null модификаторов
     const safeModifiers = Array.isArray(modifiers) ? modifiers : [];
     const itemId = `${dish.id}-${safeModifiers.map(m => m.id).join('-')}`;
@@ -62,7 +82,7 @@ export const useCartStore = create(persist((set, get) => ({
     });
   },
 
-  clearCart: () => set({ items: [] }),
+  clearCart: () => set({ items: [], restaurantId: null, restaurantName: null }),
 
   getTotal: () => {
     const total = get().items.reduce((sum, item) => {
