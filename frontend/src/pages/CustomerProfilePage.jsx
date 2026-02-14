@@ -562,6 +562,7 @@ function OrdersTab({ orders }) {
             const commentText = comment ? ` (${comment})` : '';
             return `${labelText}${main}${parts ? ' | ' + parts : ''}${commentText}`;
         }
+        if (order.deliveryType === 'dine_in') return order.tableNumber ? `Стол ${order.tableNumber}` : 'В зале';
         return order.deliveryAddress || (order.deliveryType === 'pickup' ? 'Самовывоз' : '—');
     };
 
@@ -637,7 +638,7 @@ function OrdersTab({ orders }) {
                             <span className="text-sm text-gray-600">{order.restaurant?.name}</span>
                             <span className="text-lg font-semibold text-gray-900">{order.totalAmount} {getCurrencySymbol(order.restaurant?.currency || 'RUB')}</span>
                         </div>
-                        <div className="text-xs text-gray-600">Способ: {order.deliveryType === 'pickup' ? 'Самовывоз' : 'Доставка'} · Оплата: {order.paymentMethod === 'card' ? 'Картой' : 'Наличные'}</div>
+                        <div className="text-xs text-gray-600">Способ: {order.deliveryType === 'dine_in' ? '🍽️ В зале' : order.deliveryType === 'pickup' ? '🏃 Самовывоз' : '🚗 Доставка'}{order.deliveryType !== 'dine_in' ? ` · Оплата: ${order.paymentMethod === 'card' ? 'Картой' : 'Наличные'}` : ''}</div>
                         <div className="text-xs text-gray-700">Адрес: {formatAddress(order)}</div>
                         <div className="text-sm font-semibold text-gray-900 mt-1">Итого: {order.totalAmount} {getCurrencySymbol(order.restaurant?.currency || 'RUB')}</div>
                     </div>
