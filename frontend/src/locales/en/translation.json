@@ -20,7 +20,7 @@
     "language": "Language"
   },
   "home": {
-    "cta": "Try Free for 7 Days",
+    "cta": "Start Free",
     "nav": {
       "features": "Features",
       "solutions": "Solutions",
@@ -28,21 +28,26 @@
       "pricing": "Pricing"
     },
     "hero": {
-      "badge": "#1 QR Menu Platform in Central Asia",
-      "title": "Digital Menu for Your Business",
-      "subtitle": "Create a modern QR menu in 5 minutes. Restaurants, stores, and hotels — all in one platform. No coding required.",
-      "demo": "How It Works"
+      "badge": "Launch in 5 minutes — no code",
+      "titleStart": "Your menu.",
+      "titleHighlight": "Digital.",
+      "titleEnd": "On your customer's phone.",
+      "subtitle": "QR menus, online storefronts, and room service — one platform for restaurants, stores, and hotels. Orders via WhatsApp.",
+      "demo": "Watch demo",
+      "trust": "businesses already with us"
     },
     "stats": {
       "businesses": "businesses",
       "scans": "scans",
-      "minutes": "min to launch"
+      "minutes": "min to launch",
+      "uptime": "uptime"
     },
     "business": {
       "title": "One Platform — Three Solutions",
       "subtitle": "OimoQR adapts to your business type",
       "restaurant": {
         "title": "Restaurants & Cafés",
+        "tag": "QR Menu",
         "desc": "QR menu on every table. Guests scan — see the menu, order via WhatsApp.",
         "point1": "QR code for each table",
         "point2": "Orders directly to WhatsApp",
@@ -50,6 +55,7 @@
       },
       "store": {
         "title": "Online Stores",
+        "tag": "Catalog",
         "desc": "Product catalog with cart and checkout via WhatsApp.",
         "point1": "Product catalog with photos",
         "point2": "Cart and order placement",
@@ -57,6 +63,7 @@
       },
       "hotel": {
         "title": "Hotels & Hospitality",
+        "tag": "Room Service",
         "desc": "QR menu for room service. QR code in every room — guests order without calling.",
         "point1": "QR code for each room",
         "point2": "Room service via WhatsApp",
@@ -67,73 +74,78 @@
       "title": "Everything Your Business Needs",
       "subtitle": "Powerful tools in a simple interface",
       "qrmenu": "QR Menu",
-      "qrmenuDesc": "Guests scan the QR code and see your menu on their phones. Beautiful, fast, no app needed.",
+      "qrmenuDesc": "Guests scan the QR code and see your menu on their phone. Beautiful, fast, no app needed.",
       "whatsapp": "WhatsApp Orders",
-      "whatsappDesc": "Customers place orders directly from the menu and send to your WhatsApp in one tap.",
+      "whatsappDesc": "Customers pick items and send the order to your WhatsApp in one tap.",
       "realtime": "Instant Updates",
-      "realtimeDesc": "Change prices, dishes, and descriptions in real-time. No more reprinting menus.",
+      "realtimeDesc": "Change prices, dishes, and descriptions in real-time. No more reprinting.",
       "customization": "Branding",
-      "customizationDesc": "Your colors, logo, banners, and subdomain. The menu looks like part of your brand.",
+      "customizationDesc": "Your colors, logo, banners, and subdomain. The menu is part of your brand.",
       "analytics": "Analytics",
-      "analyticsDesc": "Track scan counts, popular dishes, and customer activity.",
-      "multilang": "Multilingual",
-      "multilangDesc": "Interface in Russian, English, Kyrgyz, and Turkish. Reach more customers."
+      "analyticsDesc": "Popular dishes, scan counts, and customer activity at a glance.",
+      "multilang": "4 Languages",
+      "multilangDesc": "Russian, English, Kyrgyz, and Turkish. Reach more customers."
     },
     "how": {
-      "title": "Launch in 3 Steps",
-      "subtitle": "From sign-up to first order — less than 5 minutes",
+      "title": "Three Steps to Your First Order",
+      "subtitle": "From sign-up to a live QR menu — less than 5 minutes",
+      "stepLabel": "STEP",
       "step1": {
         "title": "Sign Up",
-        "desc": "Create an account and select your business type. Get 7 days free."
+        "desc": "Create an account and select your business type. 7 days free."
       },
       "step2": {
         "title": "Add Your Menu",
-        "desc": "Upload photos, set prices, and organize categories. All from a simple dashboard."
+        "desc": "Photos, prices, categories — all from a simple dashboard."
       },
       "step3": {
-        "title": "Share Your QR",
-        "desc": "Print the QR code and place it on tables, at the counter, or in rooms."
+        "title": "Print Your QR",
+        "desc": "Place the QR code on tables, at the counter, or in rooms. Done."
       }
     },
     "capabilities": {
-      "title": "Complete Toolkit",
+      "tag": "Toolkit",
+      "title": "Complete Menu Management",
       "banner": "Banner slider for promotions and special offers",
       "categories": "Categories with photos and descriptions",
       "modifiers": "Modifiers (sizes, add-ons, sauces)",
       "social": "Integration with Instagram, Telegram, Facebook",
       "subdomain": "Unique subdomain for your business",
-      "trial": "7 days of free trial period"
+      "trial": "7 days of free trial period",
+      "promoPreview": "-20% Sale"
     },
     "faq": {
       "title": "Frequently Asked Questions",
       "faq1": {
-        "q": "Do I need technical skills to set up?",
-        "a": "No. The interface is intuitive — just add dishes, upload photos, and print the QR code. Anyone can do it."
+        "q": "Do I need technical skills?",
+        "a": "No. Just add dishes, upload photos, and print the QR code. Anyone can do it."
       },
       "faq2": {
         "q": "How do customers place orders?",
-        "a": "The customer scans the QR code, selects items from the menu, and taps 'Order'. The order is automatically sent to your WhatsApp."
+        "a": "Scan QR → pick items → tap 'Order'. The order goes to your WhatsApp automatically."
       },
       "faq3": {
-        "q": "Can I try it for free?",
-        "a": "Yes! When you sign up, you get 7 days of free trial with full access to all features."
+        "q": "Is there a free trial?",
+        "a": "Yes, 7 days of full access to all features. No card required."
       },
       "faq4": {
-        "q": "Do you support multiple languages?",
-        "a": "Yes, the interface is available in Russian, English, Kyrgyz, and Turkish."
+        "q": "What languages are supported?",
+        "a": "Russian, English, Kyrgyz, and Turkish. We're adding more."
       },
       "faq5": {
-        "q": "Can I use this for a store instead of a restaurant?",
-        "a": "Absolutely! OimoQR supports restaurants, online stores, and hotels. Choose your business type when signing up."
+        "q": "Can I use it for a store or hotel?",
+        "a": "Yes! OimoQR works with restaurants, online stores, and hotels. Pick your type when signing up."
       }
     },
     "finalCta": {
       "title": "Ready to Digitize Your Business?",
-      "subtitle": "Join hundreds of businesses already using OimoQR"
+      "subtitle": "Join hundreds of companies already using OimoQR"
     },
     "footer": {
-      "tagline": "Digital menu for your business",
-      "copy": "© 2026 OimoQR. All rights reserved."
+      "tagline": "QR menus and online orders for any business. Fast, simple, beautiful.",
+      "copy": "© 2026 OimoQR. All rights reserved.",
+      "product": "Product",
+      "getStarted": "Get Started"
     }
   },
   "auth": {
