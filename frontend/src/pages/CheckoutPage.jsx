@@ -235,7 +235,7 @@ const CheckoutPage = () => {
                                     <div className="flex items-center gap-3 p-3 bg-primary-50 rounded-lg border-2 border-primary-600">
                                         <div className="text-3xl">🍽️</div>
                                         <div>
-                                            <div className="font-semibold text-base">Стол {tableNumber}</div>
+                                            <div className="font-semibold text-base">{tableNumber ? `Стол ${tableNumber}` : 'Заказ в зале'}</div>
                                             <div className="text-xs text-gray-500">Заказ будет отправлен на кухню</div>
                                         </div>
                                     </div>

@@ -126,6 +126,7 @@ const MenuPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const tableFromUrl = searchParams.get('table');
+  const dineInParam = searchParams.has('dine_in');
   const setOrderMode = useCartStore((state) => state.setOrderMode);
   const { setTheme, themes, setCustomColors } = useTheme();
   const [restaurant, setRestaurant] = useState(null);
@@ -184,12 +185,14 @@ const MenuPage = () => {
     setIsCustomerLoggedIn(customerService.isAuthenticated());
   }, []);
 
-  // Определяем режим: заказ в зале (?table=X) или доставка
+  // Определяем режим: заказ в зале (?table=X или ?dine_in) или доставка
   useEffect(() => {
     if (tableFromUrl) {
       setOrderMode('dine_in', tableFromUrl);
+    } else if (dineInParam) {
+      setOrderMode('dine_in', null);
     }
-  }, [tableFromUrl, setOrderMode]);
+  }, [tableFromUrl, dineInParam, setOrderMode]);
 
   useEffect(() => {
     if (isSearchOpen && searchInputRef.current) {
