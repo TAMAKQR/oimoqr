@@ -154,7 +154,7 @@ const RegisterPage = () => {
               value={formData.restaurantName}
               onChange={handleChange}
               className="input-field"
-              placeholder="Например: Кафе, Магазин, Отель..."
+              placeholder="Например: Пиццерия 'Мамино'"
               required
             />
           </div>
