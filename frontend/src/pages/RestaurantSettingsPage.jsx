@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { restaurantService } from '../services/restaurantService';
@@ -12,6 +12,7 @@ import ImageUploader from '../components/ImageUploader';
 import { compressImage, formatFileSize, validateImage, shouldCompress } from '../utils/imageCompression';
 import { useUserData } from '../hooks/useUserData';
 import { useSelectedRestaurant } from '../hooks/useSelectedRestaurant';
+import { QRCodeSVG } from 'qrcode.react';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -49,6 +50,10 @@ const RestaurantSettingsPage = () => {
   // Telegram settings
   const [telegramGroupId, setTelegramGroupId] = useState('');
   const [testingTelegram, setTestingTelegram] = useState(false);
+
+  // QR code settings
+  const [qrTableCount, setQrTableCount] = useState(5);
+  const qrContainerRef = useRef(null);
 
   // Максимальный размер файла (10MB)
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB в байтах
@@ -977,6 +982,83 @@ const RestaurantSettingsPage = () => {
               </div>
             </div>
           </div>
+
+          {/* QR Codes for Tables */}
+          {getSelectedRestaurant()?.subdomain && (
+            <div className="bg-white rounded-xl border border-gray-100 p-5">
+              <h2 className="text-xl font-bold mb-2">QR-коды для столов</h2>
+              <p className="text-sm text-gray-600 mb-4">
+                Распечатайте QR-коды и разместите на столах. Клиенты отсканируют код и сразу попадут в меню с привязкой к столу.
+              </p>
+
+              <div className="flex items-center gap-3 mb-4">
+                <label className="text-sm font-medium text-gray-700">Количество столов:</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={qrTableCount}
+                  onChange={(e) => setQrTableCount(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
+                  className="input w-20 text-center"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const container = qrContainerRef.current;
+                    if (!container) return;
+                    const printWindow = window.open('', '_blank');
+                    printWindow.document.write(`
+                      <html><head><title>QR коды — ${getSelectedRestaurant().name}</title>
+                      <style>
+                        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+                        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+                        .card { border: 2px solid #e5e7eb; border-radius: 12px; padding: 20px; text-align: center; page-break-inside: avoid; }
+                        .card h3 { margin: 12px 0 4px; font-size: 18px; }
+                        .card p { margin: 0; font-size: 12px; color: #6b7280; }
+                        @media print { .grid { grid-template-columns: repeat(3, 1fr); } }
+                      </style></head><body>
+                      <div class="grid">${container.innerHTML}</div>
+                      </body></html>
+                    `);
+                    printWindow.document.close();
+                    printWindow.focus();
+                    setTimeout(() => { printWindow.print(); }, 300);
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18.75 12h.008v.008h-.008V12zm-2.25 0h.008v.008H16.5V12z" />
+                  </svg>
+                  Печать
+                </button>
+              </div>
+
+              <div ref={qrContainerRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {Array.from({ length: qrTableCount }, (_, i) => i + 1).map(tableNum => {
+                  const menuUrl = `${window.location.origin}/menu/${getSelectedRestaurant().subdomain}?table=${tableNum}`;
+                  return (
+                    <div key={tableNum} className="card border border-gray-200 rounded-xl p-4 text-center hover:shadow-md transition-shadow">
+                      <QRCodeSVG
+                        value={menuUrl}
+                        size={120}
+                        level="M"
+                        includeMargin={false}
+                        className="mx-auto"
+                      />
+                      <h3 className="font-bold text-lg mt-3 text-gray-900">Стол {tableNum}</h3>
+                      <p className="text-xs text-gray-500 mt-1 break-all">{menuUrl}</p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  💡 <strong>Совет:</strong> Нажмите «Печать» чтобы распечатать все QR-коды. Каждый код привязан к номеру стола — заказ клиента сразу покажет стол.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Working Hours */}
           <div className="bg-white rounded-xl border border-gray-100 p-5">

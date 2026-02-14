@@ -191,6 +191,9 @@ const MenuPage = () => {
       setOrderMode('dine_in', tableFromUrl);
     } else if (dineInParam) {
       setOrderMode('dine_in', null);
+    } else {
+      // Сбрасываем режим dine_in если нет параметров в URL
+      setOrderMode(null, null);
     }
   }, [tableFromUrl, dineInParam, setOrderMode]);
 

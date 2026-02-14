@@ -18,7 +18,7 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
   const total = getTotal();
   const itemCount = getItemCount();
   const minAmount = restaurant?.minOrderAmount;
-  const isBelowMinimum = minAmount && total < minAmount;
+  const isBelowMinimum = orderMode !== 'dine_in' && minAmount && total < minAmount;
 
   const [isTrackVisible, setIsTrackVisible] = useState(false);
 
