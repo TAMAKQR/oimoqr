@@ -70,8 +70,8 @@ const PricingPage = () => {
                         <button
                             onClick={() => setActiveTab('RESTAURANT')}
                             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'RESTAURANT'
-                                    ? 'bg-white text-gray-900 shadow-sm'
-                                    : 'text-gray-500 hover:text-gray-700'
+                                ? 'bg-white text-gray-900 shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700'
                                 }`}
                         >
                             🍽 Рестораны
@@ -79,11 +79,20 @@ const PricingPage = () => {
                         <button
                             onClick={() => setActiveTab('ONLINE_STORE')}
                             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'ONLINE_STORE'
-                                    ? 'bg-white text-gray-900 shadow-sm'
-                                    : 'text-gray-500 hover:text-gray-700'
+                                ? 'bg-white text-gray-900 shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700'
                                 }`}
                         >
                             🛍 Магазины
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('HOTEL')}
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'HOTEL'
+                                ? 'bg-white text-gray-900 shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                        >
+                            🏨 Отели
                         </button>
                     </div>
                 </div>

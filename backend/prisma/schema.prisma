@@ -45,7 +45,7 @@ model Restaurant {
   defaultLanguage   String    @default("ru")
   
   // Business type
-  businessType      String    @default("RESTAURANT") // RESTAURANT | ONLINE_STORE
+  businessType      String    @default("RESTAURANT") // RESTAURANT | ONLINE_STORE | HOTEL
   
   // Geolocation fields
   latitude          Float?
@@ -407,7 +407,7 @@ model PricingTier {
   description       String?
   features          String?
   maxRestaurants    Int?
-  businessType      String    @default("RESTAURANT") // RESTAURANT | ONLINE_STORE | ALL
+  businessType      String    @default("RESTAURANT") // RESTAURANT | ONLINE_STORE | HOTEL | ALL
   order             Int       @default(0)
   isActive          Boolean   @default(true)
   

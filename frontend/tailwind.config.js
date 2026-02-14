@@ -4,6 +4,12 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  safelist: [
+    // Dynamic business type colors
+    'border-blue-500', 'bg-blue-50',
+    'border-purple-500', 'bg-purple-50',
+    'border-green-500', 'bg-green-50',
+  ],
   theme: {
     extend: {
       colors: {
