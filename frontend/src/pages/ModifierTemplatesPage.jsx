@@ -1,19 +1,17 @@
 import { useState, useEffect } from 'react';
-import { authService } from '../services/authService';
 import DashboardLayout from '../components/DashboardLayout';
 import modifierTemplateService from '../services/modifierTemplateService';
 import toast from 'react-hot-toast';
 import { confirmDialog } from '../utils/confirmDialog';
 import RestaurantSelector from '../components/RestaurantSelector';
+import { useUserData } from '../hooks/useUserData';
+import { useSelectedRestaurant } from '../hooks/useSelectedRestaurant';
 
 const ModifierTemplatesPage = () => {
+    const { userData, loading: pageLoading } = useUserData();
+    const { selectedRestaurantId, setSelectedRestaurantId, selectedRestaurant } = useSelectedRestaurant(userData);
     const [templates, setTemplates] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [pageLoading, setPageLoading] = useState(true);
-    const [userData, setUserData] = useState(null);
-    const [selectedRestaurantId, setSelectedRestaurantId] = useState(() => {
-        return localStorage.getItem('selectedRestaurantId') || null;
-    });
     const [showModal, setShowModal] = useState(false);
     const [editingTemplate, setEditingTemplate] = useState(null);
     const [syncingId, setSyncingId] = useState(null);
@@ -27,38 +25,6 @@ const ModifierTemplatesPage = () => {
     });
 
     useEffect(() => {
-        loadUserData();
-    }, []);
-
-    useEffect(() => {
-        if (!userData) return;
-
-        const allRestaurants = [
-            ...(userData.restaurants || []),
-            ...(userData.restaurantStaff?.map((s) => s.restaurant) || [])
-        ];
-
-        if (allRestaurants.length === 0) {
-            setSelectedRestaurantId(null);
-            localStorage.removeItem('selectedRestaurantId');
-            return;
-        }
-
-        const savedRestaurantId = localStorage.getItem('selectedRestaurantId');
-        const savedExists = savedRestaurantId && allRestaurants.some((r) => r.id === savedRestaurantId);
-
-        if (savedExists) {
-            if (selectedRestaurantId !== savedRestaurantId) {
-                setSelectedRestaurantId(savedRestaurantId);
-            }
-        } else if (!selectedRestaurantId || !allRestaurants.some((r) => r.id === selectedRestaurantId)) {
-            const firstRestaurantId = allRestaurants[0].id;
-            setSelectedRestaurantId(firstRestaurantId);
-            localStorage.setItem('selectedRestaurantId', firstRestaurantId);
-        }
-    }, [userData, selectedRestaurantId]);
-
-    useEffect(() => {
         if (selectedRestaurantId) {
             loadTemplates();
         } else {
@@ -66,44 +32,7 @@ const ModifierTemplatesPage = () => {
         }
     }, [selectedRestaurantId]);
 
-    const loadUserData = async () => {
-        try {
-            setPageLoading(true);
-            const data = await authService.getMe();
-            setUserData(data);
-
-            const allRestaurants = [
-                ...(data.restaurants || []),
-                ...(data.restaurantStaff?.map((s) => s.restaurant) || [])
-            ];
-
-            if (allRestaurants.length > 0) {
-                const savedRestaurantId = localStorage.getItem('selectedRestaurantId');
-                const savedExists = savedRestaurantId && allRestaurants.some((r) => r.id === savedRestaurantId);
-                const targetId = savedExists ? savedRestaurantId : allRestaurants[0].id;
-                setSelectedRestaurantId(targetId);
-                localStorage.setItem('selectedRestaurantId', targetId);
-            } else {
-                setSelectedRestaurantId(null);
-                localStorage.removeItem('selectedRestaurantId');
-            }
-        } catch (error) {
-            console.error('Error loading user data:', error);
-            toast.error('Не удалось загрузить данные профиля');
-        } finally {
-            setPageLoading(false);
-        }
-    };
-
-    const getSelectedRestaurant = () => {
-        if (!userData || !selectedRestaurantId) return null;
-
-        const owned = userData.restaurants?.find((r) => r.id === selectedRestaurantId);
-        if (owned) return owned;
-
-        const staffRestaurant = userData.restaurantStaff?.find((s) => s.restaurant.id === selectedRestaurantId);
-        return staffRestaurant?.restaurant || null;
-    };
+    const getSelectedRestaurant = () => selectedRestaurant;
 
     const currency = getSelectedRestaurant()?.currency || 'KGS';
 

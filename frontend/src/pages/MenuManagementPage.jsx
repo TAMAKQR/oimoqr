@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { authService } from '../services/authService';
 import { menuService } from '../services/menuService';
 import { restaurantService } from '../services/restaurantService';
 import modifierTemplateService from '../services/modifierTemplateService';
@@ -12,18 +11,16 @@ import RestaurantSelector from '../components/RestaurantSelector';
 import DashboardLayout from '../components/DashboardLayout';
 import CategoryGroupsModal from '../components/CategoryGroupsModal';
 import ImageWithLoader from '../components/ImageWithLoader';
+import { useUserData } from '../hooks/useUserData';
+import { useSelectedRestaurant } from '../hooks/useSelectedRestaurant';
 
 const MenuManagementPage = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
-  const [userData, setUserData] = useState(null);
-  const [selectedRestaurantId, setSelectedRestaurantId] = useState(() => {
-    // Восстанавливаем последний выбранный ресторан из localStorage
-    return localStorage.getItem('selectedRestaurantId') || null;
-  });
+  const { userData, loading, refresh: refreshUserData } = useUserData();
+  const { selectedRestaurantId, setSelectedRestaurantId, selectedRestaurant } = useSelectedRestaurant(userData);
   const [categories, setCategories] = useState([]);
   const [dishes, setDishes] = useState({});
-  const [loading, setLoading] = useState(true);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showDishModal, setShowDishModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
@@ -41,58 +38,11 @@ const MenuManagementPage = () => {
   const [dragOverDishId, setDragOverDishId] = useState(null);
   const [showCategoryGroupsModal, setShowCategoryGroupsModal] = useState(false);
   const [categoryGroups, setCategoryGroups] = useState([]);
-  const [dataTimestamp, setDataTimestamp] = useState(Date.now()); // Для cache-busting изображений
+  const [dataTimestamp, setDataTimestamp] = useState(Date.now());
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  // Автоматически выбираем ресторан при загрузке (handled by useSelectedRestaurant)
 
-  // Автоматически выбираем ресторан при загрузке
-  useEffect(() => {
-    if (userData && (userData.restaurants?.length > 0 || userData.restaurantStaff?.length > 0)) {
-      const allRestaurants = [
-        ...(userData.restaurants || []),
-        ...(userData.restaurantStaff?.map(s => s.restaurant) || [])
-      ];
-
-      if (allRestaurants.length > 0) {
-        // Проверяем есть ли сохраненный ресторан в доступных
-        const savedRestaurantId = localStorage.getItem('selectedRestaurantId');
-        const savedRestaurantExists = savedRestaurantId && allRestaurants.some(r => r.id === savedRestaurantId);
-
-        if (savedRestaurantExists) {
-          // Если сохраненный ресторан существует - используем его
-          setSelectedRestaurantId(savedRestaurantId);
-        } else if (!selectedRestaurantId) {
-          // Если нет сохраненного или он недоступен - выбираем первый
-          const firstRestaurantId = allRestaurants[0].id;
-          setSelectedRestaurantId(firstRestaurantId);
-          localStorage.setItem('selectedRestaurantId', firstRestaurantId);
-        }
-      }
-    }
-  }, [userData]);
-
-  const getSelectedRestaurant = () => {
-    if (!userData || !selectedRestaurantId) return null;
-
-    const owned = userData.restaurants?.find(r => r.id === selectedRestaurantId);
-    if (owned) return owned;
-
-    const staff = userData.restaurantStaff?.find(s => s.restaurant.id === selectedRestaurantId);
-    return staff?.restaurant || null;
-  };
-
-  const loadData = async () => {
-    try {
-      const data = await authService.getMe();
-      setUserData(data);
-    } catch (err) {
-      console.error('Error loading data:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const getSelectedRestaurant = () => selectedRestaurant;
 
   const loadCategories = async (restaurantId) => {
     try {

@@ -79,7 +79,7 @@ export const createOrder = async (req, res, next) => {
             dishId: item.id,
             quantity: parseInt(item.quantity, 10),
             price: item.price ?? 0, // Цена за единицу на момент заказа, с fallback на 0
-            selectedModifiers: item.selectedModifiers ? JSON.stringify(item.selectedModifiers) : undefined
+            selectedModifiers: item.selectedModifiers?.length > 0 ? item.selectedModifiers : undefined
           }))
         }
       },
@@ -137,8 +137,10 @@ export const getOrdersByRestaurant = async (req, res, next) => {
       orderBy: { createdAt: 'desc' },
       include: {
         items: {
-          select: {
-            id: true // Просто чтобы можно было посчитать количество
+          include: {
+            dish: {
+              select: { id: true, name: true, price: true, image: true }
+            }
           }
         }
       }

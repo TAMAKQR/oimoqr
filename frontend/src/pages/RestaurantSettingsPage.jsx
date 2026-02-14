@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { authService } from '../services/authService';
 import { restaurantService } from '../services/restaurantService';
 import toast from 'react-hot-toast';
 import { confirmDialog } from '../utils/confirmDialog';
@@ -11,18 +10,16 @@ import ThemeSwitcher from '../components/ThemeSwitcher';
 import ImageWithLoader from '../components/ImageWithLoader';
 import ImageUploader from '../components/ImageUploader';
 import { compressImage, formatFileSize, validateImage, shouldCompress } from '../utils/imageCompression';
+import { useUserData } from '../hooks/useUserData';
+import { useSelectedRestaurant } from '../hooks/useSelectedRestaurant';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 const RestaurantSettingsPage = () => {
   const navigate = useNavigate();
   const { user, logout, updateUser } = useAuthStore();
-  const [userData, setUserData] = useState(null);
-  const [selectedRestaurantId, setSelectedRestaurantId] = useState(() => {
-    // Восстанавливаем последний выбранный ресторан из localStorage
-    return localStorage.getItem('selectedRestaurantId') || null;
-  });
-  const [loading, setLoading] = useState(true);
+  const { userData, loading, refresh: refreshUserData } = useUserData();
+  const { selectedRestaurantId, setSelectedRestaurantId, selectedRestaurant, isOwner: isOwnerFlag } = useSelectedRestaurant(userData);
   const [saving, setSaving] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -88,10 +85,6 @@ const RestaurantSettingsPage = () => {
   ];
 
   useEffect(() => {
-    loadData();
-  }, []);
-
-  useEffect(() => {
     if (userData && selectedRestaurantId) {
       const restaurant = getSelectedRestaurant();
       if (restaurant) {
@@ -99,33 +92,6 @@ const RestaurantSettingsPage = () => {
       }
     }
   }, [selectedRestaurantId, userData]);
-
-  useEffect(() => {
-    if (userData && (userData.restaurants?.length > 0 || userData.restaurantStaff?.length > 0)) {
-      const allRestaurants = [
-        ...(userData.restaurants || []),
-        ...(userData.restaurantStaff?.map(s => s.restaurant) || [])
-      ];
-
-      if (allRestaurants.length > 0) {
-        // Проверяем есть ли сохраненный ресторан в доступных
-        const savedRestaurantId = localStorage.getItem('selectedRestaurantId');
-        const savedRestaurantExists = savedRestaurantId && allRestaurants.some(r => r.id === savedRestaurantId);
-
-        if (savedRestaurantExists) {
-          // Если сохраненный ресторан существует - используем его
-          if (selectedRestaurantId !== savedRestaurantId) {
-            setSelectedRestaurantId(savedRestaurantId);
-          }
-        } else if (!selectedRestaurantId) {
-          // Если нет сохраненного или он недоступен - выбираем первый
-          const firstRestaurantId = allRestaurants[0].id;
-          setSelectedRestaurantId(firstRestaurantId);
-          localStorage.setItem('selectedRestaurantId', firstRestaurantId);
-        }
-      }
-    }
-  }, [userData]);
 
   // Обработчики выбора файлов (обновлены для работы с ImageUploader)
   const handleBannerFileSelect = (file) => {
@@ -136,33 +102,8 @@ const RestaurantSettingsPage = () => {
     setLogoFile(file);
   };
 
-  const getSelectedRestaurant = () => {
-    if (!userData || !selectedRestaurantId) return null;
-
-    const owned = userData.restaurants?.find(r => r.id === selectedRestaurantId);
-    if (owned) return owned;
-
-    const staff = userData.restaurantStaff?.find(s => s.restaurant.id === selectedRestaurantId);
-    return staff?.restaurant || null;
-  };
-
-  const isOwner = () => {
-    if (!userData || !selectedRestaurantId) return false;
-    return userData.restaurants?.some(r => r.id === selectedRestaurantId) || false;
-  };
-
-  const loadData = async () => {
-    try {
-      const data = await authService.getMe();
-      console.log('✅ Loaded data from API:', data);
-      console.log('✅ Restaurant data:', data.restaurants?.[0]);
-      setUserData(data);
-    } catch (err) {
-      console.error('Error loading data:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const getSelectedRestaurant = () => selectedRestaurant;
+  const isOwner = () => isOwnerFlag;
 
   const loadRestaurantData = async (restaurant) => {
     console.log('📝 Loading restaurant data into form:', restaurant);
@@ -283,7 +224,7 @@ const RestaurantSettingsPage = () => {
       await restaurantService.deleteRestaurant(selectedRestaurantId);
       toast.success('Ресторан успешно удален');
       // Обновляем данные и переходим на dashboard
-      await loadData();
+      await refreshUserData();
       navigate('/dashboard');
     } catch (err) {
       const errorMsg = err.response?.data?.message || err.response?.data?.error || 'Ошибка при удалении ресторана';
@@ -395,7 +336,7 @@ const RestaurantSettingsPage = () => {
       }
 
       toast.success('Настройки сохранены!');
-      await loadData();
+      await refreshUserData();
     } catch (err) {
       toast.error('Ошибка при сохранении настроек');
       console.error(err);

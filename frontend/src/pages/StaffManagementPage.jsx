@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { authService } from '../services/authService';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { confirmDialog } from '../utils/confirmDialog';
 import DashboardLayout from '../components/DashboardLayout';
+import { useUserData } from '../hooks/useUserData';
 
 const StaffManagementPage = () => {
   const navigate = useNavigate();
   const { restaurantId } = useParams();
   const { logout } = useAuthStore();
-  const [userData, setUserData] = useState(null);
+  const { userData } = useUserData();
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -21,23 +21,10 @@ const StaffManagementPage = () => {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    loadUserData();
-  }, []);
-
-  useEffect(() => {
     if (restaurantId) {
       loadStaff();
     }
   }, [restaurantId]);
-
-  const loadUserData = async () => {
-    try {
-      const data = await authService.getMe();
-      setUserData(data);
-    } catch (err) {
-      console.error('Error loading user data:', err);
-    }
-  };
 
   const loadStaff = async () => {
     try {

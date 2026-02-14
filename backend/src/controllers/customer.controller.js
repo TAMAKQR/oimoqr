@@ -527,7 +527,7 @@ export const createCustomerOrder = async (req, res, next) => {
                         dishId: item.id,
                         quantity: parseInt(item.quantity, 10),
                         price: item.price ?? 0,
-                        selectedModifiers: item.selectedModifiers ? JSON.stringify(item.selectedModifiers) : undefined
+                        selectedModifiers: item.selectedModifiers?.length > 0 ? item.selectedModifiers : undefined
                     }))
                 }
             },
