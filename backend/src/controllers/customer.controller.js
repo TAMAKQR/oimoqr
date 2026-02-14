@@ -467,9 +467,9 @@ export const createCustomerOrder = async (req, res, next) => {
             deliveryAddress
         } = req.body;
 
-        if (!restaurantId || !items || total === undefined) {
+        if (!restaurantId || !items || !Array.isArray(items) || items.length === 0 || total === undefined) {
             return res.status(400).json({
-                error: 'restaurantId, items, and total are required'
+                error: 'restaurantId, items (non-empty array), and total are required'
             });
         }
 

@@ -1,9 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useCustomerAuthStore } from '../store/customerAuthStore';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+import api from '../services/api';
 
 export default function CustomerLoginModal({ isOpen, onClose, onLoginSuccess, restaurantId }) {
     const setAuth = useCustomerAuthStore((state) => state.setAuth);
@@ -40,7 +38,7 @@ export default function CustomerLoginModal({ isOpen, onClose, onLoginSuccess, re
 
         setLoading(true);
         try {
-            await axios.post(`${API_URL}/customers/whatsapp/send-code`, {
+            await api.post('/customers/whatsapp/send-code', {
                 phoneNumber,
                 restaurantId
             });
@@ -70,7 +68,7 @@ export default function CustomerLoginModal({ isOpen, onClose, onLoginSuccess, re
 
         setLoading(true);
         try {
-            const response = await axios.post(`${API_URL}/customers/whatsapp/verify-code`, {
+            const response = await api.post('/customers/whatsapp/verify-code', {
                 phoneNumber,
                 code: fullCode,
                 restaurantId

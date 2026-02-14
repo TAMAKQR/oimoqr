@@ -127,9 +127,9 @@ const CheckoutPage = () => {
             toast.success('Заказ оформлен');
             const orderId = response?.data?.order?.id || response?.data?.id;
             if (orderId) {
-                navigate(`/orders/${orderId}`);
+                navigate(`/customer/orders/${orderId}`);
             } else {
-                navigate(-1);
+                navigate('/customer/orders');
             }
         } catch (error) {
             console.error('Failed to place order', error);
