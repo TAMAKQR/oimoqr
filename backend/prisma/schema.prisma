@@ -361,6 +361,7 @@ model Order {
   notes             String?
   deliveryType      String    @default("delivery")
   paymentMethod     String    @default("cash")
+  tableNumber       String?   // Номер стола для заказов в зале (dine_in)
   customerAddressId String?
   customerAddress   CustomerAddress? @relation("OrderCustomerAddress", fields: [customerAddressId], references: [id], onDelete: SetNull)
   

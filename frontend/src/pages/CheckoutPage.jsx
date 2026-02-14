@@ -10,14 +10,16 @@ const CheckoutPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { customer } = useCustomerAuthStore();
-    const { items: cartItems, getTotal, updateQuantity, removeItem, clearCart } = useCartStore();
+    const { items: cartItems, getTotal, updateQuantity, removeItem, clearCart, orderMode, tableNumber } = useCartStore();
     const { restaurant, currency } = location.state || {};
+
+    const isDineIn = orderMode === 'dine_in';
 
     const [loading, setLoading] = useState(false);
     const [showLoginModal, setShowLoginModal] = useState(false);
     const [addresses, setAddresses] = useState([]);
     const [selectedAddressId, setSelectedAddressId] = useState(null);
-    const [deliveryType, setDeliveryType] = useState(restaurant?.deliveryEnabled ? 'delivery' : 'pickup');
+    const [deliveryType, setDeliveryType] = useState(isDineIn ? 'dine_in' : (restaurant?.deliveryEnabled ? 'delivery' : 'pickup'));
     const [paymentMethod, setPaymentMethod] = useState('cash');
     const [comment, setComment] = useState('');
     const [showNewAddressForm, setShowNewAddressForm] = useState(false);
@@ -95,7 +97,8 @@ const CheckoutPage = () => {
             return;
         }
 
-        if (!customer?.id) {
+        // Для dine_in авторизация не обязательна
+        if (!isDineIn && !customer?.id) {
             setShowLoginModal(true);
             return;
         }
@@ -116,20 +119,23 @@ const CheckoutPage = () => {
                     selectedModifiers: item.modifiers?.map(m => ({ id: m.id, name: m.name, price: m.price })) || []
                 })),
                 total: Number(finalTotal),
-                deliveryType,
+                deliveryType: isDineIn ? 'dine_in' : deliveryType,
+                tableNumber: isDineIn ? tableNumber : null,
                 customerAddressId: deliveryType === 'delivery' ? selectedAddressId : null,
                 paymentMethod,
                 comment
             };
 
-            const response = await api.post('/customers/orders', payload);
+            // Для dine_in без авторизации — отправляем на общий endpoint
+            const endpoint = customer?.id ? '/customers/orders' : '/orders';
+            const response = await api.post(endpoint, payload);
             clearCart();
-            toast.success('Заказ оформлен');
+            toast.success(isDineIn ? 'Заказ отправлен на кухню!' : 'Заказ оформлен');
             const orderId = response?.data?.order?.id || response?.data?.id;
-            if (orderId) {
+            if (customer?.id && orderId) {
                 navigate(`/customer/orders/${orderId}`);
             } else {
-                navigate('/customer/orders');
+                navigate(-1);
             }
         } catch (error) {
             console.error('Failed to place order', error);
@@ -222,32 +228,46 @@ const CheckoutPage = () => {
                         orderSection
                     ) : (
                         <div className="space-y-4">
-                            <div className="bg-white rounded-lg shadow-sm p-4">
-                                <h2 className="font-semibold text-base mb-3">Способ получения</h2>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <button
-                                        disabled={!restaurant?.deliveryEnabled}
-                                        onClick={() => restaurant?.deliveryEnabled && setDeliveryType('delivery')}
-                                        className={`p-3 rounded-lg border-2 transition-all ${deliveryType === 'delivery' ? 'border-primary-600 bg-primary-50' : 'border-primary-200 active:border-primary-300'} ${!restaurant?.deliveryEnabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    >
-                                        <div className="text-2xl mb-1">🚗</div>
-                                        <div className="font-semibold text-sm">Доставка</div>
-                                        {restaurant?.deliveryFee > 0 && (
-                                            <div className="text-xs text-gray-500">{restaurant.deliveryFee} {currency}</div>
-                                        )}
-                                    </button>
-                                    <button
-                                        onClick={() => setDeliveryType('pickup')}
-                                        className={`p-3 rounded-lg border-2 transition-all ${deliveryType === 'pickup' ? 'border-primary-600 bg-primary-50' : 'border-primary-200 active:border-primary-300'}`}
-                                    >
-                                        <div className="text-2xl mb-1">🏃</div>
-                                        <div className="font-semibold text-sm">Самовывоз</div>
-                                        <div className="text-xs text-gray-500">Бесплатно</div>
-                                    </button>
+                            {/* Для dine_in показываем номер стола */}
+                            {isDineIn ? (
+                                <div className="bg-white rounded-lg shadow-sm p-4">
+                                    <h2 className="font-semibold text-base mb-3">Заказ в зале</h2>
+                                    <div className="flex items-center gap-3 p-3 bg-primary-50 rounded-lg border-2 border-primary-600">
+                                        <div className="text-3xl">🍽️</div>
+                                        <div>
+                                            <div className="font-semibold text-base">Стол {tableNumber}</div>
+                                            <div className="text-xs text-gray-500">Заказ будет отправлен на кухню</div>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
+                            ) : (
+                                <div className="bg-white rounded-lg shadow-sm p-4">
+                                    <h2 className="font-semibold text-base mb-3">Способ получения</h2>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <button
+                                            disabled={!restaurant?.deliveryEnabled}
+                                            onClick={() => restaurant?.deliveryEnabled && setDeliveryType('delivery')}
+                                            className={`p-3 rounded-lg border-2 transition-all ${deliveryType === 'delivery' ? 'border-primary-600 bg-primary-50' : 'border-primary-200 active:border-primary-300'} ${!restaurant?.deliveryEnabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        >
+                                            <div className="text-2xl mb-1">🚗</div>
+                                            <div className="font-semibold text-sm">Доставка</div>
+                                            {restaurant?.deliveryFee > 0 && (
+                                                <div className="text-xs text-gray-500">{restaurant.deliveryFee} {currency}</div>
+                                            )}
+                                        </button>
+                                        <button
+                                            onClick={() => setDeliveryType('pickup')}
+                                            className={`p-3 rounded-lg border-2 transition-all ${deliveryType === 'pickup' ? 'border-primary-600 bg-primary-50' : 'border-primary-200 active:border-primary-300'}`}
+                                        >
+                                            <div className="text-2xl mb-1">🏃</div>
+                                            <div className="font-semibold text-sm">Самовывоз</div>
+                                            <div className="text-xs text-gray-500">Бесплатно</div>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
-                            {deliveryType === 'delivery' && (
+                            {!isDineIn && deliveryType === 'delivery' && (
                                 <div className="bg-white rounded-lg shadow-sm p-4">
                                     <div className="flex justify-between items-center mb-3">
                                         <h2 className="font-semibold text-base">Адрес доставки</h2>
@@ -352,17 +372,19 @@ const CheckoutPage = () => {
                                 </div>
                             )}
 
-                            <div className="bg-white rounded-lg shadow-sm p-4">
-                                <h2 className="font-semibold text-base mb-3">Способ оплаты</h2>
-                                <select
-                                    value={paymentMethod}
-                                    onChange={(e) => setPaymentMethod(e.target.value)}
-                                    className="input-field w-full text-sm"
-                                >
-                                    <option value="cash">Наличными</option>
-                                    <option value="card">Картой курьеру</option>
-                                </select>
-                            </div>
+                            {!isDineIn && (
+                                <div className="bg-white rounded-lg shadow-sm p-4">
+                                    <h2 className="font-semibold text-base mb-3">Способ оплаты</h2>
+                                    <select
+                                        value={paymentMethod}
+                                        onChange={(e) => setPaymentMethod(e.target.value)}
+                                        className="input-field w-full text-sm"
+                                    >
+                                        <option value="cash">Наличными</option>
+                                        <option value="card">Картой курьеру</option>
+                                    </select>
+                                </div>
+                            )}
 
                             <div className="bg-white rounded-lg shadow-sm p-4">
                                 <h2 className="font-semibold text-base mb-3">Комментарий к заказу</h2>
@@ -394,10 +416,13 @@ const CheckoutPage = () => {
                     <div className="max-w-[480px] mx-auto p-3 space-y-2">
                         <button
                             onClick={handlePlaceOrder}
-                            disabled={loading || (deliveryType === 'delivery' && !selectedAddressId)}
+                            disabled={loading || (!isDineIn && deliveryType === 'delivery' && !selectedAddressId)}
                             className="btn-primary w-full py-3 text-base disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                         >
-                            {loading ? 'Оформление...' : `Оформить на ${finalTotal} ${currency}`}
+                            {loading ? 'Оформление...' : isDineIn
+                                ? `Заказать на ${finalTotal} ${currency}`
+                                : `Оформить на ${finalTotal} ${currency}`
+                            }
                         </button>
                     </div>
                 </div>

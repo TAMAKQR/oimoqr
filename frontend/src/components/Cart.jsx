@@ -9,7 +9,7 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
   const navigate = useNavigate();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
-  const { items, getTotal, getItemCount, clearCart, restaurantId: cartRestaurantId } = useCartStore();
+  const { items, getTotal, getItemCount, clearCart, restaurantId: cartRestaurantId, orderMode, tableNumber } = useCartStore();
   const currency = restaurant?.currency || '₽';
 
   // Не показывать корзину, если она принадлежит другому ресторану
@@ -87,6 +87,14 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
       <div className="fixed inset-x-0 z-[60] flex justify-center px-0 pb-0" style={cartStyle}>
         <div className="w-full max-w-[480px] rounded-none sm:rounded-2xl bg-white border-t border-primary-100 px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex flex-col gap-3">
+            {orderMode === 'dine_in' && tableNumber && (
+              <div className="flex items-center gap-2 text-sm">
+                <span className="bg-primary-100 text-primary-700 px-2.5 py-1 rounded-full font-medium">
+                  🍽 Стол {tableNumber}
+                </span>
+              </div>
+            )}
+
             {isBelowMinimum && (
               <span className="text-xs text-yellow-700">
                 Минимальный заказ {minAmount} {currency}. Добавьте {(minAmount - total).toFixed(2)} {currency}
@@ -100,7 +108,10 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
                 disabled={isCheckingOut || isBelowMinimum}
                 className="w-full py-3 rounded-xl bg-primary-600 text-white font-semibold shadow-lg hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
               >
-                {isCheckingOut ? '...' : `Оформить на ${total.toFixed(2)} ${currency}`}
+                {isCheckingOut ? '...' : orderMode === 'dine_in'
+                  ? `Заказать на ${total.toFixed(2)} ${currency}`
+                  : `Оформить на ${total.toFixed(2)} ${currency}`
+                }
               </button>
               <button
                 type="button"

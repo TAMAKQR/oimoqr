@@ -115,7 +115,11 @@ class TelegramService {
                 `• ${item.dish?.name || 'Unknown'} x${item.quantity} - ${item.price} ${restaurant.currency || '₽'}`
             ).join('\n');
 
-            const deliveryType = order.deliveryType === 'delivery' ? '🚗 Доставка' : '🏃 Самовывоз';
+            const deliveryType = order.deliveryType === 'dine_in'
+                ? `🍽️ В зале (Стол ${order.tableNumber || '?'})`
+                : order.deliveryType === 'delivery'
+                    ? '🚗 Доставка'
+                    : '🏃 Самовывоз';
             const paymentMethod = order.paymentMethod === 'cash' ? '💵 Наличные' : '💳 Карта';
 
             const message = `
@@ -131,7 +135,7 @@ ${order.deliveryAddress ? `📍 **Адрес:** ${order.deliveryAddress}` : ''}
 ${itemsList}
 
 💰 **Сумма:** ${order.totalAmount} ${restaurant.currency || '₽'}
-💳 **Оплата:** ${paymentMethod}
+${order.deliveryType !== 'dine_in' ? `💳 **Оплата:** ${paymentMethod}` : ''}
 
 ${order.notes ? `📝 **Комментарий:** ${order.notes}` : ''}
 

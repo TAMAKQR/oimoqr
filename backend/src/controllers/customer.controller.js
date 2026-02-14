@@ -464,7 +464,8 @@ export const createCustomerOrder = async (req, res, next) => {
             paymentMethod,
             comment,
             customerAddressId,
-            deliveryAddress
+            deliveryAddress,
+            tableNumber
         } = req.body;
 
         if (!restaurantId || !items || !Array.isArray(items) || items.length === 0 || total === undefined) {
@@ -519,6 +520,7 @@ export const createCustomerOrder = async (req, res, next) => {
                 notes: comment || null,
                 deliveryType: deliveryType || 'delivery',
                 paymentMethod: paymentMethod || 'cash',
+                tableNumber: tableNumber || null,
                 customerAddressId: customerAddressId || null,
                 items: {
                     create: validItems.map(item => ({
