@@ -259,12 +259,11 @@ const HomePage = () => {
               </Reveal>
 
               <Reveal delay={100}>
-                <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-[3.25rem] xl:text-[3.5rem] font-extrabold text-gray-900 mb-6 leading-[1.1] tracking-tight">
-                  {t('home.hero.titleStart')}{' '}
+                <h1 className="text-4xl sm:text-5xl md:text-6xl xl:text-[4rem] font-extrabold text-gray-900 mb-6 leading-[1.15] tracking-tight">
+                  {t('home.hero.titleStart')}<br />
                   <span className="bg-gradient-to-r from-primary-600 via-primary-500 to-amber-500 bg-clip-text text-transparent">
                     {t('home.hero.titleHighlight')}
-                  </span>{' '}
-                  {t('home.hero.titleEnd')}
+                  </span>
                 </h1>
               </Reveal>
 
