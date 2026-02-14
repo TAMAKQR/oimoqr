@@ -534,6 +534,7 @@ const DashboardPage = () => {
               <div className="flex items-center gap-4">
                 <div className="bg-white p-2 rounded-lg border border-gray-200">
                   <QRCodeSVG
+                    id="dashboard-general-qr"
                     value={`${window.location.origin}/menu/${getSelectedRestaurant().subdomain}`}
                     size={80}
                     level="M"
@@ -546,16 +547,18 @@ const DashboardPage = () => {
                     onClick={() => {
                       const printWindow = window.open('', '_blank');
                       const url = `${window.location.origin}/menu/${getSelectedRestaurant().subdomain}`;
+                      const qrSvg = document.getElementById('dashboard-general-qr');
                       printWindow.document.write(`
                         <html><head><title>QR - ${getSelectedRestaurant().name}</title>
-                        <style>body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;font-family:sans-serif;}</style>
+                        <style>body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;font-family:sans-serif;}svg{width:300px;height:300px;}</style>
                         </head><body>
                         <h2>${getSelectedRestaurant().name}</h2>
-                        <div id="qr"></div>
+                        ${qrSvg ? qrSvg.outerHTML : ''}
                         <p style="margin-top:12px;color:#666;font-size:14px">${url}</p>
-                        <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"><\/script>
-                        <script>QRCode.toCanvas(document.createElement('canvas'),"${url}",{width:300,margin:2},function(e,c){document.getElementById('qr').appendChild(c);window.print();});<\/script>
                         </body></html>`);
+                      printWindow.document.close();
+                      printWindow.focus();
+                      setTimeout(() => { printWindow.print(); }, 300);
                     }}
                     className="mt-2 text-xs text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1"
                   >

@@ -1050,168 +1050,167 @@ const RestaurantSettingsPage = () => {
               </div>
 
             </div>
-            </div>
           )}
 
-      {/* Working Hours */}
-      <div className="bg-white rounded-xl border border-gray-100 p-5">
-        <h2 className="text-xl font-bold mb-4">Режим работы</h2>
+          {/* Working Hours */}
+          <div className="bg-white rounded-xl border border-gray-100 p-5">
+            <h2 className="text-xl font-bold mb-4">Режим работы</h2>
 
-        {/* Temporary Closure */}
-        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <div className="flex items-center gap-3 mb-3">
-            <input
-              type="checkbox"
-              id="isTemporarilyClosed"
-              checked={isTemporarilyClosed}
-              onChange={(e) => setIsTemporarilyClosed(e.target.checked)}
-              className="w-5 h-5"
-            />
-            <label htmlFor="isTemporarilyClosed" className="font-medium text-gray-700">
-              🚫 Ресторан временно закрыт
-            </label>
-          </div>
-
-          {isTemporarilyClosed && (
-            <div>
-              <label className="block text-sm font-medium mb-1 text-gray-700">Причина закрытия</label>
-              <input
-                type="text"
-                value={closureReason}
-                onChange={(e) => setClosureReason(e.target.value)}
-                className="input w-full"
-                placeholder="Например: Технический перерыв до 15:00, Ремонт, Выходной..."
-              />
-              <p className="text-sm text-gray-600 mt-1">
-                Эта информация будет отображаться в меню для клиентов
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Days of Week */}
-        <div className="space-y-3">
-          {Object.entries({
-            monday: 'Понедельник',
-            tuesday: 'Вторник',
-            wednesday: 'Среда',
-            thursday: 'Четверг',
-            friday: 'Пятница',
-            saturday: 'Суббота',
-            sunday: 'Воскресенье',
-          }).map(([day, label]) => (
-            <div key={day} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
-              <div className="w-32 font-medium text-gray-700">{label}</div>
-
-              <div className="flex items-center gap-2">
+            {/* Temporary Closure */}
+            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="flex items-center gap-3 mb-3">
                 <input
                   type="checkbox"
-                  id={`${day}-isOpen`}
-                  checked={workingHours[day].isOpen}
-                  onChange={(e) => setWorkingHours({
-                    ...workingHours,
-                    [day]: { ...workingHours[day], isOpen: e.target.checked }
-                  })}
-                  className="w-4 h-4"
+                  id="isTemporarilyClosed"
+                  checked={isTemporarilyClosed}
+                  onChange={(e) => setIsTemporarilyClosed(e.target.checked)}
+                  className="w-5 h-5"
                 />
-                <label htmlFor={`${day}-isOpen`} className="text-sm text-gray-600 w-20">
-                  {workingHours[day].isOpen ? 'Открыто' : 'Выходной'}
+                <label htmlFor="isTemporarilyClosed" className="font-medium text-gray-700">
+                  🚫 Ресторан временно закрыт
                 </label>
               </div>
 
-              {workingHours[day].isOpen && (
-                <div className="flex items-center gap-2">
+              {isTemporarilyClosed && (
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-700">Причина закрытия</label>
                   <input
-                    type="checkbox"
-                    id={`${day}-is247`}
-                    checked={workingHours[day].is247 || false}
-                    onChange={(e) => setWorkingHours({
-                      ...workingHours,
-                      [day]: { ...workingHours[day], is247: e.target.checked }
-                    })}
-                    className="w-4 h-4"
+                    type="text"
+                    value={closureReason}
+                    onChange={(e) => setClosureReason(e.target.value)}
+                    className="input w-full"
+                    placeholder="Например: Технический перерыв до 15:00, Ремонт, Выходной..."
                   />
-                  <label htmlFor={`${day}-is247`} className="text-sm text-gray-600">Круглосуточно</label>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Эта информация будет отображаться в меню для клиентов
+                  </p>
                 </div>
               )}
-
-              {workingHours[day].isOpen && !workingHours[day].is247 && (
-                <>
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-gray-600">С</label>
-                    <input
-                      type="time"
-                      value={workingHours[day].open}
-                      onChange={(e) => setWorkingHours({
-                        ...workingHours,
-                        [day]: { ...workingHours[day], open: e.target.value }
-                      })}
-                      className="input w-28 text-sm"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-gray-600">До</label>
-                    <input
-                      type="time"
-                      value={workingHours[day].close}
-                      onChange={(e) => setWorkingHours({
-                        ...workingHours,
-                        [day]: { ...workingHours[day], close: e.target.value }
-                      })}
-                      className="input w-28 text-sm"
-                    />
-                  </div>
-                </>
-              )}
             </div>
-          ))}
-        </div>
 
-        <p className="text-sm text-gray-600 mt-4">
-          💡 Режим работы будет отображаться в меню. Статус "Открыто/Закрыто" рассчитывается автоматически на основе текущего времени.
-        </p>
-      </div>
+            {/* Days of Week */}
+            <div className="space-y-3">
+              {Object.entries({
+                monday: 'Понедельник',
+                tuesday: 'Вторник',
+                wednesday: 'Среда',
+                thursday: 'Четверг',
+                friday: 'Пятница',
+                saturday: 'Суббота',
+                sunday: 'Воскресенье',
+              }).map(([day, label]) => (
+                <div key={day} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                  <div className="w-32 font-medium text-gray-700">{label}</div>
 
-      {/* Save Button */}
-      <div className="flex gap-4">
-        <button
-          type="button"
-          onClick={() => navigate('/dashboard')}
-          className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors text-sm font-medium"
-          disabled={saving || uploadingBanner}
-        >
-          Отмена
-        </button>
-        <button
-          type="submit"
-          className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-          disabled={saving || uploadingBanner}
-        >
-          {uploadingBanner ? 'Загрузка баннера...' : saving ? 'Сохранение...' : 'Сохранить изменения'}
-        </button>
-      </div>
-    </form>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id={`${day}-isOpen`}
+                      checked={workingHours[day].isOpen}
+                      onChange={(e) => setWorkingHours({
+                        ...workingHours,
+                        [day]: { ...workingHours[day], isOpen: e.target.checked }
+                      })}
+                      className="w-4 h-4"
+                    />
+                    <label htmlFor={`${day}-isOpen`} className="text-sm text-gray-600 w-20">
+                      {workingHours[day].isOpen ? 'Открыто' : 'Выходной'}
+                    </label>
+                  </div>
 
-        {/* Danger Zone - Delete Restaurant - только для владельцев */ }
-  {
-    isOwner() && (
-      <div className="bg-red-50 rounded-xl border-2 border-red-200 p-5 mt-8">
-        <h2 className="text-xl font-bold text-red-600 mb-2">Опасная зона</h2>
-        <p className="text-sm text-gray-700 mb-4">
-          Удаление ресторана необратимо. Все данные (меню, категории, блюда, модификаторы) будут удалены навсегда.
-        </p>
-        <button
-          type="button"
-          onClick={handleDeleteRestaurant}
-          className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-          disabled={saving}
-        >
-          🗑️ Удалить ресторан
-        </button>
-      </div>
-    )
-  }
+                  {workingHours[day].isOpen && (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id={`${day}-is247`}
+                        checked={workingHours[day].is247 || false}
+                        onChange={(e) => setWorkingHours({
+                          ...workingHours,
+                          [day]: { ...workingHours[day], is247: e.target.checked }
+                        })}
+                        className="w-4 h-4"
+                      />
+                      <label htmlFor={`${day}-is247`} className="text-sm text-gray-600">Круглосуточно</label>
+                    </div>
+                  )}
+
+                  {workingHours[day].isOpen && !workingHours[day].is247 && (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm text-gray-600">С</label>
+                        <input
+                          type="time"
+                          value={workingHours[day].open}
+                          onChange={(e) => setWorkingHours({
+                            ...workingHours,
+                            [day]: { ...workingHours[day], open: e.target.value }
+                          })}
+                          className="input w-28 text-sm"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm text-gray-600">До</label>
+                        <input
+                          type="time"
+                          value={workingHours[day].close}
+                          onChange={(e) => setWorkingHours({
+                            ...workingHours,
+                            [day]: { ...workingHours[day], close: e.target.value }
+                          })}
+                          className="input w-28 text-sm"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <p className="text-sm text-gray-600 mt-4">
+              💡 Режим работы будет отображаться в меню. Статус "Открыто/Закрыто" рассчитывается автоматически на основе текущего времени.
+            </p>
+          </div>
+
+          {/* Save Button */}
+          <div className="flex gap-4">
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard')}
+              className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors text-sm font-medium"
+              disabled={saving || uploadingBanner}
+            >
+              Отмена
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+              disabled={saving || uploadingBanner}
+            >
+              {uploadingBanner ? 'Загрузка баннера...' : saving ? 'Сохранение...' : 'Сохранить изменения'}
+            </button>
+          </div>
+        </form>
+
+        {/* Danger Zone - Delete Restaurant - только для владельцев */}
+        {
+          isOwner() && (
+            <div className="bg-red-50 rounded-xl border-2 border-red-200 p-5 mt-8">
+              <h2 className="text-xl font-bold text-red-600 mb-2">Опасная зона</h2>
+              <p className="text-sm text-gray-700 mb-4">
+                Удаление ресторана необратимо. Все данные (меню, категории, блюда, модификаторы) будут удалены навсегда.
+              </p>
+              <button
+                type="button"
+                onClick={handleDeleteRestaurant}
+                className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+                disabled={saving}
+              >
+                🗑️ Удалить ресторан
+              </button>
+            </div>
+          )
+        }
       </div >
     </DashboardLayout >
   );
