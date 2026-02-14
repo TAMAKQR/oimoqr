@@ -190,46 +190,37 @@ export const getRestaurantStats = async (req, res, next) => {
       }
     });
 
-    // Статистика по дням (последние 7 дней)
-    const last7Days = [];
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      date.setHours(0, 0, 0, 0);
+    // Статистика по дням (последние 30 дней) — одним эффективным SQL-запросом
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
+    thirtyDaysAgo.setHours(0, 0, 0, 0);
 
-      const nextDate = new Date(date);
-      nextDate.setDate(nextDate.getDate() + 1);
+    const dailyStats = await prisma.$queryRawUnsafe(`
+      SELECT 
+        DATE("createdAt") as date,
+        COUNT(*)::int as orders,
+        COALESCE(SUM(CASE WHEN "status" != 'cancelled' THEN "totalAmount" ELSE 0 END), 0) as revenue
+      FROM "Order"
+      WHERE ("assignedRestaurantId" = $1 OR ("assignedRestaurantId" IS NULL AND "restaurantId" = $1))
+        AND "createdAt" >= $2
+      GROUP BY DATE("createdAt")
+      ORDER BY date ASC
+    `, restaurantId, thirtyDaysAgo);
 
-      const dayOrders = await prisma.order.count({
-        where: {
-          ...orderFilter,
-          createdAt: {
-            gte: date,
-            lt: nextDate
-          }
-        }
+    // Заполняем пропущенные дни нулями
+    const chartData = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      const found = dailyStats.find(s => {
+        const sDate = s.date instanceof Date ? s.date.toISOString().split('T')[0] : String(s.date).split('T')[0];
+        return sDate === dateStr;
       });
-
-      const dayRevenue = await prisma.order.aggregate({
-        where: {
-          ...orderFilter,
-          status: {
-            not: 'cancelled'
-          },
-          createdAt: {
-            gte: date,
-            lt: nextDate
-          }
-        },
-        _sum: {
-          totalAmount: true
-        }
-      });
-
-      last7Days.push({
-        date: date.toISOString().split('T')[0],
-        orders: dayOrders,
-        revenue: dayRevenue._sum.totalAmount || 0
+      chartData.push({
+        date: dateStr,
+        orders: found ? Number(found.orders) : 0,
+        revenue: found ? Number(found.revenue) : 0
       });
     }
 
@@ -264,7 +255,7 @@ export const getRestaurantStats = async (req, res, next) => {
         createdAt: order.createdAt
       })),
       topDishes: topDishesDetails,
-      chartData: last7Days
+      chartData
     });
   } catch (error) {
     console.error('Error fetching restaurant stats:', error);
