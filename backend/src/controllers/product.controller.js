@@ -225,6 +225,61 @@ export const deleteProduct = async (req, res, next) => {
     }
 };
 
+// Upload product image
+export const uploadProductImage = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        if (!req.file) {
+            return res.status(400).json({ error: 'No image file provided' });
+        }
+
+        const product = await prisma.product.findUnique({ where: { id } });
+        if (!product) {
+            return res.status(404).json({ error: 'Product not found' });
+        }
+
+        const imageUrl = req.file.path || `/uploads/${req.file.filename}`;
+        const currentImages = Array.isArray(product.images) ? product.images : [];
+        const updatedImages = [...currentImages, imageUrl];
+
+        const updatedProduct = await prisma.product.update({
+            where: { id },
+            data: { images: updatedImages },
+            include: { category: true }
+        });
+
+        res.json(updatedProduct);
+    } catch (error) {
+        next(error);
+    }
+};
+
+// Delete product image
+export const deleteProductImage = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { imageUrl } = req.body;
+
+        const product = await prisma.product.findUnique({ where: { id } });
+        if (!product) {
+            return res.status(404).json({ error: 'Product not found' });
+        }
+
+        const currentImages = Array.isArray(product.images) ? product.images : [];
+        const updatedImages = currentImages.filter(img => img !== imageUrl);
+
+        const updatedProduct = await prisma.product.update({
+            where: { id },
+            data: { images: updatedImages },
+            include: { category: true }
+        });
+
+        res.json(updatedProduct);
+    } catch (error) {
+        next(error);
+    }
+};
+
 // Update stock quantity
 export const updateStock = async (req, res, next) => {
     try {

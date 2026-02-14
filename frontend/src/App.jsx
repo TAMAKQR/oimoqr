@@ -26,6 +26,8 @@ import PricingPage from './pages/PricingPage';
 import CustomersPage from './pages/CustomersPage';
 import CheckoutPage from './pages/CheckoutPage';
 import ModifierTemplatesPage from './pages/ModifierTemplatesPage';
+import StoreManagementPage from './pages/StoreManagementPage';
+import ShopPage from './pages/ShopPage';
 
 // Components
 import PrivateRoute from './components/PrivateRoute';
@@ -107,6 +109,7 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/menu/:subdomain" element={<MenuPage />} />
+          <Route path="/shop/:subdomain" element={<ShopPage />} />
           <Route path="/:subdomain" element={<MenuPage />} />
 
           {/* Customer routes */}
@@ -157,6 +160,14 @@ function App() {
             element={
               <PrivateRoute>
                 <ModifierTemplatesPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/store-management"
+            element={
+              <PrivateRoute>
+                <StoreManagementPage />
               </PrivateRoute>
             }
           />
