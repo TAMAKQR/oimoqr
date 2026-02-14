@@ -541,7 +541,8 @@ export const createCustomerOrder = async (req, res, next) => {
                     include: {
                         socialLinks: true
                     }
-                }
+                },
+                customerAddress: true
             }
         });
 

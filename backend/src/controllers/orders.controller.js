@@ -86,14 +86,15 @@ export const createOrder = async (req, res, next) => {
       include: {
         items: {
           include: {
-            dish: true // Включаем информацию о блюде для уведомлений
+            dish: true
           }
         },
         restaurant: {
           include: {
-            socialLinks: true // Явно включаем социальные сети ресторана
+            socialLinks: true
           }
-        }
+        },
+        customerAddress: true
       }
     });
 

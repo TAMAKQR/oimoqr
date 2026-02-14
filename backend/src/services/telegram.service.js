@@ -111,9 +111,19 @@ class TelegramService {
 
         try {
             const items = order.items || [];
-            const itemsList = items.map(item =>
-                `• ${item.dish?.name || 'Unknown'} x${item.quantity} - ${item.price} ${restaurant.currency || '₽'}`
-            ).join('\n');
+            const itemsList = items.map(item => {
+                let line = `• ${item.dish?.name || 'Unknown'} x${item.quantity} - ${item.price} ${restaurant.currency || '₽'}`;
+                // Parse and append modifiers
+                let modifiers = item.selectedModifiers;
+                if (typeof modifiers === 'string') {
+                    try { modifiers = JSON.parse(modifiers); } catch { modifiers = null; }
+                }
+                if (Array.isArray(modifiers) && modifiers.length > 0) {
+                    const modList = modifiers.map(m => m.name + (m.price ? ` +${m.price}` : '')).join(', ');
+                    line += `\n   ↳ ${modList}`;
+                }
+                return line;
+            }).join('\n');
 
             const deliveryType = order.deliveryType === 'dine_in'
                 ? (order.tableNumber ? `🍽️ В зале (Стол ${order.tableNumber})` : '🍽️ В зале')
@@ -123,13 +133,15 @@ class TelegramService {
             const paymentMethod = order.paymentMethod === 'cash' ? '💵 Наличные' : '💳 Карта';
 
             const message = `
-🆕 **НОВЫЙ ЗАКАЗ #${order.orderNumber}**
+🆕 **НОВЫЙ ЗАКАЗ ${order.orderNumber}**
+🏪 **Ресторан:** ${restaurant.name || 'Не указано'}
 
 👤 **Клиент:** ${order.customerName || 'Не указано'}
 📞 **Телефон:** ${order.customerPhone || 'Не указано'}
 
 **Тип заказа:** ${deliveryType}
 ${order.deliveryAddress ? `📍 **Адрес:** ${order.deliveryAddress}` : ''}
+${order.customerAddress ? `📍 **Адрес:** ${[order.customerAddress.address, order.customerAddress.entrance && `подъезд ${order.customerAddress.entrance}`, order.customerAddress.floor && `${order.customerAddress.floor} этаж`, order.customerAddress.apartment && `кв. ${order.customerAddress.apartment}`].filter(Boolean).join(', ')}${order.customerAddress.comment ? ` (${order.customerAddress.comment})` : ''}` : ''}
 
 **Состав заказа:**
 ${itemsList}
