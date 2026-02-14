@@ -1,5 +1,6 @@
 import express from 'express';
 import {
+  getDashboardStats,
   updateSubscription,
   updateUserSubscription,
   extendSubscription,
@@ -22,6 +23,7 @@ const router = express.Router();
 // All admin routes require authentication and admin role
 router.use(authenticate, requireAdmin);
 
+router.get('/stats/dashboard', getDashboardStats);
 router.put('/subscriptions/:id', updateSubscription);
 router.post('/subscriptions/:id/extend', extendSubscription);
 router.put('/users/:userId/subscriptions', updateUserSubscription);
