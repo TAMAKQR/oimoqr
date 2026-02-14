@@ -13,7 +13,9 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const url = config.url || '';
-    const isCustomerEndpoint = url.includes('/customers');
+    // Only treat paths starting with /customers as customer-facing endpoints
+    // Admin endpoint /restaurants/:id/customers should use admin token
+    const isCustomerEndpoint = /^\/customers(\?|\/|$)/.test(url);
 
     if (isCustomerEndpoint) {
       const customerToken = localStorage.getItem('customer-token') || localStorage.getItem('customerToken');
@@ -52,7 +54,8 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       const url = error.config?.url || '';
-      const isCustomerEndpoint = url.includes('/customers');
+      // Only treat paths starting with /customers as customer-facing endpoints
+      const isCustomerEndpoint = /^\/customers(\?|\/|$)/.test(url);
       const isCustomerAuth = url.includes('/customers/login') || url.includes('/customers/register');
 
       if (isCustomerEndpoint) {
