@@ -1006,9 +1006,15 @@ export const getRestaurantCustomers = async (req, res, next) => {
 
     // ÐŸÐ¾Ð»ÑƒÑ‡Ð°ÐµÐ¼ ÐºÐ»Ð¸ÐµÐ½Ñ‚Ð¾Ð² Ñ Ð¸Ñ… ÑÑ‚Ð°Ñ‚Ð¸ÑÑ‚Ð¸ÐºÐ¾Ð¹ Ð·Ð°ÐºÐ°Ð·Ð¾Ð²
     const customers = await prisma.customer.findMany({
-      where: { restaurantId },
+      where: {
+        OR: [
+          { registeredRestaurantId: restaurantId },
+          { orders: { some: { restaurantId } } }
+        ]
+      },
       include: {
         orders: {
+          where: { restaurantId },
           select: {
             id: true,
             totalAmount: true,
