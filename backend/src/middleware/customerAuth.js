@@ -14,7 +14,12 @@ export const authenticateCustomer = (req, res, next) => {
 
         const token = authHeader.substring(7); // Remove 'Bearer ' prefix
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        if (!process.env.JWT_SECRET) {
+            console.error('CRITICAL: JWT_SECRET environment variable is not set!');
+            return res.status(500).json({ error: 'Server configuration error' });
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
         // Проверяем, что это токен клиента
         if (!decoded.customerId) {
@@ -51,7 +56,7 @@ export const optionalCustomerAuth = (req, res, next) => {
         const token = authHeader.substring(7);
 
         try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
             if (decoded.customerId) {
                 req.customerId = decoded.customerId;

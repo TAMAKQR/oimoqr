@@ -29,6 +29,7 @@ import ModifierTemplatesPage from './pages/ModifierTemplatesPage';
 // Components
 import PrivateRoute from './components/PrivateRoute';
 import AdminRoute from './components/AdminRoute';
+import CustomerPrivateRoute from './components/CustomerPrivateRoute';
 
 const CACHE_VERSION =
   import.meta.env.VITE_APP_CACHE_VERSION ||
@@ -110,11 +111,11 @@ function App() {
           {/* Customer routes */}
           <Route path="/customer/login" element={<WhatsAppLoginPage />} />
           <Route path="/customer/whatsapp-login" element={<WhatsAppLoginPage />} />
-          <Route path="/customer/profile" element={<CustomerProfilePage />} />
-          <Route path="/customer/restaurants" element={<CustomerRestaurantsPage />} />
-          <Route path="/customer/orders" element={<CustomerProfilePage />} />
-          <Route path="/customer/orders/:orderId" element={<CustomerProfilePage />} />
-          <Route path="/customer/favorites" element={<CustomerProfilePage />} />
+          <Route path="/customer/profile" element={<CustomerPrivateRoute><CustomerProfilePage /></CustomerPrivateRoute>} />
+          <Route path="/customer/restaurants" element={<CustomerPrivateRoute><CustomerRestaurantsPage /></CustomerPrivateRoute>} />
+          <Route path="/customer/orders" element={<CustomerPrivateRoute><CustomerProfilePage /></CustomerPrivateRoute>} />
+          <Route path="/customer/orders/:orderId" element={<CustomerPrivateRoute><CustomerProfilePage /></CustomerPrivateRoute>} />
+          <Route path="/customer/favorites" element={<CustomerPrivateRoute><CustomerProfilePage /></CustomerPrivateRoute>} />
           <Route path="/checkout" element={<CheckoutPage />} />
 
           {/* Protected routes */}
