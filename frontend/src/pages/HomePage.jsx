@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '../components/LanguageSwitcher';
@@ -160,7 +160,7 @@ const HomePage = () => {
     <div className="min-h-screen bg-white overflow-x-hidden">
       {/* ═══════ HEADER ═══════ */}
       <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100' : 'bg-transparent'}`}>
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-16 py-3 flex justify-between items-center">
+        <div className="container mx-auto py-3 flex justify-between items-center">
           <Link to="/" className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center shadow-md shadow-primary-500/20">
               <span className="text-white font-bold text-sm">Q</span>
@@ -244,7 +244,7 @@ const HomePage = () => {
         <div className="absolute bottom-10 -right-32 w-80 h-80 bg-amber-200/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary-100/20 rounded-full blur-3xl" />
 
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-16 relative">
+        <div className="container mx-auto relative">
           <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
             {/* Left — text */}
             <div className="flex-1 text-center lg:text-left">
@@ -313,7 +313,7 @@ const HomePage = () => {
 
       {/* ═══════ STATS BAR ═══════ */}
       <section className="border-y border-gray-100 bg-gray-50/50">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-16 py-10">
+        <div className="container mx-auto py-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {[
               { end: 500, suffix: '+', label: t('home.stats.businesses'), icon: '🏢' },
@@ -406,7 +406,7 @@ const HomePage = () => {
       <section id="how" className="py-20 md:py-28 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-primary-900 to-gray-900" />
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.15) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-16 relative">
+        <div className="container mx-auto relative">
           <Reveal>
             <div className="text-center mb-16">
               <span className="inline-block px-4 py-1.5 rounded-full bg-white/10 text-primary-300 text-sm font-semibold mb-4 backdrop-blur-sm border border-white/10">{t('home.nav.howItWorks')}</span>
@@ -529,7 +529,7 @@ const HomePage = () => {
       <section className="py-20 md:py-28 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary-600 via-primary-700 to-gray-900" />
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.2) 1px, transparent 0)', backgroundSize: '32px 32px' }} />
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-16 relative text-center">
+        <div className="container mx-auto relative text-center">
           <Reveal>
             <h2 className="text-3xl md:text-5xl font-extrabold text-white mb-5">{t('home.finalCta.title')}</h2>
             <p className="text-primary-200 text-lg mb-10 max-w-xl mx-auto">{t('home.finalCta.subtitle')}</p>
