@@ -387,16 +387,23 @@ const DashboardPage = () => {
   if (!hasRestaurants && !userData?.isAdmin) {
     return (
       <DashboardLayout userData={userData} selectedRestaurantId={null}>
-        <div className="max-w-3xl mx-auto px-4">
-          <div className="text-center py-12">
-            <div className="text-6xl mb-6">🏪</div>
-            <h2 className="text-3xl font-bold mb-4">Создайте свой первый ресторан</h2>
-            <p className="text-gray-600 mb-8">У вас ещё нет ресторанов. Создайте первый ресторан, чтобы начать работу с платформой.</p>
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center py-16">
+            <div className="w-20 h-20 bg-gray-100 rounded-2xl mx-auto mb-6 flex items-center justify-center">
+              <svg className="w-10 h-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.016A3.001 3.001 0 0021 9.349m-18 0a2.997 2.997 0 003.75.616m-3.75-.616V2.99A1.5 1.5 0 014.5 1.5h15a1.5 1.5 0 011.5 1.5v6.849" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">Создайте свой первый ресторан</h2>
+            <p className="text-gray-500 mb-8 max-w-md mx-auto">У вас ещё нет ресторанов. Создайте первый ресторан, чтобы начать работу с платформой.</p>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="btn-primary text-lg px-8 py-4"
+              className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors"
             >
-              + Создать ресторан
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              Создать ресторан
             </button>
           </div>
 
@@ -473,20 +480,18 @@ const DashboardPage = () => {
 
   return (
     <DashboardLayout userData={userData} selectedRestaurantId={selectedRestaurantId}>
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex flex-wrap justify-between items-center gap-4 mb-6 sm:mb-8">
-          <h2 className="text-2xl sm:text-3xl font-bold">Панель управления</h2>
-          <button onClick={handleLogout} className="btn-secondary text-red-600 hover:bg-red-50">
-            Выйти
-          </button>
+      <div className="max-w-6xl mx-auto">
+        {/* Page header */}
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Панель управления</h1>
+          <p className="text-gray-500 text-sm mt-1">Обзор вашего ресторана</p>
         </div>
 
         {/* Restaurant Selector */}
         {userData && (
-          <div className="mb-6 sm:mb-8">
+          <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-medium text-gray-700">Выберите ресторан</label>
-              {/* Кнопка создания ресторана видна только владельцам, не менеджерам */}
               {(userData?.restaurants?.length > 0 || (userData?.restaurantStaff?.length === 0 && !userData?.restaurants)) && (
                 <button
                   onClick={() => {
@@ -583,9 +588,9 @@ const DashboardPage = () => {
           }
 
           return (
-            <div className="card p-4 sm:p-6 mb-6 sm:mb-8">
+            <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg sm:text-xl font-semibold">Ваша подписка</h3>
+                <h3 className="text-sm font-semibold text-gray-900">Ваша подписка</h3>
                 {subscription?.status === 'TRIAL' && (
                   <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
                     ПРОБНЫЙ ПЕРИОД
@@ -662,17 +667,20 @@ const DashboardPage = () => {
 
         {/* Restaurant Info */}
         {getSelectedRestaurant() && (
-          <div className="card p-4 sm:p-6 mb-6 sm:mb-8">
-            <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Информация о ресторане</h3>
-            <div className="space-y-2 text-sm sm:text-base">
-              <p className="break-words"><strong>Название:</strong> {getSelectedRestaurant().name}</p>
-              <p className="break-all"><strong>Субдомен:</strong> {getSelectedRestaurant().subdomain}.oimoqr.com</p>
+          <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
+            <h3 className="text-sm font-semibold text-gray-900 mb-4">Информация о ресторане</h3>
+            <div className="space-y-2 text-sm">
+              <p><span className="text-gray-500">Название:</span> <span className="font-medium text-gray-900">{getSelectedRestaurant().name}</span></p>
+              <p className="break-all"><span className="text-gray-500">Субдомен:</span> <span className="font-medium text-gray-900">{getSelectedRestaurant().subdomain}.oimoqr.com</span></p>
               <a
                 href={`/menu/${getSelectedRestaurant().subdomain}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-block mt-3 sm:mt-4 btn-primary text-sm sm:text-base w-full sm:w-auto text-center"
+                className="inline-flex items-center gap-2 mt-3 text-blue-600 hover:text-blue-700 text-sm font-medium"
               >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                </svg>
                 Посмотреть меню
               </a>
             </div>
@@ -689,116 +697,134 @@ const DashboardPage = () => {
             ) : stats && views ? (
               <>
                 {/* Overview Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-                  <div className="card p-4 sm:p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-gray-600 text-sm mb-1">Просмотры меню</p>
-                        <p className="text-2xl sm:text-3xl font-bold text-primary-600">{views.today}</p>
-                        <p className="text-xs text-gray-500 mt-1">За сегодня</p>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                  <div className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-sm transition-shadow">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                        <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
                       </div>
-                      <div className="text-4xl">👁️</div>
+                      <p className="text-sm text-gray-500">Просмотры</p>
                     </div>
+                    <p className="text-2xl font-bold text-gray-900">{views.today}</p>
+                    <p className="text-xs text-gray-400 mt-1">За сегодня</p>
                   </div>
 
-                  <div className="card p-4 sm:p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-gray-600 text-sm mb-1">Всего блюд</p>
-                        <p className="text-2xl sm:text-3xl font-bold text-green-600">{stats.overview.totalDishes}</p>
-                        <p className="text-xs text-gray-500 mt-1">{stats.overview.totalCategories} категорий</p>
+                  <div className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-sm transition-shadow">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                        <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                        </svg>
                       </div>
-                      <div className="text-4xl">🍽️</div>
+                      <p className="text-sm text-gray-500">Блюда</p>
                     </div>
+                    <p className="text-2xl font-bold text-gray-900">{stats.overview.totalDishes}</p>
+                    <p className="text-xs text-gray-400 mt-1">{stats.overview.totalCategories} категорий</p>
                   </div>
 
-                  <div className="card p-4 sm:p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-gray-600 text-sm mb-1">Заказы</p>
-                        <p className="text-2xl sm:text-3xl font-bold text-blue-600">{stats.period.today.orders}</p>
-                        <p className="text-xs text-gray-500 mt-1">За сегодня</p>
+                  <div className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-sm transition-shadow">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center">
+                        <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                        </svg>
                       </div>
-                      <div className="text-4xl">📱</div>
+                      <p className="text-sm text-gray-500">Заказы</p>
                     </div>
+                    <p className="text-2xl font-bold text-gray-900">{stats.period.today.orders}</p>
+                    <p className="text-xs text-gray-400 mt-1">За сегодня</p>
                   </div>
 
-                  <div className="card p-4 sm:p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-gray-600 text-sm mb-1">Выручка</p>
-                        <p className="text-2xl sm:text-3xl font-bold text-purple-600">
-                          {stats.period.today.revenue.toFixed(0)} {getCurrencySymbol(getSelectedRestaurant()?.currency)}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">За сегодня</p>
+                  <div className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-sm transition-shadow">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
+                        <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
                       </div>
-                      <div className="text-4xl">💰</div>
+                      <p className="text-sm text-gray-500">Выручка</p>
                     </div>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {stats.period.today.revenue.toFixed(0)} {getCurrencySymbol(getSelectedRestaurant()?.currency)}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">За сегодня</p>
                   </div>
                 </div>
 
                 {/* Period Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
-                  <div className="card p-4 sm:p-6 border-l-4 border-blue-500">
-                    <h3 className="text-lg font-semibold mb-3">За неделю</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Заказы:</span>
-                        <span className="font-semibold">{stats.period.week.orders}</span>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="bg-white rounded-xl border border-gray-100 p-5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-1 h-5 bg-blue-500 rounded-full"></div>
+                      <h3 className="text-sm font-semibold text-gray-900">За неделю</h3>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">Заказы</span>
+                        <span className="text-sm font-semibold text-gray-900">{stats.period.week.orders}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Выручка:</span>
-                        <span className="font-semibold">{stats.period.week.revenue.toFixed(0)} {getCurrencySymbol(getSelectedRestaurant()?.currency)}</span>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">Выручка</span>
+                        <span className="text-sm font-semibold text-gray-900">{stats.period.week.revenue.toFixed(0)} {getCurrencySymbol(getSelectedRestaurant()?.currency)}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Просмотры:</span>
-                        <span className="font-semibold">{views.week}</span>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">Просмотры</span>
+                        <span className="text-sm font-semibold text-gray-900">{views.week}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="card p-4 sm:p-6 border-l-4 border-purple-500">
-                    <h3 className="text-lg font-semibold mb-3">За месяц</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Заказы:</span>
-                        <span className="font-semibold">{stats.period.month.orders}</span>
+                  <div className="bg-white rounded-xl border border-gray-100 p-5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-1 h-5 bg-purple-500 rounded-full"></div>
+                      <h3 className="text-sm font-semibold text-gray-900">За месяц</h3>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">Заказы</span>
+                        <span className="text-sm font-semibold text-gray-900">{stats.period.month.orders}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Выручка:</span>
-                        <span className="font-semibold">{stats.period.month.revenue.toFixed(0)} {getCurrencySymbol(getSelectedRestaurant()?.currency)}</span>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">Выручка</span>
+                        <span className="text-sm font-semibold text-gray-900">{stats.period.month.revenue.toFixed(0)} {getCurrencySymbol(getSelectedRestaurant()?.currency)}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Просмотры:</span>
-                        <span className="font-semibold">{views.month}</span>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">Просмотры</span>
+                        <span className="text-sm font-semibold text-gray-900">{views.month}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="card p-4 sm:p-6 border-l-4 border-green-500">
-                    <h3 className="text-lg font-semibold mb-3">Всего</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Заказы:</span>
-                        <span className="font-semibold">{stats.overview.totalOrders}</span>
+                  <div className="bg-white rounded-xl border border-gray-100 p-5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-1 h-5 bg-green-500 rounded-full"></div>
+                      <h3 className="text-sm font-semibold text-gray-900">Всего</h3>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">Заказы</span>
+                        <span className="text-sm font-semibold text-gray-900">{stats.overview.totalOrders}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Выручка:</span>
-                        <span className="font-semibold">{stats.overview.totalRevenue.toFixed(0)} {getCurrencySymbol(getSelectedRestaurant()?.currency)}</span>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">Выручка</span>
+                        <span className="text-sm font-semibold text-gray-900">{stats.overview.totalRevenue.toFixed(0)} {getCurrencySymbol(getSelectedRestaurant()?.currency)}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Просмотры:</span>
-                        <span className="font-semibold">{views.total}</span>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">Просмотры</span>
+                        <span className="text-sm font-semibold text-gray-900">{views.total}</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Chart and Recent Orders */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
                   {/* Chart */}
-                  <div className="card p-4 sm:p-6">
-                    <h3 className="text-lg font-semibold mb-4">📈 Заказы за неделю</h3>
+                  <div className="bg-white rounded-xl border border-gray-100 p-5">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-4">Заказы за неделю</h3>
                     <div className="space-y-3">
                       {stats.chartData.map((day, index) => {
                         const maxOrders = Math.max(...stats.chartData.map(d => d.orders), 1);
@@ -825,8 +851,8 @@ const DashboardPage = () => {
                   </div>
 
                   {/* Recent Orders */}
-                  <div className="card p-4 sm:p-6">
-                    <h3 className="text-lg font-semibold mb-4">📱 Последние заказы</h3>
+                  <div className="bg-white rounded-xl border border-gray-100 p-5">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-4">Последние заказы</h3>
                     {stats.recentOrders.length > 0 ? (
                       <div className="space-y-3">
                         {stats.recentOrders.map((order) => {
@@ -899,20 +925,20 @@ const DashboardPage = () => {
 
                 {/* Top Dishes */}
                 {stats.topDishes.length > 0 && (
-                  <div className="card p-4 sm:p-6">
-                    <h3 className="text-lg font-semibold mb-4">🏆 Популярные блюда</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                  <div className="bg-white rounded-xl border border-gray-100 p-5">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-4">Популярные блюда</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
                       {stats.topDishes.map((dish, index) => (
-                        <div key={dish.id} className="border rounded-lg p-3 hover:shadow-md transition-shadow">
+                        <div key={dish.id} className="border border-gray-100 rounded-xl p-4 hover:shadow-sm transition-shadow">
                           <div className="flex items-start justify-between mb-2">
-                            <span className="text-2xl font-bold text-gray-300">#{index + 1}</span>
-                            <span className="bg-primary-100 text-primary-700 px-2 py-1 rounded text-xs font-semibold">
+                            <span className="text-lg font-bold text-gray-200">#{index + 1}</span>
+                            <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">
                               {dish.totalQuantity} шт
                             </span>
                           </div>
-                          <p className="font-semibold text-sm mb-1">{dish.name}</p>
-                          <p className="text-xs text-gray-600">{dish.orderCount} заказов</p>
-                          <p className="text-sm font-semibold text-primary-600 mt-1">{dish.price.toFixed(0)} {getCurrencySymbol(getSelectedRestaurant()?.currency)}</p>
+                          <p className="font-medium text-sm text-gray-900 mb-1">{dish.name}</p>
+                          <p className="text-xs text-gray-400">{dish.orderCount} заказов</p>
+                          <p className="text-sm font-semibold text-gray-900 mt-2">{dish.price.toFixed(0)} {getCurrencySymbol(getSelectedRestaurant()?.currency)}</p>
                         </div>
                       ))}
                     </div>
@@ -920,8 +946,8 @@ const DashboardPage = () => {
                 )}
               </>
             ) : (
-              <div className="card p-8 text-center">
-                <p className="text-gray-500">Статистика недоступна</p>
+              <div className="bg-white rounded-xl border border-gray-100 p-8 text-center">
+                <p className="text-gray-400 text-sm">Статистика недоступна</p>
               </div>
             )}
           </>
@@ -1037,9 +1063,9 @@ const DashboardPage = () => {
         )}
 
         {/* Info Box */}
-        <div className="card p-4 sm:p-6 mt-6 sm:mt-8 bg-primary-50 border-primary-200">
-          <h3 className="text-base sm:text-lg font-semibold mb-2">💡 Совет</h3>
-          <p className="text-gray-700 text-sm sm:text-base">
+        <div className="bg-white rounded-xl border border-gray-100 p-5 mt-6">
+          <h3 className="text-sm font-semibold text-gray-900 mb-2">Совет</h3>
+          <p className="text-sm text-gray-500">
             Добавьте красивые фотографии блюд и подробные описания, чтобы увеличить количество заказов.
             Не забудьте настроить баннеры для акций и специальных предложений!
           </p>

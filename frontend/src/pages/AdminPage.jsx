@@ -248,39 +248,32 @@ const AdminPage = () => {
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
-          <h1 className="text-3xl font-bold">Админ-панель</h1>
-          <div className="flex items-center gap-4">
-            <button onClick={() => navigate('/admin/pricing')} className="btn-secondary">
-              💰 Управление тарифами
-            </button>
-            <button onClick={handleLogout} className="btn-secondary text-red-600 hover:bg-red-50">
-              Выйти
-            </button>
-          </div>
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Админ-панель</h1>
+          <p className="text-gray-500 text-sm mt-1">Управление платформой</p>
         </div>
 
         {/* Stats */}
         {stats && (
-          <div className="grid grid-cols-4 gap-6 mb-8">
-            <div className="card p-6">
-              <h3 className="text-sm text-gray-600 mb-2">Всего пользователей</h3>
-              <p className="text-3xl font-bold">{users.length}</p>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white rounded-xl border border-gray-100 p-5">
+              <p className="text-sm text-gray-500 mb-2">Пользователи</p>
+              <p className="text-2xl font-bold text-gray-900">{users.length}</p>
             </div>
-            <div className="card p-6">
-              <h3 className="text-sm text-gray-600 mb-2">Всего ресторанов</h3>
-              <p className="text-3xl font-bold">{getTotalRestaurants()}</p>
+            <div className="bg-white rounded-xl border border-gray-100 p-5">
+              <p className="text-sm text-gray-500 mb-2">Рестораны</p>
+              <p className="text-2xl font-bold text-gray-900">{getTotalRestaurants()}</p>
             </div>
-            <div className="card p-6">
-              <h3 className="text-sm text-gray-600 mb-2">Активные подписки</h3>
-              <p className="text-3xl font-bold text-green-600">
+            <div className="bg-white rounded-xl border border-gray-100 p-5">
+              <p className="text-sm text-gray-500 mb-2">Активные подписки</p>
+              <p className="text-2xl font-bold text-green-600">
                 {stats.stats.find(s => s.status === 'ACTIVE')?._count || 0}
               </p>
             </div>
-            <div className="card p-6">
-              <h3 className="text-sm text-gray-600 mb-2">Trial период</h3>
-              <p className="text-3xl font-bold text-blue-600">
+            <div className="bg-white rounded-xl border border-gray-100 p-5">
+              <p className="text-sm text-gray-500 mb-2">Trial период</p>
+              <p className="text-2xl font-bold text-blue-600">
                 {stats.stats.find(s => s.status === 'TRIAL')?._count || 0}
               </p>
             </div>
@@ -288,7 +281,7 @@ const AdminPage = () => {
         )}
 
         {/* Search and Users Table */}
-        <div className="card p-6">
+        <div className="bg-white rounded-xl border border-gray-100 p-5">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold">Пользователи ({filteredUsers.length})</h2>
             <div className="w-80">

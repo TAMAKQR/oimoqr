@@ -12,14 +12,13 @@ const DashboardLayout = ({ children, userData, selectedRestaurantId }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-[#f5f5f5] flex">
       {/* Sidebar */}
       <Sidebar userData={userData} selectedRestaurantId={selectedRestaurantId} />
 
       {/* Main Content */}
-      <div className="flex-1 lg:ml-20 transition-all duration-300">
-        {/* Page Content */}
-        <main className="py-4 sm:py-6 lg:py-8">
+      <div className="flex-1 lg:ml-[260px] transition-all duration-300">
+        <main className="p-4 sm:p-6 lg:p-8 pt-16 lg:pt-8">
           {children}
         </main>
       </div>
