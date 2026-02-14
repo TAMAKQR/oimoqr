@@ -3,6 +3,170 @@ import bcrypt from 'bcryptjs';
 import { calculateSubscriptionEndDate } from '../utils/subscription.js';
 import { sendSubscriptionActivatedEmail } from '../utils/email.js';
 
+// ======================== DASHBOARD STATS ========================
+
+export const getDashboardStats = async (req, res, next) => {
+  try {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // Выполняем все запросы параллельно
+    const [
+      totalUsers,
+      totalRestaurants,
+      totalOrders,
+      totalCustomers,
+      totalDishes,
+      totalRevenue,
+      ordersToday,
+      revenueToday,
+      ordersThisWeek,
+      newUsersThisMonth,
+      newRestaurantsThisMonth,
+      newCustomersThisMonth,
+      subscriptionsByStatus,
+      ordersByStatus,
+      ordersByDeliveryType,
+      menuViews30d,
+      userGrowth,
+      orderGrowth,
+      topRestaurants,
+      recentOrders,
+      citiesDistribution,
+    ] = await Promise.all([
+      // Общие счётчики
+      prisma.user.count({ where: { isAdmin: false } }),
+      prisma.restaurant.count(),
+      prisma.order.count(),
+      prisma.customer.count(),
+      prisma.dish.count(),
+      prisma.order.aggregate({ _sum: { totalAmount: true } }),
+
+      // Сегодня
+      prisma.order.count({ where: { createdAt: { gte: today } } }),
+      prisma.order.aggregate({ _sum: { totalAmount: true }, where: { createdAt: { gte: today } } }),
+
+      // За неделю
+      prisma.order.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
+
+      // Рост за месяц
+      prisma.user.count({ where: { isAdmin: false, createdAt: { gte: thirtyDaysAgo } } }),
+      prisma.restaurant.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
+      prisma.customer.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
+
+      // Подписки по статусу
+      prisma.subscription.groupBy({ by: ['status'], _count: true }),
+
+      // Заказы по статусу
+      prisma.order.groupBy({ by: ['status'], _count: true }),
+
+      // Заказы по типу доставки
+      prisma.order.groupBy({ by: ['deliveryType'], _count: true }),
+
+      // Просмотры меню за 30 дней
+      prisma.menuView.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
+
+      // Рост пользователей по дням (30 дней) 
+      prisma.$queryRaw`
+        SELECT DATE("createdAt") as date, COUNT(*)::int as count
+        FROM "User"
+        WHERE "createdAt" >= ${thirtyDaysAgo} AND "isAdmin" = false
+        GROUP BY DATE("createdAt")
+        ORDER BY date
+      `,
+
+      // Рост заказов по дням (30 дней)
+      prisma.$queryRaw`
+        SELECT DATE("createdAt") as date, COUNT(*)::int as count, COALESCE(SUM("totalAmount"), 0)::float as revenue
+        FROM "Order"
+        WHERE "createdAt" >= ${thirtyDaysAgo}
+        GROUP BY DATE("createdAt")
+        ORDER BY date
+      `,
+
+      // Топ 10 ресторанов по заказам
+      prisma.restaurant.findMany({
+        select: {
+          id: true,
+          name: true,
+          subdomain: true,
+          city: true,
+          _count: { select: { orders: true, dishes: true } },
+        },
+        orderBy: { orders: { _count: 'desc' } },
+        take: 10,
+      }),
+
+      // Последние 10 заказов
+      prisma.order.findMany({
+        select: {
+          id: true,
+          orderNumber: true,
+          totalAmount: true,
+          status: true,
+          deliveryType: true,
+          createdAt: true,
+          restaurant: { select: { name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      }),
+
+      // Города
+      prisma.$queryRaw`
+        SELECT "city", COUNT(*)::int as count
+        FROM "Restaurant"
+        WHERE "city" IS NOT NULL AND "city" != ''
+        GROUP BY "city"
+        ORDER BY count DESC
+        LIMIT 10
+      `,
+    ]);
+
+    res.json({
+      overview: {
+        totalUsers,
+        totalRestaurants,
+        totalOrders,
+        totalCustomers,
+        totalDishes,
+        totalRevenue: totalRevenue._sum.totalAmount || 0,
+        menuViews30d,
+      },
+      today: {
+        orders: ordersToday,
+        revenue: revenueToday._sum.totalAmount || 0,
+      },
+      week: {
+        orders: ordersThisWeek,
+      },
+      growth: {
+        newUsersThisMonth,
+        newRestaurantsThisMonth,
+        newCustomersThisMonth,
+      },
+      charts: {
+        userGrowth,
+        orderGrowth,
+      },
+      distributions: {
+        subscriptionsByStatus,
+        ordersByStatus,
+        ordersByDeliveryType,
+        citiesDistribution,
+      },
+      topRestaurants,
+      recentOrders,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ======================== SUBSCRIPTIONS ========================
+
 
 
 export const updateUserSubscription = async (req, res, next) => {

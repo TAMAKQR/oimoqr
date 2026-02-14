@@ -11,6 +11,7 @@ import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import MenuPage from './pages/MenuPage';
 import AdminPage from './pages/AdminPage';
+import AdminDashboardPage from './pages/AdminDashboardPage';
 import NotFoundPage from './pages/NotFoundPage';
 import MenuManagementPage from './pages/MenuManagementPage';
 import RestaurantSettingsPage from './pages/RestaurantSettingsPage';
@@ -185,6 +186,14 @@ function App() {
           />
 
           {/* Admin routes */}
+          <Route
+            path="/admin/dashboard"
+            element={
+              <AdminRoute>
+                <AdminDashboardPage />
+              </AdminRoute>
+            }
+          />
           <Route
             path="/admin"
             element={
