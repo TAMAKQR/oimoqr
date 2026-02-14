@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 
-/* ═══════ HOOKS ═══════ */
+/* â•â•â•â•â•â•â• HOOKS â•â•â•â•â•â•â• */
 const useInView = (threshold = 0.15) => {
   const ref = useRef(null);
   const [visible, setVisible] = useState(false);
@@ -17,7 +17,7 @@ const useInView = (threshold = 0.15) => {
   return [ref, visible];
 };
 
-/* ═══════ COMPONENTS ═══════ */
+/* â•â•â•â•â•â•â• COMPONENTS â•â•â•â•â•â•â• */
 const Counter = ({ end, suffix = '' }) => {
   const [val, setVal] = useState(0);
   const [ref, visible] = useInView(0.3);
@@ -59,7 +59,7 @@ const FaqItem = ({ q, a }) => {
   );
 };
 
-/* ═══════ Phone mockup ═══════ */
+/* â•â•â•â•â•â•â• Phone mockup â•â•â•â•â•â•â• */
 const PhoneMockup = () => (
   <div className="relative w-[280px] h-[560px] lg:w-[320px] lg:h-[640px] mx-auto">
     {/* Phone frame */}
@@ -82,11 +82,11 @@ const PhoneMockup = () => (
         </div>
         {/* Banner */}
         <div className="mx-3 mt-3 h-20 bg-gradient-to-r from-primary-400 to-primary-600 rounded-xl flex items-center justify-center">
-          <span className="text-white text-xs font-semibold px-3 text-center">🔥 -20% on all dishes</span>
+          <span className="text-white text-xs font-semibold px-3 text-center">ðŸ”¥ -20% on all dishes</span>
         </div>
         {/* Categories */}
         <div className="flex gap-2 px-3 mt-3 overflow-hidden">
-          {['🍕', '🍔', '🥗', '🍰'].map((e, i) => (
+          {['ðŸ•', 'ðŸ”', 'ðŸ¥—', 'ðŸ°'].map((e, i) => (
             <div key={i} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium ${i === 0 ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
               {e}
             </div>
@@ -95,9 +95,9 @@ const PhoneMockup = () => (
         {/* Dishes */}
         <div className="px-3 mt-3 space-y-2">
           {[
-            { name: 'Margherita', price: '320 сом', color: 'from-orange-100 to-red-50' },
-            { name: 'Caesar Salad', price: '280 сом', color: 'from-green-50 to-emerald-100' },
-            { name: 'Tiramisu', price: '250 сом', color: 'from-amber-50 to-yellow-100' },
+            { name: 'Margherita', price: '320 ÑÐ¾Ð¼', color: 'from-orange-100 to-red-50' },
+            { name: 'Caesar Salad', price: '280 ÑÐ¾Ð¼', color: 'from-green-50 to-emerald-100' },
+            { name: 'Tiramisu', price: '250 ÑÐ¾Ð¼', color: 'from-amber-50 to-yellow-100' },
           ].map((d, i) => (
             <div key={i} className={`flex items-center gap-2 p-2 rounded-xl bg-gradient-to-r ${d.color}`}>
               <div className="w-10 h-10 bg-white/60 rounded-lg shrink-0" />
@@ -114,7 +114,7 @@ const PhoneMockup = () => (
         {/* Cart button */}
         <div className="absolute bottom-6 left-5 right-5">
           <div className="bg-primary-600 text-white text-xs font-semibold py-2.5 rounded-xl text-center shadow-lg shadow-primary-600/30">
-            🛒 WhatsApp · 850 сом
+            ðŸ›’ WhatsApp Â· 850 ÑÐ¾Ð¼
           </div>
         </div>
       </div>
@@ -136,31 +136,31 @@ const HomePage = () => {
   }, []);
 
   const businessTypes = [
-    { icon: '🍽️', key: 'restaurant', gradient: 'from-primary-500 to-primary-700', bg: 'bg-primary-50', ring: 'ring-primary-200' },
-    { icon: '🛒', key: 'store', gradient: 'from-amber-500 to-amber-700', bg: 'bg-amber-50', ring: 'ring-amber-200' },
-    { icon: '🏨', key: 'hotel', gradient: 'from-emerald-500 to-emerald-700', bg: 'bg-emerald-50', ring: 'ring-emerald-200' },
+    { icon: 'ðŸ½ï¸', key: 'restaurant', gradient: 'from-primary-500 to-primary-700', bg: 'bg-primary-50', ring: 'ring-primary-200' },
+    { icon: 'ðŸ›’', key: 'store', gradient: 'from-amber-500 to-amber-700', bg: 'bg-amber-50', ring: 'ring-amber-200' },
+    { icon: 'ðŸ¨', key: 'hotel', gradient: 'from-emerald-500 to-emerald-700', bg: 'bg-emerald-50', ring: 'ring-emerald-200' },
   ];
 
   const features = [
-    { icon: '📱', key: 'qrmenu', color: 'from-blue-500 to-indigo-600' },
-    { icon: '💬', key: 'whatsapp', color: 'from-green-500 to-emerald-600' },
-    { icon: '⚡', key: 'realtime', color: 'from-yellow-500 to-orange-500' },
-    { icon: '🎨', key: 'customization', color: 'from-purple-500 to-pink-500' },
-    { icon: '📊', key: 'analytics', color: 'from-cyan-500 to-blue-500' },
-    { icon: '🌐', key: 'multilang', color: 'from-rose-500 to-red-500' },
+    { icon: 'ðŸ“±', key: 'qrmenu', color: 'from-blue-500 to-indigo-600' },
+    { icon: 'ðŸ’¬', key: 'whatsapp', color: 'from-green-500 to-emerald-600' },
+    { icon: 'âš¡', key: 'realtime', color: 'from-yellow-500 to-orange-500' },
+    { icon: 'ðŸŽ¨', key: 'customization', color: 'from-purple-500 to-pink-500' },
+    { icon: 'ðŸ“Š', key: 'analytics', color: 'from-cyan-500 to-blue-500' },
+    { icon: 'ðŸŒ', key: 'multilang', color: 'from-rose-500 to-red-500' },
   ];
 
   const steps = [
-    { num: '01', key: 'step1', icon: '✍️' },
-    { num: '02', key: 'step2', icon: '📋' },
-    { num: '03', key: 'step3', icon: '📲' },
+    { num: '01', key: 'step1', icon: 'âœï¸' },
+    { num: '02', key: 'step2', icon: 'ðŸ“‹' },
+    { num: '03', key: 'step3', icon: 'ðŸ“²' },
   ];
 
   return (
     <div className="min-h-screen bg-white overflow-x-hidden">
-      {/* ═══════ HEADER ═══════ */}
+      {/* â•â•â•â•â•â•â• HEADER â•â•â•â•â•â•â• */}
       <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100' : 'bg-transparent'}`}>
-        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-16 py-3 flex justify-between items-center">
           <Link to="/" className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center shadow-md shadow-primary-500/20">
               <span className="text-white font-bold text-sm">Q</span>
@@ -237,16 +237,16 @@ const HomePage = () => {
         </div>
       </header>
 
-      {/* ═══════ HERO ═══════ */}
+      {/* â•â•â•â•â•â•â• HERO â•â•â•â•â•â•â• */}
       <section className="relative pt-28 pb-20 md:pt-36 md:pb-32 overflow-hidden">
         {/* Animated bg blobs */}
         <div className="absolute top-20 -left-32 w-96 h-96 bg-primary-200/30 rounded-full blur-3xl animate-pulse" />
         <div className="absolute bottom-10 -right-32 w-80 h-80 bg-amber-200/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary-100/20 rounded-full blur-3xl" />
 
-        <div className="container mx-auto px-4 relative">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-16 relative">
           <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
-            {/* Left — text */}
+            {/* Left â€” text */}
             <div className="flex-1 text-center lg:text-left">
               <Reveal>
                 <div className="inline-flex items-center gap-2 bg-gradient-to-r from-primary-50 to-primary-100 text-primary-700 px-4 py-2 rounded-full text-sm font-semibold mb-6 border border-primary-200/50">
@@ -304,7 +304,7 @@ const HomePage = () => {
               </Reveal>
             </div>
 
-            {/* Right — phone mockup */}
+            {/* Right â€” phone mockup */}
             <Reveal delay={200} className="flex-shrink-0">
               <PhoneMockup />
             </Reveal>
@@ -312,15 +312,15 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* ═══════ STATS BAR ═══════ */}
+      {/* â•â•â•â•â•â•â• STATS BAR â•â•â•â•â•â•â• */}
       <section className="border-y border-gray-100 bg-gray-50/50">
-        <div className="container mx-auto px-4 py-10">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-16 py-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {[
-              { end: 500, suffix: '+', label: t('home.stats.businesses'), icon: '🏢' },
-              { end: 50000, suffix: '+', label: t('home.stats.scans'), icon: '📱' },
-              { end: 5, suffix: '', label: t('home.stats.minutes'), icon: '⚡' },
-              { end: 99, suffix: '%', label: t('home.stats.uptime'), icon: '🟢' },
+              { end: 500, suffix: '+', label: t('home.stats.businesses'), icon: 'ðŸ¢' },
+              { end: 50000, suffix: '+', label: t('home.stats.scans'), icon: 'ðŸ“±' },
+              { end: 5, suffix: '', label: t('home.stats.minutes'), icon: 'âš¡' },
+              { end: 99, suffix: '%', label: t('home.stats.uptime'), icon: 'ðŸŸ¢' },
             ].map((s, i) => (
               <Reveal key={i} delay={i * 100} className="text-center">
                 <div className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-1">
@@ -333,9 +333,9 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* ═══════ BUSINESS TYPES ═══════ */}
+      {/* â•â•â•â•â•â•â• BUSINESS TYPES â•â•â•â•â•â•â• */}
       <section id="solutions" className="py-20 md:py-28">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-16">
           <Reveal>
             <div className="text-center mb-16">
               <span className="inline-block px-4 py-1.5 rounded-full bg-primary-50 text-primary-600 text-sm font-semibold mb-4">{t('home.nav.solutions')}</span>
@@ -374,9 +374,9 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* ═══════ FEATURES ═══════ */}
+      {/* â•â•â•â•â•â•â• FEATURES â•â•â•â•â•â•â• */}
       <section id="features" className="py-20 md:py-28 bg-gray-50">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-16">
           <Reveal>
             <div className="text-center mb-16">
               <span className="inline-block px-4 py-1.5 rounded-full bg-primary-50 text-primary-600 text-sm font-semibold mb-4">{t('home.nav.features')}</span>
@@ -403,11 +403,11 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* ═══════ HOW IT WORKS ═══════ */}
+      {/* â•â•â•â•â•â•â• HOW IT WORKS â•â•â•â•â•â•â• */}
       <section id="how" className="py-20 md:py-28 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-primary-900 to-gray-900" />
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.15) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
-        <div className="container mx-auto px-4 relative">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-16 relative">
           <Reveal>
             <div className="text-center mb-16">
               <span className="inline-block px-4 py-1.5 rounded-full bg-white/10 text-primary-300 text-sm font-semibold mb-4 backdrop-blur-sm border border-white/10">{t('home.nav.howItWorks')}</span>
@@ -443,9 +443,9 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* ═══════ CAPABILITIES + MOCKUP ═══════ */}
+      {/* â•â•â•â•â•â•â• CAPABILITIES + MOCKUP â•â•â•â•â•â•â• */}
       <section className="py-20 md:py-28">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-16">
           <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-16 items-center">
             <Reveal className="flex-1">
               <span className="inline-block px-4 py-1.5 rounded-full bg-primary-50 text-primary-600 text-sm font-semibold mb-4">{t('home.capabilities.tag')}</span>
@@ -480,10 +480,10 @@ const HomePage = () => {
                     </div>
                     <div className="h-24 bg-gradient-to-r from-primary-500 to-primary-700 rounded-xl flex items-center justify-center overflow-hidden relative">
                       <div className="absolute inset-0 bg-black/10" />
-                      <span className="text-white font-semibold text-sm relative">🎉 {t('home.capabilities.promoPreview')}</span>
+                      <span className="text-white font-semibold text-sm relative">ðŸŽ‰ {t('home.capabilities.promoPreview')}</span>
                     </div>
                     <div className="flex gap-2">
-                      {['🍕 Pizza', '🍔 Burger', '🥤'].map((c, i) => (
+                      {['ðŸ• Pizza', 'ðŸ” Burger', 'ðŸ¥¤'].map((c, i) => (
                         <div key={i} className={`px-3 py-1.5 rounded-full text-xs font-semibold ${i === 0 ? 'bg-primary-600 text-white shadow-sm' : 'bg-gray-100 text-gray-500'}`}>{c}</div>
                       ))}
                     </div>
@@ -507,9 +507,9 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* ═══════ FAQ ═══════ */}
+      {/* â•â•â•â•â•â•â• FAQ â•â•â•â•â•â•â• */}
       <section id="faq" className="py-20 md:py-28 bg-gray-50">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-16">
           <Reveal>
             <div className="text-center mb-14">
               <span className="inline-block px-4 py-1.5 rounded-full bg-primary-50 text-primary-600 text-sm font-semibold mb-4">FAQ</span>
@@ -526,11 +526,11 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* ═══════ FINAL CTA ═══════ */}
+      {/* â•â•â•â•â•â•â• FINAL CTA â•â•â•â•â•â•â• */}
       <section className="py-20 md:py-28 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary-600 via-primary-700 to-gray-900" />
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.2) 1px, transparent 0)', backgroundSize: '32px 32px' }} />
-        <div className="container mx-auto px-4 relative text-center">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-16 relative text-center">
           <Reveal>
             <h2 className="text-3xl md:text-5xl font-extrabold text-white mb-5">{t('home.finalCta.title')}</h2>
             <p className="text-primary-200 text-lg mb-10 max-w-xl mx-auto">{t('home.finalCta.subtitle')}</p>
@@ -542,9 +542,9 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* ═══════ FOOTER ═══════ */}
+      {/* â•â•â•â•â•â•â• FOOTER â•â•â•â•â•â•â• */}
       <footer className="bg-gray-900 text-gray-400 pt-16 pb-8">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-16">
           <div className="grid md:grid-cols-4 gap-8 pb-10 border-b border-gray-800">
             <div className="md:col-span-2">
               <div className="flex items-center gap-2 mb-4">
