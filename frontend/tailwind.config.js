@@ -11,6 +11,16 @@ export default {
     'border-green-500', 'bg-green-50',
   ],
   theme: {
+    container: {
+      center: true,
+      padding: {
+        DEFAULT: '1rem',
+        sm: '1.5rem',
+        lg: '3rem',
+        xl: '5rem',
+        '2xl': '8rem',
+      },
+    },
     extend: {
       colors: {
         // OimoQR brand palette — Steppe Indigo
