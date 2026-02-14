@@ -347,10 +347,9 @@ const DishModal = ({
               {dish.modifiers.map((modifier) => (
                 modifier.options && modifier.options.length > 0 && (
                   <div key={modifier.id} className="mb-4">
-                    <h3 className="text-base sm:text-lg font-semibold mb-2">
-                      {modifier.name}
-                      {modifier.isRequired && <span className="text-red-500 ml-1">*</span>}
-                    </h3>
+                    {modifier.isRequired && (
+                      <p className="text-xs text-red-500 mb-2">* Обязательный выбор</p>
+                    )}
                     <div className="space-y-2">
                       {modifier.options.map((option) => (
                         <label
