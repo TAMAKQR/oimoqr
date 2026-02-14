@@ -620,6 +620,8 @@ const MenuPage = () => {
                       dish={dish}
                       currency={getCurrencySymbol(restaurant.currency)}
                       style={restaurant.menuCardStyle || 'horizontal'}
+                      restaurantId={restaurant.id}
+                      restaurantName={restaurant.name}
                       onFavoriteToggle={(action) => {
                         if (action === 'login') {
                           setShowLoginModal(true);
@@ -658,6 +660,8 @@ const MenuPage = () => {
                         dish={dish}
                         currency={getCurrencySymbol(restaurant.currency)}
                         style={restaurant.menuCardStyle || 'horizontal'}
+                        restaurantId={restaurant.id}
+                        restaurantName={restaurant.name}
                         onFavoriteToggle={(action) => {
                           if (action === 'login') {
                             setShowLoginModal(true);
@@ -756,6 +760,8 @@ const MenuPage = () => {
                         dish={dish}
                         currency={getCurrencySymbol(restaurant.currency)}
                         style={restaurant.menuCardStyle || 'horizontal'}
+                        restaurantId={restaurant.id}
+                        restaurantName={restaurant.name}
                         onFavoriteToggle={(action) => {
                           if (action === 'login') {
                             setShowLoginModal(true);

@@ -93,7 +93,9 @@ const DishModal = ({
   currency = '₽',
   isFavorite = false,
   onToggleFavorite,
-  favoriteLoading = false
+  favoriteLoading = false,
+  restaurantId,
+  restaurantName
 }) => {
   const [dish, setDish] = useState(initialDish);
   // Используем объект для хранения выбранных опций для каждого модификатора
@@ -102,6 +104,8 @@ const DishModal = ({
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
   const addItem = useCartStore((state) => state.addItem);
   const removeItem = useCartStore((state) => state.removeItem);
+  const isOtherRestaurant = useCartStore((state) => state.isOtherRestaurant);
+  const switchRestaurant = useCartStore((state) => state.switchRestaurant);
   const isAvailable = dish?.available !== false; // По умолчанию true если поле отсутствует
 
   useEffect(() => {
@@ -209,6 +213,15 @@ const DishModal = ({
   const handleAddToCart = () => {
     if (!isAvailable) return;
 
+    // Проверяем, не из другого ли ресторана
+    if (restaurantId && isOtherRestaurant(restaurantId)) {
+      if (window.confirm('В корзине блюда из другого ресторана. Очистить корзину и добавить это блюдо?')) {
+        switchRestaurant(restaurantId, restaurantName);
+      } else {
+        return;
+      }
+    }
+
     const basePrice = parseFloat(dish.price) || 0;
     const selectedOptions = Object.values(selectedModifiers).flat();
 
@@ -236,7 +249,7 @@ const DishModal = ({
     const itemId = `${dish.id}-${modifierIds}`;
 
     // Добавляем блюдо с модификаторами в корзину
-    addItem(dish, selectedOptions);
+    addItem(dish, selectedOptions, restaurantId, restaurantName);
 
     toast.success(`${dish.name} добавлен в корзину!`);
     onClose();

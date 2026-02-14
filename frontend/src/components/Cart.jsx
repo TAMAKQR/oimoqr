@@ -9,8 +9,11 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
   const navigate = useNavigate();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
-  const { items, getTotal, getItemCount, clearCart } = useCartStore();
+  const { items, getTotal, getItemCount, clearCart, restaurantId: cartRestaurantId } = useCartStore();
   const currency = restaurant?.currency || '₽';
+
+  // Не показывать корзину, если она принадлежит другому ресторану
+  const isCartForCurrentRestaurant = !cartRestaurantId || !restaurant?.id || cartRestaurantId === restaurant.id;
 
   const total = getTotal();
   const itemCount = getItemCount();
@@ -57,7 +60,7 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
     }
   };
 
-  if (!itemCount || isDishModalOpen) {
+  if (!itemCount || isDishModalOpen || !isCartForCurrentRestaurant) {
     return null;
   }
 
