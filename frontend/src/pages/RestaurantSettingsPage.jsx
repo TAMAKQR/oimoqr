@@ -983,13 +983,72 @@ const RestaurantSettingsPage = () => {
             </div>
           </div>
 
-          {/* QR Codes for Tables */}
+          {/* QR Codes */}
           {getSelectedRestaurant()?.subdomain && (
             <div className="bg-white rounded-xl border border-gray-100 p-5">
-              <h2 className="text-xl font-bold mb-2">QR-коды для столов</h2>
-              <p className="text-sm text-gray-600 mb-4">
-                Распечатайте QR-коды и разместите на столах. Клиенты отсканируют код и сразу попадут в меню с привязкой к столу.
+              <h2 className="text-xl font-bold mb-2">QR-коды</h2>
+              <p className="text-sm text-gray-600 mb-5">
+                QR-коды для вашего меню. Общий — для доставки/самовывоза, по столам — для dine-in.
               </p>
+
+              {/* General QR */}
+              <div className="flex items-center gap-5 p-4 border border-gray-200 rounded-xl mb-6">
+                <QRCodeSVG
+                  value={`${window.location.origin}/menu/${getSelectedRestaurant().subdomain}`}
+                  size={140}
+                  level="M"
+                  includeMargin={false}
+                  className="flex-shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-lg text-gray-900 mb-1">Общий QR-код</h3>
+                  <p className="text-sm text-gray-600 mb-2">Для доставки и самовывоза — без привязки к столу</p>
+                  <p className="text-xs text-gray-500 break-all mb-3">{window.location.origin}/menu/{getSelectedRestaurant().subdomain}</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const url = `${window.location.origin}/menu/${getSelectedRestaurant().subdomain}`;
+                      const printWindow = window.open('', '_blank');
+                      const svgEl = document.getElementById('general-qr-svg');
+                      printWindow.document.write(`
+                        <html><head><title>QR — ${getSelectedRestaurant().name}</title>
+                        <style>
+                          body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+                          .card { text-align: center; padding: 40px; }
+                          .card h2 { margin: 20px 0 8px; font-size: 24px; }
+                          .card p { margin: 0; color: #6b7280; font-size: 14px; }
+                        </style></head><body>
+                        <div class="card">
+                          ${svgEl?.outerHTML || ''}
+                          <h2>${getSelectedRestaurant().name}</h2>
+                          <p>Отсканируйте для просмотра меню</p>
+                        </div>
+                        </body></html>
+                      `);
+                      printWindow.document.close();
+                      printWindow.focus();
+                      setTimeout(() => { printWindow.print(); }, 300);
+                    }}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 rounded-lg transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18.75 12h.008v.008h-.008V12zm-2.25 0h.008v.008H16.5V12z" />
+                    </svg>
+                    Печать
+                  </button>
+                </div>
+                <QRCodeSVG
+                  id="general-qr-svg"
+                  value={`${window.location.origin}/menu/${getSelectedRestaurant().subdomain}`}
+                  size={200}
+                  level="M"
+                  className="hidden"
+                />
+              </div>
+
+              {/* Table QR Codes */}
+              <h3 className="font-semibold text-gray-900 mb-3">QR-коды по столам</h3>
+              <p className="text-sm text-gray-600 mb-3">Каждый QR привязан к номеру стола — заказ клиента сразу покажет стол.</p>
 
               <div className="flex items-center gap-3 mb-4">
                 <label className="text-sm font-medium text-gray-700">Количество столов:</label>
@@ -1052,173 +1111,171 @@ const RestaurantSettingsPage = () => {
                 })}
               </div>
 
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  💡 <strong>Совет:</strong> Нажмите «Печать» чтобы распечатать все QR-коды. Каждый код привязан к номеру стола — заказ клиента сразу покажет стол.
-                </p>
-              </div>
+            </div>
             </div>
           )}
 
-          {/* Working Hours */}
-          <div className="bg-white rounded-xl border border-gray-100 p-5">
-            <h2 className="text-xl font-bold mb-4">Режим работы</h2>
+      {/* Working Hours */}
+      <div className="bg-white rounded-xl border border-gray-100 p-5">
+        <h2 className="text-xl font-bold mb-4">Режим работы</h2>
 
-            {/* Temporary Closure */}
-            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <div className="flex items-center gap-3 mb-3">
+        {/* Temporary Closure */}
+        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <div className="flex items-center gap-3 mb-3">
+            <input
+              type="checkbox"
+              id="isTemporarilyClosed"
+              checked={isTemporarilyClosed}
+              onChange={(e) => setIsTemporarilyClosed(e.target.checked)}
+              className="w-5 h-5"
+            />
+            <label htmlFor="isTemporarilyClosed" className="font-medium text-gray-700">
+              🚫 Ресторан временно закрыт
+            </label>
+          </div>
+
+          {isTemporarilyClosed && (
+            <div>
+              <label className="block text-sm font-medium mb-1 text-gray-700">Причина закрытия</label>
+              <input
+                type="text"
+                value={closureReason}
+                onChange={(e) => setClosureReason(e.target.value)}
+                className="input w-full"
+                placeholder="Например: Технический перерыв до 15:00, Ремонт, Выходной..."
+              />
+              <p className="text-sm text-gray-600 mt-1">
+                Эта информация будет отображаться в меню для клиентов
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Days of Week */}
+        <div className="space-y-3">
+          {Object.entries({
+            monday: 'Понедельник',
+            tuesday: 'Вторник',
+            wednesday: 'Среда',
+            thursday: 'Четверг',
+            friday: 'Пятница',
+            saturday: 'Суббота',
+            sunday: 'Воскресенье',
+          }).map(([day, label]) => (
+            <div key={day} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+              <div className="w-32 font-medium text-gray-700">{label}</div>
+
+              <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
-                  id="isTemporarilyClosed"
-                  checked={isTemporarilyClosed}
-                  onChange={(e) => setIsTemporarilyClosed(e.target.checked)}
-                  className="w-5 h-5"
+                  id={`${day}-isOpen`}
+                  checked={workingHours[day].isOpen}
+                  onChange={(e) => setWorkingHours({
+                    ...workingHours,
+                    [day]: { ...workingHours[day], isOpen: e.target.checked }
+                  })}
+                  className="w-4 h-4"
                 />
-                <label htmlFor="isTemporarilyClosed" className="font-medium text-gray-700">
-                  🚫 Ресторан временно закрыт
+                <label htmlFor={`${day}-isOpen`} className="text-sm text-gray-600 w-20">
+                  {workingHours[day].isOpen ? 'Открыто' : 'Выходной'}
                 </label>
               </div>
 
-              {isTemporarilyClosed && (
-                <div>
-                  <label className="block text-sm font-medium mb-1 text-gray-700">Причина закрытия</label>
+              {workingHours[day].isOpen && (
+                <div className="flex items-center gap-2">
                   <input
-                    type="text"
-                    value={closureReason}
-                    onChange={(e) => setClosureReason(e.target.value)}
-                    className="input w-full"
-                    placeholder="Например: Технический перерыв до 15:00, Ремонт, Выходной..."
+                    type="checkbox"
+                    id={`${day}-is247`}
+                    checked={workingHours[day].is247 || false}
+                    onChange={(e) => setWorkingHours({
+                      ...workingHours,
+                      [day]: { ...workingHours[day], is247: e.target.checked }
+                    })}
+                    className="w-4 h-4"
                   />
-                  <p className="text-sm text-gray-600 mt-1">
-                    Эта информация будет отображаться в меню для клиентов
-                  </p>
+                  <label htmlFor={`${day}-is247`} className="text-sm text-gray-600">Круглосуточно</label>
                 </div>
               )}
-            </div>
 
-            {/* Days of Week */}
-            <div className="space-y-3">
-              {Object.entries({
-                monday: 'Понедельник',
-                tuesday: 'Вторник',
-                wednesday: 'Среда',
-                thursday: 'Четверг',
-                friday: 'Пятница',
-                saturday: 'Суббота',
-                sunday: 'Воскресенье',
-              }).map(([day, label]) => (
-                <div key={day} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
-                  <div className="w-32 font-medium text-gray-700">{label}</div>
-
+              {workingHours[day].isOpen && !workingHours[day].is247 && (
+                <>
                   <div className="flex items-center gap-2">
+                    <label className="text-sm text-gray-600">С</label>
                     <input
-                      type="checkbox"
-                      id={`${day}-isOpen`}
-                      checked={workingHours[day].isOpen}
+                      type="time"
+                      value={workingHours[day].open}
                       onChange={(e) => setWorkingHours({
                         ...workingHours,
-                        [day]: { ...workingHours[day], isOpen: e.target.checked }
+                        [day]: { ...workingHours[day], open: e.target.value }
                       })}
-                      className="w-4 h-4"
+                      className="input w-28 text-sm"
                     />
-                    <label htmlFor={`${day}-isOpen`} className="text-sm text-gray-600 w-20">
-                      {workingHours[day].isOpen ? 'Открыто' : 'Выходной'}
-                    </label>
                   </div>
 
-                  {workingHours[day].isOpen && (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id={`${day}-is247`}
-                        checked={workingHours[day].is247 || false}
-                        onChange={(e) => setWorkingHours({
-                          ...workingHours,
-                          [day]: { ...workingHours[day], is247: e.target.checked }
-                        })}
-                        className="w-4 h-4"
-                      />
-                      <label htmlFor={`${day}-is247`} className="text-sm text-gray-600">Круглосуточно</label>
-                    </div>
-                  )}
-
-                  {workingHours[day].isOpen && !workingHours[day].is247 && (
-                    <>
-                      <div className="flex items-center gap-2">
-                        <label className="text-sm text-gray-600">С</label>
-                        <input
-                          type="time"
-                          value={workingHours[day].open}
-                          onChange={(e) => setWorkingHours({
-                            ...workingHours,
-                            [day]: { ...workingHours[day], open: e.target.value }
-                          })}
-                          className="input w-28 text-sm"
-                        />
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <label className="text-sm text-gray-600">До</label>
-                        <input
-                          type="time"
-                          value={workingHours[day].close}
-                          onChange={(e) => setWorkingHours({
-                            ...workingHours,
-                            [day]: { ...workingHours[day], close: e.target.value }
-                          })}
-                          className="input w-28 text-sm"
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-              ))}
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-gray-600">До</label>
+                    <input
+                      type="time"
+                      value={workingHours[day].close}
+                      onChange={(e) => setWorkingHours({
+                        ...workingHours,
+                        [day]: { ...workingHours[day], close: e.target.value }
+                      })}
+                      className="input w-28 text-sm"
+                    />
+                  </div>
+                </>
+              )}
             </div>
+          ))}
+        </div>
 
-            <p className="text-sm text-gray-600 mt-4">
-              💡 Режим работы будет отображаться в меню. Статус "Открыто/Закрыто" рассчитывается автоматически на основе текущего времени.
-            </p>
-          </div>
-
-          {/* Save Button */}
-          <div className="flex gap-4">
-            <button
-              type="button"
-              onClick={() => navigate('/dashboard')}
-              className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors text-sm font-medium"
-              disabled={saving || uploadingBanner}
-            >
-              Отмена
-            </button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-              disabled={saving || uploadingBanner}
-            >
-              {uploadingBanner ? 'Загрузка баннера...' : saving ? 'Сохранение...' : 'Сохранить изменения'}
-            </button>
-          </div>
-        </form>
-
-        {/* Danger Zone - Delete Restaurant - только для владельцев */}
-        {isOwner() && (
-          <div className="bg-red-50 rounded-xl border-2 border-red-200 p-5 mt-8">
-            <h2 className="text-xl font-bold text-red-600 mb-2">Опасная зона</h2>
-            <p className="text-sm text-gray-700 mb-4">
-              Удаление ресторана необратимо. Все данные (меню, категории, блюда, модификаторы) будут удалены навсегда.
-            </p>
-            <button
-              type="button"
-              onClick={handleDeleteRestaurant}
-              className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-              disabled={saving}
-            >
-              🗑️ Удалить ресторан
-            </button>
-          </div>
-        )}
+        <p className="text-sm text-gray-600 mt-4">
+          💡 Режим работы будет отображаться в меню. Статус "Открыто/Закрыто" рассчитывается автоматически на основе текущего времени.
+        </p>
       </div>
-    </DashboardLayout>
+
+      {/* Save Button */}
+      <div className="flex gap-4">
+        <button
+          type="button"
+          onClick={() => navigate('/dashboard')}
+          className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors text-sm font-medium"
+          disabled={saving || uploadingBanner}
+        >
+          Отмена
+        </button>
+        <button
+          type="submit"
+          className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+          disabled={saving || uploadingBanner}
+        >
+          {uploadingBanner ? 'Загрузка баннера...' : saving ? 'Сохранение...' : 'Сохранить изменения'}
+        </button>
+      </div>
+    </form>
+
+        {/* Danger Zone - Delete Restaurant - только для владельцев */ }
+  {
+    isOwner() && (
+      <div className="bg-red-50 rounded-xl border-2 border-red-200 p-5 mt-8">
+        <h2 className="text-xl font-bold text-red-600 mb-2">Опасная зона</h2>
+        <p className="text-sm text-gray-700 mb-4">
+          Удаление ресторана необратимо. Все данные (меню, категории, блюда, модификаторы) будут удалены навсегда.
+        </p>
+        <button
+          type="button"
+          onClick={handleDeleteRestaurant}
+          className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+          disabled={saving}
+        >
+          🗑️ Удалить ресторан
+        </button>
+      </div>
+    )
+  }
+      </div >
+    </DashboardLayout >
   );
 };
 
