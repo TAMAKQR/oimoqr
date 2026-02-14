@@ -1,8 +1,9 @@
 /**
- * Добавляет timestamp к URL изображения для обхода кэша браузера
+ * Возвращает URL изображения. Не добавляет timestamp для клиентского меню,
+ * чтобы браузер мог использовать кэш и изображения загружались мгновенно.
  * @param {string} url - URL изображения
  * @param {boolean} forceRefresh - Принудительно обновить (добавить новый timestamp)
- * @returns {string} - URL с параметром timestamp
+ * @returns {string} - URL изображения
  */
 export const cacheBustImage = (url, forceRefresh = false) => {
     if (!url) return url;
@@ -10,20 +11,14 @@ export const cacheBustImage = (url, forceRefresh = false) => {
     // Если это blob URL, возвращаем как есть
     if (url.startsWith('blob:')) return url;
 
-    // Если forceRefresh = true, всегда добавляем новый timestamp
+    // Если forceRefresh = true, всегда добавляем новый timestamp (для админки после загрузки нового фото)
     if (forceRefresh) {
         const separator = url.includes('?') ? '&' : '?';
         return `${url}${separator}t=${Date.now()}`;
     }
 
-    // Если URL уже содержит параметр t=, возвращаем как есть
-    if (url.includes('?t=') || url.includes('&t=')) {
-        return url;
-    }
-
-    // Добавляем timestamp только при первой загрузке
-    const separator = url.includes('?') ? '&' : '?';
-    return `${url}${separator}t=${Date.now()}`;
+    // Не добавляем timestamp — пусть браузер кэширует изображения
+    return url;
 };
 
 /**
