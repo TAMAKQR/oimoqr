@@ -139,8 +139,11 @@ const StaffManagementPage = () => {
 
   return (
     <DashboardLayout userData={userData} selectedRestaurantId={restaurantId}>
-      <div className="max-w-7xl mx-auto px-4">
-        <h2 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8">Управление сотрудниками</h2>
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Управление сотрудниками</h1>
+          <p className="text-gray-500 text-sm mt-1">Создавайте и управляйте доступом менеджеров</p>
+        </div>
 
         {error && (
           <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded">
@@ -156,13 +159,22 @@ const StaffManagementPage = () => {
 
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="btn-primary mb-6"
+          className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium mb-6"
         >
-          {showAddForm ? 'Отменить' : '+ Создать менеджера'}
+          {showAddForm ? (
+            <span>Отменить</span>
+          ) : (
+            <>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              <span>Создать менеджера</span>
+            </>
+          )}
         </button>
 
         {showAddForm && (
-          <div className="card p-6 mb-8">
+          <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
             <h3 className="text-lg font-semibold mb-4">Создать менеджера</h3>
             <p className="text-sm text-gray-600 mb-4">
               Создайте учетную запись для менеджера. Он сможет управлять меню: добавлять/редактировать блюда, изменять цены, ставить блюда на стоп.
@@ -216,7 +228,7 @@ const StaffManagementPage = () => {
                 </p>
               </div>
 
-              <button type="submit" className="btn-primary w-full">
+              <button type="submit" className="w-full px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
                 Создать менеджера
               </button>
             </form>
@@ -224,14 +236,14 @@ const StaffManagementPage = () => {
         )}
 
         {staff.length === 0 ? (
-          <div className="card p-6 text-center">
+          <div className="bg-white rounded-xl border border-gray-100 p-5 text-center">
             <p className="text-gray-600">Менеджеры не найдены</p>
             <p className="text-sm text-gray-500 mt-2">
               Создайте учетную запись менеджера, чтобы делегировать управление меню
             </p>
           </div>
         ) : (
-          <div className="card overflow-hidden">
+          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50">

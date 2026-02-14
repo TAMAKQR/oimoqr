@@ -156,7 +156,7 @@ const Sidebar = ({ userData, selectedRestaurantId }) => {
       <aside
         ref={sidebarRef}
         className={`
-          fixed lg:static top-0 left-0 h-full lg:h-auto lg:min-h-screen bg-white border-r border-gray-200 z-40 transition-transform duration-300 ease-in-out
+          fixed lg:sticky lg:top-0 top-0 left-0 h-screen bg-white border-r border-gray-200 z-40 transition-transform duration-300 ease-in-out
           w-[260px] flex-shrink-0 flex flex-col
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}

@@ -122,27 +122,32 @@ const CustomersPage = () => {
 
     return (
         <DashboardLayout userData={userData} selectedRestaurantId={restaurantId}>
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="max-w-6xl mx-auto">
                 {/* Header */}
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Клиенты</h1>
-                    <p className="text-gray-600">
+                <div className="mb-6">
+                    <h1 className="text-2xl font-bold text-gray-900">Клиенты</h1>
+                    <p className="text-gray-500 text-sm mt-1">
                         Всего клиентов: <span className="font-semibold">{customers.length}</span>
                     </p>
                 </div>
 
                 {/* Filters and Search */}
-                <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+                <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
                     <div className="flex flex-col md:flex-row gap-4">
                         {/* Search */}
                         <div className="flex-1">
-                            <input
-                                type="text"
-                                placeholder="🔍 Поиск по имени, телефону или email..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="input-field w-full"
-                            />
+                            <div className="relative">
+                                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                                </svg>
+                                <input
+                                    type="text"
+                                    placeholder="Поиск по имени, телефону или email..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                            </div>
                         </div>
 
                         {/* Sort By */}
@@ -160,7 +165,7 @@ const CustomersPage = () => {
 
                             <button
                                 onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                                className="btn-secondary px-4"
+                                className="px-4 py-2 border border-gray-200 rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors text-sm"
                                 title={sortOrder === 'asc' ? 'По возрастанию' : 'По убыванию'}
                             >
                                 {sortOrder === 'asc' ? '↑' : '↓'}
@@ -171,8 +176,12 @@ const CustomersPage = () => {
 
                 {/* Customers List */}
                 {filteredAndSortedCustomers.length === 0 ? (
-                    <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-                        <div className="text-6xl mb-4">👥</div>
+                    <div className="bg-white rounded-xl border border-gray-100 p-12 text-center">
+                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                            </svg>
+                        </div>
                         <h3 className="text-xl font-semibold mb-2">
                             {searchQuery ? 'Клиенты не найдены' : 'Пока нет клиентов'}
                         </h3>
@@ -183,7 +192,7 @@ const CustomersPage = () => {
                         </p>
                     </div>
                 ) : (
-                    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+                    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-200">
                                 <thead className="bg-gray-50">
@@ -277,17 +286,17 @@ const CustomersPage = () => {
                 {/* Statistics */}
                 {customers.length > 0 && (
                     <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="bg-white rounded-lg shadow-sm p-6">
+                        <div className="bg-white rounded-xl border border-gray-100 p-5">
                             <div className="text-sm text-gray-500 mb-1">Всего клиентов</div>
                             <div className="text-3xl font-bold text-gray-900">{customers.length}</div>
                         </div>
-                        <div className="bg-white rounded-lg shadow-sm p-6">
+                        <div className="bg-white rounded-xl border border-gray-100 p-5">
                             <div className="text-sm text-gray-500 mb-1">Всего заказов</div>
                             <div className="text-3xl font-bold text-gray-900">
                                 {customers.reduce((sum, c) => sum + c.stats.totalOrders, 0)}
                             </div>
                         </div>
-                        <div className="bg-white rounded-lg shadow-sm p-6">
+                        <div className="bg-white rounded-xl border border-gray-100 p-5">
                             <div className="text-sm text-gray-500 mb-1">Общая сумма</div>
                             <div className="text-3xl font-bold text-green-600">
                                 {formatCurrency(customers.reduce((sum, c) => sum + c.stats.totalSpent, 0))}

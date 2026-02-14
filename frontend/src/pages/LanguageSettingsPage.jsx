@@ -308,7 +308,7 @@ const LanguageSettingsPage = () => {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <p className="text-xl text-gray-600 mb-4">У вас нет ресторанов</p>
-          <button onClick={() => navigate('/dashboard')} className="btn-primary">
+          <button onClick={() => navigate('/dashboard')} className="px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
             На главную
           </button>
         </div>
@@ -318,8 +318,11 @@ const LanguageSettingsPage = () => {
 
   return (
     <DashboardLayout userData={userData} selectedRestaurantId={selectedRestaurantId}>
-      <div className="max-w-4xl mx-auto px-4">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-6">Управление языками</h1>
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Управление языками</h1>
+          <p className="text-gray-500 text-sm mt-1">Настройте языки и переводы для меню</p>
+        </div>
 
         {allRestaurants.length > 1 && (
           <div className="mb-6">
@@ -363,7 +366,7 @@ const LanguageSettingsPage = () => {
             {/* Languages Tab */}
             {activeTab === 'languages' && (
               <div className="space-y-6">
-                <div className="card">
+                <div className="bg-white rounded-xl border border-gray-100 p-5">
                   <h2 className="text-xl font-bold mb-4">Доступные языки</h2>
                   <div className="space-y-3">
                     {AVAILABLE_LANGUAGES.map(lang => (
@@ -383,7 +386,7 @@ const LanguageSettingsPage = () => {
 
                 {restaurantLanguages.length > 0 && (
                   <>
-                    <div className="card">
+                    <div className="bg-white rounded-xl border border-gray-100 p-5">
                       <h2 className="text-xl font-bold mb-4">Порядок языков (перетаскивайте для переупорядочения)</h2>
                       <div className="space-y-2">
                         {restaurantLanguages.map(lang => {
@@ -405,7 +408,7 @@ const LanguageSettingsPage = () => {
                       </div>
                     </div>
 
-                    <div className="card">
+                    <div className="bg-white rounded-xl border border-gray-100 p-5">
                       <h2 className="text-xl font-bold mb-4">Язык по умолчанию в QR меню</h2>
                       <p className="text-gray-600 mb-4">Выберите язык, который будет отображаться при первом открытии меню</p>
                       <select
@@ -426,7 +429,7 @@ const LanguageSettingsPage = () => {
                 <button
                   onClick={saveLanguages}
                   disabled={saving}
-                  className="btn-primary w-full"
+                  className="w-full px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
                 >
                   {saving ? 'Сохранение...' : 'Сохранить языки'}
                 </button>
@@ -467,7 +470,7 @@ const LanguageSettingsPage = () => {
 
                 {translationType === 'dishes' && (
                   <>
-                    <div className="card">
+                    <div className="bg-white rounded-xl border border-gray-100 p-5">
                       <h2 className="text-xl font-bold mb-4">Выберите блюдо для перевода</h2>
                       <select
                         value={selectedDish || ''}
@@ -489,7 +492,7 @@ const LanguageSettingsPage = () => {
                           const isEditing = editingTranslation?.languageCode === lang.languageCode;
 
                           return (
-                            <div key={lang.languageCode} className="card">
+                            <div key={lang.languageCode} className="bg-white rounded-xl border border-gray-100 p-5">
                               <div className="flex items-center justify-between mb-3">
                                 <h3 className="text-lg font-semibold">{langInfo?.name}</h3>
                                 {!isEditing && (
@@ -527,13 +530,13 @@ const LanguageSettingsPage = () => {
                                   <div className="flex gap-2">
                                     <button
                                       onClick={() => saveTranslation(editingTranslation)}
-                                      className="btn-primary flex-1"
+                                      className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
                                     >
                                       Сохранить
                                     </button>
                                     <button
                                       onClick={() => setEditingTranslation(null)}
-                                      className="btn-secondary flex-1"
+                                      className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors text-sm font-medium"
                                     >
                                       Отмена
                                     </button>
@@ -555,7 +558,7 @@ const LanguageSettingsPage = () => {
 
                 {translationType === 'categories' && (
                   <>
-                    <div className="card">
+                    <div className="bg-white rounded-xl border border-gray-100 p-5">
                       <h2 className="text-xl font-bold mb-4">Выберите категорию для перевода</h2>
                       <select
                         value={selectedCategory || ''}
@@ -577,7 +580,7 @@ const LanguageSettingsPage = () => {
                           const isEditing = editingTranslation?.languageCode === lang.languageCode;
 
                           return (
-                            <div key={lang.languageCode} className="card">
+                            <div key={lang.languageCode} className="bg-white rounded-xl border border-gray-100 p-5">
                               <div className="flex items-center justify-between mb-3">
                                 <h3 className="text-lg font-semibold">{langInfo?.name}</h3>
                                 {!isEditing && (
@@ -615,13 +618,13 @@ const LanguageSettingsPage = () => {
                                   <div className="flex gap-2">
                                     <button
                                       onClick={() => saveCategoryTranslation(editingTranslation)}
-                                      className="btn-primary flex-1"
+                                      className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
                                     >
                                       Сохранить
                                     </button>
                                     <button
                                       onClick={() => setEditingTranslation(null)}
-                                      className="btn-secondary flex-1"
+                                      className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors text-sm font-medium"
                                     >
                                       Отмена
                                     </button>

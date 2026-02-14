@@ -236,16 +236,21 @@ const AdminPricingPage = () => {
         <div className="flex items-center gap-4 mb-6">
           <button
             onClick={() => navigate('/admin')}
-            className="text-gray-600 hover:text-gray-800 transition-colors"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
             title="Назад к админ-панели"
           >
-            ← Назад
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+            </svg>
           </button>
-          <h1 className="text-3xl font-bold">Управление тарифами</h1>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Управление тарифами</h1>
+            <p className="text-gray-500 text-sm mt-1">Создавайте и редактируйте тарифные планы</p>
+          </div>
         </div>
 
         {(editingId || isCreating) && (
-          <div className="card p-6 mb-8 bg-blue-50 border-blue-200">
+          <div className="bg-blue-50 rounded-xl border border-blue-200 p-5 mb-6">
             <h2 className="text-xl font-bold mb-4">
               {isCreating ? 'Создать новый тариф' : 'Редактировать тариф'}
             </h2>
@@ -348,14 +353,14 @@ const AdminPricingPage = () => {
             <div className="flex gap-2 mt-4">
               <button
                 onClick={handleCancel}
-                className="btn-secondary flex-1"
+                className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors text-sm font-medium"
                 disabled={saving}
               >
                 Отмена
               </button>
               <button
                 onClick={handleSave}
-                className="btn-primary flex-1"
+                className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
                 disabled={saving}
               >
                 {saving ? 'Сохранение...' : 'Сохранить'}
@@ -366,18 +371,18 @@ const AdminPricingPage = () => {
 
         <div className="grid gap-4 mb-8">
           {tiers.length === 0 ? (
-            <div className="card text-center py-12">
+            <div className="bg-white rounded-xl border border-gray-100 text-center py-12">
               <p className="text-gray-600 mb-4">Тарифы не установлены</p>
               <button
                 onClick={handleNew}
-                className="btn-primary"
+                className="px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
               >
                 Создать первый тариф
               </button>
             </div>
           ) : (
             tiers.map(tier => (
-              <div key={tier.id} className="card p-6">
+              <div key={tier.id} className="bg-white rounded-xl border border-gray-100 p-5">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold">{tier.name}</h3>
@@ -389,10 +394,10 @@ const AdminPricingPage = () => {
                         <p className="text-gray-600">{tier.description}</p>
                       )}
                       {tier.features && (
-                        <p className="text-sm text-gray-500">📋 {tier.features}</p>
+                        <p className="text-sm text-gray-500">{tier.features}</p>
                       )}
                       {tier.maxRestaurants && (
-                        <p className="text-sm text-gray-500">🏪 До {tier.maxRestaurants} ресторанов</p>
+                        <p className="text-sm text-gray-500">До {tier.maxRestaurants} ресторанов</p>
                       )}
                       <p className="text-xs text-gray-400">
                         Обновлено: {new Date(tier.updatedAt).toLocaleDateString('ru-RU')}
@@ -403,17 +408,17 @@ const AdminPricingPage = () => {
                   <div className="flex gap-2 ml-4">
                     <button
                       onClick={() => handleEdit(tier)}
-                      className="btn-secondary"
+                      className="px-3 py-1.5 border border-gray-200 rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors text-sm"
                       disabled={saving}
                     >
-                      ✏️ Редакт.
+                      Редакт.
                     </button>
                     <button
                       onClick={() => handleDelete(tier.id)}
-                      className="btn-secondary text-red-600 hover:bg-red-50"
+                      className="px-3 py-1.5 border border-gray-200 rounded-lg text-red-600 bg-white hover:bg-red-50 transition-colors text-sm"
                       disabled={saving}
                     >
-                      🗑️ Удалить
+                      Удалить
                     </button>
                   </div>
                 </div>
@@ -425,16 +430,19 @@ const AdminPricingPage = () => {
         {!isCreating && !editingId && (
           <button
             onClick={handleNew}
-            className="btn-primary"
+            className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
           >
-            + Добавить тариф
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            Добавить тариф
           </button>
         )}
 
         <hr className="my-12" />
 
         {isEditingTrial && (
-          <div className="card p-6 mb-8 bg-yellow-50 border-yellow-200">
+          <div className="bg-yellow-50 rounded-xl border border-yellow-200 p-5 mb-6">
             <h2 className="text-xl font-bold mb-4">Настройки пробного периода (Trial)</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -487,14 +495,14 @@ const AdminPricingPage = () => {
             <div className="flex gap-2 mt-4">
               <button
                 onClick={() => setIsEditingTrial(false)}
-                className="btn-secondary flex-1"
+                className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors text-sm font-medium"
                 disabled={saving}
               >
                 Отмена
               </button>
               <button
                 onClick={handleSaveTrial}
-                className="btn-primary flex-1"
+                className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
                 disabled={saving}
               >
                 {saving ? 'Сохранение...' : 'Сохранить'}
@@ -504,26 +512,26 @@ const AdminPricingPage = () => {
         )}
 
         {!isEditingTrial && trialConfig && (
-          <div className="card p-6 bg-blue-50 border-blue-200">
+          <div className="bg-blue-50 rounded-xl border border-blue-200 p-5">
             <div className="flex justify-between items-start">
               <div className="flex-1">
-                <h3 className="text-lg font-semibold">⏱️ Настройки пробного периода</h3>
+                <h3 className="text-lg font-semibold">Настройки пробного периода</h3>
                 <div className="mt-3 space-y-2">
                   <p className="text-xl font-bold text-primary-600">
                     {trialConfig.days} дней
                   </p>
                   <p className="text-gray-600">{trialConfig.name}</p>
-                  <p className="text-sm text-gray-500">📝 {trialConfig.message}</p>
+                  <p className="text-sm text-gray-500">{trialConfig.message}</p>
                 </div>
               </div>
 
               <div className="flex gap-2 ml-4">
                 <button
                   onClick={handleEditTrial}
-                  className="btn-secondary"
+                  className="px-3 py-1.5 border border-gray-200 rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors text-sm"
                   disabled={saving}
                 >
-                  ✏️ Редакт.
+                  Редакт.
                 </button>
               </div>
             </div>

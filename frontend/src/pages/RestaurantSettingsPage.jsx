@@ -414,8 +414,11 @@ const RestaurantSettingsPage = () => {
 
   return (
     <DashboardLayout userData={userData} selectedRestaurantId={selectedRestaurantId}>
-      <div className="max-w-3xl mx-auto px-4">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-6">Настройки ресторана</h1>
+      <div className="max-w-3xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Настройки ресторана</h1>
+          <p className="text-gray-500 text-sm mt-1">Основные параметры и внешний вид</p>
+        </div>
 
         {/* Restaurant Selector */}
         {userData && (
@@ -434,7 +437,7 @@ const RestaurantSettingsPage = () => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Info */}
-          <div className="card">
+          <div className="bg-white rounded-xl border border-gray-100 p-5">
             <h2 className="text-xl font-bold mb-4">Основная информация</h2>
 
             <div className="space-y-4">
@@ -520,7 +523,7 @@ const RestaurantSettingsPage = () => {
           </div>
 
           {/* Logo */}
-          <div className="card">
+          <div className="bg-white rounded-xl border border-gray-100 p-5">
             <h2 className="text-xl font-bold mb-4">Логотип ресторана</h2>
 
             {getSelectedRestaurant()?.logo && (
@@ -593,7 +596,7 @@ const RestaurantSettingsPage = () => {
           </div>
 
           {/* Banner */}
-          <div className="card">
+          <div className="bg-white rounded-xl border border-gray-100 p-5">
             <h2 className="text-xl font-bold mb-4">Баннеры</h2>
 
             {getSelectedRestaurant()?.banners && getSelectedRestaurant().banners.length > 0 && (
@@ -672,7 +675,7 @@ const RestaurantSettingsPage = () => {
           </div>
 
           {/* Тема оформления */}
-          <div className="card">
+          <div className="bg-white rounded-xl border border-gray-100 p-5">
             <h2 className="text-xl font-bold mb-2">Тема оформления меню</h2>
             <p className="text-sm text-gray-600 mb-4">Выберите цветовую гамму для клиентского меню.</p>
 
@@ -696,7 +699,7 @@ const RestaurantSettingsPage = () => {
           </div>
 
           {/* Social Media */}
-          <div className="card">
+          <div className="bg-white rounded-xl border border-gray-100 p-5">
             <h2 className="text-xl font-bold mb-4">Социальные сети</h2>
 
             <div className="space-y-4">
@@ -739,7 +742,7 @@ const RestaurantSettingsPage = () => {
           </div>
 
           {/* Delivery Settings */}
-          <div className="card">
+          <div className="bg-white rounded-xl border border-gray-100 p-5">
             <h2 className="text-xl font-bold mb-4">Настройки доставки</h2>
 
             <div className="space-y-4">
@@ -869,8 +872,8 @@ const RestaurantSettingsPage = () => {
           </div>
 
           {/* Delivery Settings */}
-          <div className="card">
-            <h2 className="text-xl font-bold mb-4">🚗 Настройки доставки</h2>
+          <div className="bg-white rounded-xl border border-gray-100 p-5">
+            <h2 className="text-xl font-bold mb-4">Настройки доставки</h2>
 
             <div className="space-y-4">
               <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -931,8 +934,8 @@ const RestaurantSettingsPage = () => {
           </div>
 
           {/* Telegram Notifications */}
-          <div className="card">
-            <h2 className="text-xl font-bold mb-4">📲 Уведомления Telegram</h2>
+          <div className="bg-white rounded-xl border border-gray-100 p-5">
+            <h2 className="text-xl font-bold mb-4">Уведомления Telegram</h2>
 
             <div className="space-y-4">
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -960,7 +963,7 @@ const RestaurantSettingsPage = () => {
                     type="button"
                     onClick={handleTestTelegram}
                     disabled={testingTelegram || !telegramGroupId}
-                    className="btn-secondary whitespace-nowrap"
+                    className="px-4 py-2.5 border border-gray-200 rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors text-sm whitespace-nowrap"
                   >
                     {testingTelegram ? '⏳ Проверка...' : '✓ Проверить'}
                   </button>
@@ -973,8 +976,8 @@ const RestaurantSettingsPage = () => {
           </div>
 
           {/* Working Hours */}
-          <div className="card">
-            <h2 className="text-xl font-bold mb-4">⏰ Режим работы</h2>
+          <div className="bg-white rounded-xl border border-gray-100 p-5">
+            <h2 className="text-xl font-bold mb-4">Режим работы</h2>
 
             {/* Temporary Closure */}
             <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -1097,14 +1100,14 @@ const RestaurantSettingsPage = () => {
             <button
               type="button"
               onClick={() => navigate('/dashboard')}
-              className="btn-secondary flex-1"
+              className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors text-sm font-medium"
               disabled={saving || uploadingBanner}
             >
               Отмена
             </button>
             <button
               type="submit"
-              className="btn-primary flex-1"
+              className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
               disabled={saving || uploadingBanner}
             >
               {uploadingBanner ? 'Загрузка баннера...' : saving ? 'Сохранение...' : 'Сохранить изменения'}
@@ -1114,8 +1117,8 @@ const RestaurantSettingsPage = () => {
 
         {/* Danger Zone - Delete Restaurant - только для владельцев */}
         {isOwner() && (
-          <div className="card border-2 border-red-200 bg-red-50 mt-8">
-            <h2 className="text-xl font-bold text-red-600 mb-2">⚠️ Опасная зона</h2>
+          <div className="bg-red-50 rounded-xl border-2 border-red-200 p-5 mt-8">
+            <h2 className="text-xl font-bold text-red-600 mb-2">Опасная зона</h2>
             <p className="text-sm text-gray-700 mb-4">
               Удаление ресторана необратимо. Все данные (меню, категории, блюда, модификаторы) будут удалены навсегда.
             </p>
