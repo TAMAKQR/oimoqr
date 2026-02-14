@@ -31,6 +31,80 @@ const getCurrencySymbol = (currencyCode) => {
   return currencySymbols[currencyCode] || '₽'; // По умолчанию используем ₽
 };
 
+const DashLineChart = ({ data, dataKey = 'orders', color = '#8b5cf6', height = 180 }) => {
+  const [hover, setHover] = useState(null);
+  if (!data?.length) return <div className="h-[180px] flex items-center justify-center text-gray-400 text-sm">Нет данных</div>;
+
+  const values = data.map(d => Number(d[dataKey]) || 0);
+  const maxVal = Math.max(...values, 1);
+  const minVal = Math.min(...values, 0);
+  const range = maxVal - minVal || 1;
+
+  const padX = 45, padTop = 10, padBottom = 28;
+  const w = 600;
+  const chartH = height - padTop - padBottom;
+
+  const points = data.map((d, i) => {
+    const x = padX + (i / Math.max(data.length - 1, 1)) * (w - padX - 10);
+    const y = padTop + chartH - ((values[i] - minVal) / range) * chartH;
+    return { x, y, val: values[i], date: d.date };
+  });
+
+  const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+  const areaPath = `${linePath} L${points[points.length - 1].x},${padTop + chartH} L${points[0].x},${padTop + chartH} Z`;
+
+  const gridLines = Array.from({ length: 5 }, (_, i) => {
+    const val = minVal + (range / 4) * i;
+    const y = padTop + chartH - ((val - minVal) / range) * chartH;
+    return { y, label: val >= 1000 ? `${(val / 1000).toFixed(1)}k` : Math.round(val).toString() };
+  });
+
+  const step = Math.max(Math.floor(data.length / 6), 1);
+  const dateLabels = data.filter((_, i) => i % step === 0 || i === data.length - 1).map((d) => {
+    const idx = data.indexOf(d);
+    const x = padX + (idx / Math.max(data.length - 1, 1)) * (w - padX - 10);
+    const dt = new Date(d.date);
+    return { x, label: `${dt.getDate()}.${String(dt.getMonth() + 1).padStart(2, '0')}` };
+  });
+
+  const gradId = `grad-${color.replace('#', '')}-${dataKey}`;
+
+  return (
+    <svg viewBox={`0 0 ${w} ${height}`} className="w-full" preserveAspectRatio="xMidYMid meet">
+      {gridLines.map((g, i) => (
+        <g key={i}>
+          <line x1={padX} y1={g.y} x2={w - 10} y2={g.y} stroke="#f3f4f6" strokeWidth="1" />
+          <text x={padX - 6} y={g.y + 4} textAnchor="end" fill="#9ca3af" fontSize="10">{g.label}</text>
+        </g>
+      ))}
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.15" />
+          <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+        </linearGradient>
+      </defs>
+      <path d={areaPath} fill={`url(#${gradId})`} />
+      <path d={linePath} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+      {points.map((p, i) => (
+        <circle key={i} cx={p.x} cy={p.y} r={hover === i ? 5 : 3} fill="white" stroke={color} strokeWidth="2"
+          className="cursor-pointer" onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} />
+      ))}
+      {dateLabels.map((d, i) => (
+        <text key={i} x={d.x} y={height - 4} textAnchor="middle" fill="#9ca3af" fontSize="10">{d.label}</text>
+      ))}
+      {hover !== null && (
+        <g>
+          <line x1={points[hover].x} y1={padTop} x2={points[hover].x} y2={padTop + chartH} stroke={color} strokeWidth="1" strokeDasharray="4 4" opacity="0.3" />
+          <rect x={points[hover].x - 40} y={points[hover].y - 32} width="80" height="24" rx="6" fill="#1f2937" />
+          <text x={points[hover].x} y={points[hover].y - 16} textAnchor="middle" fill="white" fontSize="11" fontWeight="600">
+            {Number(points[hover].val).toLocaleString('ru')}
+          </text>
+        </g>
+      )}
+    </svg>
+  );
+};
+
 const DashboardPage = () => {
   const [pricingTiers, setPricingTiers] = useState([]);
   const navigate = useNavigate();
@@ -706,41 +780,29 @@ const DashboardPage = () => {
                   </div>
                 </div>
 
-                {/* Chart and Recent Orders */}
+                {/* Charts and Recent Orders */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-                  {/* Chart */}
+                  {/* Orders Line Chart */}
                   <div className="bg-white rounded-xl border border-gray-100 p-5">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-4">Заказы за неделю</h3>
-                    <div className="space-y-3">
-                      {stats.chartData.map((day, index) => {
-                        const maxOrders = Math.max(...stats.chartData.map(d => d.orders), 1);
-                        const percentage = (day.orders / maxOrders) * 100;
-                        const date = new Date(day.date);
-                        const dayName = date.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric' });
-
-                        return (
-                          <div key={index}>
-                            <div className="flex justify-between text-sm mb-1">
-                              <span className="text-gray-600">{dayName}</span>
-                              <span className="font-semibold">{day.orders} заказов</span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-3">
-                              <div
-                                className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-500"
-                                style={{ width: `${percentage}%` }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-1">📦 Заказы за 30 дней</h3>
+                    <p className="text-xs text-gray-500 mb-2">Динамика заказов по дням</p>
+                    <DashLineChart data={stats.chartData} dataKey="orders" color="#8b5cf6" />
                   </div>
 
-                  {/* Recent Orders */}
+                  {/* Revenue Line Chart */}
+                  <div className="bg-white rounded-xl border border-gray-100 p-5">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-1">💰 Выручка за 30 дней</h3>
+                    <p className="text-xs text-gray-500 mb-2">Динамика выручки по дням ({getCurrencySymbol(getSelectedRestaurant()?.currency)})</p>
+                    <DashLineChart data={stats.chartData} dataKey="revenue" color="#10b981" />
+                  </div>
+                </div>
+
+                {/* Recent Orders */}
+                <div className="grid grid-cols-1 gap-4 mb-6">
                   <div className="bg-white rounded-xl border border-gray-100 p-5">
                     <h3 className="text-sm font-semibold text-gray-900 mb-4">Последние заказы</h3>
                     {stats.recentOrders.length > 0 ? (
-                      <div className="space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
                         {stats.recentOrders.map((order) => {
                           const statusColors = {
                             new: 'bg-blue-100 text-blue-800',
