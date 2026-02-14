@@ -43,9 +43,9 @@ const CheckoutPage = () => {
     const loadAddresses = async () => {
         try {
             const response = await api.get('/customers/addresses');
-            const list = response.data || [];
-            setAddresses(list);
-            const defaultAddress = list.find((addr) => addr.isDefault);
+            const list = response.data?.addresses || response.data || [];
+            setAddresses(Array.isArray(list) ? list : []);
+            const defaultAddress = (Array.isArray(list) ? list : []).find((addr) => addr.isDefault);
             if (defaultAddress) {
                 setSelectedAddressId(defaultAddress.id);
             } else if (list.length > 0) {
@@ -109,14 +109,20 @@ const CheckoutPage = () => {
         try {
             const payload = {
                 restaurantId: restaurant?.id,
-                items: cartItems,
+                items: cartItems.map(item => ({
+                    id: item.dish?.id,
+                    quantity: item.quantity,
+                    price: item.totalPrice,
+                    selectedModifiers: item.modifiers?.map(m => ({ id: m.id, name: m.name, price: m.price })) || []
+                })),
+                total: Number(finalTotal),
                 deliveryType,
-                addressId: deliveryType === 'delivery' ? selectedAddressId : null,
+                customerAddressId: deliveryType === 'delivery' ? selectedAddressId : null,
                 paymentMethod,
                 comment
             };
 
-            const response = await api.post('/orders', payload);
+            const response = await api.post('/customers/orders', payload);
             clearCart();
             toast.success('Заказ оформлен');
             const orderId = response?.data?.order?.id || response?.data?.id;
