@@ -116,7 +116,7 @@ class TelegramService {
             ).join('\n');
 
             const deliveryType = order.deliveryType === 'dine_in'
-                ? `🍽️ В зале (Стол ${order.tableNumber || '?'})`
+                ? (order.tableNumber ? `🍽️ В зале (Стол ${order.tableNumber})` : '🍽️ В зале')
                 : order.deliveryType === 'delivery'
                     ? '🚗 Доставка'
                     : '🏃 Самовывоз';

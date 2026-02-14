@@ -87,10 +87,10 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
       <div className="fixed inset-x-0 z-[60] flex justify-center px-0 pb-0" style={cartStyle}>
         <div className="w-full max-w-[480px] rounded-none sm:rounded-2xl bg-white border-t border-primary-100 px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex flex-col gap-3">
-            {orderMode === 'dine_in' && tableNumber && (
+            {orderMode === 'dine_in' && (
               <div className="flex items-center gap-2 text-sm">
                 <span className="bg-primary-100 text-primary-700 px-2.5 py-1 rounded-full font-medium">
-                  🍽 Стол {tableNumber}
+                  🍽 {tableNumber ? `Стол ${tableNumber}` : 'В зале'}
                 </span>
               </div>
             )}
