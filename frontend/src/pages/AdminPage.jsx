@@ -501,16 +501,11 @@ const AdminPage = () => {
                   required
                 >
                   <option value="">Выберите тариф</option>
-                  {pricingTiers
-                    .filter(tier => {
-                      const userBizType = editingUser?.restaurants?.[0]?.businessType || 'RESTAURANT';
-                      return !tier.businessType || tier.businessType === userBizType || tier.businessType === 'ALL';
-                    })
-                    .map((tier) => (
-                      <option key={tier.id} value={tier.id}>
-                        {tier.name} (${tier.price}/мес) {tier.businessType === 'ONLINE_STORE' ? '🛍' : tier.businessType === 'ALL' ? '📦' : '🍽'}
-                      </option>
-                    ))}
+                  {pricingTiers.map((tier) => (
+                    <option key={tier.id} value={tier.id}>
+                      {tier.name} (${tier.price}/мес) {tier.businessType === 'ONLINE_STORE' ? '🛍' : tier.businessType === 'ALL' ? '📦' : '🍽'}
+                    </option>
+                  ))}
                 </select>
               </div>
 
