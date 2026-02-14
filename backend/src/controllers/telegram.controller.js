@@ -50,6 +50,7 @@ export const updateTelegramSettings = async (req, res, next) => {
 export const testTelegramConnection = async (req, res, next) => {
     try {
         const { id } = req.params;
+        const { chatId } = req.body; // Фронтенд может передать chatId напрямую
 
         const restaurant = await prisma.restaurant.findUnique({
             where: { id },
@@ -71,12 +72,23 @@ export const testTelegramConnection = async (req, res, next) => {
             return res.status(403).json({ error: 'Access denied' });
         }
 
-        if (!restaurant.telegramGroupId) {
+        // Используем chatId из body или из БД
+        const targetChatId = chatId || restaurant.telegramGroupId;
+
+        if (!targetChatId) {
             return res.status(400).json({ error: 'Telegram group ID not configured' });
         }
 
+        // Если передан chatId, автоматически сохраняем в БД
+        if (chatId && chatId !== restaurant.telegramGroupId) {
+            await prisma.restaurant.update({
+                where: { id },
+                data: { telegramGroupId: chatId }
+            });
+        }
+
         // Тестируем подключение
-        await telegramService.testConnection(restaurant.telegramGroupId);
+        await telegramService.testConnection(targetChatId);
 
         res.json({
             message: 'Test message sent successfully',
