@@ -87,32 +87,76 @@ const PricingPage = () => {
                 </div>
 
                 {/* Current Subscription Info */}
-                {currentSubscription && (
-                    <div className="mb-6 p-5 bg-blue-50 border border-blue-200 rounded-xl">
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center">
-                                <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
-                                </svg>
-                            </div>
-                            <div>
-                                <h3 className="font-semibold text-lg">Ваш текущий тариф</h3>
-                                <p className="text-sm text-gray-600">
-                                    {currentSubscription.status === 'TRIAL' ? (
-                                        <>Пробный период • {currentSubscription.pricingTier?.name || 'Trial'}</>
-                                    ) : (
-                                        <>{currentSubscription.pricingTier?.name || currentSubscription.plan}</>
+                {currentSubscription && (() => {
+                    const now = new Date();
+                    const isTrial = currentSubscription.status === 'TRIAL';
+                    const isActive = currentSubscription.status === 'ACTIVE';
+                    const pricingTier = currentSubscription.pricingTier;
+                    const maxRestaurants = pricingTier?.maxRestaurants || 1;
+                    const currentRestaurantCount = userData?.restaurants?.length || 0;
+
+                    let daysLeft = 0;
+                    let endDateFormatted = '';
+                    if (isTrial && currentSubscription.trialEndsAt) {
+                        daysLeft = Math.max(0, Math.ceil((new Date(currentSubscription.trialEndsAt) - now) / (1000 * 60 * 60 * 24)));
+                        endDateFormatted = new Date(currentSubscription.trialEndsAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+                    } else if (isActive && currentSubscription.currentPeriodEnd) {
+                        daysLeft = Math.ceil((new Date(currentSubscription.currentPeriodEnd) - now) / (1000 * 60 * 60 * 24));
+                        endDateFormatted = new Date(currentSubscription.currentPeriodEnd).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+                    }
+
+                    const daysWord = daysLeft === 1 ? 'день' : daysLeft < 5 ? 'дня' : 'дней';
+
+                    return (
+                        <div className={`mb-6 rounded-xl border ${isActive ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200'}`}>
+                            <div className="p-5">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isActive ? 'bg-green-100' : 'bg-blue-100'}`}>
+                                            <svg className={`w-5 h-5 ${isActive ? 'text-green-600' : 'text-blue-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h3 className="font-semibold text-gray-900">
+                                                {isTrial ? 'Пробный период' : pricingTier?.name || currentSubscription.plan}
+                                            </h3>
+                                        </div>
+                                    </div>
+                                    <span className={`px-3 py-1 text-xs font-medium rounded-full ${isActive ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                                        {isActive ? 'АКТИВНА' : 'ПРОБНЫЙ'}
+                                    </span>
+                                </div>
+
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+                                    <div className="bg-white/60 rounded-lg p-3">
+                                        <p className="text-gray-500 text-xs mb-1">Рестораны</p>
+                                        <p className="font-semibold text-gray-900">{currentRestaurantCount} из {maxRestaurants}</p>
+                                    </div>
+                                    {isActive && pricingTier && (
+                                        <div className="bg-white/60 rounded-lg p-3">
+                                            <p className="text-gray-500 text-xs mb-1">Стоимость</p>
+                                            <p className="font-semibold text-gray-900">${pricingTier.price}/мес</p>
+                                        </div>
                                     )}
-                                </p>
+                                    {endDateFormatted && (
+                                        <div className="bg-white/60 rounded-lg p-3">
+                                            <p className="text-gray-500 text-xs mb-1">Действует до</p>
+                                            <p className="font-semibold text-gray-900">{endDateFormatted}</p>
+                                            <p className="text-xs text-orange-600 mt-0.5">{daysLeft} {daysWord}</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {isTrial && (
+                                    <p className="text-sm text-blue-800 mt-3">
+                                        💡 Для активации платной подписки свяжитесь с администратором
+                                    </p>
+                                )}
                             </div>
                         </div>
-                        {currentSubscription.status === 'TRIAL' && (
-                            <p className="text-sm text-blue-800 mt-2">
-                                💡 Для активации платной подписки свяжитесь с администратором
-                            </p>
-                        )}
-                    </div>
-                )}
+                    );
+                })()}
 
                 {/* Pricing Cards */}
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
