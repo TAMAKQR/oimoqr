@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 import { QRCodeSVG } from 'qrcode.react';
 import { useUserData } from '../hooks/useUserData';
 import { useSelectedRestaurant } from '../hooks/useSelectedRestaurant';
+import { getBusinessType, BUSINESS_TYPE_OPTIONS } from '../utils/businessTypes';
 
 const getCurrencySymbol = (currencyCode) => {
   const currencySymbols = {
@@ -440,35 +441,29 @@ const DashboardPage = () => {
                 <div className="space-y-4 mb-6 sm:mb-8">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Тип бизнеса</label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setNewRestaurant({ ...newRestaurant, businessType: 'RESTAURANT' })}
-                        className={`p-3 rounded-xl border-2 text-center transition-all ${newRestaurant.businessType === 'RESTAURANT' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}
-                        disabled={creating}
-                      >
-                        <span className="text-2xl block mb-1">🍽</span>
-                        <span className="text-sm font-medium">Ресторан</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setNewRestaurant({ ...newRestaurant, businessType: 'ONLINE_STORE' })}
-                        className={`p-3 rounded-xl border-2 text-center transition-all ${newRestaurant.businessType === 'ONLINE_STORE' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}`}
-                        disabled={creating}
-                      >
-                        <span className="text-2xl block mb-1">🛍</span>
-                        <span className="text-sm font-medium">Магазин</span>
-                      </button>
+                    <div className="grid grid-cols-3 gap-3">
+                      {BUSINESS_TYPE_OPTIONS.map(opt => (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          onClick={() => setNewRestaurant({ ...newRestaurant, businessType: opt.key })}
+                          className={`p-3 rounded-xl border-2 text-center transition-all ${newRestaurant.businessType === opt.key ? `border-${opt.color}-500 bg-${opt.color}-50` : 'border-gray-200 hover:border-gray-300'}`}
+                          disabled={creating}
+                        >
+                          <span className="text-2xl block mb-1">{opt.icon}</span>
+                          <span className="text-sm font-medium">{opt.label}</span>
+                        </button>
+                      ))}
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">{newRestaurant.businessType === 'ONLINE_STORE' ? 'Название магазина' : 'Название ресторана'}</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{getBusinessType(newRestaurant.businessType).nameLabel}</label>
                     <input
                       type="text"
                       value={newRestaurant.name}
                       onChange={(e) => setNewRestaurant({ ...newRestaurant, name: e.target.value })}
-                      placeholder={newRestaurant.businessType === 'ONLINE_STORE' ? "Например: Магазин 'Свежесть'" : "Например: Пиццерия 'Мамино'"}
+                      placeholder={`Например: ${getBusinessType(newRestaurant.businessType).namePlaceholder}`}
                       className="input-field w-full"
                       disabled={creating}
                     />
@@ -481,7 +476,7 @@ const DashboardPage = () => {
                         type="text"
                         value={newRestaurant.subdomain}
                         onChange={(e) => setNewRestaurant({ ...newRestaurant, subdomain: e.target.value.toLowerCase() })}
-                        placeholder={newRestaurant.businessType === 'ONLINE_STORE' ? "my-store" : "mamino-pizza"}
+                        placeholder={getBusinessType(newRestaurant.businessType).subdomainPlaceholder}
                         className="input-field flex-1"
                         disabled={creating}
                       />
@@ -526,7 +521,7 @@ const DashboardPage = () => {
         {/* Page header */}
         <div className="mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Панель управления</h1>
-          <p className="text-gray-500 text-sm mt-1">{getSelectedRestaurant()?.businessType === 'ONLINE_STORE' ? 'Обзор вашего магазина' : 'Обзор вашего ресторана'}</p>
+          <p className="text-gray-500 text-sm mt-1">{getBusinessType(getSelectedRestaurant()?.businessType).overviewLabel}</p>
         </div>
 
         {/* Restaurant Selector */}
@@ -615,7 +610,7 @@ const DashboardPage = () => {
               <p><span className="text-gray-500">Название:</span> <span className="font-medium text-gray-900">{getSelectedRestaurant().name}</span></p>
               <p className="break-all"><span className="text-gray-500">Субдомен:</span> <span className="font-medium text-gray-900">{getSelectedRestaurant().subdomain}.oimoqr.com</span></p>
               <a
-                href={getSelectedRestaurant()?.businessType === 'ONLINE_STORE' ? `/shop/${getSelectedRestaurant().subdomain}` : `/menu/${getSelectedRestaurant().subdomain}`}
+                href={`/${getBusinessType(getSelectedRestaurant()?.businessType).route}/${getSelectedRestaurant().subdomain}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 mt-3 text-blue-600 hover:text-blue-700 text-sm font-medium"
@@ -623,7 +618,7 @@ const DashboardPage = () => {
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
                 </svg>
-                {getSelectedRestaurant()?.businessType === 'ONLINE_STORE' ? 'Посмотреть магазин' : 'Посмотреть меню'}
+                {getBusinessType(getSelectedRestaurant()?.businessType).viewLabel}
               </a>
             </div>
 
@@ -633,18 +628,18 @@ const DashboardPage = () => {
                 <div className="bg-white p-2 rounded-lg border border-gray-200">
                   <QRCodeSVG
                     id="dashboard-general-qr"
-                    value={`${window.location.origin}/${getSelectedRestaurant()?.businessType === 'ONLINE_STORE' ? 'shop' : 'menu'}/${getSelectedRestaurant().subdomain}`}
+                    value={`${window.location.origin}/${getBusinessType(getSelectedRestaurant()?.businessType).route}/${getSelectedRestaurant().subdomain}`}
                     size={80}
                     level="M"
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-500 mb-1">{getSelectedRestaurant()?.businessType === 'ONLINE_STORE' ? 'QR-код магазина' : 'QR-код меню'}</p>
-                  <p className="text-xs text-gray-400 truncate">{window.location.origin}/{getSelectedRestaurant()?.businessType === 'ONLINE_STORE' ? 'shop' : 'menu'}/{getSelectedRestaurant().subdomain}</p>
+                  <p className="text-xs text-gray-500 mb-1">{getBusinessType(getSelectedRestaurant()?.businessType).qrLabel}</p>
+                  <p className="text-xs text-gray-400 truncate">{window.location.origin}/{getBusinessType(getSelectedRestaurant()?.businessType).route}/{getSelectedRestaurant().subdomain}</p>
                   <button
                     onClick={() => {
                       const printWindow = window.open('', '_blank');
-                      const url = `${window.location.origin}/${getSelectedRestaurant()?.businessType === 'ONLINE_STORE' ? 'shop' : 'menu'}/${getSelectedRestaurant().subdomain}`;
+                      const url = `${window.location.origin}/${getBusinessType(getSelectedRestaurant()?.businessType).route}/${getSelectedRestaurant().subdomain}`;
                       const qrSvg = document.getElementById('dashboard-general-qr');
                       printWindow.document.write(`
                         <html><head><title>QR - ${getSelectedRestaurant().name}</title>
@@ -912,7 +907,7 @@ const DashboardPage = () => {
                 {/* Top Dishes */}
                 {stats.topDishes.length > 0 && (
                   <div className="bg-white rounded-xl border border-gray-100 p-5">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-4">{getSelectedRestaurant()?.businessType === 'ONLINE_STORE' ? 'Популярные товары' : 'Популярные блюда'}</h3>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-4">{getBusinessType(getSelectedRestaurant()?.businessType).popularLabel}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
                       {stats.topDishes.map((dish, index) => (
                         <div key={dish.id} className="border border-gray-100 rounded-xl p-4 hover:shadow-sm transition-shadow">
@@ -1054,9 +1049,7 @@ const DashboardPage = () => {
         <div className="bg-white rounded-xl border border-gray-100 p-5 mt-6">
           <h3 className="text-sm font-semibold text-gray-900 mb-2">Совет</h3>
           <p className="text-sm text-gray-500">
-            {getSelectedRestaurant()?.businessType === 'ONLINE_STORE'
-              ? 'Добавьте качественные фотографии товаров и подробные описания, чтобы увеличить продажи. Следите за остатками на складе!'
-              : 'Добавьте красивые фотографии блюд и подробные описания, чтобы увеличить количество заказов. Не забудьте настроить баннеры для акций и специальных предложений!'}
+            {getBusinessType(getSelectedRestaurant()?.businessType).tip}
           </p>
         </div>
 
@@ -1075,35 +1068,29 @@ const DashboardPage = () => {
               <div className="space-y-4 mb-6 sm:mb-8">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Тип бизнеса</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setNewRestaurant({ ...newRestaurant, businessType: 'RESTAURANT' })}
-                      className={`p-3 rounded-xl border-2 text-center transition-all ${newRestaurant.businessType === 'RESTAURANT' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}
-                      disabled={creating}
-                    >
-                      <span className="text-2xl block mb-1">🍽</span>
-                      <span className="text-sm font-medium">Ресторан</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setNewRestaurant({ ...newRestaurant, businessType: 'ONLINE_STORE' })}
-                      className={`p-3 rounded-xl border-2 text-center transition-all ${newRestaurant.businessType === 'ONLINE_STORE' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}`}
-                      disabled={creating}
-                    >
-                      <span className="text-2xl block mb-1">🛍</span>
-                      <span className="text-sm font-medium">Магазин</span>
-                    </button>
+                  <div className="grid grid-cols-3 gap-3">
+                    {BUSINESS_TYPE_OPTIONS.map(opt => (
+                      <button
+                        key={opt.key}
+                        type="button"
+                        onClick={() => setNewRestaurant({ ...newRestaurant, businessType: opt.key })}
+                        className={`p-3 rounded-xl border-2 text-center transition-all ${newRestaurant.businessType === opt.key ? `border-${opt.color}-500 bg-${opt.color}-50` : 'border-gray-200 hover:border-gray-300'}`}
+                        disabled={creating}
+                      >
+                        <span className="text-2xl block mb-1">{opt.icon}</span>
+                        <span className="text-sm font-medium">{opt.label}</span>
+                      </button>
+                    ))}
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">{newRestaurant.businessType === 'ONLINE_STORE' ? 'Название магазина' : 'Название ресторана'}</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{getBusinessType(newRestaurant.businessType).nameLabel}</label>
                   <input
                     type="text"
                     value={newRestaurant.name}
                     onChange={(e) => setNewRestaurant({ ...newRestaurant, name: e.target.value })}
-                    placeholder={newRestaurant.businessType === 'ONLINE_STORE' ? "Например: Магазин 'Свежесть'" : "Например: Пиццерия 'Мамино'"}
+                    placeholder={`Например: ${getBusinessType(newRestaurant.businessType).namePlaceholder}`}
                     className="input w-full"
                     disabled={creating}
                   />
@@ -1116,7 +1103,7 @@ const DashboardPage = () => {
                       type="text"
                       value={newRestaurant.subdomain}
                       onChange={(e) => setNewRestaurant({ ...newRestaurant, subdomain: e.target.value.toLowerCase() })}
-                      placeholder={newRestaurant.businessType === 'ONLINE_STORE' ? "my-store" : "mamino-pizza"}
+                      placeholder={getBusinessType(newRestaurant.businessType).subdomainPlaceholder}
                       className="input flex-1"
                       disabled={creating}
                     />

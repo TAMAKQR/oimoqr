@@ -14,6 +14,7 @@ const Sidebar = ({ userData, selectedRestaurantId, collapsed, onToggleCollapsed 
   const isAdmin = user?.isAdmin;
   const selectedRestaurant = userData?.restaurants?.find(r => r.id === selectedRestaurantId);
   const isStore = selectedRestaurant?.businessType === 'ONLINE_STORE';
+  const isHotel = selectedRestaurant?.businessType === 'HOTEL';
 
   // Poster POS style menu structure with sections
   const menuSections = [

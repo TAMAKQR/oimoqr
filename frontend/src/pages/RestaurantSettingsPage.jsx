@@ -13,6 +13,7 @@ import { compressImage, formatFileSize, validateImage, shouldCompress } from '..
 import { useUserData } from '../hooks/useUserData';
 import { useSelectedRestaurant } from '../hooks/useSelectedRestaurant';
 import { QRCodeSVG } from 'qrcode.react';
+import { getBusinessType } from '../utils/businessTypes';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -922,41 +923,39 @@ const RestaurantSettingsPage = () => {
           </div>
 
           {/* QR Codes */}
-          {getSelectedRestaurant()?.subdomain && (
-            <div className="bg-white rounded-xl border border-gray-100 p-5">
-              <h2 className="text-xl font-bold mb-2">QR-коды</h2>
-              <p className="text-sm text-gray-600 mb-5">
-                {getSelectedRestaurant()?.businessType === 'ONLINE_STORE'
-                  ? 'QR-код для вашего магазина. Клиенты могут отсканировать его для быстрого перехода.'
-                  : 'QR-коды для вашего меню. Общий — для доставки/самовывоза, по столам — для dine-in.'}
-              </p>
+          {getSelectedRestaurant()?.subdomain && (() => {
+            const bt = getBusinessType(getSelectedRestaurant()?.businessType);
+            return (
+              <div className="bg-white rounded-xl border border-gray-100 p-5">
+                <h2 className="text-xl font-bold mb-2">QR-коды</h2>
+                <p className="text-sm text-gray-600 mb-5">
+                  {bt.qrDescription}
+                </p>
 
-              {/* General QR */}
-              <div className={`flex items-center gap-5 p-4 border border-gray-200 rounded-xl ${getSelectedRestaurant()?.businessType === 'ONLINE_STORE' ? '' : 'mb-6'}`}>
-                <QRCodeSVG
-                  value={`${window.location.origin}/${getSelectedRestaurant()?.businessType === 'ONLINE_STORE' ? 'shop' : 'menu'}/${getSelectedRestaurant().subdomain}`}
-                  size={140}
-                  level="M"
-                  includeMargin={false}
-                  className="flex-shrink-0"
-                />
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-lg text-gray-900 mb-1">
-                    {getSelectedRestaurant()?.businessType === 'ONLINE_STORE' ? 'QR-код магазина' : 'Общий QR-код'}
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-2">
-                    {getSelectedRestaurant()?.businessType === 'ONLINE_STORE'
-                      ? 'Ссылка на ваш интернет-магазин'
-                      : 'Для доставки и самовывоза — без привязки к столу'}
-                  </p>
-                  <p className="text-xs text-gray-500 break-all mb-3">{window.location.origin}/{getSelectedRestaurant()?.businessType === 'ONLINE_STORE' ? 'shop' : 'menu'}/{getSelectedRestaurant().subdomain}</p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const url = `${window.location.origin}/${getSelectedRestaurant()?.businessType === 'ONLINE_STORE' ? 'shop' : 'menu'}/${getSelectedRestaurant().subdomain}`;
-                      const printWindow = window.open('', '_blank');
-                      const svgEl = document.getElementById('general-qr-svg');
-                      printWindow.document.write(`
+                {/* General QR */}
+                <div className={`flex items-center gap-5 p-4 border border-gray-200 rounded-xl ${bt.hasTableQR ? 'mb-6' : ''}`}>
+                  <QRCodeSVG
+                    value={`${window.location.origin}/${bt.route}/${getSelectedRestaurant().subdomain}`}
+                    size={140}
+                    level="M"
+                    includeMargin={false}
+                    className="flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-lg text-gray-900 mb-1">
+                      {bt.qrMainTitle}
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-2">
+                      {bt.qrMainDescription}
+                    </p>
+                    <p className="text-xs text-gray-500 break-all mb-3">{window.location.origin}/{bt.route}/{getSelectedRestaurant().subdomain}</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const url = `${window.location.origin}/${bt.route}/${getSelectedRestaurant().subdomain}`;
+                        const printWindow = window.open('', '_blank');
+                        const svgEl = document.getElementById('general-qr-svg');
+                        printWindow.document.write(`
                         <html><head><title>QR — ${getSelectedRestaurant().name}</title>
                         <style>
                           body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
@@ -967,54 +966,54 @@ const RestaurantSettingsPage = () => {
                         <div class="card">
                           ${svgEl?.outerHTML || ''}
                           <h2>${getSelectedRestaurant().name}</h2>
-                          <p>Отсканируйте для ${getSelectedRestaurant()?.businessType === 'ONLINE_STORE' ? 'перехода в магазин' : 'просмотра меню'}</p>
+                          <p>Отсканируйте для ${bt.qrScanLabel}</p>
                         </div>
                         </body></html>
                       `);
-                      printWindow.document.close();
-                      printWindow.focus();
-                      setTimeout(() => { printWindow.print(); }, 300);
-                    }}
-                    className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 rounded-lg transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18.75 12h.008v.008h-.008V12zm-2.25 0h.008v.008H16.5V12z" />
-                    </svg>
-                    Печать
-                  </button>
-                </div>
-                <QRCodeSVG
-                  id="general-qr-svg"
-                  value={`${window.location.origin}/${getSelectedRestaurant()?.businessType === 'ONLINE_STORE' ? 'shop' : 'menu'}/${getSelectedRestaurant().subdomain}`}
-                  size={200}
-                  level="M"
-                  className="hidden"
-                />
-              </div>
-
-              {/* Table QR Codes — only for restaurants */}
-              {getSelectedRestaurant()?.businessType !== 'ONLINE_STORE' && (<>
-                {/* Table QR Codes */}
-                <h3 className="font-semibold text-gray-900 mb-3">QR-коды по столам</h3>
-                <p className="text-sm text-gray-600 mb-3">Каждый QR привязан к номеру стола — заказ клиента сразу покажет стол.</p>
-
-                <div className="flex items-center gap-3 mb-4">
-                  <label className="text-sm font-medium text-gray-700">Количество столов:</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={qrTableCount}
-                    onChange={(e) => setQrTableCount(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
-                    className="input w-20 text-center"
+                        printWindow.document.close();
+                        printWindow.focus();
+                        setTimeout(() => { printWindow.print(); }, 300);
+                      }}
+                      className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 rounded-lg transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18.75 12h.008v.008h-.008V12zm-2.25 0h.008v.008H16.5V12z" />
+                      </svg>
+                      Печать
+                    </button>
+                  </div>
+                  <QRCodeSVG
+                    id="general-qr-svg"
+                    value={`${window.location.origin}/${bt.route}/${getSelectedRestaurant().subdomain}`}
+                    size={200}
+                    level="M"
+                    className="hidden"
                   />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const container = qrContainerRef.current;
-                      if (!container) return;
-                      const printWindow = window.open('', '_blank');
-                      printWindow.document.write(`
+                </div>
+
+                {/* Table/Room QR Codes — only when hasTableQR */}
+                {bt.hasTableQR && (<>
+                  {/* Table QR Codes */}
+                  <h3 className="font-semibold text-gray-900 mb-3">QR-коды по столам</h3>
+                  <p className="text-sm text-gray-600 mb-3">Каждый QR привязан к номеру стола — заказ клиента сразу покажет стол.</p>
+
+                  <div className="flex items-center gap-3 mb-4">
+                    <label className="text-sm font-medium text-gray-700">Количество столов:</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={qrTableCount}
+                      onChange={(e) => setQrTableCount(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
+                      className="input w-20 text-center"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const container = qrContainerRef.current;
+                        if (!container) return;
+                        const printWindow = window.open('', '_blank');
+                        printWindow.document.write(`
                       <html><head><title>QR коды — ${getSelectedRestaurant().name}</title>
                       <style>
                         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
@@ -1027,41 +1026,42 @@ const RestaurantSettingsPage = () => {
                       <div class="grid">${container.innerHTML}</div>
                       </body></html>
                     `);
-                      printWindow.document.close();
-                      printWindow.focus();
-                      setTimeout(() => { printWindow.print(); }, 300);
-                    }}
-                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18.75 12h.008v.008h-.008V12zm-2.25 0h.008v.008H16.5V12z" />
-                    </svg>
-                    Печать
-                  </button>
-                </div>
+                        printWindow.document.close();
+                        printWindow.focus();
+                        setTimeout(() => { printWindow.print(); }, 300);
+                      }}
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18.75 12h.008v.008h-.008V12zm-2.25 0h.008v.008H16.5V12z" />
+                      </svg>
+                      Печать
+                    </button>
+                  </div>
 
-                <div ref={qrContainerRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {Array.from({ length: qrTableCount }, (_, i) => i + 1).map(tableNum => {
-                    const menuUrl = `${window.location.origin}/menu/${getSelectedRestaurant().subdomain}?table=${tableNum}`;
-                    return (
-                      <div key={tableNum} className="card border border-gray-200 rounded-xl p-4 text-center hover:shadow-md transition-shadow">
-                        <QRCodeSVG
-                          value={menuUrl}
-                          size={120}
-                          level="M"
-                          includeMargin={false}
-                          className="mx-auto"
-                        />
-                        <h3 className="font-bold text-lg mt-3 text-gray-900">Стол {tableNum}</h3>
-                        <p className="text-xs text-gray-500 mt-1 break-all">{menuUrl}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>)}
+                  <div ref={qrContainerRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {Array.from({ length: qrTableCount }, (_, i) => i + 1).map(tableNum => {
+                      const menuUrl = `${window.location.origin}/menu/${getSelectedRestaurant().subdomain}?table=${tableNum}`;
+                      return (
+                        <div key={tableNum} className="card border border-gray-200 rounded-xl p-4 text-center hover:shadow-md transition-shadow">
+                          <QRCodeSVG
+                            value={menuUrl}
+                            size={120}
+                            level="M"
+                            includeMargin={false}
+                            className="mx-auto"
+                          />
+                          <h3 className="font-bold text-lg mt-3 text-gray-900">{bt.tableLabel} {tableNum}</h3>
+                          <p className="text-xs text-gray-500 mt-1 break-all">{menuUrl}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>)}
 
-            </div>
-          )}
+              </div>
+            );
+          })()}
 
           {/* Working Hours */}
           <div className="bg-white rounded-xl border border-gray-100 p-5">

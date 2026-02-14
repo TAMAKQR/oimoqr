@@ -328,6 +328,7 @@ const AdminPricingPage = () => {
                 >
                   <option value="RESTAURANT">🍽 Ресторан</option>
                   <option value="ONLINE_STORE">🛍 Магазин</option>
+                  <option value="HOTEL">🏨 Отель</option>
                   <option value="ALL">📦 Универсальный</option>
                 </select>
               </div>
@@ -403,10 +404,11 @@ const AdminPricingPage = () => {
                     <div className="flex items-center gap-2">
                       <h3 className="text-lg font-semibold">{tier.name}</h3>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${tier.businessType === 'ONLINE_STORE' ? 'bg-purple-100 text-purple-700' :
+                        tier.businessType === 'HOTEL' ? 'bg-green-100 text-green-700' :
                           tier.businessType === 'ALL' ? 'bg-gray-100 text-gray-700' :
                             'bg-blue-100 text-blue-700'
                         }`}>
-                        {tier.businessType === 'ONLINE_STORE' ? '🛍 Магазин' : tier.businessType === 'ALL' ? '📦 Все' : '🍽 Ресторан'}
+                        {tier.businessType === 'ONLINE_STORE' ? '🛍 Магазин' : tier.businessType === 'HOTEL' ? '🏨 Отель' : tier.businessType === 'ALL' ? '📦 Все' : '🍽 Ресторан'}
                       </span>
                     </div>
                     <div className="mt-3 space-y-2">
