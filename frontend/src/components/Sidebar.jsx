@@ -34,8 +34,12 @@ const Sidebar = ({ userData, selectedRestaurantId, collapsed, onToggleCollapsed 
         </svg>
       ),
       label: 'Меню',
-      path: '/menu-management',
       show: !isAdmin,
+      expandable: true,
+      children: [
+        { label: 'Управление', path: '/menu-management', show: true },
+        { label: 'Модификаторы', path: '/modifier-templates', show: isOwner },
+      ],
     },
     {
       id: 'settings',
@@ -51,7 +55,6 @@ const Sidebar = ({ userData, selectedRestaurantId, collapsed, onToggleCollapsed 
       children: [
         { label: 'Ресторан', path: '/settings', show: true },
         { label: 'Языки', path: '/languages', show: true },
-        { label: 'Модификаторы', path: '/modifier-templates', show: true },
       ],
     },
     {
