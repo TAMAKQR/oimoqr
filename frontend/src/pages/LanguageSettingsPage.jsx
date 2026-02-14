@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { authService } from '../services/authService';
 import toast from 'react-hot-toast';
 import DashboardLayout from '../components/DashboardLayout';
+import { useUserData } from '../hooks/useUserData';
+import { useSelectedRestaurant } from '../hooks/useSelectedRestaurant';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -17,8 +18,8 @@ const AVAILABLE_LANGUAGES = [
 const LanguageSettingsPage = () => {
   const navigate = useNavigate();
   const { token } = useAuthStore();
-  const [userData, setUserData] = useState(null);
-  const [selectedRestaurantId, setSelectedRestaurantId] = useState(null);
+  const { userData, loading: userLoading } = useUserData();
+  const { selectedRestaurantId, setSelectedRestaurantId } = useSelectedRestaurant(userData);
   const [restaurantLanguages, setRestaurantLanguages] = useState([]);
   const [defaultLanguage, setDefaultLanguage] = useState('ru');
   const [loading, setLoading] = useState(true);
@@ -34,35 +35,7 @@ const LanguageSettingsPage = () => {
   const [activeTab, setActiveTab] = useState('languages');
   const [translationType, setTranslationType] = useState('dishes'); // 'dishes' or 'categories'
 
-  // Load user data
-  useEffect(() => {
-    loadUserData();
-  }, []);
-
-  const loadUserData = async () => {
-    try {
-      const data = await authService.getMe();
-      setUserData(data);
-    } catch (err) {
-      console.error('Error loading user data:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Auto-select first restaurant when userData is loaded
-  useEffect(() => {
-    if (userData && !selectedRestaurantId && (userData.restaurants?.length > 0 || userData.restaurantStaff?.length > 0)) {
-      const allRestaurants = [
-        ...(userData.restaurants || []),
-        ...(userData.restaurantStaff?.map(s => s.restaurant) || [])
-      ];
-      if (allRestaurants.length > 0) {
-        setSelectedRestaurantId(allRestaurants[0].id);
-      }
-    }
-  }, [userData]);
-
+  // Load languages when restaurant selected
   useEffect(() => {
     if (selectedRestaurantId) {
       setLoading(true);

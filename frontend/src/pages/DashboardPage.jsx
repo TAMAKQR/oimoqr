@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { authService } from '../services/authService';
 import { restaurantService } from '../services/restaurantService';
 import { pricingService } from '../services/pricingService';
 import { analyticsService } from '../services/analyticsService';
@@ -9,6 +8,8 @@ import RestaurantSelector from '../components/RestaurantSelector';
 import DashboardLayout from '../components/DashboardLayout';
 import { ordersService } from '../services/ordersService';
 import toast from 'react-hot-toast';
+import { useUserData } from '../hooks/useUserData';
+import { useSelectedRestaurant } from '../hooks/useSelectedRestaurant';
 
 const getCurrencySymbol = (currencyCode) => {
   const currencySymbols = {
@@ -33,12 +34,8 @@ const DashboardPage = () => {
   const [pricingTiers, setPricingTiers] = useState([]);
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
-  const [userData, setUserData] = useState(null);
-  const [selectedRestaurantId, setSelectedRestaurantId] = useState(() => {
-    // Восстанавливаем последний выбранный ресторан из localStorage
-    return localStorage.getItem('selectedRestaurantId') || null;
-  });
-  const [loading, setLoading] = useState(true);
+  const { userData, loading, refresh: refreshUserData } = useUserData();
+  const { selectedRestaurantId, setSelectedRestaurantId, selectedRestaurant, isOwner: isOwnerFlag } = useSelectedRestaurant(userData);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newRestaurant, setNewRestaurant] = useState({ name: '', subdomain: '' });
   const [creating, setCreating] = useState(false);
@@ -63,7 +60,6 @@ const DashboardPage = () => {
   ];
 
   useEffect(() => {
-    loadUserData();
     loadPricingTiers();
   }, []);
 
@@ -83,42 +79,11 @@ const DashboardPage = () => {
     }
   };
 
-  useEffect(() => {
-    if (userData) {
-      const allRestaurants = [
-        ...(userData.restaurants || []),
-        ...(userData.restaurantStaff?.map(s => s.restaurant) || [])
-      ];
-
-      if (allRestaurants.length > 0) {
-        // Проверяем есть ли сохраненный ресторан в доступных
-        const savedRestaurantId = localStorage.getItem('selectedRestaurantId');
-        const savedRestaurantExists = savedRestaurantId && allRestaurants.some(r => r.id === savedRestaurantId);
-
-        if (savedRestaurantExists) {
-          // Если сохраненный ресторан существует - используем его
-          if (selectedRestaurantId !== savedRestaurantId) {
-            setSelectedRestaurantId(savedRestaurantId);
-          }
-        } else if (!selectedRestaurantId || !allRestaurants.some(r => r.id === selectedRestaurantId)) {
-          // Если нет сохраненного или он недоступен - выбираем первый
-          const firstRestaurantId = allRestaurants[0].id;
-          setSelectedRestaurantId(firstRestaurantId);
-          localStorage.setItem('selectedRestaurantId', firstRestaurantId);
-        }
-      } else {
-        // Если ресторанов нет, очищаем выбранный ID
-        setSelectedRestaurantId(null);
-        localStorage.removeItem('selectedRestaurantId');
-      }
-    }
-  }, [userData, selectedRestaurantId]); // selectedRestaurantId теперь в зависимостях
-
   // Загрузка статистики при выборе ресторана
   useEffect(() => {
     if (selectedRestaurantId) {
       loadStats();
-      loadUserData(); // Перезагружаем данные пользователя (и ресторана) при смене
+      refreshUserData();
     }
   }, [selectedRestaurantId]);
 
@@ -214,31 +179,8 @@ const DashboardPage = () => {
     }
   };
 
-  const loadUserData = async () => {
-    try {
-      const data = await authService.getMe();
-      setUserData(data);
-    } catch (err) {
-      console.error('Error loading user data:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getSelectedRestaurant = () => {
-    if (!userData || !selectedRestaurantId) return null;
-
-    const owned = userData.restaurants?.find(r => r.id === selectedRestaurantId);
-    if (owned) return owned;
-
-    const staff = userData.restaurantStaff?.find(s => s.restaurant.id === selectedRestaurantId);
-    return staff?.restaurant || null;
-  };
-
-  // Проверка: является ли пользователь владельцем выбранного ресторана
-  const isOwner = () => {
-    return userData?.restaurants?.some(r => r.id === selectedRestaurantId) || false;
-  };
+  const getSelectedRestaurant = () => selectedRestaurant;
+  const isOwner = () => isOwnerFlag;
 
   const handleLogout = () => {
     logout();
@@ -288,7 +230,7 @@ const DashboardPage = () => {
 
       setNewRestaurant({ name: '', subdomain: '' });
       setShowCreateModal(false);
-      await loadUserData();
+      await refreshUserData();
       setSelectedRestaurantId(response.restaurant.id);
     } catch (err) {
       setError(err.message || 'Ошибка при создании ресторана');

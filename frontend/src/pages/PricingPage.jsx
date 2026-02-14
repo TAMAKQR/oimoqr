@@ -4,41 +4,24 @@ import { pricingService } from '../services/pricingService';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
 import DashboardLayout from '../components/DashboardLayout';
-import { authService } from '../services/authService';
+import { useUserData } from '../hooks/useUserData';
+import { useSelectedRestaurant } from '../hooks/useSelectedRestaurant';
 
 const PricingPage = () => {
     const navigate = useNavigate();
     const { user } = useAuthStore();
     const [pricingTiers, setPricingTiers] = useState([]);
+    const { userData, loading: userLoading } = useUserData();
+    const { selectedRestaurantId, setSelectedRestaurantId } = useSelectedRestaurant(userData);
     const [loading, setLoading] = useState(true);
-    const [userData, setUserData] = useState(null);
-    const [selectedRestaurantId, setSelectedRestaurantId] = useState(null);
 
     useEffect(() => {
-        loadData();
+        loadPricingTiers();
     }, []);
 
-    // Автоматически выбираем первый ресторан при загрузке
-    useEffect(() => {
-        if (userData && !selectedRestaurantId && (userData.restaurants?.length > 0 || userData.restaurantStaff?.length > 0)) {
-            const allRestaurants = [
-                ...(userData.restaurants || []),
-                ...(userData.restaurantStaff?.map(s => s.restaurant) || [])
-            ];
-            if (allRestaurants.length > 0) {
-                setSelectedRestaurantId(allRestaurants[0].id);
-            }
-        }
-    }, [userData]);
-
-    const loadData = async () => {
+    const loadPricingTiers = async () => {
         try {
-            const [tiers, userInfo] = await Promise.all([
-                pricingService.getPricingTiers(),
-                authService.getMe()
-            ]);
-
-            // Парсим features если это JSON строка
+            const tiers = await pricingService.getPricingTiers();
             const parsedTiers = tiers.map(tier => {
                 let features = tier.features;
                 if (typeof features === 'string') {
@@ -53,11 +36,9 @@ const PricingPage = () => {
                     features: Array.isArray(features) ? features : []
                 };
             });
-
             setPricingTiers(parsedTiers);
-            setUserData(userInfo);
         } catch (err) {
-            console.error('Error loading data:', err);
+            console.error('Error loading pricing tiers:', err);
         } finally {
             setLoading(false);
         }

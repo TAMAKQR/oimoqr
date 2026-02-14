@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
 import { confirmDialog } from '../utils/confirmDialog';
 import DashboardLayout from '../components/DashboardLayout';
+import toast from 'react-hot-toast';
 
 const AdminPricingPage = () => {
   const navigate = useNavigate();
@@ -15,7 +16,6 @@ const AdminPricingPage = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [isEditingTrial, setIsEditingTrial] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [notification, setNotification] = useState(null);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     name: '',
@@ -40,8 +40,8 @@ const AdminPricingPage = () => {
   }, []);
 
   const showNotification = (message, type = 'success') => {
-    setNotification({ message, type });
-    setTimeout(() => setNotification(null), 4000);
+    if (type === 'error') toast.error(message);
+    else toast.success(message);
   };
 
   const loadData = async () => {
@@ -224,14 +224,6 @@ const AdminPricingPage = () => {
 
   return (
     <DashboardLayout userData={{ restaurants: [] }} selectedRestaurantId={null}>
-      {/* Toast Notification */}
-      {notification && (
-        <div className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg text-white ${notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
-          } animate-fade-in-down`}>
-          {notification.message}
-        </div>
-      )}
-
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center gap-4 mb-6">
           <button

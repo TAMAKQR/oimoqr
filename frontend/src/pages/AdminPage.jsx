@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
 import { confirmDialog } from '../utils/confirmDialog';
 import DashboardLayout from '../components/DashboardLayout';
+import toast from 'react-hot-toast';
 
 const AdminPage = () => {
   const navigate = useNavigate();
@@ -24,7 +25,6 @@ const AdminPage = () => {
   });
   const [editForm, setEditForm] = useState({ email: '', password: '' });
   const [searchQuery, setSearchQuery] = useState('');
-  const [notification, setNotification] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -50,8 +50,8 @@ const AdminPage = () => {
   }, [searchQuery, users]);
 
   const showNotification = (message, type = 'success') => {
-    setNotification({ message, type });
-    setTimeout(() => setNotification(null), 4000);
+    if (type === 'error') toast.error(message);
+    else toast.success(message);
   };
 
   const handleLogout = () => {
@@ -240,14 +240,6 @@ const AdminPage = () => {
 
   return (
     <DashboardLayout userData={user} selectedRestaurantId={null}>
-      {/* Toast Notification */}
-      {notification && (
-        <div className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg text-white ${notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
-          } animate-fade-in-down`}>
-          {notification.message}
-        </div>
-      )}
-
       <div className="max-w-6xl mx-auto">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Админ-панель</h1>

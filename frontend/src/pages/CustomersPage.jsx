@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
-import { authService } from '../services/authService';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import { useUserData } from '../hooks/useUserData';
 
 const CustomersPage = () => {
     const { restaurantId } = useParams();
     const navigate = useNavigate();
-    const [userData, setUserData] = useState(null);
+    const { userData } = useUserData();
     const [restaurant, setRestaurant] = useState(null);
     const [customers, setCustomers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -20,21 +20,20 @@ const CustomersPage = () => {
         loadData();
     }, [restaurantId]);
 
+    // Set restaurant from userData
+    useEffect(() => {
+        if (userData && restaurantId) {
+            const currentRestaurant = userData.restaurants?.find(r => r.id === restaurantId) ||
+                userData.restaurantStaff?.find(s => s.restaurantId === restaurantId)?.restaurant;
+            setRestaurant(currentRestaurant);
+        }
+    }, [userData, restaurantId]);
+
     const loadData = async () => {
         try {
             setLoading(true);
-            const [user, customersData] = await Promise.all([
-                authService.getMe(),
-                api.get(`/restaurants/${restaurantId}/customers`)
-            ]);
-
-            setUserData(user);
+            const customersData = await api.get(`/restaurants/${restaurantId}/customers`);
             setCustomers(customersData.data.customers || []);
-
-            // Находим ресторан в данных пользователя
-            const currentRestaurant = user.restaurants?.find(r => r.id === restaurantId) ||
-                user.restaurantStaff?.find(s => s.restaurantId === restaurantId)?.restaurant;
-            setRestaurant(currentRestaurant);
         } catch (error) {
             console.error('Error loading data:', error);
             toast.error('Ошибка загрузки данных');
