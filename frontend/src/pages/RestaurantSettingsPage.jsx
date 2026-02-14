@@ -572,62 +572,109 @@ const RestaurantSettingsPage = () => {
           <div className="bg-white rounded-xl border border-gray-100 p-5">
             <h2 className="text-xl font-bold mb-4">Баннеры</h2>
 
-            {getSelectedRestaurant()?.banners && getSelectedRestaurant().banners.length > 0 && (
-              <div className="mb-4">
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {getSelectedRestaurant().banners.map((banner, index) => (
-                    <div key={index} className="relative group">
-                      <ImageWithLoader
-                        src={banner}
-                        alt={`Banner ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-lg"
-                        loading="lazy"
-                      />
+            {getSelectedRestaurant()?.banners && getSelectedRestaurant().banners.length > 0 ? (
+              /* Compact view when banners exist */
+              <div>
+                <div className="flex items-start gap-4">
+                  <div className="flex gap-3 flex-wrap flex-1">
+                    {getSelectedRestaurant().banners.map((banner, index) => (
+                      <div key={index} className="relative group flex-shrink-0">
+                        <ImageWithLoader
+                          src={banner}
+                          alt={`Banner ${index + 1}`}
+                          className="w-28 h-16 object-cover rounded-lg border border-gray-200"
+                          loading="lazy"
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteBanner(banner);
+                          }}
+                          className="absolute -top-1.5 -right-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow-lg transition-all opacity-0 group-hover:opacity-100"
+                          title="Удалить баннер"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex flex-col gap-2 flex-shrink-0">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      id="banner-add-input"
+                      onChange={async (e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        const validation = validateImage(file, { maxSizeMB: 10 });
+                        if (!validation.valid) { toast.error(validation.error); return; }
+                        if (shouldCompress(file, 1)) {
+                          try {
+                            const compressed = await compressImage(file, { maxWidth: 1920, maxHeight: 800, quality: 0.85, maxSizeMB: 1 });
+                            toast.success(`Сжато: ${formatFileSize(file.size)} → ${formatFileSize(compressed.size)}`);
+                            handleBannerFileSelect(compressed);
+                          } catch { handleBannerFileSelect(file); }
+                        } else { handleBannerFileSelect(file); }
+                        e.target.value = '';
+                      }}
+                    />
+                    {!uploadingBanner ? (
                       <button
                         type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteBanner(banner);
-                        }}
-                        className="absolute top-1.5 right-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 shadow-lg transition-all opacity-0 group-hover:opacity-100"
-                        title="Удалить баннер"
+                        onClick={() => document.getElementById('banner-add-input').click()}
+                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
                       >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                         </svg>
+                        Добавить
                       </button>
-                    </div>
-                  ))}
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <div className="w-32 bg-blue-200 rounded-full h-2">
+                          <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
+                        </div>
+                        <span className="text-sm text-blue-600 font-bold">{uploadProgress}%</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            )}
-
-            {!uploadingBanner ? (
-              <ImageUploader
-                onFileSelect={handleBannerFileSelect}
-                maxSizeMB={10}
-                compressOptions={{
-                  maxWidth: 1920,
-                  maxHeight: 800,
-                  quality: 0.85,
-                  maxSizeMB: 1
-                }}
-                label="Загрузите баннер"
-                showPreview={true}
-                disabled={uploadingBanner}
-              />
             ) : (
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-blue-600 font-medium">Загрузка...</span>
-                  <span className="text-sm text-blue-600 font-bold">{uploadProgress}%</span>
-                </div>
-                <div className="w-full bg-blue-200 rounded-full h-2">
-                  <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
-                </div>
+              /* Full uploader when no banners */
+              <div>
+                {!uploadingBanner ? (
+                  <ImageUploader
+                    onFileSelect={handleBannerFileSelect}
+                    maxSizeMB={10}
+                    compressOptions={{
+                      maxWidth: 1920,
+                      maxHeight: 800,
+                      quality: 0.85,
+                      maxSizeMB: 1
+                    }}
+                    label="Загрузите баннер"
+                    showPreview={true}
+                    disabled={uploadingBanner}
+                  />
+                ) : (
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-blue-600 font-medium">Загрузка...</span>
+                      <span className="text-sm text-blue-600 font-bold">{uploadProgress}%</span>
+                    </div>
+                    <div className="w-full bg-blue-200 rounded-full h-2">
+                      <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
+                    </div>
+                  </div>
+                )}
+                <p className="text-xs text-gray-500 mt-1.5">1200×400 px, авто-сжатие до 1 МБ</p>
               </div>
             )}
-            <p className="text-xs text-gray-500 mt-1.5">1200×400 px, авто-сжатие до 1 МБ</p>
           </div>
 
           {/* Тема оформления */}
