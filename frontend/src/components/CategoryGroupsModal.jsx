@@ -129,7 +129,7 @@ const CategoryGroupsModal = ({ restaurantId, categories, onClose, onSave }) => {
         try {
             // Обновляем категорию через menuService
             // Пока используем прямой вызов API
-            toast.info('Функция привязки категорий в разработке');
+            toast('Функция привязки категорий в разработке', { icon: 'ℹ️' });
         } catch (err) {
             console.error('Error assigning category:', err);
             toast.error('Ошибка при привязке категории');
