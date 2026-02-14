@@ -696,6 +696,14 @@ export const getPricingTiers = async (req, res, next) => {
 
     res.json(tiers);
   } catch (error) {
+    console.error('Error in getPricingTiers:', error.message);
+    // Fallback: use raw SQL if Prisma Client is out of sync
+    try {
+      const tiers = await prisma.$queryRawUnsafe('SELECT * FROM "PricingTier" ORDER BY "order" ASC');
+      return res.json(tiers);
+    } catch (rawError) {
+      console.error('Raw fallback also failed:', rawError.message);
+    }
     next(error);
   }
 };
