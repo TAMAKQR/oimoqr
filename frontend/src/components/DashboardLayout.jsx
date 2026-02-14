@@ -17,7 +17,7 @@ const DashboardLayout = ({ children, userData, selectedRestaurantId }) => {
       <Sidebar userData={userData} selectedRestaurantId={selectedRestaurantId} />
 
       {/* Main Content */}
-      <div className="flex-1 lg:ml-[260px] transition-all duration-300">
+      <div className="flex-1 min-w-0">
         <main className="p-4 sm:p-6 lg:p-8 pt-16 lg:pt-8">
           {children}
         </main>
