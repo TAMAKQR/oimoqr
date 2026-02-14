@@ -9,7 +9,6 @@ import WorkingHoursSection from '../components/WorkingHoursSection';
 import MenuSkeleton from '../components/MenuSkeleton';
 import CustomerLoginModal from '../components/CustomerLoginModal';
 import ImageWithLoader from '../components/ImageWithLoader';
-import CustomerBottomNav from '../components/CustomerBottomNav';
 import { useTheme } from '../theme/ThemeProvider';
 
 const clamp = (value, min = 0, max = 1) => Math.min(Math.max(value, min), max);
@@ -776,9 +775,6 @@ const MenuPage = () => {
             </div>
           </div>
         )}
-
-        {/* Bottom navigation для авторизованных клиентов */}
-        {isCustomerLoggedIn && !isDishModalOpen && !isSearchOpen && <CustomerBottomNav />}
       </div>
       {/* Закрытие mobile wrapper */}
     </div>
