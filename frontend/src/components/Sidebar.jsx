@@ -186,7 +186,7 @@ const Sidebar = ({ userData, selectedRestaurantId, collapsed, onToggleCollapsed 
         {/* Collapse toggle button (desktop only) */}
         <button
           onClick={onToggleCollapsed}
-          className="hidden lg:flex items-center justify-center mx-auto my-2 w-8 h-8 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors flex-shrink-0"
+          className={`hidden lg:flex items-center justify-center my-2 w-8 h-8 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors flex-shrink-0 ${collapsed ? 'mx-auto' : 'ml-4'}`}
           title={collapsed ? 'Развернуть меню' : 'Свернуть меню'}
         >
           <svg
