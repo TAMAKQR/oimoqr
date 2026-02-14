@@ -3,8 +3,35 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useCustomerAuthStore } from '../store/customerAuthStore';
 import { useCartStore } from '../store/cartStore';
+import { useTheme } from '../theme/ThemeProvider';
 import CustomerLoginModal from '../components/CustomerLoginModal';
 import api from '../services/api';
+
+/* ---- palette builder (same as MenuPage) ---- */
+const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+const hexToHsl = (hex) => {
+    let r = 0, g = 0, b = 0;
+    if (hex.length === 4) { r = parseInt(hex[1] + hex[1], 16); g = parseInt(hex[2] + hex[2], 16); b = parseInt(hex[3] + hex[3], 16); }
+    else { r = parseInt(hex.slice(1, 3), 16); g = parseInt(hex.slice(3, 5), 16); b = parseInt(hex.slice(5, 7), 16); }
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+    let h = 0, s = 0, l = (max + min) / 2;
+    if (d) { s = l > 0.5 ? d / (2 - max - min) : d / (max + min); switch (max) { case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break; case g: h = ((b - r) / d + 2) / 6; break; default: h = ((r - g) / d + 4) / 6; } }
+    return { h, s, l };
+};
+const hslToHex = ({ h, s, l }) => {
+    const hue2rgb = (p, q, t) => { if (t < 0) t += 1; if (t > 1) t -= 1; if (t < 1 / 6) return p + (q - p) * 6 * t; if (t < 1 / 2) return q; if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6; return p; };
+    let r, g, b; if (!s) { r = g = b = l; } else { const q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q; r = hue2rgb(p, q, h + 1 / 3); g = hue2rgb(p, q, h); b = hue2rgb(p, q, h - 1 / 3); }
+    const toHex = v => Math.round(v * 255).toString(16).padStart(2, '0');
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+};
+const buildPaletteFromBase = (baseHex = '#374B6A') => {
+    const hsl = hexToHsl(baseHex);
+    const steps = { 50: .38, 100: .32, 200: .26, 300: .2, 400: .14, 500: 0, 600: -.06, 700: -.12, 800: -.18, 900: -.24 };
+    const palette = {};
+    Object.entries(steps).forEach(([tone, delta]) => { palette[tone] = hslToHex({ h: hsl.h, s: hsl.s, l: clamp(hsl.l + delta, 0.05, 0.95) }); });
+    return palette;
+};
 
 const CheckoutPage = () => {
     const navigate = useNavigate();
@@ -12,6 +39,17 @@ const CheckoutPage = () => {
     const { customer } = useCustomerAuthStore();
     const { items: cartItems, getTotal, updateQuantity, removeItem, clearCart, orderMode, tableNumber } = useCartStore();
     const { restaurant, currency } = location.state || {};
+    const { setTheme, setCustomColors } = useTheme();
+
+    // Apply restaurant theme on mount so checkout inherits the QR-menu style
+    useEffect(() => {
+        if (restaurant?.primaryColor) {
+            const palette = buildPaletteFromBase(restaurant.primaryColor);
+            setCustomColors(palette);
+            setTheme('custom');
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [restaurant?.primaryColor]);
 
     const isDineIn = orderMode === 'dine_in';
 
