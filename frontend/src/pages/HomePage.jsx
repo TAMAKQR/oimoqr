@@ -245,7 +245,7 @@ const HomePage = () => {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary-100/20 rounded-full blur-3xl" />
 
         <div className="container mx-auto px-4 relative">
-          <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-16">
             {/* Left — text */}
             <div className="flex-1 text-center lg:text-left max-w-2xl">
               <Reveal>
@@ -305,7 +305,7 @@ const HomePage = () => {
             </div>
 
             {/* Right — phone mockup */}
-            <Reveal delay={200} className="flex-shrink-0">
+            <Reveal delay={200} className="flex-shrink-0 lg:mr-8 xl:mr-16">
               <PhoneMockup />
             </Reveal>
           </div>
