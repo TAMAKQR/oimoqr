@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useCustomerAuthStore } from '../store/customerAuthStore';
 import { useCartStore } from '../store/cartStore';
-import CustomerBottomNav from '../components/CustomerBottomNav';
 import CustomerLoginModal from '../components/CustomerLoginModal';
 import api from '../services/api';
 
@@ -408,8 +407,6 @@ const CheckoutPage = () => {
                 }}
                 restaurantId={restaurant?.id}
             />
-
-            {customer?.id && <CustomerBottomNav />}
         </div>
     );
 };
