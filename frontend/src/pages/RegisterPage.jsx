@@ -147,13 +147,14 @@ const RegisterPage = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Название ресторана *</label>
+            <label className="block text-sm font-medium mb-1">Название бизнеса *</label>
             <input
               type="text"
               name="restaurantName"
               value={formData.restaurantName}
               onChange={handleChange}
               className="input-field"
+              placeholder="Например: Кафе, Магазин, Отель..."
               required
             />
           </div>
