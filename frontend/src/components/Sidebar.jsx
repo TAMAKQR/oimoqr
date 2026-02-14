@@ -2,7 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../store/authStore';
 
-const Sidebar = ({ userData, selectedRestaurantId }) => {
+const Sidebar = ({ userData, selectedRestaurantId, collapsed, onToggleCollapsed }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuthStore();
@@ -125,6 +125,11 @@ const Sidebar = ({ userData, selectedRestaurantId }) => {
   };
 
   const toggleSection = (id) => {
+    if (collapsed) {
+      onToggleCollapsed?.();
+      setExpandedSection(id);
+      return;
+    }
     setExpandedSection(expandedSection === id ? null : id);
   };
 
@@ -156,23 +161,44 @@ const Sidebar = ({ userData, selectedRestaurantId }) => {
       <aside
         ref={sidebarRef}
         className={`
-          fixed lg:sticky lg:top-0 top-0 left-0 h-screen bg-white border-r border-gray-200 z-40 transition-transform duration-300 ease-in-out
-          w-[260px] flex-shrink-0 flex flex-col
+          fixed lg:sticky lg:top-0 top-0 left-0 h-screen bg-white border-r border-gray-200 z-40
+          transition-all duration-300 ease-in-out
+          flex-shrink-0 flex flex-col
+          ${collapsed ? 'w-[68px]' : 'w-[260px]'}
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center px-6 border-b border-gray-100 flex-shrink-0">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => handleNavigate('/dashboard')}>
-            <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
+        <div className="h-16 flex items-center px-4 border-b border-gray-100 flex-shrink-0 justify-between">
+          <div
+            className={`flex items-center gap-3 cursor-pointer overflow-hidden ${collapsed ? 'justify-center w-full' : ''}`}
+            onClick={() => handleNavigate('/dashboard')}
+          >
+            <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center flex-shrink-0">
               <span className="text-white font-bold text-sm">Q</span>
             </div>
-            <span className="text-lg font-bold text-gray-900 tracking-tight">OimoQR</span>
+            {!collapsed && (
+              <span className="text-lg font-bold text-gray-900 tracking-tight whitespace-nowrap">OimoQR</span>
+            )}
           </div>
         </div>
 
+        {/* Collapse toggle button (desktop only) */}
+        <button
+          onClick={onToggleCollapsed}
+          className="hidden lg:flex items-center justify-center mx-auto my-2 w-8 h-8 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors flex-shrink-0"
+          title={collapsed ? 'Развернуть меню' : 'Свернуть меню'}
+        >
+          <svg
+            className={`w-4 h-4 transition-transform duration-300 ${collapsed ? 'rotate-180' : ''}`}
+            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+          </svg>
+        </button>
+
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-2">
+        <nav className="flex-1 overflow-y-auto py-1">
           {menuSections.filter(s => s.show).map((section) => (
             <div key={section.id}>
               {section.expandable ? (
@@ -180,64 +206,68 @@ const Sidebar = ({ userData, selectedRestaurantId }) => {
                   {/* Expandable section header */}
                   <button
                     onClick={() => toggleSection(section.id)}
+                    title={collapsed ? section.label : undefined}
                     className={`
-                      w-full flex items-center justify-between px-6 py-2.5 text-sm transition-colors
+                      w-full flex items-center ${collapsed ? 'justify-center px-0 py-3' : 'justify-between px-6 py-2.5'} text-sm transition-colors
                       ${isSectionActive(section)
                         ? 'text-blue-600 font-medium'
                         : 'text-gray-700 hover:bg-gray-50'
                       }
                     `}
                   >
-                    <div className="flex items-center gap-3">
-                      <span className={isSectionActive(section) ? 'text-blue-600' : 'text-gray-400'}>{section.icon}</span>
-                      <span>{section.label}</span>
+                    <div className={`flex items-center ${collapsed ? '' : 'gap-3'}`}>
+                      <span className={`flex-shrink-0 ${isSectionActive(section) ? 'text-blue-600' : 'text-gray-400'}`}>{section.icon}</span>
+                      {!collapsed && <span>{section.label}</span>}
                     </div>
-                    <svg
-                      className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${expandedSection === section.id ? 'rotate-180' : ''
-                        }`}
-                      fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                    </svg>
+                    {!collapsed && (
+                      <svg
+                        className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${expandedSection === section.id ? 'rotate-180' : ''}`}
+                        fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                      </svg>
+                    )}
                   </button>
 
-                  {/* Expandable children */}
-                  <div
-                    className={`overflow-hidden transition-all duration-200 ${expandedSection === section.id ? 'max-h-48' : 'max-h-0'
-                      }`}
-                  >
-                    {section.children.filter(c => c.show).map((child) => (
-                      <button
-                        key={child.path}
-                        onClick={() => handleNavigate(child.path)}
-                        className={`
-                          w-full text-left pl-14 pr-6 py-2 text-sm transition-colors
-                          ${isActive(child.path)
-                            ? 'text-blue-600 font-medium bg-blue-50'
-                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                          }
-                        `}
-                      >
-                        {child.label}
-                      </button>
-                    ))}
-                  </div>
+                  {/* Expandable children - hidden when collapsed */}
+                  {!collapsed && (
+                    <div
+                      className={`overflow-hidden transition-all duration-200 ${expandedSection === section.id ? 'max-h-48' : 'max-h-0'}`}
+                    >
+                      {section.children.filter(c => c.show).map((child) => (
+                        <button
+                          key={child.path}
+                          onClick={() => handleNavigate(child.path)}
+                          className={`
+                            w-full text-left pl-14 pr-6 py-2 text-sm transition-colors
+                            ${isActive(child.path)
+                              ? 'text-blue-600 font-medium bg-blue-50'
+                              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                            }
+                          `}
+                        >
+                          {child.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </>
               ) : (
                 /* Regular menu item */
                 <button
                   onClick={() => handleNavigate(section.path)}
+                  title={collapsed ? section.label : undefined}
                   className={`
-                    w-full flex items-center gap-3 px-6 py-2.5 text-sm transition-colors
+                    w-full flex items-center ${collapsed ? 'justify-center px-0 py-3' : 'gap-3 px-6 py-2.5'} text-sm transition-colors
                     ${isActive(section.path)
-                      ? 'text-blue-600 font-medium bg-blue-50 border-r-2 border-blue-600'
+                      ? `text-blue-600 font-medium bg-blue-50 ${collapsed ? '' : 'border-r-2 border-blue-600'}`
                       : 'text-gray-700 hover:bg-gray-50'
                     }
                   `}
                 >
-                  <span className={isActive(section.path) ? 'text-blue-600' : 'text-gray-400'}>{section.icon}</span>
-                  <span>{section.label}</span>
-                  {section.badge && (
+                  <span className={`flex-shrink-0 ${isActive(section.path) ? 'text-blue-600' : 'text-gray-400'}`}>{section.icon}</span>
+                  {!collapsed && <span>{section.label}</span>}
+                  {!collapsed && section.badge && (
                     <span className="ml-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                       {section.badge}
                     </span>
@@ -250,27 +280,46 @@ const Sidebar = ({ userData, selectedRestaurantId }) => {
 
         {/* User section at bottom */}
         {user && (
-          <div className="border-t border-gray-100 p-4 flex-shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                </svg>
+          <div className="border-t border-gray-100 p-3 flex-shrink-0">
+            {collapsed ? (
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                  </svg>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                  title="Выйти"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+                  </svg>
+                </button>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
-                <p className="text-xs text-gray-500 truncate">{user.email}</p>
+            ) : (
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
+                  <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                  title="Выйти"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+                  </svg>
+                </button>
               </div>
-              <button
-                onClick={handleLogout}
-                className="text-gray-400 hover:text-gray-600 transition-colors p-1"
-                title="Выйти"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
-                </svg>
-              </button>
-            </div>
+            )}
           </div>
         )}
       </aside>
