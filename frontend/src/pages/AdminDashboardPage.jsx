@@ -26,19 +26,102 @@ const StatCard = ({ label, value, sub, icon, color = 'blue' }) => {
     );
 };
 
-const MiniBar = ({ data, maxVal, color = '#3b82f6' }) => {
-    if (!data?.length) return null;
-    const max = maxVal || Math.max(...data.map(d => d.count), 1);
+const LineChart = ({ data, dataKey = 'count', label = '', color = '#3b82f6', height = 200 }) => {
+    if (!data?.length) return <div className="h-[200px] flex items-center justify-center text-gray-400 text-sm">Нет данных</div>;
+
+    const values = data.map(d => Number(d[dataKey]) || 0);
+    const maxVal = Math.max(...values, 1);
+    const minVal = Math.min(...values, 0);
+    const range = maxVal - minVal || 1;
+
+    const padX = 45;
+    const padTop = 10;
+    const padBottom = 30;
+    const w = 600;
+    const chartH = height - padTop - padBottom;
+
+    const points = data.map((d, i) => {
+        const x = padX + (i / Math.max(data.length - 1, 1)) * (w - padX - 10);
+        const y = padTop + chartH - ((values[i] - minVal) / range) * chartH;
+        return { x, y, val: values[i], date: d.date };
+    });
+
+    const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+    const areaPath = `${linePath} L${points[points.length - 1].x},${padTop + chartH} L${points[0].x},${padTop + chartH} Z`;
+
+    // Y-axis grid lines (5 lines)
+    const gridLines = Array.from({ length: 5 }, (_, i) => {
+        const val = minVal + (range / 4) * i;
+        const y = padTop + chartH - ((val - minVal) / range) * chartH;
+        return { y, label: val >= 1000 ? `${(val / 1000).toFixed(1)}k` : Math.round(val).toString() };
+    });
+
+    // X-axis date labels (show ~6 labels)
+    const step = Math.max(Math.floor(data.length / 6), 1);
+    const dateLabels = data.filter((_, i) => i % step === 0 || i === data.length - 1).map((d, _, arr) => {
+        const idx = data.indexOf(d);
+        const x = padX + (idx / Math.max(data.length - 1, 1)) * (w - padX - 10);
+        const dt = new Date(d.date);
+        return { x, label: `${dt.getDate()}.${String(dt.getMonth() + 1).padStart(2, '0')}` };
+    });
+
+    const [hover, setHover] = useState(null);
+
     return (
-        <div className="flex items-end gap-[2px] h-12">
-            {data.map((d, i) => (
-                <div
-                    key={i}
-                    className="flex-1 rounded-t min-w-[3px] transition-all"
-                    style={{ height: `${Math.max((d.count / max) * 100, 4)}%`, backgroundColor: color }}
-                    title={`${new Date(d.date).toLocaleDateString('ru')}: ${d.count}`}
-                />
-            ))}
+        <div className="relative">
+            <svg viewBox={`0 0 ${w} ${height}`} className="w-full" preserveAspectRatio="xMidYMid meet">
+                {/* Grid */}
+                {gridLines.map((g, i) => (
+                    <g key={i}>
+                        <line x1={padX} y1={g.y} x2={w - 10} y2={g.y} stroke="#f3f4f6" strokeWidth="1" />
+                        <text x={padX - 6} y={g.y + 4} textAnchor="end" fill="#9ca3af" fontSize="10">{g.label}</text>
+                    </g>
+                ))}
+
+                {/* Area fill */}
+                <defs>
+                    <linearGradient id={`grad-${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={color} stopOpacity="0.15" />
+                        <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+                    </linearGradient>
+                </defs>
+                <path d={areaPath} fill={`url(#grad-${color.replace('#', '')})`} />
+
+                {/* Line */}
+                <path d={linePath} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+
+                {/* Dots */}
+                {points.map((p, i) => (
+                    <circle
+                        key={i}
+                        cx={p.x}
+                        cy={p.y}
+                        r={hover === i ? 5 : 3}
+                        fill="white"
+                        stroke={color}
+                        strokeWidth="2"
+                        className="cursor-pointer transition-all"
+                        onMouseEnter={() => setHover(i)}
+                        onMouseLeave={() => setHover(null)}
+                    />
+                ))}
+
+                {/* X labels */}
+                {dateLabels.map((d, i) => (
+                    <text key={i} x={d.x} y={height - 6} textAnchor="middle" fill="#9ca3af" fontSize="10">{d.label}</text>
+                ))}
+
+                {/* Tooltip */}
+                {hover !== null && (
+                    <g>
+                        <line x1={points[hover].x} y1={padTop} x2={points[hover].x} y2={padTop + chartH} stroke={color} strokeWidth="1" strokeDasharray="4 4" opacity="0.3" />
+                        <rect x={points[hover].x - 40} y={points[hover].y - 32} width="80" height="24" rx="6" fill="#1f2937" />
+                        <text x={points[hover].x} y={points[hover].y - 16} textAnchor="middle" fill="white" fontSize="11" fontWeight="600">
+                            {Number(points[hover].val).toLocaleString('ru')}
+                        </text>
+                    </g>
+                )}
+            </svg>
         </div>
     );
 };
@@ -154,25 +237,24 @@ const AdminDashboardPage = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* User growth */}
                     <div className="bg-white rounded-xl border border-gray-100 p-5">
-                        <h3 className="text-sm font-semibold text-gray-900 mb-1">Рост пользователей</h3>
+                        <h3 className="text-sm font-semibold text-gray-900 mb-1">📈 Рост пользователей</h3>
                         <p className="text-xs text-gray-500 mb-3">Новые регистрации за 30 дней</p>
-                        <MiniBar data={charts.userGrowth} color="#3b82f6" />
-                        <div className="flex justify-between text-[10px] text-gray-400 mt-1">
-                            <span>30 дней назад</span>
-                            <span>Сегодня</span>
-                        </div>
+                        <LineChart data={charts.userGrowth} dataKey="count" color="#3b82f6" label="Пользователи" />
                     </div>
 
                     {/* Order growth */}
                     <div className="bg-white rounded-xl border border-gray-100 p-5">
-                        <h3 className="text-sm font-semibold text-gray-900 mb-1">Заказы</h3>
+                        <h3 className="text-sm font-semibold text-gray-900 mb-1">📦 Заказы</h3>
                         <p className="text-xs text-gray-500 mb-3">Количество заказов за 30 дней</p>
-                        <MiniBar data={charts.orderGrowth} color="#10b981" />
-                        <div className="flex justify-between text-[10px] text-gray-400 mt-1">
-                            <span>30 дней назад</span>
-                            <span>Сегодня</span>
-                        </div>
+                        <LineChart data={charts.orderGrowth} dataKey="count" color="#10b981" label="Заказы" />
                     </div>
+                </div>
+
+                {/* Revenue chart - full width */}
+                <div className="bg-white rounded-xl border border-gray-100 p-5">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-1">💰 Выручка</h3>
+                    <p className="text-xs text-gray-500 mb-3">Динамика выручки за 30 дней</p>
+                    <LineChart data={charts.orderGrowth} dataKey="revenue" color="#f59e0b" label="Выручка" height={220} />
                 </div>
 
                 {/* Distributions row */}
