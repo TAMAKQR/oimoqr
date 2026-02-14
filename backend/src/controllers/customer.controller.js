@@ -1,5 +1,6 @@
 import { prisma } from '../config/prisma.js';
 import bcrypt from 'bcryptjs';
+import telegramService from '../services/telegram.service.js';
 
 /**
  * Получить профиль клиента
@@ -541,6 +542,13 @@ export const createCustomerOrder = async (req, res, next) => {
                 }
             }
         });
+
+        // 🔔 Отправляем уведомление в Telegram
+        if (order.restaurant?.telegramGroupId) {
+            telegramService.sendNewOrderNotification(order, order.restaurant).catch(err => {
+                console.error('Failed to send Telegram notification:', err);
+            });
+        }
 
         res.status(201).json({
             message: 'Order created successfully',
