@@ -80,7 +80,7 @@ const hslToHex = ({ h, s, l }) => {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 };
 
-const buildPaletteFromBase = (baseHex = '#009e47') => {
+const buildPaletteFromBase = (baseHex = '#374B6A') => {
   const hsl = hexToHsl(baseHex);
   const steps = {
     50: 0.38,

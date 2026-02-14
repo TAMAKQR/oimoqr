@@ -36,7 +36,7 @@ const RestaurantSettingsPage = () => {
   const [facebook, setFacebook] = useState('');
   const [currency, setCurrency] = useState('KGS');
   const [menuCardStyle, setMenuCardStyle] = useState('horizontal');
-  const [primaryColor, setPrimaryColor] = useState('#009e47');
+  const [primaryColor, setPrimaryColor] = useState('#374B6A');
   const [deliveryEnabled, setDeliveryEnabled] = useState(false);
   const [deliveryFee, setDeliveryFee] = useState('');
   const [minOrderAmount, setMinOrderAmount] = useState('');
@@ -123,7 +123,7 @@ const RestaurantSettingsPage = () => {
     setFacebook(r.facebook || '');
     setCurrency(r.currency || 'KGS');
     setMenuCardStyle(r.cardStyle || 'horizontal');
-    setPrimaryColor(r.primaryColor || '#009e47');
+    setPrimaryColor(r.primaryColor || '#374B6A');
     setDeliveryEnabled(r.deliveryEnabled || false);
     setDeliveryFee(r.deliveryFee || '');
     setMinOrderAmount(r.minOrderAmount || '');

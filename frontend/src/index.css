@@ -16,18 +16,18 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Theme tokens */
+/* Theme tokens — OimoQR Steppe Indigo */
 :root {
-  --primary-50: #e6f7f1;
-  --primary-100: #b3e8d6;
-  --primary-200: #80d9bb;
-  --primary-300: #4dcaa0;
-  --primary-400: #1abb85;
-  --primary-500: #00b14f;
-  --primary-600: #009e47;
-  --primary-700: #008a3f;
-  --primary-800: #007737;
-  --primary-900: #00642f;
+  --primary-50: #F0F2F7;
+  --primary-100: #D8DDE8;
+  --primary-200: #B4BECE;
+  --primary-300: #8E9DB4;
+  --primary-400: #6A7E9B;
+  --primary-500: #4B6282;
+  --primary-600: #374B6A;
+  --primary-700: #2A3A54;
+  --primary-800: #1F2B3F;
+  --primary-900: #141D2B;
 }
 
 .theme-sunrise {
