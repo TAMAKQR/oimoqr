@@ -12,8 +12,9 @@ const PricingPage = () => {
     const { user } = useAuthStore();
     const [pricingTiers, setPricingTiers] = useState([]);
     const { userData, loading: userLoading } = useUserData();
-    const { selectedRestaurantId, setSelectedRestaurantId } = useSelectedRestaurant(userData);
+    const { selectedRestaurantId, setSelectedRestaurantId, selectedRestaurant } = useSelectedRestaurant(userData);
     const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState('RESTAURANT');
 
     useEffect(() => {
         loadPricingTiers();
@@ -65,6 +66,26 @@ const PricingPage = () => {
                     <p className="text-gray-500 text-sm mt-1">
                         Выберите подходящий тариф для вашего бизнеса
                     </p>
+                    <div className="flex gap-1 mt-4 bg-gray-100 rounded-lg p-1 w-fit">
+                        <button
+                            onClick={() => setActiveTab('RESTAURANT')}
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'RESTAURANT'
+                                    ? 'bg-white text-gray-900 shadow-sm'
+                                    : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                        >
+                            🍽 Рестораны
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('ONLINE_STORE')}
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'ONLINE_STORE'
+                                    ? 'bg-white text-gray-900 shadow-sm'
+                                    : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                        >
+                            🛍 Магазины
+                        </button>
+                    </div>
                 </div>
 
                 {/* Current Subscription Info */}
@@ -141,91 +162,93 @@ const PricingPage = () => {
 
                 {/* Pricing Cards */}
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {pricingTiers.map((tier) => {
-                        const isCurrentTier = tier.id === currentTierId;
-                        const isTrial = currentSubscription?.status === 'TRIAL';
+                    {pricingTiers
+                        .filter(tier => !tier.businessType || tier.businessType === activeTab || tier.businessType === 'ALL')
+                        .map((tier) => {
+                            const isCurrentTier = tier.id === currentTierId;
+                            const isTrial = currentSubscription?.status === 'TRIAL';
 
-                        return (
-                            <div
-                                key={tier.id}
-                                className={`relative rounded-xl overflow-hidden transition-all hover:shadow-md ${isCurrentTier
-                                    ? 'ring-2 ring-primary-600 bg-primary-50'
-                                    : 'bg-white border border-gray-100'
-                                    }`}
-                            >
-                                {/* Ribbon for current tier */}
-                                {isCurrentTier && (
-                                    <div className="absolute top-4 right-4">
-                                        <span className="bg-primary-600 text-white text-xs font-bold px-3 py-1 rounded-full">
-                                            Текущий
-                                        </span>
-                                    </div>
-                                )}
-
-                                <div className="p-6">
-                                    {/* Tier Name */}
-                                    <h3 className="text-2xl font-bold mb-2">{tier.name}</h3>
-
-                                    {/* Price */}
-                                    <div className="mb-6">
-                                        <span className="text-4xl font-bold">${tier.price}</span>
-                                        <span className="text-gray-600 ml-2">/месяц</span>
-                                    </div>
-
-                                    {/* Description */}
-                                    {tier.description && (
-                                        <p className="text-gray-600 text-sm mb-6">
-                                            {tier.description}
-                                        </p>
+                            return (
+                                <div
+                                    key={tier.id}
+                                    className={`relative rounded-xl overflow-hidden transition-all hover:shadow-md ${isCurrentTier
+                                        ? 'ring-2 ring-primary-600 bg-primary-50'
+                                        : 'bg-white border border-gray-100'
+                                        }`}
+                                >
+                                    {/* Ribbon for current tier */}
+                                    {isCurrentTier && (
+                                        <div className="absolute top-4 right-4">
+                                            <span className="bg-primary-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+                                                Текущий
+                                            </span>
+                                        </div>
                                     )}
 
-                                    {/* Features */}
-                                    <div className="mb-6">
-                                        <p className="font-semibold mb-3 text-sm text-gray-700">
-                                            Что включено:
-                                        </p>
-                                        <ul className="space-y-2">
-                                            <li className="flex items-start gap-2 text-sm">
-                                                <span className="text-green-500 mt-0.5">✓</span>
-                                                <span>До {tier.maxRestaurants} {tier.maxRestaurants === 1 ? 'ресторана' : 'ресторанов'}</span>
-                                            </li>
-                                            {tier.features && tier.features.map((feature, index) => (
-                                                <li key={index} className="flex items-start gap-2 text-sm">
-                                                    <span className="text-green-500 mt-0.5">✓</span>
-                                                    <span>{feature}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
+                                    <div className="p-6">
+                                        {/* Tier Name */}
+                                        <h3 className="text-2xl font-bold mb-2">{tier.name}</h3>
 
-                                    {/* CTA Button */}
-                                    <button
-                                        onClick={() => {
-                                            if (isTrial) {
-                                                toast('Для активации этого тарифа свяжитесь с администратором:\n\nEmail: admin@oimoqr.com\nTelegram: @oimoqr_support', {
-                                                    duration: 6000,
-                                                    icon: '💬'
-                                                });
-                                            }
-                                        }}
-                                        className={`w-full py-3 rounded-lg font-semibold transition-colors ${isCurrentTier
-                                            ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-                                            : isTrial
-                                                ? 'bg-primary-600 text-white hover:bg-primary-700'
-                                                : 'bg-gray-200 text-gray-600 cursor-not-allowed'
-                                            }`}
-                                        disabled={isCurrentTier || !isTrial}
-                                    >
-                                        {isCurrentTier
-                                            ? 'Активен'
-                                            : isTrial
-                                                ? 'Связаться с администратором'
-                                                : 'Недоступно'}
-                                    </button>
+                                        {/* Price */}
+                                        <div className="mb-6">
+                                            <span className="text-4xl font-bold">${tier.price}</span>
+                                            <span className="text-gray-600 ml-2">/месяц</span>
+                                        </div>
+
+                                        {/* Description */}
+                                        {tier.description && (
+                                            <p className="text-gray-600 text-sm mb-6">
+                                                {tier.description}
+                                            </p>
+                                        )}
+
+                                        {/* Features */}
+                                        <div className="mb-6">
+                                            <p className="font-semibold mb-3 text-sm text-gray-700">
+                                                Что включено:
+                                            </p>
+                                            <ul className="space-y-2">
+                                                <li className="flex items-start gap-2 text-sm">
+                                                    <span className="text-green-500 mt-0.5">✓</span>
+                                                    <span>До {tier.maxRestaurants} {tier.maxRestaurants === 1 ? 'ресторана' : 'ресторанов'}</span>
+                                                </li>
+                                                {tier.features && tier.features.map((feature, index) => (
+                                                    <li key={index} className="flex items-start gap-2 text-sm">
+                                                        <span className="text-green-500 mt-0.5">✓</span>
+                                                        <span>{feature}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+
+                                        {/* CTA Button */}
+                                        <button
+                                            onClick={() => {
+                                                if (isTrial) {
+                                                    toast('Для активации этого тарифа свяжитесь с администратором:\n\nEmail: admin@oimoqr.com\nTelegram: @oimoqr_support', {
+                                                        duration: 6000,
+                                                        icon: '💬'
+                                                    });
+                                                }
+                                            }}
+                                            className={`w-full py-3 rounded-lg font-semibold transition-colors ${isCurrentTier
+                                                ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                                                : isTrial
+                                                    ? 'bg-primary-600 text-white hover:bg-primary-700'
+                                                    : 'bg-gray-200 text-gray-600 cursor-not-allowed'
+                                                }`}
+                                            disabled={isCurrentTier || !isTrial}
+                                        >
+                                            {isCurrentTier
+                                                ? 'Активен'
+                                                : isTrial
+                                                    ? 'Связаться с администратором'
+                                                    : 'Недоступно'}
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        })}
                 </div>
 
                 {/* Contact Info */}

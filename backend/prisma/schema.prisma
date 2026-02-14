@@ -407,6 +407,7 @@ model PricingTier {
   description       String?
   features          String?
   maxRestaurants    Int?
+  businessType      String    @default("RESTAURANT") // RESTAURANT | ONLINE_STORE | ALL
   order             Int       @default(0)
   isActive          Boolean   @default(true)
   

@@ -23,6 +23,7 @@ const AdminPricingPage = () => {
     description: '',
     features: '',
     maxRestaurants: '',
+    businessType: 'RESTAURANT',
     order: ''
   });
   const [trialFormData, setTrialFormData] = useState({
@@ -69,6 +70,7 @@ const AdminPricingPage = () => {
       description: tier.description || '',
       features: tier.features || '',
       maxRestaurants: tier.maxRestaurants || '',
+      businessType: tier.businessType || 'RESTAURANT',
       order: tier.order || ''
     });
     setError('');
@@ -82,6 +84,7 @@ const AdminPricingPage = () => {
       description: '',
       features: '',
       maxRestaurants: '',
+      businessType: 'RESTAURANT',
       order: ''
     });
     setError('');
@@ -96,6 +99,7 @@ const AdminPricingPage = () => {
       description: '',
       features: '',
       maxRestaurants: '',
+      businessType: 'RESTAURANT',
       order: ''
     });
   };
@@ -124,6 +128,7 @@ const AdminPricingPage = () => {
           description: formData.description || null,
           features: formData.features || null,
           maxRestaurants: formData.maxRestaurants ? parseInt(formData.maxRestaurants) : null,
+          businessType: formData.businessType || 'RESTAURANT',
           order: formData.order ? parseInt(formData.order) : 0
         });
         showNotification('Тариф создан успешно!');
@@ -134,6 +139,7 @@ const AdminPricingPage = () => {
           description: formData.description || null,
           features: formData.features || null,
           maxRestaurants: formData.maxRestaurants ? parseInt(formData.maxRestaurants) : null,
+          businessType: formData.businessType || 'RESTAURANT',
           order: formData.order ? parseInt(formData.order) : 0
         });
         showNotification('Тариф обновлен успешно!');
@@ -311,6 +317,23 @@ const AdminPricingPage = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Тип бизнеса
+                </label>
+                <select
+                  name="businessType"
+                  value={formData.businessType}
+                  onChange={handleInputChange}
+                  className="input w-full"
+                  disabled={saving}
+                >
+                  <option value="RESTAURANT">🍽 Ресторан</option>
+                  <option value="ONLINE_STORE">🛍 Магазин</option>
+                  <option value="ALL">📦 Универсальный</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Макс. ресторанов
                 </label>
                 <input
@@ -377,7 +400,15 @@ const AdminPricingPage = () => {
               <div key={tier.id} className="bg-white rounded-xl border border-gray-100 p-5">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold">{tier.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-semibold">{tier.name}</h3>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${tier.businessType === 'ONLINE_STORE' ? 'bg-purple-100 text-purple-700' :
+                          tier.businessType === 'ALL' ? 'bg-gray-100 text-gray-700' :
+                            'bg-blue-100 text-blue-700'
+                        }`}>
+                        {tier.businessType === 'ONLINE_STORE' ? '🛍 Магазин' : tier.businessType === 'ALL' ? '📦 Все' : '🍽 Ресторан'}
+                      </span>
+                    </div>
                     <div className="mt-3 space-y-2">
                       <p className="text-2xl font-bold text-primary-600">
                         ${tier.price.toFixed(2)}/месяц

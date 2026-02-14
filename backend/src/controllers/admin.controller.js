@@ -654,7 +654,8 @@ export const getAllUsers = async (req, res, next) => {
           select: {
             id: true,
             name: true,
-            subdomain: true
+            subdomain: true,
+            businessType: true
           }
         },
         // Включаем все подписки пользователя с информацией о тарифе
