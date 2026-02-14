@@ -297,12 +297,12 @@ const ModifierTemplatesPage = () => {
 
     return (
         <DashboardLayout userData={userData} selectedRestaurantId={selectedRestaurantId}>
-            <div className="max-w-6xl mx-auto p-6">
+            <div className="max-w-6xl mx-auto">
                 {/* Header */}
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">📚 Модификаторы</h1>
-                        <p className="text-gray-600 mt-1">Создавайте шаблоны модификаторов и применяйте их к блюдам</p>
+                        <h1 className="text-2xl font-bold text-gray-900">Модификаторы</h1>
+                        <p className="text-gray-500 text-sm mt-1">Создавайте шаблоны модификаторов и применяйте их к блюдам</p>
                     </div>
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
                         <RestaurantSelector
@@ -315,7 +315,7 @@ const ModifierTemplatesPage = () => {
                         />
                         <button
                             onClick={() => handleOpenModal()}
-                            className="btn-primary flex items-center gap-2 justify-center"
+                            className="flex items-center gap-2 justify-center px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
                         >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -327,7 +327,7 @@ const ModifierTemplatesPage = () => {
 
                 {/* Templates List */}
                 {templates.length === 0 ? (
-                    <div className="text-center py-12 bg-white rounded-lg border-2 border-dashed border-gray-300">
+                    <div className="text-center py-12 bg-white rounded-xl border-2 border-dashed border-gray-200">
                         <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
@@ -335,7 +335,7 @@ const ModifierTemplatesPage = () => {
                         <p className="text-gray-600 mb-4">Создайте первый шаблон модификатора</p>
                         <button
                             onClick={() => handleOpenModal()}
-                            className="btn-primary"
+                            className="px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
                         >
                             Создать шаблон
                         </button>
@@ -343,7 +343,7 @@ const ModifierTemplatesPage = () => {
                 ) : (
                     <div className="grid gap-4">
                         {templates.map((template) => (
-                            <div key={template.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                            <div key={template.id} className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-sm transition-shadow">
                                 <div className="flex items-start justify-between mb-4">
                                     <div className="flex-1">
                                         <h3 className="text-xl font-bold text-gray-900 mb-1">{template.name}</h3>
@@ -410,7 +410,7 @@ const ModifierTemplatesPage = () => {
                                     <button
                                         onClick={() => handleSync(template)}
                                         disabled={syncingId === template.id}
-                                        className="w-full btn-secondary flex items-center justify-center gap-2"
+                                        className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors text-sm"
                                     >
                                         {syncingId === template.id ? (
                                             <>
@@ -546,13 +546,13 @@ const ModifierTemplatesPage = () => {
 
                                 {/* Actions */}
                                 <div className="flex gap-2">
-                                    <button type="submit" className="btn-primary flex-1">
+                                    <button type="submit" className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
                                         {editingTemplate ? 'Сохранить' : 'Создать'}
                                     </button>
                                     <button
                                         type="button"
                                         onClick={handleCloseModal}
-                                        className="btn-secondary flex-1"
+                                        className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors text-sm font-medium"
                                     >
                                         Отмена
                                     </button>
