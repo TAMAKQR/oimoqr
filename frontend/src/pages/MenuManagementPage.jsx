@@ -5,6 +5,7 @@ import { authService } from '../services/authService';
 import { menuService } from '../services/menuService';
 import { restaurantService } from '../services/restaurantService';
 import modifierTemplateService from '../services/modifierTemplateService';
+import api from '../services/api';
 import toast from 'react-hot-toast';
 import { confirmDialog } from '../utils/confirmDialog';
 import RestaurantSelector from '../components/RestaurantSelector';
@@ -861,33 +862,11 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
   const loadAllDishes = async () => {
     setLoadingDishes(true);
     try {
-      const url = `/api/dishes/restaurant/${restaurantId}/all`;
-      console.log('🔄 Loading dishes from:', url);
-
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      console.log('📡 Response status:', response.status);
-
-      if (response.ok) {
-        const text = await response.text();
-        console.log('📄 Response text (first 500 chars):', text.substring(0, 500));
-
-        try {
-          const data = JSON.parse(text);
-          console.log(`✅ Loaded ${data.length} dishes`);
-          setAllDishes(data);
-        } catch (parseError) {
-          console.error('❌ JSON Parse Error:', parseError);
-          console.log('Full response:', text);
-        }
-      } else {
-        const text = await response.text();
-        console.error('❌ Failed to load dishes, status:', response.status, 'Response:', text.substring(0, 200));
-      }
+      console.log('🔄 Loading dishes for restaurant:', restaurantId);
+      const response = await api.get(`/dishes/restaurant/${restaurantId}/all`);
+      const data = response.data;
+      console.log(`✅ Loaded ${data.length} dishes`);
+      setAllDishes(data);
     } catch (err) {
       console.error('❌ Error loading dishes:', err);
     } finally {
@@ -1072,7 +1051,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
           ? { ...m, options: [...(m.options || []), newOption] }
           : m
       ));
-      toast.info('💡 Сохраните блюдо, чтобы добавить фото к опциям');
+      toast('💡 Сохраните блюдо, чтобы добавить фото к опциям', { icon: 'ℹ️' });
     }
   };
 

@@ -17,7 +17,10 @@ export const updateTelegramSettings = async (req, res, next) => {
             return res.status(404).json({ error: 'Restaurant not found' });
         }
 
-        if (restaurant.ownerId !== req.user.userId) {
+        // Проверяем права доступа (владелец или стафф)
+        const isOwner = restaurant.ownerId === req.user.id;
+        const isStaff = req.user.restaurantStaff?.some(s => s.restaurantId === id);
+        if (!isOwner && !isStaff && !req.user.isAdmin) {
             return res.status(403).json({ error: 'Access denied' });
         }
 
@@ -61,7 +64,10 @@ export const testTelegramConnection = async (req, res, next) => {
             return res.status(404).json({ error: 'Restaurant not found' });
         }
 
-        if (restaurant.ownerId !== req.user.userId) {
+        // Проверяем права доступа (владелец или стафф)
+        const isOwner = restaurant.ownerId === req.user.id;
+        const isStaff = req.user.restaurantStaff?.some(s => s.restaurantId === id);
+        if (!isOwner && !isStaff && !req.user.isAdmin) {
             return res.status(403).json({ error: 'Access denied' });
         }
 

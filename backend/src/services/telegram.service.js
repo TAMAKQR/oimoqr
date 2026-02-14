@@ -15,38 +15,87 @@ class TelegramService {
         }
 
         try {
-            // Используем polling только в development для локального тестирования
-            const options = process.env.NODE_ENV === 'production'
-                ? { polling: false }
-                : { polling: true };
+            // Polling включён всегда — нужен для обработки команд /start и /getid
+            this.bot = new TelegramBot(token, {
+                polling: {
+                    interval: 2000,        // Проверяем каждые 2 секунды
+                    autoStart: true,
+                    params: {
+                        timeout: 10        // Long polling timeout
+                    }
+                }
+            });
 
-            this.bot = new TelegramBot(token, options);
-            console.log('✅ Telegram Bot initialized');
+            console.log('✅ Telegram Bot initialized (polling enabled)');
+
+            // Обработка ошибок polling (чтобы не крашился сервер)
+            this.bot.on('polling_error', (error) => {
+                // 409 Conflict = другой экземпляр бота уже использует polling
+                if (error.code === 'ETELEGRAM' && error.response?.statusCode === 409) {
+                    console.warn('⚠️ Telegram Bot: another instance is already polling. Stopping polling...');
+                    this.bot.stopPolling();
+                } else {
+                    console.error('❌ Telegram polling error:', error.code || error.message);
+                }
+            });
 
             // Обработчик команды /start для получения chat ID
-            this.bot.onText(/\/start/, (msg) => {
+            this.bot.onText(/\/start(@\w+)?/, (msg) => {
                 const chatId = msg.chat.id;
                 const chatType = msg.chat.type;
 
                 let message = `🤖 Привет! Я бот OimoQR для уведомлений о заказах.\n\n`;
 
                 if (chatType === 'group' || chatType === 'supergroup') {
-                    message += `📍 **ID вашей группы**: \`${chatId}\`\n\n`;
+                    message += `📍 *ID вашей группы:* \`${chatId}\`\n\n`;
                     message += `Скопируйте этот ID и вставьте в настройки ресторана в админ-панели.`;
                 } else {
-                    message += `⚠️ Для получения уведомлений:\n`;
-                    message += `1. Добавьте меня в группу вашего ресторана\n`;
-                    message += `2. Отправьте /start в группе\n`;
-                    message += `3. Скопируйте ID группы из сообщения`;
+                    message += `📍 *Ваш Chat ID:* \`${chatId}\`\n\n`;
+                    message += `Для получения уведомлений о заказах:\n`;
+                    message += `1. Создайте группу в Telegram\n`;
+                    message += `2. Добавьте меня в группу\n`;
+                    message += `3. Отправьте /getid в группе\n`;
+                    message += `4. Скопируйте ID группы в настройки ресторана`;
                 }
 
                 this.bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
             });
 
-            // Обработчик команды /getid
-            this.bot.onText(/\/getid/, (msg) => {
+            // Обработчик команды /getid — работает и в группе и в ЛС
+            this.bot.onText(/\/getid(@\w+)?/, (msg) => {
                 const chatId = msg.chat.id;
-                this.bot.sendMessage(chatId, `📍 Chat ID: \`${chatId}\``, { parse_mode: 'Markdown' });
+                const chatTitle = msg.chat.title || 'Личные сообщения';
+                const chatType = msg.chat.type;
+
+                let response = `📍 *Chat ID:* \`${chatId}\`\n`;
+                response += `📝 *Название:* ${chatTitle}\n`;
+                response += `🔖 *Тип:* ${chatType}\n\n`;
+
+                if (chatType === 'group' || chatType === 'supergroup') {
+                    response += `✅ Скопируйте ID выше и вставьте в настройки ресторана в админ-панели OimoQR.`;
+                } else {
+                    response += `⚠️ Для уведомлений о заказах добавьте бота в *группу* и отправьте /getid там.`;
+                }
+
+                this.bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
+            });
+
+            // Обработчик команды /help
+            this.bot.onText(/\/help(@\w+)?/, (msg) => {
+                const chatId = msg.chat.id;
+                const helpMessage = `🤖 *OimoQR Bot — Помощь*\n\n` +
+                    `Доступные команды:\n` +
+                    `/start — Приветствие и инструкция\n` +
+                    `/getid — Получить ID этого чата\n` +
+                    `/help — Показать это сообщение\n\n` +
+                    `*Как настроить уведомления:*\n` +
+                    `1. Создайте группу в Telegram\n` +
+                    `2. Добавьте @OimoQR\\_bot в группу\n` +
+                    `3. Отправьте /getid в группе\n` +
+                    `4. Скопируйте ID и вставьте в настройки ресторана\n` +
+                    `5. Нажмите "Проверить подключение"`;
+
+                this.bot.sendMessage(chatId, helpMessage, { parse_mode: 'Markdown' });
             });
 
         } catch (error) {
