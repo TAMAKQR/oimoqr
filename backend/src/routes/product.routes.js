@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
+import { upload } from '../middleware/upload.js';
 import {
     getProductCategories,
     createProductCategory,
@@ -10,6 +11,8 @@ import {
     createProduct,
     updateProduct,
     deleteProduct,
+    uploadProductImage,
+    deleteProductImage,
     updateStock
 } from '../controllers/product.controller.js';
 
@@ -27,6 +30,10 @@ router.get('/restaurant/:restaurantId', getRestaurantProducts);
 router.post('/', authenticate, createProduct);
 router.put('/:id', authenticate, updateProduct);
 router.delete('/:id', authenticate, deleteProduct);
+
+// Product images
+router.post('/:id/upload-image', authenticate, upload.single('image'), uploadProductImage);
+router.delete('/:id/delete-image', authenticate, deleteProductImage);
 
 // Stock management
 router.patch('/:id/stock', authenticate, updateStock);

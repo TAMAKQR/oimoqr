@@ -561,7 +561,7 @@ export const updateMenuCardStyle = async (req, res, next) => {
 
 export const createRestaurant = async (req, res, next) => {
   try {
-    const { name, subdomain } = req.body;
+    const { name, subdomain, businessType } = req.body;
 
     if (!name || !subdomain) {
       return res.status(400).json({ error: 'Restaurant name and subdomain are required' });
@@ -715,6 +715,7 @@ export const createRestaurant = async (req, res, next) => {
       data: {
         name,
         subdomain,
+        businessType: businessType || 'RESTAURANT',
         ownerId: req.user.id
       }
     });

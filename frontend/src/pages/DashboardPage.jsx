@@ -112,7 +112,7 @@ const DashboardPage = () => {
   const { userData, loading, refresh: refreshUserData } = useUserData();
   const { selectedRestaurantId, setSelectedRestaurantId, selectedRestaurant, isOwner: isOwnerFlag } = useSelectedRestaurant(userData);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newRestaurant, setNewRestaurant] = useState({ name: '', subdomain: '' });
+  const [newRestaurant, setNewRestaurant] = useState({ name: '', subdomain: '', businessType: 'RESTAURANT' });
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
   const [stats, setStats] = useState(null);
@@ -303,7 +303,7 @@ const DashboardPage = () => {
         return;
       }
 
-      setNewRestaurant({ name: '', subdomain: '' });
+      setNewRestaurant({ name: '', subdomain: '', businessType: 'RESTAURANT' });
       setShowCreateModal(false);
       await refreshUserData();
       setSelectedRestaurantId(response.restaurant.id);
@@ -412,8 +412,8 @@ const DashboardPage = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.016A3.001 3.001 0 0021 9.349m-18 0a2.997 2.997 0 003.75.616m-3.75-.616V2.99A1.5 1.5 0 014.5 1.5h15a1.5 1.5 0 011.5 1.5v6.849" />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">Создайте свой первый ресторан</h2>
-            <p className="text-gray-500 mb-8 max-w-md mx-auto">У вас ещё нет ресторанов. Создайте первый ресторан, чтобы начать работу с платформой.</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">Создайте свой первый бизнес</h2>
+            <p className="text-gray-500 mb-8 max-w-md mx-auto">У вас ещё нет ресторанов или магазинов. Создайте первый, чтобы начать работу с платформой.</p>
             <button
               onClick={() => setShowCreateModal(true)}
               className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors"
@@ -429,7 +429,7 @@ const DashboardPage = () => {
           {showCreateModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
               <div className="bg-white rounded-lg max-w-md w-full p-6 sm:p-8">
-                <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Создать новый ресторан</h2>
+                <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Создать новый бизнес</h2>
 
                 {error && (
                   <div className="bg-red-50 text-red-700 p-3 rounded mb-4 text-sm">
@@ -439,12 +439,36 @@ const DashboardPage = () => {
 
                 <div className="space-y-4 mb-6 sm:mb-8">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Название ресторана</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Тип бизнеса</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setNewRestaurant({ ...newRestaurant, businessType: 'RESTAURANT' })}
+                        className={`p-3 rounded-xl border-2 text-center transition-all ${newRestaurant.businessType === 'RESTAURANT' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}
+                        disabled={creating}
+                      >
+                        <span className="text-2xl block mb-1">🍽</span>
+                        <span className="text-sm font-medium">Ресторан</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewRestaurant({ ...newRestaurant, businessType: 'ONLINE_STORE' })}
+                        className={`p-3 rounded-xl border-2 text-center transition-all ${newRestaurant.businessType === 'ONLINE_STORE' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}`}
+                        disabled={creating}
+                      >
+                        <span className="text-2xl block mb-1">🛍</span>
+                        <span className="text-sm font-medium">Магазин</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{newRestaurant.businessType === 'ONLINE_STORE' ? 'Название магазина' : 'Название ресторана'}</label>
                     <input
                       type="text"
                       value={newRestaurant.name}
                       onChange={(e) => setNewRestaurant({ ...newRestaurant, name: e.target.value })}
-                      placeholder="Например: Пиццерия 'Мамино'"
+                      placeholder={newRestaurant.businessType === 'ONLINE_STORE' ? "Например: Магазин 'Свежесть'" : "Например: Пиццерия 'Мамино'"}
                       className="input-field w-full"
                       disabled={creating}
                     />
@@ -457,7 +481,7 @@ const DashboardPage = () => {
                         type="text"
                         value={newRestaurant.subdomain}
                         onChange={(e) => setNewRestaurant({ ...newRestaurant, subdomain: e.target.value.toLowerCase() })}
-                        placeholder="mamino-pizza"
+                        placeholder={newRestaurant.businessType === 'ONLINE_STORE' ? "my-store" : "mamino-pizza"}
                         className="input-field flex-1"
                         disabled={creating}
                       />
@@ -502,7 +526,7 @@ const DashboardPage = () => {
         {/* Page header */}
         <div className="mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Панель управления</h1>
-          <p className="text-gray-500 text-sm mt-1">Обзор вашего ресторана</p>
+          <p className="text-gray-500 text-sm mt-1">{getSelectedRestaurant()?.businessType === 'ONLINE_STORE' ? 'Обзор вашего магазина' : 'Обзор вашего ресторана'}</p>
         </div>
 
         {/* Restaurant Selector */}
@@ -591,7 +615,7 @@ const DashboardPage = () => {
               <p><span className="text-gray-500">Название:</span> <span className="font-medium text-gray-900">{getSelectedRestaurant().name}</span></p>
               <p className="break-all"><span className="text-gray-500">Субдомен:</span> <span className="font-medium text-gray-900">{getSelectedRestaurant().subdomain}.oimoqr.com</span></p>
               <a
-                href={`/menu/${getSelectedRestaurant().subdomain}`}
+                href={getSelectedRestaurant()?.businessType === 'ONLINE_STORE' ? `/shop/${getSelectedRestaurant().subdomain}` : `/menu/${getSelectedRestaurant().subdomain}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 mt-3 text-blue-600 hover:text-blue-700 text-sm font-medium"
@@ -599,7 +623,7 @@ const DashboardPage = () => {
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
                 </svg>
-                Посмотреть меню
+                {getSelectedRestaurant()?.businessType === 'ONLINE_STORE' ? 'Посмотреть магазин' : 'Посмотреть меню'}
               </a>
             </div>
 
@@ -679,7 +703,7 @@ const DashboardPage = () => {
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
                         </svg>
                       </div>
-                      <p className="text-sm text-gray-500">Блюда</p>
+                      <p className="text-sm text-gray-500">{getSelectedRestaurant()?.businessType === 'ONLINE_STORE' ? 'Товары' : 'Блюда'}</p>
                     </div>
                     <p className="text-2xl font-bold text-gray-900">{stats.overview.totalDishes}</p>
                     <p className="text-xs text-gray-400 mt-1">{stats.overview.totalCategories} категорий</p>
@@ -888,7 +912,7 @@ const DashboardPage = () => {
                 {/* Top Dishes */}
                 {stats.topDishes.length > 0 && (
                   <div className="bg-white rounded-xl border border-gray-100 p-5">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-4">Популярные блюда</h3>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-4">{getSelectedRestaurant()?.businessType === 'ONLINE_STORE' ? 'Популярные товары' : 'Популярные блюда'}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
                       {stats.topDishes.map((dish, index) => (
                         <div key={dish.id} className="border border-gray-100 rounded-xl p-4 hover:shadow-sm transition-shadow">
@@ -1030,8 +1054,9 @@ const DashboardPage = () => {
         <div className="bg-white rounded-xl border border-gray-100 p-5 mt-6">
           <h3 className="text-sm font-semibold text-gray-900 mb-2">Совет</h3>
           <p className="text-sm text-gray-500">
-            Добавьте красивые фотографии блюд и подробные описания, чтобы увеличить количество заказов.
-            Не забудьте настроить баннеры для акций и специальных предложений!
+            {getSelectedRestaurant()?.businessType === 'ONLINE_STORE'
+              ? 'Добавьте качественные фотографии товаров и подробные описания, чтобы увеличить продажи. Следите за остатками на складе!'
+              : 'Добавьте красивые фотографии блюд и подробные описания, чтобы увеличить количество заказов. Не забудьте настроить баннеры для акций и специальных предложений!'}
           </p>
         </div>
 
@@ -1039,7 +1064,7 @@ const DashboardPage = () => {
         {showCreateModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg max-w-md w-full p-6 sm:p-8">
-              <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Создать новый ресторан</h2>
+              <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Создать новый бизнес</h2>
 
               {error && (
                 <div className="bg-red-50 text-red-700 p-3 rounded mb-4 text-sm">
@@ -1049,12 +1074,36 @@ const DashboardPage = () => {
 
               <div className="space-y-4 mb-6 sm:mb-8">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Название ресторана</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Тип бизнеса</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setNewRestaurant({ ...newRestaurant, businessType: 'RESTAURANT' })}
+                      className={`p-3 rounded-xl border-2 text-center transition-all ${newRestaurant.businessType === 'RESTAURANT' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}
+                      disabled={creating}
+                    >
+                      <span className="text-2xl block mb-1">🍽</span>
+                      <span className="text-sm font-medium">Ресторан</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewRestaurant({ ...newRestaurant, businessType: 'ONLINE_STORE' })}
+                      className={`p-3 rounded-xl border-2 text-center transition-all ${newRestaurant.businessType === 'ONLINE_STORE' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}`}
+                      disabled={creating}
+                    >
+                      <span className="text-2xl block mb-1">🛍</span>
+                      <span className="text-sm font-medium">Магазин</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{newRestaurant.businessType === 'ONLINE_STORE' ? 'Название магазина' : 'Название ресторана'}</label>
                   <input
                     type="text"
                     value={newRestaurant.name}
                     onChange={(e) => setNewRestaurant({ ...newRestaurant, name: e.target.value })}
-                    placeholder="Например: Пиццерия 'Мамино'"
+                    placeholder={newRestaurant.businessType === 'ONLINE_STORE' ? "Например: Магазин 'Свежесть'" : "Например: Пиццерия 'Мамино'"}
                     className="input w-full"
                     disabled={creating}
                   />
@@ -1067,7 +1116,7 @@ const DashboardPage = () => {
                       type="text"
                       value={newRestaurant.subdomain}
                       onChange={(e) => setNewRestaurant({ ...newRestaurant, subdomain: e.target.value.toLowerCase() })}
-                      placeholder="mamino-pizza"
+                      placeholder={newRestaurant.businessType === 'ONLINE_STORE' ? "my-store" : "mamino-pizza"}
                       className="input flex-1"
                       disabled={creating}
                     />
