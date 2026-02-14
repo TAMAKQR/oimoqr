@@ -798,77 +798,91 @@ const DashboardPage = () => {
                 </div>
 
                 {/* Recent Orders */}
-                <div className="grid grid-cols-1 gap-4 mb-6">
-                  <div className="bg-white rounded-xl border border-gray-100 p-5">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-4">Последние заказы</h3>
-                    {stats.recentOrders.length > 0 ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
-                        {stats.recentOrders.map((order) => {
-                          const statusColors = {
-                            new: 'bg-blue-100 text-blue-800',
-                            confirmed: 'bg-indigo-100 text-indigo-800',
-                            preparing: 'bg-yellow-100 text-yellow-800',
-                            ready: 'bg-green-100 text-green-800',
-                            delivered: 'bg-emerald-100 text-emerald-800',
-                            completed: 'bg-gray-100 text-gray-800',
-                            cancelled: 'bg-red-100 text-red-800'
-                          };
-                          const statusLabels = {
-                            new: 'Новый',
-                            confirmed: 'Подтвержден',
-                            preparing: 'Готовится',
-                            ready: 'Готов',
-                            delivered: 'Доставлен',
-                            completed: 'Выполнен',
-                            cancelled: 'Отменён'
-                          };
+                <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-4">Последние заказы</h3>
+                  {stats.recentOrders.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-left text-xs text-gray-400 border-b border-gray-100">
+                            <th className="pb-2 font-medium">Заказ</th>
+                            <th className="pb-2 font-medium">Клиент</th>
+                            <th className="pb-2 font-medium">Дата</th>
+                            <th className="pb-2 font-medium">Сумма</th>
+                            <th className="pb-2 font-medium">Статус</th>
+                            <th className="pb-2 font-medium"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {stats.recentOrders.map((order) => {
+                            const statusColors = {
+                              new: 'bg-blue-50 text-blue-700',
+                              confirmed: 'bg-indigo-50 text-indigo-700',
+                              preparing: 'bg-yellow-50 text-yellow-700',
+                              ready: 'bg-green-50 text-green-700',
+                              delivered: 'bg-emerald-50 text-emerald-700',
+                              completed: 'bg-gray-100 text-gray-600',
+                              cancelled: 'bg-red-50 text-red-700'
+                            };
+                            const statusLabels = {
+                              new: 'Новый',
+                              confirmed: 'Подтвержден',
+                              preparing: 'Готовится',
+                              ready: 'Готов',
+                              delivered: 'Доставлен',
+                              completed: 'Выполнен',
+                              cancelled: 'Отменён'
+                            };
 
-                          return (
-                            <div
-                              key={order.id}
-                              className="w-full text-left border-b pb-3 last:border-0 hover:bg-gray-50 rounded focus-within:ring-2 focus-within:ring-primary-300"
-                            >
-                              <div className="flex justify-between items-start mb-2">
-                                <div className="cursor-pointer" onClick={() => openOrderDetails(order.id)}>
-                                  <p className="font-semibold text-sm">#{order.orderNumber}</p>
-                                  <p className="text-xs text-gray-600">{order.customerName}</p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[order.status] || statusColors.new}`}>
-                                    {statusLabels[order.status] || order.status}
-                                  </span>
-                                  <select
-                                    className="text-xs border rounded px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-primary-300"
-                                    value={order.status}
-                                    onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value)}
-                                    disabled={updatingStatusId === order.id}
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    {ORDER_STATUSES.map((s) => (
-                                      <option key={s.value} value={s.value}>{s.label}</option>
-                                    ))}
-                                  </select>
-                                </div>
-                              </div>
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="text-gray-500 cursor-pointer" onClick={() => openOrderDetails(order.id)}>
+                            return (
+                              <tr
+                                key={order.id}
+                                className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors cursor-pointer"
+                                onClick={() => openOrderDetails(order.id)}
+                              >
+                                <td className="py-3 pr-3">
+                                  <span className="font-semibold text-gray-900">#{order.orderNumber}</span>
+                                </td>
+                                <td className="py-3 pr-3">
+                                  <span className="text-gray-700">{order.customerName || '—'}</span>
+                                </td>
+                                <td className="py-3 pr-3 text-gray-500 whitespace-nowrap">
                                   {new Date(order.createdAt).toLocaleString('ru-RU', {
                                     day: 'numeric',
                                     month: 'short',
                                     hour: '2-digit',
                                     minute: '2-digit'
                                   })}
-                                </span>
-                                <span className="font-semibold text-purple-600">{order.totalAmount.toFixed(0)} {getCurrencySymbol(getSelectedRestaurant()?.currency)}</span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <p className="text-gray-500 text-sm text-center py-8">Заказов пока нет</p>
-                    )}
-                  </div>
+                                </td>
+                                <td className="py-3 pr-3">
+                                  <span className="font-semibold text-gray-900">{order.totalAmount.toFixed(0)} {getCurrencySymbol(getSelectedRestaurant()?.currency)}</span>
+                                </td>
+                                <td className="py-3 pr-3">
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[order.status] || statusColors.new}`}>
+                                    {statusLabels[order.status] || order.status}
+                                  </span>
+                                </td>
+                                <td className="py-3" onClick={(e) => e.stopPropagation()}>
+                                  <select
+                                    className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary-300"
+                                    value={order.status}
+                                    onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value)}
+                                    disabled={updatingStatusId === order.id}
+                                  >
+                                    {ORDER_STATUSES.map((s) => (
+                                      <option key={s.value} value={s.value}>{s.label}</option>
+                                    ))}
+                                  </select>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-sm text-center py-8">Заказов пока нет</p>
+                  )}
                 </div>
 
                 {/* Top Dishes */}
