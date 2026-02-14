@@ -481,6 +481,12 @@ const AdminPage = () => {
             <h2 className="text-xl font-bold mb-4">Настройки подписки</h2>
             <p className="text-sm text-gray-600 mb-4">
               Пользователь: <strong>{editingUser?.name}</strong>
+              {editingUser?.restaurants?.[0]?.businessType && (
+                <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-medium ${editingUser.restaurants[0].businessType === 'ONLINE_STORE' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                  }`}>
+                  {editingUser.restaurants[0].businessType === 'ONLINE_STORE' ? '🛍 Магазин' : '🍽 Ресторан'}
+                </span>
+              )}
             </p>
 
             <form onSubmit={handleSubmitSubscription} className="space-y-4">
@@ -495,11 +501,16 @@ const AdminPage = () => {
                   required
                 >
                   <option value="">Выберите тариф</option>
-                  {pricingTiers.map((tier) => (
-                    <option key={tier.id} value={tier.id}>
-                      {tier.name} (${tier.price}/мес)
-                    </option>
-                  ))}
+                  {pricingTiers
+                    .filter(tier => {
+                      const userBizType = editingUser?.restaurants?.[0]?.businessType || 'RESTAURANT';
+                      return !tier.businessType || tier.businessType === userBizType || tier.businessType === 'ALL';
+                    })
+                    .map((tier) => (
+                      <option key={tier.id} value={tier.id}>
+                        {tier.name} (${tier.price}/мес) {tier.businessType === 'ONLINE_STORE' ? '🛍' : tier.businessType === 'ALL' ? '📦' : '🍽'}
+                      </option>
+                    ))}
                 </select>
               </div>
 
