@@ -30,12 +30,16 @@ const CheckoutPage = () => {
             navigate(-1);
             return;
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [restaurant, cartItems?.length]);
 
-        if (customer?.id) {
+    // Загружаем адреса только когда выбран тип "доставка"
+    useEffect(() => {
+        if (customer?.id && deliveryType === 'delivery') {
             loadAddresses();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [restaurant, cartItems?.length, customer?.id]);
+    }, [customer?.id, deliveryType]);
 
     const loadAddresses = async () => {
         try {
