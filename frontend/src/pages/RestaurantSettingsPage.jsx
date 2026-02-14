@@ -526,72 +526,58 @@ const RestaurantSettingsPage = () => {
           <div className="bg-white rounded-xl border border-gray-100 p-5">
             <h2 className="text-xl font-bold mb-4">Логотип ресторана</h2>
 
-            {getSelectedRestaurant()?.logo && (
-              <div className="mb-4">
-                <p className="text-sm text-gray-600 mb-2">Текущий логотип:</p>
-                <div className="relative inline-block group">
+            <div className={`flex ${getSelectedRestaurant()?.logo ? 'items-start gap-5' : ''}`}>
+              {/* Current logo with delete */}
+              {getSelectedRestaurant()?.logo && (
+                <div className="relative group flex-shrink-0">
                   <img
                     src={getSelectedRestaurant().logo}
                     alt="Логотип"
-                    className="w-32 h-32 object-contain rounded border-2 border-gray-200 bg-white p-2"
+                    className="w-24 h-24 object-contain rounded-lg border border-gray-200 bg-white p-1.5"
                   />
                   <button
                     type="button"
                     onClick={handleDeleteLogo}
-                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-lg transition-all opacity-0 group-hover:opacity-100"
+                    className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 shadow-lg transition-all opacity-0 group-hover:opacity-100"
                     title="Удалить логотип"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
                 </div>
-              </div>
-            )}
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                {
-                  getSelectedRestaurant()?.logo ? 'Изменить логотип' : 'Загрузить логотип'}
-              </label>
-
-              {!uploadingLogo ? (
-                <ImageUploader
-                  onFileSelect={handleLogoFileSelect}
-                  maxSizeMB={10}
-                  compressOptions={{
-                    maxWidth: 800,
-                    maxHeight: 800,
-                    quality: 0.9,
-                    maxSizeMB: 0.5
-                  }}
-                  label="Загрузите логотип"
-                  showPreview={true}
-                  currentImage={getSelectedRestaurant()?.logo}
-                  disabled={uploadingLogo}
-                />
-              ) : (
-                <div className="p-6 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-blue-600 font-medium">
-                      Загрузка логотипа...
-                    </span>
-                    <span className="text-sm text-blue-600 font-bold">
-                      {logoUploadProgress}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-blue-200 rounded-full h-2">
-                    <div
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${logoUploadProgress}%` }}
-                    ></div>
-                  </div>
-                </div>
               )}
 
-              <p className="text-xs text-gray-500 mt-2">
-                Рекомендуемый размер: 200x200 пикселей. Изображение будет автоматически сжато.
-              </p>
+              {/* Upload zone */}
+              <div className="flex-1 min-w-0">
+                {!uploadingLogo ? (
+                  <ImageUploader
+                    onFileSelect={handleLogoFileSelect}
+                    maxSizeMB={10}
+                    compressOptions={{
+                      maxWidth: 800,
+                      maxHeight: 800,
+                      quality: 0.9,
+                      maxSizeMB: 0.5
+                    }}
+                    label={getSelectedRestaurant()?.logo ? 'Заменить логотип' : 'Загрузите логотип'}
+                    showPreview={true}
+                    currentImage={null}
+                    disabled={uploadingLogo}
+                  />
+                ) : (
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-blue-600 font-medium">Загрузка...</span>
+                      <span className="text-sm text-blue-600 font-bold">{logoUploadProgress}%</span>
+                    </div>
+                    <div className="w-full bg-blue-200 rounded-full h-2">
+                      <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${logoUploadProgress}%` }}></div>
+                    </div>
+                  </div>
+                )}
+                <p className="text-xs text-gray-500 mt-1.5">200×200 px, авто-сжатие до 0.5 МБ</p>
+              </div>
             </div>
           </div>
 
@@ -601,14 +587,13 @@ const RestaurantSettingsPage = () => {
 
             {getSelectedRestaurant()?.banners && getSelectedRestaurant().banners.length > 0 && (
               <div className="mb-4">
-                <p className="text-sm text-gray-600 mb-2">Текущие баннеры:</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {getSelectedRestaurant().banners.map((banner, index) => (
                     <div key={index} className="relative group">
                       <ImageWithLoader
                         src={banner}
                         alt={`Banner ${index + 1}`}
-                        className="w-full h-32 object-cover rounded"
+                        className="w-full h-24 object-cover rounded-lg"
                         loading="lazy"
                       />
                       <button
@@ -617,10 +602,10 @@ const RestaurantSettingsPage = () => {
                           e.stopPropagation();
                           handleDeleteBanner(banner);
                         }}
-                        className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-lg transition-all opacity-0 group-hover:opacity-100"
+                        className="absolute top-1.5 right-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 shadow-lg transition-all opacity-0 group-hover:opacity-100"
                         title="Удалить баннер"
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                       </button>
@@ -630,48 +615,32 @@ const RestaurantSettingsPage = () => {
               </div>
             )}
 
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Загрузить новый баннер
-              </label>
-
-              {!uploadingBanner ? (
-                <ImageUploader
-                  onFileSelect={handleBannerFileSelect}
-                  maxSizeMB={10}
-                  compressOptions={{
-                    maxWidth: 1920,
-                    maxHeight: 800,
-                    quality: 0.85,
-                    maxSizeMB: 1
-                  }}
-                  label="Загрузите баннер"
-                  showPreview={true}
-                  disabled={uploadingBanner}
-                />
-              ) : (
-                <div className="p-6 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-blue-600 font-medium">
-                      Загрузка баннера...
-                    </span>
-                    <span className="text-sm text-blue-600 font-bold">
-                      {uploadProgress}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-blue-200 rounded-full h-2">
-                    <div
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${uploadProgress}%` }}
-                    ></div>
-                  </div>
+            {!uploadingBanner ? (
+              <ImageUploader
+                onFileSelect={handleBannerFileSelect}
+                maxSizeMB={10}
+                compressOptions={{
+                  maxWidth: 1920,
+                  maxHeight: 800,
+                  quality: 0.85,
+                  maxSizeMB: 1
+                }}
+                label="Загрузите баннер"
+                showPreview={true}
+                disabled={uploadingBanner}
+              />
+            ) : (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-blue-600 font-medium">Загрузка...</span>
+                  <span className="text-sm text-blue-600 font-bold">{uploadProgress}%</span>
                 </div>
-              )}
-
-              <p className="text-xs text-gray-500 mt-2">
-                Рекомендуемый размер: 1200x400 пикселей. Изображение будет автоматически сжато.
-              </p>
-            </div>
+                <div className="w-full bg-blue-200 rounded-full h-2">
+                  <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
+                </div>
+              </div>
+            )}
+            <p className="text-xs text-gray-500 mt-1.5">1200×400 px, авто-сжатие до 1 МБ</p>
           </div>
 
           {/* Тема оформления */}
