@@ -39,7 +39,7 @@ const CheckoutPage = () => {
 
     const loadAddresses = async () => {
         try {
-            const response = await api.get('/addresses');
+            const response = await api.get('/customers/addresses');
             const list = response.data || [];
             setAddresses(list);
             const defaultAddress = list.find((addr) => addr.isDefault);
@@ -61,7 +61,7 @@ const CheckoutPage = () => {
         }
 
         try {
-            await api.post('/addresses', newAddress);
+            await api.post('/customers/addresses', newAddress);
             toast.success('Адрес сохранен');
             setShowNewAddressForm(false);
             setNewAddress({ address: '', entrance: '', floor: '', apartment: '', comment: '' });
@@ -74,7 +74,7 @@ const CheckoutPage = () => {
 
     const handleDeleteAddress = async (id) => {
         try {
-            await api.delete(`/addresses/${id}`);
+            await api.delete(`/customers/addresses/${id}`);
             toast.success('Адрес удален');
             if (selectedAddressId === id) {
                 setSelectedAddressId(null);
