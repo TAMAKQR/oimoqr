@@ -934,31 +934,35 @@ export const getDishRecommendations = async (req, res, next) => {
 
     // PRIORITY 2: Manual recommendations (if not enough from statistics)
     if (recommendations.length < limit && manualRecommendationIds.length > 0) {
-      const manualRecommendations = await prisma.dish.findMany({
-        where: {
-          id: { in: manualRecommendationIds },
-          available: true,
-          id: { notIn: recommendations.map(r => r.id) }
-        },
-        select: {
-          id: true,
-          name: true,
-          description: true,
-          price: true,
-          image: true,
-          categoryId: true
-        },
-        take: limit - recommendations.length
-      });
+      const existingIds = recommendations.map(r => r.id);
+      const filteredManualIds = manualRecommendationIds.filter(id => !existingIds.includes(id));
 
-      recommendations = [
-        ...recommendations,
-        ...manualRecommendations.map(d => ({
-          ...d,
-          imageUrl: d.image,
-          recommendationType: 'manual'
-        }))
-      ];
+      if (filteredManualIds.length > 0) {
+        const manualRecommendations = await prisma.dish.findMany({
+          where: {
+            id: { in: filteredManualIds },
+            available: true
+          },
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            price: true,
+            image: true,
+            categoryId: true
+          },
+          take: limit - recommendations.length
+        });
+
+        recommendations = [
+          ...recommendations,
+          ...manualRecommendations.map(d => ({
+            ...d,
+            imageUrl: d.image,
+            recommendationType: 'manual'
+          }))
+        ];
+      }
     }
 
     // PRIORITY 3: Category-based fallback (similar dishes from same category)

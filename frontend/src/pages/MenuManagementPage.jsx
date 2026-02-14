@@ -1668,7 +1668,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
             {loadingDishes ? (
               <div className="text-center py-4 text-gray-500 text-sm">Загрузка блюд...</div>
             ) : (
-              <div className="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-2 bg-gray-50">
+              <div className="max-h-72 overflow-y-auto border rounded-lg bg-gray-50">
                 {allDishes
                   .filter(d => d.id !== dish?.id) // Исключаем текущее блюдо
                   .map((availableDish) => {
@@ -1676,9 +1676,9 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
                     return (
                       <label
                         key={availableDish.id}
-                        className={`flex items-center gap-3 p-2 border rounded cursor-pointer transition-colors ${isSelected
-                          ? 'bg-primary-50 border-primary-300'
-                          : 'bg-white border-gray-200 hover:bg-gray-50'
+                        className={`flex items-center gap-3 p-3 border-b last:border-b-0 cursor-pointer transition-colors ${isSelected
+                          ? 'bg-green-50'
+                          : 'bg-white hover:bg-gray-50'
                           }`}
                       >
                         <input
@@ -1691,21 +1691,28 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
                               setRecommendationIds(recommendationIds.filter(id => id !== availableDish.id));
                             }
                           }}
-                          className="w-4 h-4"
+                          className="w-4 h-4 flex-shrink-0 accent-green-500"
                         />
-                        {availableDish.image && (
-                          <ImageWithLoader
-                            src={availableDish.image}
-                            alt={availableDish.name}
-                            className="w-12 h-12 object-cover rounded"
-                            loading="lazy"
-                          />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm">{availableDish.name}</div>
-                          <div className="text-xs text-gray-500">
-                            {availableDish.category?.name} • {availableDish.price} {currency}
+                        <div className="w-10 h-10 flex-shrink-0 rounded overflow-hidden bg-gray-200">
+                          {availableDish.image ? (
+                            <ImageWithLoader
+                              src={availableDish.image}
+                              alt={availableDish.name}
+                              className="w-10 h-10 object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 flex items-center justify-center text-gray-400 text-lg">🍽</div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0 overflow-hidden">
+                          <div className="font-medium text-sm truncate">{availableDish.name}</div>
+                          <div className="text-xs text-gray-500 truncate">
+                            {availableDish.category?.name}
                           </div>
+                        </div>
+                        <div className="text-sm font-semibold text-gray-700 flex-shrink-0 whitespace-nowrap">
+                          {availableDish.price} {currency}
                         </div>
                       </label>
                     );
