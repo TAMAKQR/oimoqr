@@ -13,35 +13,33 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Grab color palette
+        // OimoQR brand palette — Steppe Indigo
         grab: {
-          50: '#e6f7f1',
-          100: '#b3e8d6',
-          200: '#80d9bb',
-          300: '#4dcaa0',
-          400: '#1abb85',
-          500: '#00b14f', // Main Grab green
-          600: '#009e47',
-          700: '#008a3f',
-          800: '#007737',
-          900: '#00642f',
+          50: '#F0F2F7',
+          100: '#D8DDE8',
+          200: '#B4BECE',
+          300: '#8E9DB4',
+          400: '#6A7E9B',
+          500: '#4B6282',
+          600: '#374B6A',
+          700: '#2A3A54',
+          800: '#1F2B3F',
+          900: '#141D2B',
         },
         primary: {
-          50: 'var(--primary-50, #e6f7f1)',
-          100: 'var(--primary-100, #b3e8d6)',
-          200: 'var(--primary-200, #80d9bb)',
-          300: 'var(--primary-300, #4dcaa0)',
-          400: 'var(--primary-400, #1abb85)',
-          500: 'var(--primary-500, #00b14f)',
-          600: 'var(--primary-600, #009e47)',
-          700: 'var(--primary-700, #008a3f)',
-          800: 'var(--primary-800, #007737)',
-          900: 'var(--primary-900, #00642f)',
+          50: 'var(--primary-50, #F0F2F7)',
+          100: 'var(--primary-100, #D8DDE8)',
+          200: 'var(--primary-200, #B4BECE)',
+          300: 'var(--primary-300, #8E9DB4)',
+          400: 'var(--primary-400, #6A7E9B)',
+          500: 'var(--primary-500, #4B6282)',
+          600: 'var(--primary-600, #374B6A)',
+          700: 'var(--primary-700, #2A3A54)',
+          800: 'var(--primary-800, #1F2B3F)',
+          900: 'var(--primary-900, #141D2B)',
         },
-        // Grab secondary colors
-        grabOrange: '#ff7a00',
-        grabRed: '#ff3b30',
-        grabYellow: '#ffc107',
+        // Accent colors
+        accent: '#C4943D',
       },
       borderRadius: {
         'grab': '16px',

@@ -71,7 +71,7 @@ const hslToHex = ({ h, s, l }) => {
 const clamp = (value, min = 0, max = 1) => Math.min(Math.max(value, min), max);
 
 const buildPalette = (baseHex) => {
-    const hsl = hexToHsl(baseHex || '#00b14f');
+    const hsl = hexToHsl(baseHex || '#4B6282');
     // Lightness adjustments for Tailwind-like steps
     const steps = {
         50: 0.38,
@@ -96,7 +96,7 @@ const buildPalette = (baseHex) => {
 
 const ThemeSwitcher = ({ inline = false }) => {
     const { theme, setTheme, themes, customColors, setCustomColors } = useTheme();
-    const [baseColor, setBaseColor] = useState(customColors?.[600] || '#009e47');
+    const [baseColor, setBaseColor] = useState(customColors?.[600] || '#374B6A');
     const [localPalette, setLocalPalette] = useState(customColors || themes.custom.colors);
 
     useEffect(() => {
