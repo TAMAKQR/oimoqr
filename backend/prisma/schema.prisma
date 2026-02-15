@@ -39,9 +39,10 @@ model Restaurant {
   primaryColor      String?
   themePalette      Json?
   isTrialDefault    Boolean   @default(false)
-  deliveryEnabled   Boolean   @default(false)
-  deliveryFee       Float?
-  minOrderAmount    Float?
+  deliveryEnabled        Boolean   @default(false)
+  deliveryFee            Float?
+  minOrderAmount         Float?
+  freeDeliveryThreshold  Float?    // Бесплатная доставка при заказе от этой суммы
   defaultLanguage   String    @default("ru")
   
   // Business type
