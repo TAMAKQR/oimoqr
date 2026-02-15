@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
+const YANDEX_GEOCODER_KEY = process.env.YANDEX_GEOCODER_KEY || '';
 
 // Функция для расчета расстояния по формуле гаверсинусов
 function getDistance(lat1, lon1, lat2, lon2) {
@@ -87,6 +88,44 @@ export const getNearbyRestaurants = async (req, res, next) => {
 
     res.json(restaurantsWithDistance);
   } catch (error) {
+    next(error);
+  }
+};
+
+// Геокодинг адреса через Yandex Geocoder API
+export const geocodeAddress = async (req, res, next) => {
+  const { address } = req.query;
+
+  if (!address) {
+    return res.status(400).json({ error: 'Укажите адрес' });
+  }
+
+  if (!YANDEX_GEOCODER_KEY) {
+    return res.status(500).json({ error: 'Ключ Yandex Geocoder не настроен' });
+  }
+
+  try {
+    const url = `https://geocode-maps.yandex.ru/1.x/?apikey=${YANDEX_GEOCODER_KEY}&geocode=${encodeURIComponent(address)}&format=json&results=1`;
+    const response = await fetch(url);
+    const data = await response.json();
+
+    const featureMember = data?.response?.GeoObjectCollection?.featureMember;
+    if (!featureMember || featureMember.length === 0) {
+      return res.json({ found: false, message: 'Адрес не найден' });
+    }
+
+    const geoObject = featureMember[0].GeoObject;
+    const [lon, lat] = geoObject.Point.pos.split(' ').map(Number);
+    const formattedAddress = geoObject.metaDataProperty?.GeocoderMetaData?.text || address;
+
+    res.json({
+      found: true,
+      latitude: lat,
+      longitude: lon,
+      formattedAddress
+    });
+  } catch (error) {
+    console.error('Yandex Geocoder error:', error);
     next(error);
   }
 };

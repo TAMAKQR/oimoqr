@@ -64,7 +64,7 @@ const CheckoutPage = () => {
     const [newAddress, setNewAddress] = useState({ address: '', entrance: '', floor: '', apartment: '', comment: '' });
     const [checkoutStep, setCheckoutStep] = useState(1);
 
-    // Delivery zone check via Browser Geolocation
+    // Delivery zone check via Yandex Geocoder
     const [zoneStatus, setZoneStatus] = useState(null); // null | 'checking' | 'ok' | 'outside' | 'error' | 'no-zone'
     const [zoneMessage, setZoneMessage] = useState('');
     const [zoneDistance, setZoneDistance] = useState(null);
@@ -85,57 +85,84 @@ const CheckoutPage = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [customer?.id, deliveryType]);
 
-    // GPS-проверка зоны доставки
+    // Сбрасываем зону при смене типа
     useEffect(() => {
-        if (deliveryType !== 'delivery' || !restaurant?.id) {
+        if (deliveryType !== 'delivery') {
             setZoneStatus(null);
-            return;
         }
-        // Если у ресторана не настроены координаты/радиус — пропускаем проверку
+    }, [deliveryType]);
+
+    // Проверяем зону при выборе адреса
+    useEffect(() => {
+        if (deliveryType !== 'delivery' || !selectedAddressId || !restaurant?.id) return;
+        // Если у ресторана не настроены координаты/радиус — пропускаем
         if (!restaurant.latitude || !restaurant.longitude || !restaurant.deliveryRadius) {
             setZoneStatus('no-zone');
             return;
         }
-        checkDeliveryZone();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [deliveryType, restaurant?.id]);
+        const addr = addresses.find(a => a.id === selectedAddressId);
+        if (!addr) return;
 
-    const checkDeliveryZone = () => {
-        if (!navigator.geolocation) {
-            setZoneStatus('error');
-            setZoneMessage('Геолокация не поддерживается вашим браузером');
-            return;
+        // Если у адреса уже есть координаты — проверяем сразу
+        if (addr.latitude && addr.longitude) {
+            checkZoneByCoords(addr.latitude, addr.longitude);
+        } else {
+            // Геокодируем адрес через Yandex
+            geocodeAndCheck(addr.address);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedAddressId, addresses]);
+
+    const checkZoneByCoords = async (lat, lng) => {
         setZoneStatus('checking');
-        navigator.geolocation.getCurrentPosition(
-            async (position) => {
-                try {
-                    const { latitude, longitude } = position.coords;
-                    const resp = await api.get('/check-delivery', {
-                        params: { restaurantId: restaurant.id, latitude, longitude }
-                    });
-                    const data = resp.data;
-                    setZoneDistance(data.distance);
-                    if (data.deliveryAvailable) {
-                        setZoneStatus('ok');
-                        setZoneMessage(`Доставка доступна (${data.distance} км)`);
-                    } else {
-                        setZoneStatus('outside');
-                        setZoneMessage(data.message || `Вы за пределами зоны доставки (${data.deliveryRadius} км)`);
-                    }
-                } catch (err) {
-                    console.error('Delivery zone check failed:', err);
-                    setZoneStatus('error');
-                    setZoneMessage('Не удалось проверить зону доставки');
-                }
-            },
-            (err) => {
-                console.warn('Geolocation denied:', err.message);
+        try {
+            const resp = await api.get('/geolocation/check-delivery', {
+                params: { restaurantId: restaurant.id, latitude: lat, longitude: lng }
+            });
+            const data = resp.data;
+            setZoneDistance(data.distance);
+            if (data.deliveryAvailable) {
+                setZoneStatus('ok');
+                setZoneMessage(`Доставка доступна (${data.distance} км)`);
+            } else {
+                setZoneStatus('outside');
+                setZoneMessage(data.message || `Адрес за пределами зоны доставки (${data.deliveryRadius} км)`);
+            }
+        } catch (err) {
+            console.error('Zone check failed:', err);
+            setZoneStatus('error');
+            setZoneMessage('Не удалось проверить зону доставки');
+        }
+    };
+
+    const geocodeAndCheck = async (addressText) => {
+        setZoneStatus('checking');
+        try {
+            // Добавляем город ресторана для точности
+            const city = restaurant.city || '';
+            const query = city ? `${city}, ${addressText}` : addressText;
+            const geoResp = await api.get('/geolocation/geocode', { params: { address: query } });
+            const geo = geoResp.data;
+            if (!geo.found) {
                 setZoneStatus('error');
-                setZoneMessage('Разрешите доступ к геолокации для проверки зоны доставки');
-            },
-            { enableHighAccuracy: true, timeout: 10000 }
-        );
+                setZoneMessage('Не удалось определить координаты адреса');
+                return;
+            }
+            // Сохраняем координаты для адреса (обновляем в фоне)
+            const addr = addresses.find(a => a.id === selectedAddressId);
+            if (addr && customer?.id) {
+                api.put(`/customers/addresses/${selectedAddressId}`, {
+                    address: addr.address,
+                    latitude: geo.latitude,
+                    longitude: geo.longitude
+                }).catch(() => { });
+            }
+            await checkZoneByCoords(geo.latitude, geo.longitude);
+        } catch (err) {
+            console.error('Geocoding failed:', err);
+            setZoneStatus('error');
+            setZoneMessage('Не удалось определить координаты адреса');
+        }
     };
 
     const loadAddresses = async () => {
@@ -162,7 +189,24 @@ const CheckoutPage = () => {
         }
 
         try {
-            await api.post('/customers/addresses', newAddress);
+            // Геокодируем адрес перед сохранением
+            let lat = null, lng = null;
+            try {
+                const city = restaurant?.city || '';
+                const query = city ? `${city}, ${newAddress.address}` : newAddress.address;
+                const geoResp = await api.get('/geolocation/geocode', { params: { address: query } });
+                if (geoResp.data?.found) {
+                    lat = geoResp.data.latitude;
+                    lng = geoResp.data.longitude;
+                }
+            } catch (geoErr) {
+                console.warn('Geocoding failed for new address, saving without coords:', geoErr);
+            }
+
+            await api.post('/customers/addresses', {
+                ...newAddress,
+                ...(lat && lng ? { latitude: lat, longitude: lng } : {})
+            });
             toast.success('Адрес сохранен');
             setShowNewAddressForm(false);
             setNewAddress({ address: '', entrance: '', floor: '', apartment: '', comment: '' });
@@ -379,12 +423,12 @@ const CheckoutPage = () => {
                             {/* Статус зоны доставки */}
                             {!isDineIn && deliveryType === 'delivery' && zoneStatus && zoneStatus !== 'no-zone' && (
                                 <div className={`rounded-lg p-3 text-sm flex items-center gap-2 ${zoneStatus === 'checking' ? 'bg-blue-50 text-blue-700' :
-                                        zoneStatus === 'ok' ? 'bg-green-50 text-green-700' :
-                                            zoneStatus === 'outside' ? 'bg-red-50 text-red-700' :
-                                                'bg-yellow-50 text-yellow-700'
+                                    zoneStatus === 'ok' ? 'bg-green-50 text-green-700' :
+                                        zoneStatus === 'outside' ? 'bg-red-50 text-red-700' :
+                                            'bg-yellow-50 text-yellow-700'
                                     }`}>
                                     {zoneStatus === 'checking' && (
-                                        <><svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg> Определяем местоположение...</>
+                                        <><svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg> Проверяем зону доставки...</>
                                     )}
                                     {zoneStatus === 'ok' && (
                                         <><span>📍</span> {zoneMessage}</>
@@ -394,7 +438,10 @@ const CheckoutPage = () => {
                                     )}
                                     {zoneStatus === 'error' && (
                                         <><span>📍</span> {zoneMessage}
-                                            <button onClick={checkDeliveryZone} className="ml-auto text-xs underline font-medium">Повторить</button>
+                                            <button onClick={() => {
+                                                const addr = addresses.find(a => a.id === selectedAddressId);
+                                                if (addr) geocodeAndCheck(addr.address);
+                                            }} className="ml-auto text-xs underline font-medium">Повторить</button>
                                         </>
                                     )}
                                 </div>
