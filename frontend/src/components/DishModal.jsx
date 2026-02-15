@@ -20,13 +20,17 @@ const RecommendationCard = ({ dish, currency, addItem, removeItem, onOpenDish })
   return (
     <div className="relative">
       <div className="relative mb-1">
-        {dish.image && (
+        {dish.image ? (
           <ImageWithLoader
             src={dish.image}
             alt={dish.name}
             className="w-full aspect-square object-cover rounded-lg"
             loading="lazy"
           />
+        ) : (
+          <div className="w-full aspect-square bg-gradient-to-br from-primary-50 via-white to-primary-100 rounded-lg flex items-center justify-center">
+            <span className="text-3xl font-bold text-primary-200 select-none">Q</span>
+          </div>
         )}
         {/* Кнопка внутри фото в правом нижнем углу */}
         <div className="absolute bottom-2 right-2">
