@@ -46,6 +46,7 @@ const RestaurantSettingsPage = () => {
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
   const [deliveryRadius, setDeliveryRadius] = useState('');
+  const [geocoding, setGeocoding] = useState(false);
   const [bannerFile, setBannerFile] = useState(null);
   const [logoFile, setLogoFile] = useState(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -856,37 +857,55 @@ const RestaurantSettingsPage = () => {
                   <div className="border-t pt-4">
                     <h3 className="font-medium mb-3">📍 Геолокация и зона доставки</h3>
                     <p className="text-sm text-gray-600 mb-4">
-                      Укажите координаты вашего ресторана для определения зоны доставки
+                      Координаты определяются автоматически по адресу
                     </p>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-1">
-                          Широта (Latitude)
-                        </label>
-                        <input
-                          type="number"
-                          value={latitude}
-                          onChange={(e) => setLatitude(e.target.value)}
-                          className="input w-full"
-                          step="0.000001"
-                          placeholder="55.751244"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium mb-1">
-                          Долгота (Longitude)
-                        </label>
-                        <input
-                          type="number"
-                          value={longitude}
-                          onChange={(e) => setLongitude(e.target.value)}
-                          className="input w-full"
-                          step="0.000001"
-                          placeholder="37.618423"
-                        />
-                      </div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const fullAddress = [city, address, country].filter(Boolean).join(', ');
+                          if (!fullAddress || (!address && !city)) {
+                            toast.error('Укажите адрес и город в основной информации');
+                            return;
+                          }
+                          setGeocoding(true);
+                          try {
+                            const resp = await fetch(`${API_URL}/geolocation/geocode?address=${encodeURIComponent(fullAddress)}`);
+                            const data = await resp.json();
+                            if (data.found) {
+                              setLatitude(data.latitude);
+                              setLongitude(data.longitude);
+                              toast.success(`Координаты определены: ${data.formattedAddress}`);
+                            } else {
+                              toast.error('Не удалось определить координаты. Проверьте адрес.');
+                            }
+                          } catch (err) {
+                            console.error('Geocode error:', err);
+                            toast.error('Ошибка при определении координат');
+                          } finally {
+                            setGeocoding(false);
+                          }
+                        }}
+                        className="btn-primary text-sm py-2 px-4 flex items-center gap-2"
+                        disabled={geocoding}
+                      >
+                        {geocoding ? (
+                          <><svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg> Определяем...</>
+                        ) : (
+                          <>📍 Определить по адресу</>
+                        )}
+                      </button>
+                      {latitude && longitude && (
+                        <span className="text-sm text-green-600 font-medium">
+                          ✅ {Number(latitude).toFixed(6)}, {Number(longitude).toFixed(6)}
+                        </span>
+                      )}
+                      {!latitude && !longitude && (
+                        <span className="text-sm text-gray-400">
+                          Координаты не указаны
+                        </span>
+                      )}
                     </div>
 
                     <div className="mt-4">
@@ -903,30 +922,6 @@ const RestaurantSettingsPage = () => {
                       />
                       <p className="text-sm text-gray-500 mt-1">
                         Максимальное расстояние доставки от вашего ресторана
-                      </p>
-                    </div>
-
-                    <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-                      <p className="text-sm text-blue-800">
-                        💡 <strong>Совет:</strong> Используйте{' '}
-                        <a
-                          href="https://www.google.com/maps"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="underline"
-                        >
-                          Google Maps
-                        </a>
-                        {' '}или{' '}
-                        <a
-                          href="https://yandex.ru/maps"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="underline"
-                        >
-                          Яндекс Карты
-                        </a>
-                        {' '}чтобы найти координаты вашего ресторана
                       </p>
                     </div>
                   </div>
