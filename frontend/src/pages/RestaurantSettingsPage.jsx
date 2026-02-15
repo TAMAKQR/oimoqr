@@ -948,7 +948,7 @@ const RestaurantSettingsPage = () => {
                     <p className="text-sm text-gray-600 mb-2">
                       {bt.qrMainDescription}
                     </p>
-                    <p className="text-xs text-gray-500 break-all mb-3">{window.location.origin}/{bt.route}/{getSelectedRestaurant().subdomain}</p>
+
                     <button
                       type="button"
                       onClick={() => {
@@ -1020,7 +1020,6 @@ const RestaurantSettingsPage = () => {
                         .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
                         .card { border: 2px solid #e5e7eb; border-radius: 12px; padding: 20px; text-align: center; page-break-inside: avoid; }
                         .card h3 { margin: 12px 0 4px; font-size: 18px; }
-                        .card p { margin: 0; font-size: 12px; color: #6b7280; }
                         @media print { .grid { grid-template-columns: repeat(3, 1fr); } }
                       </style></head><body>
                       <div class="grid">${container.innerHTML}</div>
@@ -1052,7 +1051,6 @@ const RestaurantSettingsPage = () => {
                             className="mx-auto"
                           />
                           <h3 className="font-bold text-lg mt-3 text-gray-900">{bt.tableLabel} {tableNum}</h3>
-                          <p className="text-xs text-gray-500 mt-1 break-all">{menuUrl}</p>
                         </div>
                       );
                     })}
