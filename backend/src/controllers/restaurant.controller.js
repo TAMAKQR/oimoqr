@@ -719,6 +719,8 @@ export const createRestaurant = async (req, res, next) => {
         name,
         subdomain,
         businessType: businessType || 'RESTAURANT',
+        country: req.body.country || null,
+        city: req.body.city || null,
         ownerId: req.user.id
       }
     });

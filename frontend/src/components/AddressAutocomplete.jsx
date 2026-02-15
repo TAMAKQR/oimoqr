@@ -2,13 +2,13 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import api from '../services/api';
 
 /**
- * Компонент автодополнения адреса через Yandex Suggest API
+ * Компонент автодополнения адреса через Yandex Geocoder API
  * @param {string} value - текущее значение
  * @param {function} onChange - колбэк при изменении текста
- * @param {function} onSelect - колбэк при выборе подсказки (title, subtitle, fullAddress)
+ * @param {function} onSelect - колбэк при выборе подсказки ({ title, subtitle, fullAddress, latitude, longitude })
  * @param {string} placeholder - плейсхолдер
  * @param {string} className - CSS классы
- * @param {object} restaurant - ресторан (для приоритизации по координатам)
+ * @param {object} restaurant - ресторан (город/страна для точности)
  */
 const AddressAutocomplete = ({ value, onChange, onSelect, placeholder, className, restaurant }) => {
     const [suggestions, setSuggestions] = useState([]);
@@ -38,10 +38,9 @@ const AddressAutocomplete = ({ value, onChange, onSelect, placeholder, className
         setLoading(true);
         try {
             const params = { text };
-            // Приоритизируем результаты вокруг ресторана
-            if (restaurant?.longitude && restaurant?.latitude) {
-                params.ll = `${restaurant.longitude},${restaurant.latitude}`;
-            }
+            // Передаём город/страну ресторана для точности
+            if (restaurant?.city) params.city = restaurant.city;
+            if (restaurant?.country) params.country = restaurant.country;
             const resp = await api.get('/geolocation/suggest', { params });
             const items = resp.data?.suggestions || [];
             setSuggestions(items);
@@ -52,7 +51,7 @@ const AddressAutocomplete = ({ value, onChange, onSelect, placeholder, className
         } finally {
             setLoading(false);
         }
-    }, [restaurant?.longitude, restaurant?.latitude]);
+    }, [restaurant?.city, restaurant?.country]);
 
     const handleChange = (e) => {
         const val = e.target.value;
@@ -66,7 +65,8 @@ const AddressAutocomplete = ({ value, onChange, onSelect, placeholder, className
     };
 
     const handleSelect = (suggestion) => {
-        const address = suggestion.title + (suggestion.subtitle ? `, ${suggestion.subtitle}` : '');
+        // Используем полный адрес из геокодера или собираем из частей
+        const address = suggestion.fullAddress || suggestion.title;
         onChange(address);
         setShowDropdown(false);
         setSuggestions([]);

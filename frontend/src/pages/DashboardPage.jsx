@@ -113,7 +113,7 @@ const DashboardPage = () => {
   const { userData, loading, refresh: refreshUserData } = useUserData();
   const { selectedRestaurantId, setSelectedRestaurantId, selectedRestaurant, isOwner: isOwnerFlag } = useSelectedRestaurant(userData);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newRestaurant, setNewRestaurant] = useState({ name: '', subdomain: '', businessType: 'RESTAURANT' });
+  const [newRestaurant, setNewRestaurant] = useState({ name: '', subdomain: '', businessType: 'RESTAURANT', country: '', city: '' });
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
   const [stats, setStats] = useState(null);
@@ -304,7 +304,7 @@ const DashboardPage = () => {
         return;
       }
 
-      setNewRestaurant({ name: '', subdomain: '', businessType: 'RESTAURANT' });
+      setNewRestaurant({ name: '', subdomain: '', businessType: 'RESTAURANT', country: '', city: '' });
       setShowCreateModal(false);
       await refreshUserData();
       setSelectedRestaurantId(response.restaurant.id);
@@ -467,6 +467,34 @@ const DashboardPage = () => {
                       className="input-field w-full"
                       disabled={creating}
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Страна и город</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <select
+                        value={newRestaurant.country}
+                        onChange={(e) => setNewRestaurant({ ...newRestaurant, country: e.target.value, city: '' })}
+                        className="input-field"
+                        disabled={creating}
+                      >
+                        <option value="">Выберите страну</option>
+                        <option value="Кыргызстан">🇰🇬 Кыргызстан</option>
+                        <option value="Турция">🇹🇷 Турция</option>
+                        <option value="Казахстан">🇰🇿 Казахстан</option>
+                        <option value="Узбекистан">🇺🇿 Узбекистан</option>
+                        <option value="Россия">🇷🇺 Россия</option>
+                        <option value="Таджикистан">🇹🇯 Таджикистан</option>
+                      </select>
+                      <input
+                        type="text"
+                        value={newRestaurant.city}
+                        onChange={(e) => setNewRestaurant({ ...newRestaurant, city: e.target.value })}
+                        placeholder="Город"
+                        className="input-field"
+                        disabled={creating}
+                      />
+                    </div>
                   </div>
 
                   <div>
