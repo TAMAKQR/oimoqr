@@ -1,0 +1,23 @@
+#!/bin/sh
+# Pre-push hook - проверяет билд перед пушем
+# Установить: cp .githooks/pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
+
+echo ""
+echo "🔍 Запускаю pre-push проверку..."
+echo ""
+
+# Run the check script
+node scripts/pre-deploy-check.js
+
+# If check failed, abort push
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "🚫 Push отменён — исправь ошибки выше"
+  echo ""
+  exit 1
+fi
+
+echo ""
+echo "🟢 Все проверки пройдены — пушим!"
+echo ""
+exit 0
