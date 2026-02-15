@@ -14,6 +14,7 @@ import { useUserData } from '../hooks/useUserData';
 import { useSelectedRestaurant } from '../hooks/useSelectedRestaurant';
 import { QRCodeSVG } from 'qrcode.react';
 import { getBusinessType } from '../utils/businessTypes';
+import MapPicker from '../components/MapPicker';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -856,11 +857,9 @@ const RestaurantSettingsPage = () => {
 
                   <div className="border-t pt-4">
                     <h3 className="font-medium mb-3">📍 Геолокация и зона доставки</h3>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Координаты определяются автоматически по адресу
-                    </p>
 
-                    <div className="flex items-center gap-3 mb-4">
+                    {/* Кнопки управления */}
+                    <div className="flex flex-wrap items-center gap-2 mb-4">
                       <button
                         type="button"
                         onClick={async () => {
@@ -897,18 +896,40 @@ const RestaurantSettingsPage = () => {
                         )}
                       </button>
                       {latitude && longitude && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLatitude('');
+                            setLongitude('');
+                            toast.success('Координаты удалены');
+                          }}
+                          className="text-sm py-2 px-3 text-red-600 hover:bg-red-50 rounded-lg border border-red-200 flex items-center gap-1"
+                        >
+                          ✕ Удалить
+                        </button>
+                      )}
+                      {latitude && longitude && (
                         <span className="text-sm text-green-600 font-medium">
                           ✅ {Number(latitude).toFixed(6)}, {Number(longitude).toFixed(6)}
                         </span>
                       )}
-                      {!latitude && !longitude && (
-                        <span className="text-sm text-gray-400">
-                          Координаты не указаны
-                        </span>
-                      )}
                     </div>
 
-                    <div className="mt-4">
+                    {/* Интерактивная карта */}
+                    <div className="mb-4">
+                      <p className="text-sm text-gray-500 mb-2">Кликните на карте чтобы указать точку вручную</p>
+                      <MapPicker
+                        latitude={latitude}
+                        longitude={longitude}
+                        radius={deliveryRadius}
+                        onChange={(lat, lng) => {
+                          setLatitude(lat);
+                          setLongitude(lng);
+                        }}
+                      />
+                    </div>
+
+                    <div>
                       <label className="block text-sm font-medium mb-1">
                         Радиус доставки (км)
                       </label>
@@ -921,7 +942,7 @@ const RestaurantSettingsPage = () => {
                         placeholder="5"
                       />
                       <p className="text-sm text-gray-500 mt-1">
-                        Максимальное расстояние доставки от вашего ресторана
+                        Максимальное расстояние доставки от вашего ресторана. Зона показана на карте.
                       </p>
                     </div>
                   </div>
