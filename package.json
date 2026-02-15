@@ -9,7 +9,10 @@
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev --workspace=frontend\" \"npm run dev --workspace=backend\"",
-    "backup": "node create-backup.js"
+    "backup": "node create-backup.js",
+    "check": "node scripts/pre-deploy-check.js",
+    "predeploy": "node scripts/pre-deploy-check.js",
+    "deploy": "node scripts/pre-deploy-check.js && git push origin main"
   },
   "dependencies": {
     "archiver": "^7.0.1",
