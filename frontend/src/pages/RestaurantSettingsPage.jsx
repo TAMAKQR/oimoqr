@@ -40,6 +40,7 @@ const RestaurantSettingsPage = () => {
   const [deliveryEnabled, setDeliveryEnabled] = useState(false);
   const [deliveryFee, setDeliveryFee] = useState('');
   const [minOrderAmount, setMinOrderAmount] = useState('');
+  const [freeDeliveryThreshold, setFreeDeliveryThreshold] = useState('');
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
   const [deliveryRadius, setDeliveryRadius] = useState('');
@@ -127,6 +128,7 @@ const RestaurantSettingsPage = () => {
     setDeliveryEnabled(r.deliveryEnabled || false);
     setDeliveryFee(r.deliveryFee || '');
     setMinOrderAmount(r.minOrderAmount || '');
+    setFreeDeliveryThreshold(r.freeDeliveryThreshold || '');
     setLatitude(r.latitude || '');
     setLongitude(r.longitude || '');
     setDeliveryRadius(r.deliveryRadius || '');
@@ -300,6 +302,7 @@ const RestaurantSettingsPage = () => {
         deliveryEnabled,
         deliveryFee: deliveryFee ? parseFloat(deliveryFee) : null,
         minOrderAmount: minOrderAmount ? parseFloat(minOrderAmount) : null,
+        freeDeliveryThreshold: freeDeliveryThreshold ? parseFloat(freeDeliveryThreshold) : null,
         latitude: latitude ? parseFloat(latitude) : null,
         longitude: longitude ? parseFloat(longitude) : null,
         deliveryRadius: deliveryRadius ? parseFloat(deliveryRadius) : null,
@@ -796,6 +799,23 @@ const RestaurantSettingsPage = () => {
                       step="0.01"
                       placeholder="2000"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Бесплатная доставка от ({currency})
+                    </label>
+                    <input
+                      type="number"
+                      value={freeDeliveryThreshold}
+                      onChange={(e) => setFreeDeliveryThreshold(e.target.value)}
+                      className="input w-full"
+                      step="0.01"
+                      placeholder="3000"
+                    />
+                    <p className="text-sm text-gray-500 mt-1">
+                      Если сумма заказа больше или равна этой суммы — доставка бесплатная
+                    </p>
                   </div>
 
                   <div className="border-t pt-4">

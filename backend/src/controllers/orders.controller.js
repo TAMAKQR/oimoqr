@@ -40,6 +40,20 @@ export const createOrder = async (req, res, next) => {
       });
     }
 
+    // Проверяем минимальную сумму заказа для доставки
+    if (deliveryType === 'delivery') {
+      const restaurantData = await prisma.restaurant.findUnique({
+        where: { id: restaurantId },
+        select: { minOrderAmount: true, deliveryEnabled: true }
+      });
+      if (restaurantData && !restaurantData.deliveryEnabled) {
+        return res.status(400).json({ error: 'Доставка не доступна для этого ресторана' });
+      }
+      if (restaurantData?.minOrderAmount && parseFloat(total) < restaurantData.minOrderAmount) {
+        return res.status(400).json({ error: `Минимальная сумма заказа для доставки: ${restaurantData.minOrderAmount}` });
+      }
+    }
+
     // Фильтруем товары без ID, чтобы избежать ошибок
     const validItems = items.filter(item => item && item.id);
 

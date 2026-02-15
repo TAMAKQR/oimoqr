@@ -474,6 +474,20 @@ export const createCustomerOrder = async (req, res, next) => {
             });
         }
 
+        // Проверяем минимальную сумму заказа для доставки
+        if (deliveryType === 'delivery') {
+            const restaurantRules = await prisma.restaurant.findUnique({
+                where: { id: restaurantId },
+                select: { minOrderAmount: true, deliveryEnabled: true }
+            });
+            if (restaurantRules && !restaurantRules.deliveryEnabled) {
+                return res.status(400).json({ error: 'Доставка не доступна для этого ресторана' });
+            }
+            if (restaurantRules?.minOrderAmount && parseFloat(total) < restaurantRules.minOrderAmount) {
+                return res.status(400).json({ error: `Минимальная сумма заказа для доставки: ${restaurantRules.minOrderAmount}` });
+            }
+        }
+
         // Получаем данные клиента
         const customer = await prisma.customer.findUnique({
             where: { id: customerId }

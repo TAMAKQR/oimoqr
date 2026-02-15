@@ -184,7 +184,9 @@ const CheckoutPage = () => {
     };
 
     const total = Number(getTotal() || 0);
-    const deliveryFee = deliveryType === 'delivery' ? Number(restaurant?.deliveryFee || 0) : 0;
+    const freeDeliveryThreshold = Number(restaurant?.freeDeliveryThreshold || 0);
+    const isFreeDelivery = freeDeliveryThreshold > 0 && total >= freeDeliveryThreshold;
+    const deliveryFee = deliveryType === 'delivery' && !isFreeDelivery ? Number(restaurant?.deliveryFee || 0) : 0;
     const finalTotal = (total + deliveryFee).toFixed(2);
 
     const orderSection = (
@@ -230,10 +232,19 @@ const CheckoutPage = () => {
                     <span>Сумма заказа</span>
                     <span>{total.toFixed(2)} {currency}</span>
                 </div>
-                {deliveryFee > 0 && (
+                {deliveryType === 'delivery' && (
                     <div className="flex justify-between text-gray-600">
                         <span>Доставка</span>
-                        <span>{deliveryFee.toFixed(2)} {currency}</span>
+                        {isFreeDelivery ? (
+                            <span className="text-green-600 font-medium">Бесплатно ✓</span>
+                        ) : (
+                            <span>{deliveryFee > 0 ? `${deliveryFee.toFixed(2)} ${currency}` : 'Бесплатно'}</span>
+                        )}
+                    </div>
+                )}
+                {deliveryType === 'delivery' && !isFreeDelivery && freeDeliveryThreshold > 0 && (
+                    <div className="text-xs text-green-600 bg-green-50 rounded-lg px-3 py-1.5">
+                        🎁 Бесплатная доставка от {freeDeliveryThreshold.toFixed(0)} {currency} — добавьте ещё {(freeDeliveryThreshold - total).toFixed(0)} {currency}
                     </div>
                 )}
                 <div className="flex justify-between text-base font-bold text-gray-900">
@@ -289,9 +300,11 @@ const CheckoutPage = () => {
                                         >
                                             <div className="text-2xl mb-1">🚗</div>
                                             <div className="font-semibold text-sm">Доставка</div>
-                                            {restaurant?.deliveryFee > 0 && (
+                                            {isFreeDelivery ? (
+                                                <div className="text-xs text-green-600 font-medium">Бесплатно ✓</div>
+                                            ) : restaurant?.deliveryFee > 0 ? (
                                                 <div className="text-xs text-gray-500">{restaurant.deliveryFee} {currency}</div>
-                                            )}
+                                            ) : null}
                                         </button>
                                         <button
                                             onClick={() => setDeliveryType('pickup')}
