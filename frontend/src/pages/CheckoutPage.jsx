@@ -64,6 +64,11 @@ const CheckoutPage = () => {
     const [newAddress, setNewAddress] = useState({ address: '', entrance: '', floor: '', apartment: '', comment: '' });
     const [checkoutStep, setCheckoutStep] = useState(1);
 
+    // Delivery zone check via Browser Geolocation
+    const [zoneStatus, setZoneStatus] = useState(null); // null | 'checking' | 'ok' | 'outside' | 'error' | 'no-zone'
+    const [zoneMessage, setZoneMessage] = useState('');
+    const [zoneDistance, setZoneDistance] = useState(null);
+
     useEffect(() => {
         if (!restaurant || !cartItems || cartItems.length === 0) {
             navigate(-1);
@@ -79,6 +84,59 @@ const CheckoutPage = () => {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [customer?.id, deliveryType]);
+
+    // GPS-проверка зоны доставки
+    useEffect(() => {
+        if (deliveryType !== 'delivery' || !restaurant?.id) {
+            setZoneStatus(null);
+            return;
+        }
+        // Если у ресторана не настроены координаты/радиус — пропускаем проверку
+        if (!restaurant.latitude || !restaurant.longitude || !restaurant.deliveryRadius) {
+            setZoneStatus('no-zone');
+            return;
+        }
+        checkDeliveryZone();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [deliveryType, restaurant?.id]);
+
+    const checkDeliveryZone = () => {
+        if (!navigator.geolocation) {
+            setZoneStatus('error');
+            setZoneMessage('Геолокация не поддерживается вашим браузером');
+            return;
+        }
+        setZoneStatus('checking');
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                try {
+                    const { latitude, longitude } = position.coords;
+                    const resp = await api.get('/check-delivery', {
+                        params: { restaurantId: restaurant.id, latitude, longitude }
+                    });
+                    const data = resp.data;
+                    setZoneDistance(data.distance);
+                    if (data.deliveryAvailable) {
+                        setZoneStatus('ok');
+                        setZoneMessage(`Доставка доступна (${data.distance} км)`);
+                    } else {
+                        setZoneStatus('outside');
+                        setZoneMessage(data.message || `Вы за пределами зоны доставки (${data.deliveryRadius} км)`);
+                    }
+                } catch (err) {
+                    console.error('Delivery zone check failed:', err);
+                    setZoneStatus('error');
+                    setZoneMessage('Не удалось проверить зону доставки');
+                }
+            },
+            (err) => {
+                console.warn('Geolocation denied:', err.message);
+                setZoneStatus('error');
+                setZoneMessage('Разрешите доступ к геолокации для проверки зоны доставки');
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+        );
+    };
 
     const loadAddresses = async () => {
         try {
@@ -318,6 +376,30 @@ const CheckoutPage = () => {
                                 </div>
                             )}
 
+                            {/* Статус зоны доставки */}
+                            {!isDineIn && deliveryType === 'delivery' && zoneStatus && zoneStatus !== 'no-zone' && (
+                                <div className={`rounded-lg p-3 text-sm flex items-center gap-2 ${zoneStatus === 'checking' ? 'bg-blue-50 text-blue-700' :
+                                        zoneStatus === 'ok' ? 'bg-green-50 text-green-700' :
+                                            zoneStatus === 'outside' ? 'bg-red-50 text-red-700' :
+                                                'bg-yellow-50 text-yellow-700'
+                                    }`}>
+                                    {zoneStatus === 'checking' && (
+                                        <><svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg> Определяем местоположение...</>
+                                    )}
+                                    {zoneStatus === 'ok' && (
+                                        <><span>📍</span> {zoneMessage}</>
+                                    )}
+                                    {zoneStatus === 'outside' && (
+                                        <><span>⚠️</span> {zoneMessage}</>
+                                    )}
+                                    {zoneStatus === 'error' && (
+                                        <><span>📍</span> {zoneMessage}
+                                            <button onClick={checkDeliveryZone} className="ml-auto text-xs underline font-medium">Повторить</button>
+                                        </>
+                                    )}
+                                </div>
+                            )}
+
                             {!isDineIn && deliveryType === 'delivery' && (
                                 <div className="bg-white rounded-lg shadow-sm p-4">
                                     <div className="flex justify-between items-center mb-3">
@@ -467,7 +549,7 @@ const CheckoutPage = () => {
                     <div className="max-w-[480px] mx-auto p-3 space-y-2">
                         <button
                             onClick={handlePlaceOrder}
-                            disabled={loading || (!isDineIn && deliveryType === 'delivery' && !selectedAddressId)}
+                            disabled={loading || (!isDineIn && deliveryType === 'delivery' && !selectedAddressId) || zoneStatus === 'outside'}
                             className="btn-primary w-full py-3 text-base disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                         >
                             {loading ? 'Оформление...' : isDineIn
