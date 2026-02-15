@@ -92,6 +92,40 @@ export const getNearbyRestaurants = async (req, res, next) => {
   }
 };
 
+// Подсказки адресов через Yandex Suggest API
+export const suggestAddress = async (req, res, next) => {
+  const { text, ll } = req.query; // ll = "lon,lat" центр для приоритизации результатов
+
+  if (!text || text.length < 2) {
+    return res.json({ suggestions: [] });
+  }
+
+  if (!YANDEX_GEOCODER_KEY) {
+    return res.status(500).json({ error: 'Ключ Yandex не настроен' });
+  }
+
+  try {
+    let url = `https://suggest-maps.yandex.ru/v1/suggest?apikey=${YANDEX_GEOCODER_KEY}&text=${encodeURIComponent(text)}&lang=ru&types=geo&print_address=1&results=5`;
+    if (ll) {
+      url += `&ll=${ll}&spn=0.5,0.5&ull=${ll}`;
+    }
+    const response = await fetch(url);
+    const data = await response.json();
+
+    const suggestions = (data?.results || []).map(item => ({
+      title: item.title?.text || '',
+      subtitle: item.subtitle?.text || '',
+      fullAddress: item.address?.formatted_address || item.subtitle?.text || '',
+      tags: item.tags || []
+    })).filter(s => s.title);
+
+    res.json({ suggestions });
+  } catch (error) {
+    console.error('Yandex Suggest error:', error);
+    res.json({ suggestions: [] });
+  }
+};
+
 // Геокодинг адреса через Yandex Geocoder API
 export const geocodeAddress = async (req, res, next) => {
   const { address } = req.query;

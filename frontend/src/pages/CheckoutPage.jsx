@@ -5,6 +5,7 @@ import { useCustomerAuthStore } from '../store/customerAuthStore';
 import { useCartStore } from '../store/cartStore';
 import { useTheme } from '../theme/ThemeProvider';
 import CustomerLoginModal from '../components/CustomerLoginModal';
+import AddressAutocomplete from '../components/AddressAutocomplete';
 import api from '../services/api';
 
 /* ---- palette builder (same as MenuPage) ---- */
@@ -471,12 +472,16 @@ const CheckoutPage = () => {
 
                                     {showNewAddressForm && (
                                         <div className="mb-3 p-3 bg-gray-50 rounded-lg space-y-2">
-                                            <input
-                                                type="text"
-                                                placeholder="Улица, дом"
+                                            <AddressAutocomplete
                                                 value={newAddress.address}
-                                                onChange={(e) => setNewAddress({ ...newAddress, address: e.target.value })}
+                                                onChange={(val) => setNewAddress({ ...newAddress, address: val })}
+                                                onSelect={(suggestion) => {
+                                                    const addr = suggestion.title + (suggestion.subtitle ? `, ${suggestion.subtitle}` : '');
+                                                    setNewAddress(prev => ({ ...prev, address: addr }));
+                                                }}
+                                                placeholder="Улица, дом"
                                                 className="input-field w-full text-sm"
+                                                restaurant={restaurant}
                                             />
                                             <div className="grid grid-cols-3 gap-2">
                                                 <input
