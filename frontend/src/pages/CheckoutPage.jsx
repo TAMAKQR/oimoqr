@@ -183,6 +183,10 @@ const CheckoutPage = () => {
     };
 
     const handleAddAddress = async () => {
+        if (!customer?.id) {
+            setShowLoginModal(true);
+            return;
+        }
         if (!newAddress.address.trim()) {
             toast.error('Укажите адрес');
             return;
@@ -447,7 +451,16 @@ const CheckoutPage = () => {
                                 </div>
                             )}
 
-                            {!isDineIn && deliveryType === 'delivery' && (
+                            {!isDineIn && deliveryType === 'delivery' && !customer?.id && (
+                                <div className="bg-white rounded-lg shadow-sm p-4 text-center">
+                                    <p className="text-gray-600 text-sm mb-3">Для оформления доставки необходимо войти в аккаунт</p>
+                                    <button onClick={() => setShowLoginModal(true)} className="btn-primary text-sm py-2 px-6">
+                                        Войти
+                                    </button>
+                                </div>
+                            )}
+
+                            {!isDineIn && deliveryType === 'delivery' && customer?.id && (
                                 <div className="bg-white rounded-lg shadow-sm p-4">
                                     <div className="flex justify-between items-center mb-3">
                                         <h2 className="font-semibold text-base">Адрес доставки</h2>
