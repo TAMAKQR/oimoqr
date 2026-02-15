@@ -194,22 +194,26 @@ const CheckoutPage = () => {
         }
 
         try {
-            // Геокодируем адрес перед сохранением
-            let lat = null, lng = null;
-            try {
-                const city = restaurant?.city || '';
-                const query = city ? `${city}, ${newAddress.address}` : newAddress.address;
-                const geoResp = await api.get('/geolocation/geocode', { params: { address: query } });
-                if (geoResp.data?.found) {
-                    lat = geoResp.data.latitude;
-                    lng = geoResp.data.longitude;
+            // Используем координаты из автокомплита, или геокодируем
+            let lat = newAddress.latitude || null;
+            let lng = newAddress.longitude || null;
+            if (!lat || !lng) {
+                try {
+                    const city = restaurant?.city || '';
+                    const query = city ? `${city}, ${newAddress.address}` : newAddress.address;
+                    const geoResp = await api.get('/geolocation/geocode', { params: { address: query } });
+                    if (geoResp.data?.found) {
+                        lat = geoResp.data.latitude;
+                        lng = geoResp.data.longitude;
+                    }
+                } catch (geoErr) {
+                    console.warn('Geocoding failed for new address, saving without coords:', geoErr);
                 }
-            } catch (geoErr) {
-                console.warn('Geocoding failed for new address, saving without coords:', geoErr);
             }
 
+            const { latitude, longitude, ...addrData } = newAddress;
             await api.post('/customers/addresses', {
-                ...newAddress,
+                ...addrData,
                 ...(lat && lng ? { latitude: lat, longitude: lng } : {})
             });
             toast.success('Адрес сохранен');
@@ -474,10 +478,14 @@ const CheckoutPage = () => {
                                         <div className="mb-3 p-3 bg-gray-50 rounded-lg space-y-2">
                                             <AddressAutocomplete
                                                 value={newAddress.address}
-                                                onChange={(val) => setNewAddress({ ...newAddress, address: val })}
+                                                onChange={(val) => setNewAddress(prev => ({ ...prev, address: val, latitude: null, longitude: null }))}
                                                 onSelect={(suggestion) => {
-                                                    const addr = suggestion.title + (suggestion.subtitle ? `, ${suggestion.subtitle}` : '');
-                                                    setNewAddress(prev => ({ ...prev, address: addr }));
+                                                    setNewAddress(prev => ({
+                                                        ...prev,
+                                                        address: suggestion.fullAddress || suggestion.title,
+                                                        latitude: suggestion.latitude || null,
+                                                        longitude: suggestion.longitude || null
+                                                    }));
                                                 }}
                                                 placeholder="Улица, дом"
                                                 className="input-field w-full text-sm"

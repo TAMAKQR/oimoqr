@@ -92,11 +92,11 @@ export const getNearbyRestaurants = async (req, res, next) => {
   }
 };
 
-// Подсказки адресов через Yandex Suggest API
+// Подсказки адресов через Yandex Geocoder API (множественные результаты)
 export const suggestAddress = async (req, res, next) => {
-  const { text, ll } = req.query; // ll = "lon,lat" центр для приоритизации результатов
+  const { text, city, country } = req.query;
 
-  if (!text || text.length < 2) {
+  if (!text || text.length < 3) {
     return res.json({ suggestions: [] });
   }
 
@@ -105,23 +105,40 @@ export const suggestAddress = async (req, res, next) => {
   }
 
   try {
-    let url = `https://suggest-maps.yandex.ru/v1/suggest?apikey=${YANDEX_GEOCODER_KEY}&text=${encodeURIComponent(text)}&lang=ru&types=geo&print_address=1&results=5`;
-    if (ll) {
-      url += `&ll=${ll}&spn=0.5,0.5&ull=${ll}`;
+    // Формируем запрос с учётом города/страны для точности
+    let query = text;
+    if (city && !text.toLowerCase().includes(city.toLowerCase())) {
+      query = `${city}, ${text}`;
+    } else if (country && !text.toLowerCase().includes(country.toLowerCase())) {
+      query = `${country}, ${text}`;
     }
+
+    const url = `https://geocode-maps.yandex.ru/1.x/?apikey=${YANDEX_GEOCODER_KEY}&geocode=${encodeURIComponent(query)}&format=json&results=5&kind=house`;
     const response = await fetch(url);
     const data = await response.json();
 
-    const suggestions = (data?.results || []).map(item => ({
-      title: item.title?.text || '',
-      subtitle: item.subtitle?.text || '',
-      fullAddress: item.address?.formatted_address || item.subtitle?.text || '',
-      tags: item.tags || []
-    })).filter(s => s.title);
+    const featureMembers = data?.response?.GeoObjectCollection?.featureMember || [];
+    const suggestions = featureMembers.map(item => {
+      const geo = item.GeoObject;
+      const meta = geo.metaDataProperty?.GeocoderMetaData;
+      const addressDetails = meta?.Address?.Components || [];
+      const street = addressDetails.filter(c => c.kind === 'street').map(c => c.name).join(', ');
+      const house = addressDetails.filter(c => c.kind === 'house').map(c => c.name).join(', ');
+      const locality = addressDetails.filter(c => c.kind === 'locality').map(c => c.name).join(', ');
+      const [lon, lat] = geo.Point.pos.split(' ').map(Number);
+
+      return {
+        title: street ? `${street}${house ? ', ' + house : ''}` : geo.name || '',
+        subtitle: locality || meta?.text || '',
+        fullAddress: meta?.text || '',
+        latitude: lat,
+        longitude: lon
+      };
+    }).filter(s => s.title);
 
     res.json({ suggestions });
   } catch (error) {
-    console.error('Yandex Suggest error:', error);
+    console.error('Yandex Suggest via Geocoder error:', error);
     res.json({ suggestions: [] });
   }
 };
