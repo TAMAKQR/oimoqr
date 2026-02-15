@@ -635,7 +635,6 @@ const DashboardPage = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-gray-500 mb-1">{getBusinessType(getSelectedRestaurant()?.businessType).qrLabel}</p>
-                  <p className="text-xs text-gray-400 truncate">{window.location.origin}/{getBusinessType(getSelectedRestaurant()?.businessType).route}/{getSelectedRestaurant().subdomain}</p>
                   <button
                     onClick={() => {
                       const printWindow = window.open('', '_blank');
@@ -647,7 +646,6 @@ const DashboardPage = () => {
                         </head><body>
                         <h2>${getSelectedRestaurant().name}</h2>
                         ${qrSvg ? qrSvg.outerHTML : ''}
-                        <p style="margin-top:12px;color:#666;font-size:14px">${url}</p>
                         </body></html>`);
                       printWindow.document.close();
                       printWindow.focus();
