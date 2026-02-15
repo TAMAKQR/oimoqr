@@ -30,6 +30,8 @@ const RestaurantSettingsPage = () => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [address, setAddress] = useState('');
+  const [country, setCountry] = useState('');
+  const [city, setCity] = useState('');
   const [phone, setPhone] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [instagram, setInstagram] = useState('');
@@ -118,6 +120,8 @@ const RestaurantSettingsPage = () => {
     setName(r.name || '');
     setDescription(r.description || '');
     setAddress(r.address || '');
+    setCountry(r.country || '');
+    setCity(r.city || '');
     setPhone(r.phone || '');
     setWhatsapp(r.whatsapp || '');
     setInstagram(r.instagram || '');
@@ -292,6 +296,8 @@ const RestaurantSettingsPage = () => {
         name,
         description,
         address,
+        country: country || null,
+        city: city || null,
         phone,
         whatsapp,
         instagram,
@@ -414,13 +420,42 @@ const RestaurantSettingsPage = () => {
               </div>
 
               <div>
+                <label className="block text-sm font-medium mb-1">Страна и город</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <select
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value)}
+                    className="input w-full"
+                  >
+                    <option value="">Выберите страну</option>
+                    <option value="Кыргызстан">🇰🇬 Кыргызстан</option>
+                    <option value="Турция">🇹🇷 Турция</option>
+                    <option value="Казахстан">🇰🇿 Казахстан</option>
+                    <option value="Узбекистан">🇺🇿 Узбекистан</option>
+                    <option value="Россия">🇷🇺 Россия</option>
+                    <option value="Таджикистан">🇹🇯 Таджикистан</option>
+                  </select>
+                  <input
+                    type="text"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    className="input w-full"
+                    placeholder="Город"
+                  />
+                </div>
+                <p className="text-sm text-gray-500 mt-1">
+                  Используется для автодополнения адресов доставки
+                </p>
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium mb-1">Адрес</label>
                 <input
                   type="text"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   className="input w-full"
-                  placeholder="Например: г. Алматы, ул. Абая 123"
+                  placeholder="Например: ул. Абая 123"
                 />
               </div>
 

@@ -224,6 +224,8 @@ export const updateRestaurant = async (req, res, next) => {
     const {
       name,
       address,
+      country,
+      city,
       phone,
       description,
       instagram,
@@ -252,6 +254,8 @@ export const updateRestaurant = async (req, res, next) => {
       data: {
         name,
         address,
+        country: country !== undefined ? (country || null) : undefined,
+        city: city !== undefined ? (city || null) : undefined,
         phone,
         description,
         deliveryEnabled,
