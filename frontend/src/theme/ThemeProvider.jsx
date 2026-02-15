@@ -85,8 +85,12 @@ export const ThemeProvider = ({ children }) => {
     // Load scoped theme when scope changes
     useEffect(() => {
         if (scopeKey === 'global') {
-            setTheme('default');
-            setCustomColors(themes.default.colors);
+            // Don't reset theme when navigating to checkout — it applies the restaurant palette itself
+            const currentPath = window.location.pathname.split('/').filter(Boolean)[0];
+            if (currentPath !== 'checkout') {
+                setTheme('default');
+                setCustomColors(themes.default.colors);
+            }
             return;
         }
 
