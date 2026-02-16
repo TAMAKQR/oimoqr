@@ -279,13 +279,15 @@ const CheckoutPage = () => {
             const endpoint = customer?.id ? '/customers/orders' : '/orders';
             const response = await api.post(endpoint, payload);
             clearCart();
-            toast.success(isDineIn ? 'Заказ отправлен на кухню!' : 'Заказ оформлен');
-            const orderId = response?.data?.order?.id || response?.data?.id;
-            if (customer?.id && orderId) {
-                navigate(`/customer/orders/${orderId}`);
-            } else {
-                navigate(-1);
-            }
+            const orderData = response?.data?.order || response?.data;
+            navigate('/order-success', {
+                replace: true,
+                state: {
+                    order: orderData,
+                    restaurant: restaurant,
+                    currency: currency
+                }
+            });
         } catch (error) {
             console.error('Failed to place order', error);
             toast.error('Не удалось оформить заказ');
@@ -475,54 +477,69 @@ const CheckoutPage = () => {
                                     </div>
 
                                     {showNewAddressForm && (
-                                        <div className="mb-3 p-3 bg-gray-50 rounded-lg space-y-2">
-                                            <AddressAutocomplete
-                                                value={newAddress.address}
-                                                onChange={(val) => setNewAddress(prev => ({ ...prev, address: val, latitude: null, longitude: null }))}
-                                                onSelect={(suggestion) => {
-                                                    setNewAddress(prev => ({
-                                                        ...prev,
-                                                        address: suggestion.fullAddress || suggestion.title,
-                                                        latitude: suggestion.latitude || null,
-                                                        longitude: suggestion.longitude || null
-                                                    }));
-                                                }}
-                                                placeholder="Улица, дом"
-                                                className="input-field w-full text-sm"
-                                                restaurant={restaurant}
-                                            />
-                                            <div className="grid grid-cols-3 gap-2">
-                                                <input
-                                                    type="text"
-                                                    placeholder="Подъезд"
-                                                    value={newAddress.entrance}
-                                                    onChange={(e) => setNewAddress({ ...newAddress, entrance: e.target.value })}
-                                                    className="input-field text-sm"
-                                                />
-                                                <input
-                                                    type="text"
-                                                    placeholder="Этаж"
-                                                    value={newAddress.floor}
-                                                    onChange={(e) => setNewAddress({ ...newAddress, floor: e.target.value })}
-                                                    className="input-field text-sm"
-                                                />
-                                                <input
-                                                    type="text"
-                                                    placeholder="Кв/офис"
-                                                    value={newAddress.apartment}
-                                                    onChange={(e) => setNewAddress({ ...newAddress, apartment: e.target.value })}
-                                                    className="input-field text-sm"
+                                        <div className="mb-4 p-4 bg-gray-50 rounded-xl space-y-3 border border-gray-200">
+                                            <div>
+                                                <label className="block text-xs font-medium text-gray-600 mb-1.5">Адрес *</label>
+                                                <AddressAutocomplete
+                                                    value={newAddress.address}
+                                                    onChange={(val) => setNewAddress(prev => ({ ...prev, address: val, latitude: null, longitude: null }))}
+                                                    onSelect={(suggestion) => {
+                                                        setNewAddress(prev => ({
+                                                            ...prev,
+                                                            address: suggestion.fullAddress || suggestion.title,
+                                                            latitude: suggestion.latitude || null,
+                                                            longitude: suggestion.longitude || null
+                                                        }));
+                                                    }}
+                                                    placeholder="Город, улица, дом"
+                                                    className="w-full px-3.5 py-3 border border-gray-300 rounded-xl text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition"
+                                                    restaurant={restaurant}
                                                 />
                                             </div>
-                                            <input
-                                                type="text"
-                                                placeholder="Комментарий"
-                                                value={newAddress.comment}
-                                                onChange={(e) => setNewAddress({ ...newAddress, comment: e.target.value })}
-                                                className="input-field w-full text-sm"
-                                            />
-                                            <div className="flex gap-2">
-                                                <button onClick={handleAddAddress} className="btn-primary flex-1 text-sm py-2">
+                                            <div className="grid grid-cols-3 gap-2.5">
+                                                <div>
+                                                    <label className="block text-xs font-medium text-gray-600 mb-1">Подъезд</label>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="—"
+                                                        value={newAddress.entrance}
+                                                        onChange={(e) => setNewAddress({ ...newAddress, entrance: e.target.value })}
+                                                        className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm text-center focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-medium text-gray-600 mb-1">Этаж</label>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="—"
+                                                        value={newAddress.floor}
+                                                        onChange={(e) => setNewAddress({ ...newAddress, floor: e.target.value })}
+                                                        className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm text-center focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-medium text-gray-600 mb-1">Кв/офис</label>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="—"
+                                                        value={newAddress.apartment}
+                                                        onChange={(e) => setNewAddress({ ...newAddress, apartment: e.target.value })}
+                                                        className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm text-center focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-gray-600 mb-1">Комментарий для курьера</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Домофон, ориентир..."
+                                                    value={newAddress.comment}
+                                                    onChange={(e) => setNewAddress({ ...newAddress, comment: e.target.value })}
+                                                    className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition"
+                                                />
+                                            </div>
+                                            <div className="flex gap-2.5 pt-1">
+                                                <button onClick={handleAddAddress} className="btn-primary flex-1 text-sm py-2.5 rounded-xl">
                                                     Сохранить
                                                 </button>
                                                 <button
@@ -530,7 +547,7 @@ const CheckoutPage = () => {
                                                         setShowNewAddressForm(false);
                                                         setNewAddress({ address: '', entrance: '', floor: '', apartment: '', comment: '' });
                                                     }}
-                                                    className="btn-secondary flex-1 text-sm py-2"
+                                                    className="btn-secondary flex-1 text-sm py-2.5 rounded-xl"
                                                 >
                                                     Отмена
                                                 </button>
