@@ -28,6 +28,7 @@ import CheckoutPage from './pages/CheckoutPage';
 import ModifierTemplatesPage from './pages/ModifierTemplatesPage';
 import StoreManagementPage from './pages/StoreManagementPage';
 import ShopPage from './pages/ShopPage';
+import OrderSuccessPage from './pages/OrderSuccessPage';
 
 // Components
 import PrivateRoute from './components/PrivateRoute';
@@ -121,6 +122,7 @@ function App() {
           <Route path="/customer/orders/:orderId" element={<CustomerPrivateRoute><CustomerProfilePage /></CustomerPrivateRoute>} />
           <Route path="/customer/favorites" element={<CustomerPrivateRoute><CustomerProfilePage /></CustomerPrivateRoute>} />
           <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/order-success" element={<OrderSuccessPage />} />
 
           {/* Protected routes */}
           <Route
