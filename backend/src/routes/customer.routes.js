@@ -35,7 +35,7 @@ router.post('/register', registerCustomer);
 // Вход
 router.post('/login', loginCustomer);
 
-// WhatsApp авторизация
+// SMS авторизация (отправка и проверка кода)
 router.post('/whatsapp/send-code', sendWhatsAppCode);
 router.post('/whatsapp/verify-code', verifyWhatsAppCode);
 

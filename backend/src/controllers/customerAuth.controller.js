@@ -153,28 +153,15 @@ export const getCurrentCustomer = async (req, res, next) => {
 };
 
 /**
- * WhatsApp авторизация - отправка кода
+ * SMS авторизация - отправка кода через Twilio Verify
  */
 import whatsappService from '../services/whatsappService.js';
-
-// Временное хранилище кодов (в продакшене лучше использовать Redis)
-const verificationCodes = new Map();
-
-// Очистка старых кодов каждые 10 минут
-setInterval(() => {
-    const now = Date.now();
-    for (const [phone, data] of verificationCodes.entries()) {
-        if (now - data.timestamp > 5 * 60 * 1000) { // 5 минут
-            verificationCodes.delete(phone);
-        }
-    }
-}, 10 * 60 * 1000);
 
 export const sendWhatsAppCode = async (req, res, next) => {
     try {
         const { phoneNumber } = req.body;
 
-        console.log('📱 Sending WhatsApp verification code to:', phoneNumber);
+        console.log('📱 Sending SMS verification code to:', phoneNumber);
 
         if (!phoneNumber) {
             return res.status(400).json({ error: 'Phone number is required' });
@@ -188,41 +175,23 @@ export const sendWhatsAppCode = async (req, res, next) => {
         // Форматируем номер
         const formattedPhone = whatsappService.formatPhoneNumber(phoneNumber);
 
-        // Проверяем не отправляли ли код недавно (защита от спама)
-        const existingCode = verificationCodes.get(formattedPhone);
-        if (existingCode && Date.now() - existingCode.timestamp < 60 * 1000) {
-            return res.status(429).json({
-                error: 'Code already sent. Please wait 1 minute before requesting again.',
-                retryAfter: 60 - Math.floor((Date.now() - existingCode.timestamp) / 1000)
-            });
-        }
-
-        // Генерируем код
-        const code = whatsappService.generateCode();
-
-        // Сохраняем код
-        verificationCodes.set(formattedPhone, {
-            code,
-            timestamp: Date.now(),
-            attempts: 0
-        });
-
-        // Отправляем код через WhatsApp
+        // Отправляем код через Twilio Verify (SMS)
         try {
-            await whatsappService.sendVerificationCode(formattedPhone, code);
+            const result = await whatsappService.sendVerificationCode(formattedPhone);
 
             console.log(`✅ Verification code sent to ${formattedPhone}`);
 
             res.json({
                 success: true,
-                message: 'Verification code sent via WhatsApp',
-                phoneNumber: formattedPhone
+                message: 'Verification code sent via SMS',
+                phoneNumber: formattedPhone,
+                channel: result.channel || 'sms'
             });
         } catch (error) {
-            console.error('❌ Failed to send WhatsApp:', error);
-            // Если WhatsApp не работает, показываем код в консоли для разработки
+            console.error('❌ Failed to send verification:', error);
+            // В dev-режиме показываем ошибку подробнее
             if (process.env.NODE_ENV === 'development') {
-                console.log(`🔑 DEV MODE - Verification code for ${formattedPhone}: ${code}`);
+                console.log(`⚠️ DEV MODE - SMS verification failed: ${error.message}`);
             }
             res.status(500).json({
                 error: 'Failed to send verification code',
@@ -238,7 +207,7 @@ export const verifyWhatsAppCode = async (req, res, next) => {
     try {
         const { phoneNumber, code, restaurantId } = req.body;
 
-        console.log('🔐 Verifying WhatsApp code for:', phoneNumber);
+        console.log('🔐 Verifying SMS code for:', phoneNumber);
 
         if (!phoneNumber || !code) {
             return res.status(400).json({ error: 'Phone number and code are required' });
@@ -246,30 +215,15 @@ export const verifyWhatsAppCode = async (req, res, next) => {
 
         const formattedPhone = whatsappService.formatPhoneNumber(phoneNumber);
 
-        // Проверяем код
-        const storedData = verificationCodes.get(formattedPhone);
+        // Проверяем код через Twilio Verify
+        const verifyResult = await whatsappService.checkVerificationCode(formattedPhone, code);
 
-        if (!storedData) {
-            return res.status(400).json({ error: 'Verification code expired or not found' });
-        }
-
-        // Проверяем количество попыток
-        if (storedData.attempts >= 3) {
-            verificationCodes.delete(formattedPhone);
-            return res.status(429).json({ error: 'Too many failed attempts. Please request a new code.' });
-        }
-
-        // Проверяем код
-        if (storedData.code !== code) {
-            storedData.attempts++;
+        if (!verifyResult.success) {
             return res.status(400).json({
                 error: 'Invalid verification code',
-                attemptsLeft: 3 - storedData.attempts
+                status: verifyResult.status
             });
         }
-
-        // Код верный, удаляем из хранилища
-        verificationCodes.delete(formattedPhone);
 
         // Ищем или создаем клиента
         let customer = await prisma.customer.findUnique({
@@ -277,16 +231,16 @@ export const verifyWhatsAppCode = async (req, res, next) => {
         });
 
         if (!customer) {
-            // Создаем нового клиента без пароля (вход только через WhatsApp)
+            // Создаем нового клиента без пароля (вход только через SMS)
             customer = await prisma.customer.create({
                 data: {
                     phone: formattedPhone,
                     name: `Клиент ${formattedPhone.slice(-4)}`,
-                    password: '', // Пустой пароль для WhatsApp авторизации
+                    password: '', // Пустой пароль для SMS авторизации
                     registeredRestaurantId: restaurantId || null
                 }
             });
-            console.log(`✅ New customer created via WhatsApp: ${customer.id}`);
+            console.log(`✅ New customer created via SMS: ${customer.id}`);
         } else {
             // Обновляем ресторан если нужно
             if (restaurantId && !customer.registeredRestaurantId) {
@@ -295,7 +249,7 @@ export const verifyWhatsAppCode = async (req, res, next) => {
                     data: { registeredRestaurantId: restaurantId }
                 });
             }
-            console.log(`✅ Existing customer logged in via WhatsApp: ${customer.id}`);
+            console.log(`✅ Existing customer logged in via SMS: ${customer.id}`);
         }
 
         // Генерируем JWT токен
