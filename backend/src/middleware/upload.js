@@ -22,10 +22,13 @@ if (isCloudinaryConfigured) {
   console.log('✅ Using Cloudinary for file storage');
   storage = new CloudinaryStorage({
     cloudinary: cloudinary,
-    params: {
+        params: {
       folder: 'oimoqr',
       allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
-      transformation: [{ width: 1000, height: 1000, crop: 'limit' }]
+      transformation: [{ width: 1000, height: 1000, crop: 'limit' }],
+      resource_type: 'image',
+      type: 'upload',
+      access_mode: 'public'
     }
   });
 } else {
