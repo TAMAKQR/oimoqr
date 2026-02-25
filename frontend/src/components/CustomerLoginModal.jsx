@@ -33,7 +33,7 @@ export default function CustomerLoginModal({ isOpen, onClose, onLoginSuccess, re
     useEffect(() => {
         const detectCountry = async () => {
             try {
-                const res = await fetch('http://ip-api.com/json/?fields=countryCode', { signal: AbortSignal.timeout(3000) });
+                const res = await fetch('https://ip-api.com/json/?fields=countryCode', { signal: AbortSignal.timeout(3000) });
                 const data = await res.json();
                 if (data?.countryCode) {
                     const found = COUNTRIES.find(c => c.code === data.countryCode);
@@ -250,3 +250,4 @@ export default function CustomerLoginModal({ isOpen, onClose, onLoginSuccess, re
         </div>
     );
 }
+

@@ -42,7 +42,7 @@ const WhatsAppLoginPage = () => {
         const detectCountry = async () => {
             try {
                 // ip-api.com поддерживает CORS
-                const res = await fetch('http://ip-api.com/json/?fields=countryCode', { signal: AbortSignal.timeout(3000) });
+                const res = await fetch('https://ip-api.com/json/?fields=countryCode', { signal: AbortSignal.timeout(3000) });
                 const data = await res.json();
                 if (data?.countryCode) {
                     const found = COUNTRIES.find(c => c.code === data.countryCode);
@@ -426,3 +426,4 @@ const WhatsAppLoginPage = () => {
 };
 
 export default WhatsAppLoginPage;
+
