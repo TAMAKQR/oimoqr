@@ -23,7 +23,8 @@ const RegisterPage = () => {
   useEffect(() => {
     const fetchTrialConfig = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/trial-config`);
+        const apiBase = import.meta.env.VITE_API_URL || '/api';
+        const response = await fetch(`${apiBase}/trial-config`);
         if (response.ok) {
           const data = await response.json();
           setTrialDays(data.days || 7);
