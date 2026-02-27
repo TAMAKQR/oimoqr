@@ -64,6 +64,9 @@ model Restaurant {
   
   ownerId           String
   owner             User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  sharedMenuSourceRestaurantId String?
+  sharedMenuSource Restaurant? @relation("SharedMenuSource", fields: [sharedMenuSourceRestaurantId], references: [id], onDelete: SetNull)
+  menuSharedTo      Restaurant[] @relation("SharedMenuSource")
   
   categories        Category[]
   dishes            Dish[]
@@ -83,6 +86,7 @@ model Restaurant {
   // Online Store relations
   productCategories ProductCategory[]
   products          Product[]
+  dishStops         DishStop[]
 
   // Customers who registered from this restaurant
   registeredCustomers Customer[] @relation("CustomerRegisteredRestaurant")
@@ -198,9 +202,28 @@ model Dish {
   orderItems        OrderItem[]
   translations      DishTranslation[]
   favoritedBy       CustomerFavorite[]
+  dishStops         DishStop[]
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+}
+
+model DishStop {
+  id                String    @id @default(cuid())
+  restaurantId      String
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  dishId            String
+  dish              Dish      @relation(fields: [dishId], references: [id], onDelete: Cascade)
+
+  isStopped         Boolean   @default(true)
+  reason            String?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([restaurantId, dishId])
+  @@index([restaurantId, isStopped])
 }
 
 model Modifier {

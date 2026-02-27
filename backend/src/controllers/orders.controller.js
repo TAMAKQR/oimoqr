@@ -17,6 +17,52 @@ const generateOrderNumber = () => {
   return `#${timestamp}${random}`;
 };
 
+const getMenuSourceRestaurantId = async (restaurantId) => {
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { id: restaurantId },
+    select: { id: true, sharedMenuSourceRestaurantId: true }
+  });
+
+  if (!restaurant) return null;
+  return restaurant.sharedMenuSourceRestaurantId || restaurant.id;
+};
+
+const getNearestServingRestaurant = async ({ restaurantId, latitude, longitude }) => {
+  const baseRestaurant = await prisma.restaurant.findUnique({
+    where: { id: restaurantId },
+    select: { ownerId: true }
+  });
+
+  if (!baseRestaurant) return null;
+
+  const restaurants = await prisma.restaurant.findMany({
+    where: {
+      ownerId: baseRestaurant.ownerId,
+      deliveryEnabled: true,
+      latitude: { not: null },
+      longitude: { not: null }
+    },
+    select: {
+      id: true,
+      latitude: true,
+      longitude: true,
+      deliveryRadius: true
+    }
+  });
+
+  if (restaurants.length === 0) return null;
+
+  const withDistance = restaurants
+    .map((r) => {
+      const distance = getDistance(latitude, longitude, r.latitude, r.longitude);
+      const inDeliveryZone = r.deliveryRadius ? distance <= r.deliveryRadius : true;
+      return { ...r, distance, inDeliveryZone };
+    })
+    .sort((a, b) => a.distance - b.distance);
+
+  return withDistance.find((r) => r.inDeliveryZone) || withDistance[0];
+};
+
 export const createOrder = async (req, res, next) => {
   try {
     const {
@@ -59,10 +105,15 @@ export const createOrder = async (req, res, next) => {
 
     // Проверка существования всех блюд перед созданием заказа
     const dishIds = validItems.map(item => item.id);
+    const menuSourceRestaurantId = await getMenuSourceRestaurantId(restaurantId);
+    if (!menuSourceRestaurantId) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
     const existingDishes = await prisma.dish.findMany({
       where: {
         id: { in: dishIds },
-        restaurantId: restaurantId // Убедимся, что блюда принадлежат этому ресторану
+        restaurantId: menuSourceRestaurantId
       },
       select: { id: true }
     });
@@ -73,11 +124,52 @@ export const createOrder = async (req, res, next) => {
     }
 
     const orderNumber = generateOrderNumber();
+    let assignedRestaurantId = null;
+
+    if (deliveryType === 'delivery' && deliveryLatitude && deliveryLongitude) {
+      const nearest = await getNearestServingRestaurant({
+        restaurantId,
+        latitude: parseFloat(deliveryLatitude),
+        longitude: parseFloat(deliveryLongitude)
+      });
+
+      if (nearest?.id && nearest.id !== restaurantId) {
+        assignedRestaurantId = nearest.id;
+      }
+    }
+
+    const servingRestaurantId = assignedRestaurantId || restaurantId;
+    const stoppedDishes = await prisma.dishStop.findMany({
+      where: {
+        restaurantId: servingRestaurantId,
+        isStopped: true,
+        dishId: { in: dishIds }
+      },
+      select: {
+        dishId: true,
+        reason: true,
+        dish: {
+          select: { name: true }
+        }
+      }
+    });
+
+    if (stoppedDishes.length > 0) {
+      return res.status(400).json({
+        error: 'Some dishes are temporarily unavailable at this restaurant',
+        stoppedDishes: stoppedDishes.map((x) => ({
+          dishId: x.dishId,
+          name: x.dish?.name || null,
+          reason: x.reason || null
+        }))
+      });
+    }
 
     const order = await prisma.order.create({
       data: {
         orderNumber,
         restaurantId,
+        assignedRestaurantId,
         totalAmount: parseFloat(total),
         customerName: customerName || 'Клиент',
         customerPhone: customerPhone || 'Не указан',

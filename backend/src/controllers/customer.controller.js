@@ -2,6 +2,64 @@ import { prisma } from '../config/prisma.js';
 import bcrypt from 'bcryptjs';
 import telegramService from '../services/telegram.service.js';
 
+const getDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+};
+
+const getMenuSourceRestaurantId = async (restaurantId) => {
+    const restaurant = await prisma.restaurant.findUnique({
+        where: { id: restaurantId },
+        select: { id: true, sharedMenuSourceRestaurantId: true }
+    });
+
+    if (!restaurant) return null;
+    return restaurant.sharedMenuSourceRestaurantId || restaurant.id;
+};
+
+const getNearestServingRestaurant = async ({ restaurantId, latitude, longitude }) => {
+    const baseRestaurant = await prisma.restaurant.findUnique({
+        where: { id: restaurantId },
+        select: { ownerId: true }
+    });
+
+    if (!baseRestaurant) return null;
+
+    const restaurants = await prisma.restaurant.findMany({
+        where: {
+            ownerId: baseRestaurant.ownerId,
+            deliveryEnabled: true,
+            latitude: { not: null },
+            longitude: { not: null }
+        },
+        select: {
+            id: true,
+            latitude: true,
+            longitude: true,
+            deliveryRadius: true
+        }
+    });
+
+    if (restaurants.length === 0) return null;
+
+    const withDistance = restaurants
+        .map((r) => {
+            const distance = getDistance(latitude, longitude, r.latitude, r.longitude);
+            const inDeliveryZone = r.deliveryRadius ? distance <= r.deliveryRadius : true;
+            return { ...r, distance, inDeliveryZone };
+        })
+        .sort((a, b) => a.distance - b.distance);
+
+    return withDistance.find((r) => r.inDeliveryZone) || withDistance[0];
+};
+
 /**
  * Получить профиль клиента
  */
@@ -505,12 +563,16 @@ export const createCustomerOrder = async (req, res, next) => {
         // Фильтруем товары
         const validItems = items.filter(item => item && item.id);
         const dishIds = validItems.map(item => item.id);
+        const menuSourceRestaurantId = await getMenuSourceRestaurantId(restaurantId);
+        if (!menuSourceRestaurantId) {
+            return res.status(404).json({ error: 'Restaurant not found' });
+        }
 
         // Проверка существования блюд
         const existingDishes = await prisma.dish.findMany({
             where: {
                 id: { in: dishIds },
-                restaurantId: restaurantId
+                restaurantId: menuSourceRestaurantId
             },
             select: { id: true }
         });
@@ -520,17 +582,82 @@ export const createCustomerOrder = async (req, res, next) => {
             return res.status(400).json({ error: `One or more dishes not found: ${notFoundIds.join(', ')}` });
         }
 
+        let deliveryLatitude = null;
+        let deliveryLongitude = null;
+        let resolvedDeliveryAddress = deliveryAddress || null;
+
+        if (deliveryType === 'delivery' && customerAddressId) {
+            const selectedAddress = await prisma.customerAddress.findFirst({
+                where: { id: customerAddressId, customerId },
+                select: {
+                    id: true,
+                    address: true,
+                    latitude: true,
+                    longitude: true
+                }
+            });
+
+            if (!selectedAddress) {
+                return res.status(400).json({ error: 'Selected address not found' });
+            }
+
+            deliveryLatitude = selectedAddress.latitude ?? null;
+            deliveryLongitude = selectedAddress.longitude ?? null;
+            resolvedDeliveryAddress = selectedAddress.address || resolvedDeliveryAddress;
+        }
+
+        let assignedRestaurantId = null;
+        if (deliveryType === 'delivery' && deliveryLatitude && deliveryLongitude) {
+            const nearest = await getNearestServingRestaurant({
+                restaurantId,
+                latitude: deliveryLatitude,
+                longitude: deliveryLongitude
+            });
+
+            if (nearest?.id && nearest.id !== restaurantId) {
+                assignedRestaurantId = nearest.id;
+            }
+        }
+
+        const servingRestaurantId = assignedRestaurantId || restaurantId;
+        const stoppedDishes = await prisma.dishStop.findMany({
+            where: {
+                restaurantId: servingRestaurantId,
+                isStopped: true,
+                dishId: { in: dishIds }
+            },
+            select: {
+                dishId: true,
+                reason: true,
+                dish: { select: { name: true } }
+            }
+        });
+
+        if (stoppedDishes.length > 0) {
+            return res.status(400).json({
+                error: 'Some dishes are temporarily unavailable at this restaurant',
+                stoppedDishes: stoppedDishes.map((x) => ({
+                    dishId: x.dishId,
+                    name: x.dish?.name || null,
+                    reason: x.reason || null
+                }))
+            });
+        }
+
         // Создаем заказ
         const order = await prisma.order.create({
             data: {
                 orderNumber,
                 restaurantId,
+                assignedRestaurantId,
                 customerId,
                 totalAmount: parseFloat(total),
                 customerName: customer.name || 'Клиент',
                 customerPhone: customer.phone,
                 customerEmail: customer.email,
-                deliveryAddress: deliveryAddress || null,
+                deliveryAddress: resolvedDeliveryAddress,
+                deliveryLatitude,
+                deliveryLongitude,
                 notes: comment || null,
                 deliveryType: deliveryType || 'delivery',
                 paymentMethod: paymentMethod || 'cash',
