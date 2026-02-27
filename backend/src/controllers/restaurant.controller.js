@@ -744,16 +744,46 @@ export const createRestaurant = async (req, res, next) => {
       }
     });
 
+    // --- NEW LOGIC FOR SUBSCRIPTION ---
+    let subscriptionData;
+
+    if (isFirstRestaurant) {
+      // Логика для самого первого ресторана верна: даем триал.
+      const trialEndDate = calculateTrialEndDate(parseInt(process.env.TRIAL_PERIOD_DAYS) || 7);
+      subscriptionData = {
+        plan: 'TRIAL',
+        status: 'TRIAL',
+        trialEndsAt: trialEndDate,
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: trialEndDate,
+      };
+    } else if (activeUserSubscription) {
+      // Если это не первый ресторан, но у пользователя есть активная подписка,
+      // новый ресторан сразу становится активным в рамках этой подписки.
+      subscriptionData = {
+        plan: activeUserSubscription.plan,
+        status: 'ACTIVE',
+        pricingTierId: activeUserSubscription.pricingTierId,
+        currentPeriodStart: activeUserSubscription.currentPeriodStart,
+        currentPeriodEnd: activeUserSubscription.currentPeriodEnd,
+      };
+    } else {
+      // Запасной вариант: если нет активной подписки (например, триал истек),
+      // то новый ресторан требует активации.
+      subscriptionData = {
+        plan: 'MONTHLY',
+        status: 'PENDING',
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: new Date(),
+      };
+    }
+
     // Create subscription after restaurant is created
     const subscription = await prisma.subscription.create({
       data: {
         userId: req.user.id,
         restaurantId: restaurant.id,
-        plan: 'MONTHLY',
-        status: isFirstRestaurant ? 'TRIAL' : 'PENDING',
-        trialEndsAt: isFirstRestaurant ? trialEndDate : null,
-        currentPeriodStart: new Date(),
-        currentPeriodEnd: isFirstRestaurant ? trialEndDate : new Date(),
+        ...subscriptionData
       }
     });
 
