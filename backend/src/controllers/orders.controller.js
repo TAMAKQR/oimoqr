@@ -1,5 +1,6 @@
 import { prisma } from '../config/prisma.js';
 import telegramService from '../services/telegram.service.js';
+import { getDistance, getNetworkRankedDeliveryPoints } from './geolocation.controller.js';
 
 const ALLOWED_STATUSES = [
   'new',
@@ -35,36 +36,13 @@ const getNearestServingRestaurant = async ({ restaurantId, latitude, longitude }
 
   if (!baseRestaurant) return null;
 
-  const restaurants = await prisma.restaurant.findMany({
-    where: {
-      ownerId: baseRestaurant.ownerId,
-      deliveryEnabled: true,
-      latitude: { not: null },
-      longitude: { not: null }
-    },
-    select: {
-      id: true,
-      deliveryEnabled: true,
-      latitude: true,
-      longitude: true,
-      deliveryRadius: true,
-      minOrderAmount: true,
-      deliveryFee: true,
-      freeDeliveryThreshold: true
-    }
+  const ranked = await getNetworkRankedDeliveryPoints({
+    ownerId: baseRestaurant.ownerId,
+    latitude,
+    longitude
   });
 
-  if (restaurants.length === 0) return null;
-
-  const withDistance = restaurants
-    .map((r) => {
-      const distance = getDistance(latitude, longitude, r.latitude, r.longitude);
-      const inDeliveryZone = r.deliveryRadius ? distance <= r.deliveryRadius : true;
-      return { ...r, distance, inDeliveryZone };
-    })
-    .sort((a, b) => a.distance - b.distance);
-
-  return withDistance.find((r) => r.inDeliveryZone) || null;
+  return ranked.find((r) => r.inDeliveryZone) || null;
 };
 
 export const createOrder = async (req, res, next) => {

@@ -44,6 +44,7 @@ export const getRestaurantDishes = async (req, res, next) => {
         name: true,
         description: true,
         price: true,
+        deliveryPrice: true,
         image: true,
         available: true,
         order: true,
@@ -68,13 +69,22 @@ export const getRestaurantDishes = async (req, res, next) => {
 
 export const createDish = async (req, res, next) => {
   try {
-    const { name, description, price, categoryId, order, allergens, discount, badge } = req.body;
+    const { name, description, price, deliveryPrice, categoryId, order, allergens, discount, badge } = req.body;
     console.log('Creating dish:', { name, categoryId, price });
 
     // Validate price
     const parsedPrice = parseFloat(price);
     if (isNaN(parsedPrice) || parsedPrice < 0) {
       return res.status(400).json({ error: 'Price must be a number greater than or equal to 0' });
+    }
+
+    // Validate deliveryPrice
+    let parsedDeliveryPrice = null;
+    if (deliveryPrice !== undefined && deliveryPrice !== null && deliveryPrice !== '') {
+      parsedDeliveryPrice = parseFloat(deliveryPrice);
+      if (isNaN(parsedDeliveryPrice) || parsedDeliveryPrice < 0) {
+        return res.status(400).json({ error: 'Delivery price must be a number greater than or equal to 0' });
+      }
     }
 
     // Validate discount if provided
@@ -109,6 +119,7 @@ export const createDish = async (req, res, next) => {
       name,
       description,
       price: parsedPrice,
+      deliveryPrice: parsedDeliveryPrice,
       categoryId,
       restaurantId: category.restaurantId,
       order: dishOrder,
@@ -135,7 +146,7 @@ export const createDish = async (req, res, next) => {
 export const updateDish = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, description, price, order, isActive, allergens, discount, badge } = req.body;
+    const { name, description, price, deliveryPrice, order, isActive, allergens, discount, badge } = req.body;
 
     console.log('📝 Updating dish:', { id, name, price, allergens, discount, badge });
 
@@ -145,6 +156,19 @@ export const updateDish = async (req, res, next) => {
       parsedPrice = parseFloat(price);
       if (isNaN(parsedPrice) || parsedPrice < 0) {
         return res.status(400).json({ error: 'Price must be a number greater than or equal to 0' });
+      }
+    }
+
+    // Validate deliveryPrice if provided
+    let parsedDeliveryPrice = undefined;
+    if (deliveryPrice !== undefined) {
+      if (deliveryPrice === null || deliveryPrice === '') {
+        parsedDeliveryPrice = null;
+      } else {
+        parsedDeliveryPrice = parseFloat(deliveryPrice);
+        if (isNaN(parsedDeliveryPrice) || parsedDeliveryPrice < 0) {
+          return res.status(400).json({ error: 'Delivery price must be a number greater than or equal to 0' });
+        }
       }
     }
 
@@ -187,6 +211,7 @@ export const updateDish = async (req, res, next) => {
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
     if (parsedPrice !== undefined) updateData.price = parsedPrice;
+    if (parsedDeliveryPrice !== undefined) updateData.deliveryPrice = parsedDeliveryPrice;
     if (order !== undefined) updateData.order = order;
     if (isActive !== undefined) updateData.isActive = isActive;
     if (allergens !== undefined) updateData.allergens = allergens;

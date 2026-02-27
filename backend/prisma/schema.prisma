@@ -182,6 +182,7 @@ model Dish {
   name              String
   description       String?
   price             Float
+  deliveryPrice     Float?
   image             String?
   available         Boolean   @default(true)
   order             Int       @default(0)
