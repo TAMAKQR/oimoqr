@@ -123,6 +123,7 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
             name: true,
             description: true,
             price: true,
+            deliveryPrice: true,
             image: true,
             available: true,
             order: true,
