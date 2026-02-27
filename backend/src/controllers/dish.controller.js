@@ -173,6 +173,16 @@ export const updateDish = async (req, res, next) => {
       return res.status(404).json({ error: 'Dish not found' });
     }
 
+    // 🛡️ ЗАЩИТА: Только владелец может менять цену
+    if (parsedPrice !== undefined) {
+      const restaurantId = dish.category.restaurantId;
+      const isOwner = req.user.restaurants?.some(r => r.id === restaurantId);
+
+      if (!isOwner && !req.user.isAdmin) {
+        return res.status(403).json({ error: 'Изменять цену может только владелец ресторана' });
+      }
+    }
+
     const updateData = {};
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;

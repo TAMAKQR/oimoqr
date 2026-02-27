@@ -58,7 +58,7 @@ const CheckoutPage = () => {
     const [showLoginModal, setShowLoginModal] = useState(false);
     const [addresses, setAddresses] = useState([]);
     const [selectedAddressId, setSelectedAddressId] = useState(null);
-    const [deliveryType, setDeliveryType] = useState(isDineIn ? 'dine_in' : (restaurant?.deliveryEnabled ? 'delivery' : 'pickup'));
+    const [deliveryType, setDeliveryType] = useState(isDineIn ? 'dine_in' : 'delivery');
     const [paymentMethod, setPaymentMethod] = useState('cash');
     const [comment, setComment] = useState('');
     const [showNewAddressForm, setShowNewAddressForm] = useState(false);
@@ -96,11 +96,6 @@ const CheckoutPage = () => {
     // Проверяем зону при выборе адреса
     useEffect(() => {
         if (deliveryType !== 'delivery' || !selectedAddressId || !restaurant?.id) return;
-        // Если у ресторана не настроены координаты/радиус — пропускаем
-        if (!restaurant.latitude || !restaurant.longitude || !restaurant.deliveryRadius) {
-            setZoneStatus('no-zone');
-            return;
-        }
         const addr = addresses.find(a => a.id === selectedAddressId);
         if (!addr) return;
 
@@ -118,7 +113,7 @@ const CheckoutPage = () => {
         setZoneStatus('checking');
         try {
             const resp = await api.get('/geolocation/check-delivery', {
-                params: { restaurantId: restaurant.id, latitude: lat, longitude: lng }
+                params: { subdomain: restaurant.subdomain, latitude: lat, longitude: lng }
             });
             const data = resp.data;
             setZoneDistance(data.distance);
@@ -416,9 +411,8 @@ const CheckoutPage = () => {
                                     <h2 className="font-semibold text-base mb-3">Способ получения</h2>
                                     <div className="grid grid-cols-2 gap-3">
                                         <button
-                                            disabled={!restaurant?.deliveryEnabled}
-                                            onClick={() => restaurant?.deliveryEnabled && setDeliveryType('delivery')}
-                                            className={`p-3 rounded-lg border-2 transition-all ${deliveryType === 'delivery' ? 'border-primary-600 bg-primary-50' : 'border-primary-200 active:border-primary-300'} ${!restaurant?.deliveryEnabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                            onClick={() => setDeliveryType('delivery')}
+                                            className={`p-3 rounded-lg border-2 transition-all ${deliveryType === 'delivery' ? 'border-primary-600 bg-primary-50' : 'border-primary-200 active:border-primary-300'}`}
                                         >
                                             <div className="text-2xl mb-1">🚗</div>
                                             <div className="font-semibold text-sm">Доставка</div>
