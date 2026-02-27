@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { restaurantService } from '../services/restaurantService';
 import customerService from '../services/customerService';
-import api from '../services/api';
 import { useCartStore } from '../store/cartStore';
 import BannerSlider from '../components/BannerSlider';
 import DishCard from '../components/DishCard';
@@ -122,9 +121,6 @@ const getCurrencySymbol = (currencyCode) => {
   return currencySymbols[currencyCode] || '₽';
 };
 
-const MENU_GEO_CACHE_KEY = 'menu-nearest-geo-cache-v1';
-const MENU_GEO_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
-
 const MenuPage = () => {
   const { subdomain } = useParams();
   const navigate = useNavigate();
@@ -145,9 +141,6 @@ const MenuPage = () => {
   const [isDishModalOpen, setIsDishModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [nearestStatus, setNearestStatus] = useState('idle'); // idle | locating | ready | denied | unavailable | error
-  const [nearestInfo, setNearestInfo] = useState(null);
-  const [nearestError, setNearestError] = useState('');
   const categoryRefs = useRef({});
   const categoryButtonRefs = useRef({});
   const categoryMenuRef = useRef(null);
@@ -222,97 +215,6 @@ const MenuPage = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const fetchNearestRestaurant = useCallback(async (latitude, longitude, { saveCoords = true } = {}) => {
-    if (!subdomain) return null;
-
-    const lat = Number(latitude);
-    const lng = Number(longitude);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-      setNearestStatus('error');
-      setNearestError('Некорректные координаты геолокации');
-      return null;
-    }
-
-    try {
-      const response = await api.get('/geolocation/nearest-by-subdomain', {
-        params: { subdomain, latitude: lat, longitude: lng }
-      });
-
-      const payload = response.data || null;
-      if (!payload?.nearestRestaurant) {
-        setNearestStatus('unavailable');
-        setNearestInfo(null);
-        setNearestError('Нет доступных точек доставки рядом');
-        return null;
-      }
-
-      setNearestInfo(payload);
-      setNearestStatus('ready');
-      setNearestError('');
-
-      if (saveCoords) {
-        localStorage.setItem(MENU_GEO_CACHE_KEY, JSON.stringify({
-          latitude: lat,
-          longitude: lng,
-          ts: Date.now()
-        }));
-      }
-
-      return payload;
-    } catch (err) {
-      if (err?.response?.status === 404) {
-        setNearestStatus('unavailable');
-        setNearestInfo(null);
-        setNearestError('Для этой сети пока нет точек с доставкой');
-        return null;
-      }
-
-      setNearestStatus('error');
-      setNearestError('Не удалось определить ближайшую точку');
-      return null;
-    }
-  }, [subdomain]);
-
-  const requestNearestByCurrentLocation = useCallback(async () => {
-    if (!navigator?.geolocation) {
-      setNearestStatus('error');
-      setNearestError('Геолокация не поддерживается в этом браузере');
-      return;
-    }
-
-    setNearestStatus('locating');
-    setNearestError('');
-
-    try {
-      const position = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(
-          resolve,
-          reject,
-          { enableHighAccuracy: false, timeout: 9000, maximumAge: 120000 }
-        );
-      });
-
-      const latitude = position?.coords?.latitude;
-      const longitude = position?.coords?.longitude;
-      await fetchNearestRestaurant(latitude, longitude, { saveCoords: true });
-    } catch (geoError) {
-      if (geoError?.code === 1) {
-        setNearestStatus('denied');
-        setNearestError('Доступ к геолокации запрещен');
-        return;
-      }
-
-      if (geoError?.code === 3) {
-        setNearestStatus('error');
-        setNearestError('Не удалось определить местоположение вовремя');
-        return;
-      }
-
-      setNearestStatus('error');
-      setNearestError('Не удалось определить местоположение');
-    }
-  }, [fetchNearestRestaurant]);
-
   // ✅ ОПТИМИЗАЦИЯ: useCallback предотвращает лишние перерендеры
   const loadRestaurant = useCallback(async (language) => {
     try {
@@ -355,68 +257,6 @@ const MenuPage = () => {
   useEffect(() => {
     loadRestaurant(selectedLanguage);
   }, [subdomain, selectedLanguage, loadRestaurant]);
-
-  useEffect(() => {
-    if (!restaurant?.subdomain) {
-      setNearestStatus('idle');
-      setNearestInfo(null);
-      setNearestError('');
-      return;
-    }
-
-    let cancelled = false;
-
-    const bootstrapNearestPoint = async () => {
-      setNearestInfo(null);
-      setNearestStatus('idle');
-      setNearestError('');
-      let hasFreshCache = false;
-
-      try {
-        const raw = localStorage.getItem(MENU_GEO_CACHE_KEY);
-        if (raw) {
-          const cached = JSON.parse(raw);
-          const isFresh = cached?.ts && (Date.now() - cached.ts) < MENU_GEO_CACHE_TTL_MS;
-          if (isFresh && Number.isFinite(Number(cached.latitude)) && Number.isFinite(Number(cached.longitude))) {
-            hasFreshCache = true;
-            if (!cancelled) {
-              await fetchNearestRestaurant(cached.latitude, cached.longitude, { saveCoords: false });
-            }
-          }
-        }
-      } catch {
-        // Ignore broken cache format
-      }
-
-      if (cancelled || !navigator?.geolocation) return;
-      if (hasFreshCache) return;
-
-      if (navigator?.permissions?.query) {
-        try {
-          const permission = await navigator.permissions.query({ name: 'geolocation' });
-          if (cancelled) return;
-
-          if (permission.state === 'denied') {
-            setNearestStatus((prev) => (prev === 'ready' ? prev : 'denied'));
-            setNearestError((prev) => prev || 'Разрешите геолокацию, чтобы показать ближайшую точку');
-            return;
-          }
-        } catch {
-          // Some browsers may not support geolocation permission query reliably.
-        }
-      }
-
-      if (!cancelled) {
-        await requestNearestByCurrentLocation();
-      }
-    };
-
-    bootstrapNearestPoint();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [restaurant?.subdomain, fetchNearestRestaurant, requestNearestByCurrentLocation]);
 
 
   // Плавное переключение категорий при скролле с помощью Intersection Observer
@@ -520,15 +360,6 @@ const MenuPage = () => {
       isUserClick.current = false;
     }, 1000);
   };
-
-  const isDineInMenu = Boolean(tableFromUrl || dineInParam);
-  const nearestRestaurant = nearestInfo?.nearestRestaurant || null;
-  const showNearestCard = !isDineInMenu && Boolean(
-    restaurant?.deliveryEnabled ||
-    restaurant?.sharedMenuSourceRestaurantId ||
-    nearestStatus !== 'idle' ||
-    nearestRestaurant
-  );
 
   if (loading) {
     return <MenuSkeleton />;
@@ -641,33 +472,6 @@ const MenuPage = () => {
                 )}
               </div>
             </div>
-            {showNearestCard && (
-              <div className="mt-2 rounded-lg border border-primary-200 bg-primary-50 p-3">
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-primary-700">Ближайшая точка доставки</div>
-                  {(nearestStatus === 'idle' || nearestStatus === 'locating') && (
-                    <div className="text-sm text-primary-800 mt-1">Определяем ваше местоположение...</div>
-                  )}
-                  {nearestStatus === 'ready' && nearestRestaurant && (
-                    <div className="text-sm text-primary-900 mt-1">
-                      <div className="font-semibold">{nearestRestaurant.name}</div>
-                      <div className="text-primary-800 text-xs mt-0.5">
-                        Расстояние: {nearestRestaurant.distance} км
-                        {nearestRestaurant.id !== restaurant.id ? ' • заказ будет передан на эту точку' : ''}
-                      </div>
-                      {!nearestInfo?.inDeliveryZone && (
-                        <div className="text-amber-700 text-xs mt-1">Адрес вне радиуса доставки ближайшей точки</div>
-                      )}
-                    </div>
-                  )}
-                  {(nearestStatus === 'denied' || nearestStatus === 'error' || nearestStatus === 'unavailable') && (
-                    <div className="text-sm text-primary-900 mt-1">
-                      {nearestError || 'Не удалось определить ближайшую точку'}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
             {/* Social Links */}
             {(restaurant.instagram || restaurant.facebook || restaurant.whatsapp) && (
               <div className="flex flex-wrap gap-2 mt-3">
