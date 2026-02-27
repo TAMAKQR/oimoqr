@@ -69,6 +69,7 @@ const CheckoutPage = () => {
     const [zoneStatus, setZoneStatus] = useState(null); // null | 'checking' | 'ok' | 'outside' | 'error' | 'no-zone'
     const [zoneMessage, setZoneMessage] = useState('');
     const [zoneDistance, setZoneDistance] = useState(null);
+    const [nearestRestaurant, setNearestRestaurant] = useState(null);
 
     useEffect(() => {
         if (!restaurant || !cartItems || cartItems.length === 0) {
@@ -90,6 +91,7 @@ const CheckoutPage = () => {
     useEffect(() => {
         if (deliveryType !== 'delivery') {
             setZoneStatus(null);
+            setNearestRestaurant(null);
         }
     }, [deliveryType]);
 
@@ -122,6 +124,17 @@ const CheckoutPage = () => {
             });
             const data = resp.data;
             setZoneDistance(data.distance);
+            if (restaurant?.subdomain) {
+                try {
+                    const nearestResp = await api.get('/geolocation/nearest-by-subdomain', {
+                        params: { subdomain: restaurant.subdomain, latitude: lat, longitude: lng }
+                    });
+                    setNearestRestaurant(nearestResp.data?.nearestRestaurant || null);
+                } catch (nearestErr) {
+                    console.warn('Nearest restaurant lookup failed:', nearestErr);
+                    setNearestRestaurant(null);
+                }
+            }
             if (data.deliveryAvailable) {
                 setZoneStatus('ok');
                 setZoneMessage(`Доставка доступна (${data.distance} км)`);
@@ -290,7 +303,16 @@ const CheckoutPage = () => {
             });
         } catch (error) {
             console.error('Failed to place order', error);
-            toast.error('Не удалось оформить заказ');
+            const stoppedDishes = error.response?.data?.stoppedDishes;
+            if (Array.isArray(stoppedDishes) && stoppedDishes.length > 0) {
+                const dishesText = stoppedDishes
+                    .map((x) => x.name ? `${x.name}${x.reason ? ` (${x.reason})` : ''}` : x.dishId)
+                    .join(', ');
+                toast.error(`Некоторые блюда временно недоступны: ${dishesText}`, { duration: 6000 });
+            } else {
+                const message = error.response?.data?.error || 'Не удалось оформить заказ';
+                toast.error(message);
+            }
         } finally {
             setLoading(false);
         }
@@ -455,6 +477,17 @@ const CheckoutPage = () => {
                                             }} className="ml-auto text-xs underline font-medium">Повторить</button>
                                         </>
                                     )}
+                                </div>
+                            )}
+
+                            {!isDineIn && deliveryType === 'delivery' && nearestRestaurant && (
+                                <div className="rounded-lg p-3 text-sm bg-primary-50 border border-primary-200">
+                                    <div className="font-semibold text-primary-900">Ближайшая точка</div>
+                                    <div className="text-primary-800">{nearestRestaurant.name}</div>
+                                    <div className="text-xs text-primary-700 mt-1">
+                                        Расстояние: {nearestRestaurant.distance} км
+                                        {nearestRestaurant.id !== restaurant?.id ? ' • заказ будет передан на эту точку' : ''}
+                                    </div>
                                 </div>
                             )}
 

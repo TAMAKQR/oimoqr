@@ -18,7 +18,7 @@ const MenuManagementPage = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const { userData, loading, refresh: refreshUserData } = useUserData();
-  const { selectedRestaurantId, setSelectedRestaurantId, selectedRestaurant } = useSelectedRestaurant(userData);
+  const { selectedRestaurantId, setSelectedRestaurantId, selectedRestaurant, isOwner: isOwnerFlag } = useSelectedRestaurant(userData);
   const [categories, setCategories] = useState([]);
   const [dishes, setDishes] = useState({});
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -39,10 +39,24 @@ const MenuManagementPage = () => {
   const [showCategoryGroupsModal, setShowCategoryGroupsModal] = useState(false);
   const [categoryGroups, setCategoryGroups] = useState([]);
   const [dataTimestamp, setDataTimestamp] = useState(Date.now());
+  const [sharedMenuSourceId, setSharedMenuSourceId] = useState('');
+  const [savingSharedSource, setSavingSharedSource] = useState(false);
 
   // Автоматически выбираем ресторан при загрузке (handled by useSelectedRestaurant)
 
   const getSelectedRestaurant = () => selectedRestaurant;
+  const ownedRestaurants = userData?.restaurants || [];
+  const allAccessibleRestaurants = [
+    ...ownedRestaurants,
+    ...(userData?.restaurantStaff?.map((s) => s.restaurant) || [])
+  ];
+  const sharedSourceRestaurant = allAccessibleRestaurants.find(
+    (r) => r.id === selectedRestaurant?.sharedMenuSourceRestaurantId
+  );
+  const isSharedMenuConsumer = Boolean(
+    selectedRestaurant?.sharedMenuSourceRestaurantId &&
+    selectedRestaurant?.sharedMenuSourceRestaurantId !== selectedRestaurantId
+  );
 
   const loadCategories = async (restaurantId) => {
     try {
@@ -84,6 +98,10 @@ const MenuManagementPage = () => {
     }
   }, [selectedRestaurantId, userData]);
 
+  useEffect(() => {
+    setSharedMenuSourceId(selectedRestaurant?.sharedMenuSourceRestaurantId || '');
+  }, [selectedRestaurant?.id, selectedRestaurant?.sharedMenuSourceRestaurantId]);
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -100,6 +118,10 @@ const MenuManagementPage = () => {
   };
 
   const handleAddCategory = () => {
+    if (isSharedMenuConsumer) {
+      toast.error('Для общей витрины редактируйте меню в ресторане-источнике');
+      return;
+    }
     setEditingCategory(null);
     setShowCategoryModal(true);
   };
@@ -126,12 +148,46 @@ const MenuManagementPage = () => {
     }
   };
 
+  const handleSaveSharedMenuSource = async () => {
+    if (!selectedRestaurantId) return;
+    if (!isOwnerFlag) {
+      toast.error('Только владелец может менять источник общего меню');
+      return;
+    }
+    if (sharedMenuSourceId && sharedMenuSourceId === selectedRestaurantId) {
+      toast.error('Нельзя выбрать этот же ресторан как источник');
+      return;
+    }
+
+    setSavingSharedSource(true);
+    try {
+      await restaurantService.setSharedMenuSource(selectedRestaurantId, sharedMenuSourceId || null);
+      await refreshUserData();
+      await loadCategories(selectedRestaurantId);
+      await loadCategoryGroups(selectedRestaurantId);
+      toast.success(sharedMenuSourceId ? 'Источник общего меню сохранен' : 'Общее меню отключено');
+    } catch (err) {
+      const message = err.response?.data?.error || 'Не удалось сохранить источник общего меню';
+      toast.error(message);
+    } finally {
+      setSavingSharedSource(false);
+    }
+  };
+
   const handleEditCategory = (category) => {
+    if (isSharedMenuConsumer) {
+      toast.error('Для общей витрины редактируйте меню в ресторане-источнике');
+      return;
+    }
     setEditingCategory(category);
     setShowCategoryModal(true);
   };
 
   const handleDeleteCategory = async (categoryId) => {
+    if (isSharedMenuConsumer) {
+      toast.error('Для общей витрины редактируйте меню в ресторане-источнике');
+      return;
+    }
     const confirmed = await confirmDialog('Удалить категорию и все блюда в ней?', {
       confirmText: 'Удалить',
       cancelText: 'Отмена',
@@ -149,18 +205,30 @@ const MenuManagementPage = () => {
   };
 
   const handleAddDish = (categoryId) => {
+    if (isSharedMenuConsumer) {
+      toast.error('Для общей витрины редактируйте меню в ресторане-источнике');
+      return;
+    }
     setSelectedCategoryId(categoryId);
     setEditingDish(null);
     setShowDishModal(true);
   };
 
   const handleEditDish = (dish) => {
+    if (isSharedMenuConsumer) {
+      toast.error('Для общей витрины редактируйте меню в ресторане-источнике');
+      return;
+    }
     setSelectedCategoryId(dish.categoryId);
     setEditingDish(dish);
     setShowDishModal(true);
   };
 
   const handleDeleteDish = async (dishId) => {
+    if (isSharedMenuConsumer) {
+      toast.error('Для общей витрины редактируйте меню в ресторане-источнике');
+      return;
+    }
     const confirmed = await confirmDialog('Удалить блюдо?', {
       confirmText: 'Удалить',
       cancelText: 'Отмена',
@@ -182,26 +250,36 @@ const MenuManagementPage = () => {
     }
   };
 
-  const handleToggleAvailability = async (dishId) => {
+  const handleToggleAvailability = async (dish) => {
+    if (!dish?.id) return;
+
     try {
-      const dishToUpdate = Object.values(dishes)
-        .flat()
-        .find(d => d.id === dishId);
+      if (isSharedMenuConsumer) {
+        const nextStoppedState = !dish.stoppedAtRestaurant;
+        let reason = dish.stopReason || null;
 
-      if (!dishToUpdate) return;
+        if (nextStoppedState) {
+          const promptValue = window.prompt('Причина стоп-листа (необязательно):', dish.stopReason || '');
+          if (promptValue === null) {
+            return;
+          }
+          reason = promptValue.trim() || null;
+        }
 
-      const previousState = { ...dishes };
+        await restaurantService.setDishStop(selectedRestaurantId, dish.id, nextStoppedState, reason);
+        toast.success(nextStoppedState ? 'Блюдо добавлено в стоп-лист точки' : 'Блюдо снято со стоп-листа точки');
+        await loadCategories(selectedRestaurantId);
+        return;
+      }
+
       const updatedDishes = { ...dishes };
-
-      Object.keys(updatedDishes).forEach(categoryId => {
-        updatedDishes[categoryId] = updatedDishes[categoryId].map(dish =>
-          dish.id === dishId ? { ...dish, available: !dish.available } : dish
+      Object.keys(updatedDishes).forEach((categoryId) => {
+        updatedDishes[categoryId] = updatedDishes[categoryId].map((item) =>
+          item.id === dish.id ? { ...item, available: !item.available } : item
         );
       });
-
       setDishes(updatedDishes);
-
-      await menuService.toggleDishAvailability(dishId);
+      await menuService.toggleDishAvailability(dish.id);
       await loadCategories(selectedRestaurantId);
     } catch (err) {
       toast.error('Ошибка при изменении статуса блюда');
@@ -336,6 +414,57 @@ const MenuManagementPage = () => {
           </div>
         )}
 
+        {selectedRestaurantId && (
+          <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 space-y-3">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900">Общее меню между точками</h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Можно выбрать ресторан-источник. Для текущей точки будет доступен локальный стоп-лист блюд.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <select
+                value={sharedMenuSourceId}
+                onChange={(e) => setSharedMenuSourceId(e.target.value)}
+                className="input w-full"
+                disabled={!isOwnerFlag || savingSharedSource}
+              >
+                <option value="">Использовать свое меню</option>
+                {ownedRestaurants
+                  .filter((r) => r.id !== selectedRestaurantId)
+                  .map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))}
+              </select>
+              <button
+                type="button"
+                onClick={handleSaveSharedMenuSource}
+                disabled={
+                  !isOwnerFlag ||
+                  savingSharedSource ||
+                  sharedMenuSourceId === (selectedRestaurant?.sharedMenuSourceRestaurantId || '')
+                }
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {savingSharedSource ? 'Сохранение...' : 'Сохранить источник'}
+              </button>
+            </div>
+            {isSharedMenuConsumer && (
+              <div className="text-xs rounded-lg bg-amber-50 text-amber-800 border border-amber-200 px-3 py-2">
+                Меню этой точки берется из: <span className="font-semibold">{sharedSourceRestaurant?.name || 'другой точки'}</span>.
+                Прямое редактирование категорий и блюд отключено, доступен только локальный стоп-лист.
+              </div>
+            )}
+            {!isOwnerFlag && (
+              <div className="text-xs text-gray-500">
+                Изменять источник общего меню может только владелец ресторана.
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Add Category Button */}
         <div className="mb-4 flex justify-between items-center gap-2 flex-wrap">
           <h2 className="text-lg font-semibold text-gray-900">Категории и блюда</h2>
@@ -348,7 +477,12 @@ const MenuManagementPage = () => {
               <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.5a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>
               Копировать меню
             </button>
-            <button onClick={handleAddCategory} className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
+            <button
+              onClick={handleAddCategory}
+              disabled={isSharedMenuConsumer}
+              title={isSharedMenuConsumer ? 'Редактирование делается в ресторане-источнике' : 'Добавить категорию'}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
               Добавить категорию
             </button>
@@ -365,7 +499,11 @@ const MenuManagementPage = () => {
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-1">Меню пусто</h3>
             <p className="text-gray-500 text-sm mb-4">Начните с создания первой категории</p>
-            <button onClick={handleAddCategory} className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
+            <button
+              onClick={handleAddCategory}
+              disabled={isSharedMenuConsumer}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               Создать категорию
             </button>
           </div>
@@ -375,14 +513,14 @@ const MenuManagementPage = () => {
               <div
                 key={category.id}
                 className={`bg-white rounded-xl border transition-all ${draggedCategoryId === category.id ? 'opacity-50' : ''} ${dragOverCategoryId === category.id ? 'border-blue-400 bg-blue-50' : 'border-gray-100'}`}
-                draggable
+                draggable={!isSharedMenuConsumer}
                 onDragStart={(e) => handleCategoryDragStart(e, category.id)}
                 onDragOver={(e) => handleCategoryDragOver(e, category.id)}
                 onDragLeave={handleCategoryDragLeave}
                 onDrop={(e) => handleCategoryDrop(e, category.id)}
               >
                 {/* Category Header */}
-                <div className="flex items-center justify-between px-5 py-4 cursor-move">
+                <div className={`flex items-center justify-between px-5 py-4 ${isSharedMenuConsumer ? '' : 'cursor-move'}`}>
                   <div className="flex items-center gap-3 flex-1 min-w-0" onClick={() => toggleCategory(category.id)}>
                     <svg className={`w-4 h-4 text-gray-400 transition-transform duration-200 flex-shrink-0 ${expandedCategories.has(category.id) ? 'rotate-90' : ''}`} fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
@@ -398,21 +536,24 @@ const MenuManagementPage = () => {
                   <div className="flex items-center gap-1.5 flex-shrink-0">
                     <button
                       onClick={() => handleAddDish(category.id)}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                      disabled={isSharedMenuConsumer}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                       Блюдо
                     </button>
                     <button
                       onClick={() => handleEditCategory(category)}
-                      className="p-1.5 border border-gray-200 rounded-lg text-gray-400 hover:text-orange-500 hover:border-orange-200 bg-white hover:bg-orange-50 transition-colors"
+                      disabled={isSharedMenuConsumer}
+                      className="p-1.5 border border-gray-200 rounded-lg text-gray-400 hover:text-orange-500 hover:border-orange-200 bg-white hover:bg-orange-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Редактировать"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
                     </button>
                     <button
                       onClick={() => handleDeleteCategory(category.id)}
-                      className="p-1.5 border border-gray-200 rounded-lg text-gray-400 hover:text-red-500 hover:border-red-200 bg-white hover:bg-red-50 transition-colors"
+                      disabled={isSharedMenuConsumer}
+                      className="p-1.5 border border-gray-200 rounded-lg text-gray-400 hover:text-red-500 hover:border-red-200 bg-white hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Удалить"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
@@ -429,8 +570,8 @@ const MenuManagementPage = () => {
                       dishes[category.id]?.map((dish, idx) => (
                         <div
                           key={dish.id}
-                          className={`flex items-center gap-4 px-5 py-3 cursor-move transition-colors ${draggedDishId === dish.id ? 'opacity-50' : ''} ${dragOverDishId === dish.id ? 'bg-blue-50' : 'hover:bg-gray-50'} ${idx > 0 ? 'border-t border-gray-50' : ''}`}
-                          draggable
+                          className={`flex items-center gap-4 px-5 py-3 transition-colors ${isSharedMenuConsumer ? '' : 'cursor-move'} ${draggedDishId === dish.id ? 'opacity-50' : ''} ${dragOverDishId === dish.id ? 'bg-blue-50' : 'hover:bg-gray-50'} ${idx > 0 ? 'border-t border-gray-50' : ''}`}
+                          draggable={!isSharedMenuConsumer}
                           onDragStart={(e) => handleDishDragStart(e, dish.id)}
                           onDragOver={(e) => handleDishDragOver(e, dish.id)}
                           onDragLeave={handleDishDragLeave}
@@ -468,9 +609,14 @@ const MenuManagementPage = () => {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <h4 className="text-sm font-medium text-gray-900 truncate">{dish.name}</h4>
-                              {!dish.available && (
+                              {dish.stoppedAtRestaurant && (
                                 <span className="px-1.5 py-0.5 bg-red-100 text-red-600 text-[10px] font-semibold rounded">
                                   СТОП
+                                </span>
+                              )}
+                              {!dish.stoppedAtRestaurant && !dish.available && (
+                                <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-semibold rounded">
+                                  НЕДОСТУПНО
                                 </span>
                               )}
                             </div>
@@ -487,26 +633,30 @@ const MenuManagementPage = () => {
                           {/* Actions */}
                           <div className="flex items-center gap-1 flex-shrink-0">
                             <button
-                              onClick={() => handleToggleAvailability(dish.id)}
-                              className={`p-1.5 rounded-lg transition-colors ${!dish.available ? 'text-red-500 hover:bg-red-50' : 'text-green-500 hover:bg-green-50'}`}
-                              title={dish.available ? 'Поставить на стоп' : 'Вернуть в меню'}
+                              onClick={() => handleToggleAvailability(dish)}
+                              className={`p-1.5 rounded-lg transition-colors ${(isSharedMenuConsumer ? dish.stoppedAtRestaurant : !dish.available) ? 'text-red-500 hover:bg-red-50' : 'text-green-500 hover:bg-green-50'}`}
+                              title={isSharedMenuConsumer
+                                ? (dish.stoppedAtRestaurant ? 'Снять со стоп-листа для этой точки' : 'Поставить в стоп-лист для этой точки')
+                                : (dish.available ? 'Поставить на стоп' : 'Вернуть в меню')}
                             >
-                              {dish.available ? (
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                              ) : (
+                              {(isSharedMenuConsumer ? dish.stoppedAtRestaurant : !dish.available) ? (
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" /></svg>
+                              ) : (
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
                               )}
                             </button>
                             <button
                               onClick={() => handleEditDish(dish)}
-                              className="p-1.5 rounded-lg text-gray-400 hover:text-orange-500 hover:bg-orange-50 transition-colors"
+                              disabled={isSharedMenuConsumer}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-orange-500 hover:bg-orange-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                               title="Редактировать"
                             >
                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
                             </button>
                             <button
                               onClick={() => handleDeleteDish(dish.id)}
-                              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                              disabled={isSharedMenuConsumer}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                               title="Удалить"
                             >
                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>

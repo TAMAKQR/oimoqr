@@ -92,6 +92,81 @@ export const getNearbyRestaurants = async (req, res, next) => {
   }
 };
 
+export const getNearestRestaurantBySubdomain = async (req, res, next) => {
+  const { subdomain, latitude, longitude } = req.query;
+
+  if (!subdomain || !latitude || !longitude) {
+    return res.status(400).json({ error: 'subdomain, latitude and longitude are required' });
+  }
+
+  try {
+    const baseRestaurant = await prisma.restaurant.findUnique({
+      where: { subdomain },
+      select: { id: true, ownerId: true }
+    });
+
+    if (!baseRestaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    const userLat = parseFloat(latitude);
+    const userLon = parseFloat(longitude);
+
+    const networkRestaurants = await prisma.restaurant.findMany({
+      where: {
+        ownerId: baseRestaurant.ownerId,
+        deliveryEnabled: true,
+        latitude: { not: null },
+        longitude: { not: null }
+      },
+      select: {
+        id: true,
+        name: true,
+        subdomain: true,
+        address: true,
+        latitude: true,
+        longitude: true,
+        deliveryRadius: true,
+        sharedMenuSourceRestaurantId: true
+      }
+    });
+
+    if (networkRestaurants.length === 0) {
+      return res.status(404).json({ error: 'No delivery points found for this network' });
+    }
+
+    const ranked = networkRestaurants
+      .map((r) => {
+        const distance = getDistance(userLat, userLon, r.latitude, r.longitude);
+        const inDeliveryZone = r.deliveryRadius ? distance <= r.deliveryRadius : true;
+
+        return {
+          ...r,
+          distance,
+          inDeliveryZone
+        };
+      })
+      .sort((a, b) => a.distance - b.distance);
+
+    const nearestInZone = ranked.find((r) => r.inDeliveryZone);
+    const nearest = nearestInZone || ranked[0];
+
+    res.json({
+      nearestRestaurant: {
+        ...nearest,
+        distance: Number(nearest.distance.toFixed(2))
+      },
+      inDeliveryZone: nearest.inDeliveryZone,
+      alternatives: ranked.slice(0, 5).map((r) => ({
+        ...r,
+        distance: Number(r.distance.toFixed(2))
+      }))
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Подсказки адресов через Yandex Geocoder API (множественные результаты)
 export const suggestAddress = async (req, res, next) => {
   const { text, city, country } = req.query;

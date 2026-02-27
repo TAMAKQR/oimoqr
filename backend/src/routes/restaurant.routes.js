@@ -10,6 +10,9 @@ import {
   createRestaurant,
   deleteRestaurant,
   copyMenu,
+  setSharedMenuSource,
+  getDishStops,
+  setDishStop,
   getRestaurantCategories,
   getRestaurantCustomers
 } from '../controllers/restaurant.controller.js';
@@ -34,11 +37,14 @@ router.get('/:restaurantId/categories', authenticate, getCategories);
 
 // Get dishes for a restaurant (protected) - MUST be before /:subdomain
 router.get('/:restaurantId/dishes', authenticate, getRestaurantDishes);
+router.get('/:restaurantId/dish-stops', authenticate, getDishStops);
+router.put('/:restaurantId/dishes/:dishId/stop', authenticate, setDishStop);
 
 // Protected routes
 router.put('/:id', authenticate, updateRestaurant);
 router.put('/:id/menu-style', authenticate, updateMenuCardStyle);
 router.post('/:id/copy-menu', authenticate, copyMenu);
+router.put('/:id/shared-menu-source', authenticate, setSharedMenuSource);
 router.post('/:id/upload-banner', authenticate, upload.single('banner'), uploadBanner);
 router.delete('/:id/delete-banner', authenticate, deleteBanner);
 router.post('/:id/upload-logo', authenticate, upload.single('logo'), uploadLogo);

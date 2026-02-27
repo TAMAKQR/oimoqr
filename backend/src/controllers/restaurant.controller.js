@@ -44,6 +44,7 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
         telegramGroupId: true,
         telegramBotToken: true,
         ownerId: true,
+        sharedMenuSourceRestaurantId: true,
         socialLinks: true,
         languages: {
           where: { isEnabled: true },
@@ -105,8 +106,10 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
 
     // 3) Загружаем категории/блюда отдельно и фильтруем переводы на уровне БД
     const t3 = Date.now();
+    const menuSourceRestaurantId = restaurantBase.sharedMenuSourceRestaurantId || restaurantBase.id;
+
     const categories = await prisma.category.findMany({
-      where: { restaurantId: restaurantBase.id },
+      where: { restaurantId: menuSourceRestaurantId },
       orderBy: { order: 'asc' },
       include: {
         translations: {
@@ -143,7 +146,15 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
         }
       }
     });
-    console.log(`⏱️ [Menu Load] Categories & dishes: ${Date.now() - t3}ms`);
+
+    const stopList = await prisma.dishStop.findMany({
+      where: {
+        restaurantId: restaurantBase.id,
+        isStopped: true
+      },
+      select: { dishId: true, reason: true }
+    });
+    const stoppedByDishId = new Map(stopList.map((x) => [x.dishId, x.reason || null]));
 
     // Parse workingHours if it's a JSON string (SQLite compatibility)
     let workingHours = restaurantBase.workingHours;
@@ -168,9 +179,13 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
           translations: undefined,
           dishes: category.dishes.map(dish => {
             const translation = dish.translations?.[0];
+            const isStopped = stoppedByDishId.has(dish.id);
             return {
               ...dish,
               imageUrl: dish.image,
+              available: dish.available && !isStopped,
+              stoppedAtRestaurant: isStopped,
+              stopReason: stoppedByDishId.get(dish.id),
               name: translation?.name || dish.name,
               description: translation?.description || dish.description,
               translations: undefined
@@ -961,6 +976,188 @@ export const copyMenu = async (req, res, next) => {
       message: 'Menu copied successfully',
       categoriesCount: sourceRestaurant.categories.length,
       dishesCount: sourceRestaurant.categories.reduce((sum, cat) => sum + cat.dishes.length, 0)
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const setSharedMenuSource = async (req, res, next) => {
+  try {
+    const { id: restaurantId } = req.params;
+    const { sourceRestaurantId } = req.body;
+
+    const targetRestaurant = await prisma.restaurant.findUnique({
+      where: { id: restaurantId },
+      select: { id: true, ownerId: true }
+    });
+
+    if (!targetRestaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    if (targetRestaurant.ownerId !== req.user.id) {
+      return res.status(403).json({ error: 'Only owner can configure shared menu source' });
+    }
+
+    if (sourceRestaurantId) {
+      const sourceRestaurant = await prisma.restaurant.findUnique({
+        where: { id: sourceRestaurantId },
+        select: { id: true, ownerId: true }
+      });
+
+      if (!sourceRestaurant) {
+        return res.status(404).json({ error: 'Source restaurant not found' });
+      }
+
+      if (sourceRestaurant.ownerId !== req.user.id) {
+        return res.status(403).json({ error: 'Source restaurant must belong to the same owner' });
+      }
+    }
+
+    const updated = await prisma.restaurant.update({
+      where: { id: restaurantId },
+      data: {
+        sharedMenuSourceRestaurantId: sourceRestaurantId || null
+      },
+      select: {
+        id: true,
+        name: true,
+        sharedMenuSourceRestaurantId: true
+      }
+    });
+
+    res.json({
+      message: sourceRestaurantId
+        ? 'Shared menu source configured'
+        : 'Shared menu source disabled',
+      restaurant: updated
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getDishStops = async (req, res, next) => {
+  try {
+    const { restaurantId } = req.params;
+    const userId = req.user.id;
+
+    const restaurant = await prisma.restaurant.findFirst({
+      where: {
+        id: restaurantId,
+        OR: [
+          { ownerId: userId },
+          { staff: { some: { userId } } }
+        ]
+      },
+      select: {
+        id: true,
+        sharedMenuSourceRestaurantId: true
+      }
+    });
+
+    if (!restaurant) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const menuSourceRestaurantId = restaurant.sharedMenuSourceRestaurantId || restaurant.id;
+
+    const stops = await prisma.dishStop.findMany({
+      where: {
+        restaurantId,
+        isStopped: true,
+        dish: { restaurantId: menuSourceRestaurantId }
+      },
+      include: {
+        dish: {
+          select: {
+            id: true,
+            name: true,
+            price: true,
+            image: true
+          }
+        }
+      },
+      orderBy: { updatedAt: 'desc' }
+    });
+
+    res.json({
+      restaurantId,
+      menuSourceRestaurantId,
+      stops
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const setDishStop = async (req, res, next) => {
+  try {
+    const { restaurantId, dishId } = req.params;
+    const userId = req.user.id;
+    const { isStopped = true, reason } = req.body;
+
+    const restaurant = await prisma.restaurant.findFirst({
+      where: {
+        id: restaurantId,
+        OR: [
+          { ownerId: userId },
+          { staff: { some: { userId } } }
+        ]
+      },
+      select: {
+        id: true,
+        sharedMenuSourceRestaurantId: true
+      }
+    });
+
+    if (!restaurant) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const menuSourceRestaurantId = restaurant.sharedMenuSourceRestaurantId || restaurant.id;
+    const dish = await prisma.dish.findUnique({
+      where: { id: dishId },
+      select: { id: true, restaurantId: true, name: true }
+    });
+
+    if (!dish || dish.restaurantId !== menuSourceRestaurantId) {
+      return res.status(400).json({ error: 'Dish is not part of this restaurant shared menu' });
+    }
+
+    if (isStopped) {
+      const stop = await prisma.dishStop.upsert({
+        where: {
+          restaurantId_dishId: { restaurantId, dishId }
+        },
+        create: {
+          restaurantId,
+          dishId,
+          isStopped: true,
+          reason: reason || null
+        },
+        update: {
+          isStopped: true,
+          reason: reason || null
+        }
+      });
+
+      return res.json({
+        message: 'Dish stopped for this restaurant',
+        stop
+      });
+    }
+
+    await prisma.dishStop.deleteMany({
+      where: { restaurantId, dishId }
+    });
+
+    res.json({
+      message: 'Dish is available for this restaurant',
+      restaurantId,
+      dishId,
+      isStopped: false
     });
   } catch (error) {
     next(error);

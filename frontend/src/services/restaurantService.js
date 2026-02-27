@@ -105,6 +105,27 @@ export const restaurantService = {
     return response.data;
   },
 
+  setSharedMenuSource: async (restaurantId, sourceRestaurantId) => {
+    const response = await api.put(`/restaurants/${restaurantId}/shared-menu-source`, {
+      sourceRestaurantId: sourceRestaurantId || null
+    });
+    clearCache(`restaurant_*`);
+    return response.data;
+  },
+
+  getDishStops: async (restaurantId) => {
+    const response = await api.get(`/restaurants/${restaurantId}/dish-stops`);
+    return response.data;
+  },
+
+  setDishStop: async (restaurantId, dishId, isStopped = true, reason = null) => {
+    const response = await api.put(`/restaurants/${restaurantId}/dishes/${dishId}/stop`, {
+      isStopped,
+      reason: reason || null
+    });
+    return response.data;
+  },
+
   deleteRestaurant: async (restaurantId) => {
     const response = await api.delete(`/restaurants/${restaurantId}`);
     return response.data;

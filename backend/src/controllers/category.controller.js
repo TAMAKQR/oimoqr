@@ -3,9 +3,19 @@ import { prisma } from '../config/prisma.js';
 export const getCategories = async (req, res, next) => {
   try {
     const { restaurantId } = req.params;
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: restaurantId },
+      select: { id: true, sharedMenuSourceRestaurantId: true }
+    });
+
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    const menuSourceRestaurantId = restaurant.sharedMenuSourceRestaurantId || restaurant.id;
 
     const categories = await prisma.category.findMany({
-      where: { restaurantId },
+      where: { restaurantId: menuSourceRestaurantId },
       orderBy: { order: 'asc' },
       include: {
         categoryGroup: true, // Включаем информацию о группе категорий
@@ -22,6 +32,11 @@ export const getCategories = async (req, res, next) => {
         }
       }
     });
+    const dishStops = await prisma.dishStop.findMany({
+      where: { restaurantId, isStopped: true },
+      select: { dishId: true, reason: true }
+    });
+    const stopByDish = new Map(dishStops.map((x) => [x.dishId, x.reason || null]));
 
     // Debug: log modifiers data
     categories.forEach(cat => {
@@ -39,9 +54,13 @@ export const getCategories = async (req, res, next) => {
         ...categoryRest,
         dishes: dishes.map(dish => {
           const { modifiers, ...dishRest } = dish;
+          const isStopped = stopByDish.has(dish.id);
           return {
             ...dishRest,
             modifiers,
+            available: dish.available && !isStopped,
+            stoppedAtRestaurant: isStopped,
+            stopReason: stopByDish.get(dish.id),
             imageUrl: dish.image || null  // Explicitly set imageUrl from image field
           };
         })
