@@ -370,6 +370,7 @@ const MenuPage = () => {
       setNearestInfo(null);
       setNearestStatus('idle');
       setNearestError('');
+      let hasFreshCache = false;
 
       try {
         const raw = localStorage.getItem(MENU_GEO_CACHE_KEY);
@@ -377,6 +378,7 @@ const MenuPage = () => {
           const cached = JSON.parse(raw);
           const isFresh = cached?.ts && (Date.now() - cached.ts) < MENU_GEO_CACHE_TTL_MS;
           if (isFresh && Number.isFinite(Number(cached.latitude)) && Number.isFinite(Number(cached.longitude))) {
+            hasFreshCache = true;
             if (!cancelled) {
               await fetchNearestRestaurant(cached.latitude, cached.longitude, { saveCoords: false });
             }
@@ -387,21 +389,25 @@ const MenuPage = () => {
       }
 
       if (cancelled || !navigator?.geolocation) return;
+      if (hasFreshCache) return;
 
       if (navigator?.permissions?.query) {
         try {
           const permission = await navigator.permissions.query({ name: 'geolocation' });
           if (cancelled) return;
 
-          if (permission.state === 'granted') {
-            await requestNearestByCurrentLocation();
-          } else if (permission.state === 'denied') {
+          if (permission.state === 'denied') {
             setNearestStatus((prev) => (prev === 'ready' ? prev : 'denied'));
             setNearestError((prev) => prev || 'Разрешите геолокацию, чтобы показать ближайшую точку');
+            return;
           }
         } catch {
           // Some browsers may not support geolocation permission query reliably.
         }
+      }
+
+      if (!cancelled) {
+        await requestNearestByCurrentLocation();
       }
     };
 
@@ -637,43 +643,28 @@ const MenuPage = () => {
             </div>
             {showNearestCard && (
               <div className="mt-2 rounded-lg border border-primary-200 bg-primary-50 p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-primary-700">Ближайшая точка доставки</div>
-                    {nearestStatus === 'locating' && (
-                      <div className="text-sm text-primary-800 mt-1">Определяем ваше местоположение...</div>
-                    )}
-                    {nearestStatus === 'ready' && nearestRestaurant && (
-                      <div className="text-sm text-primary-900 mt-1">
-                        <div className="font-semibold">{nearestRestaurant.name}</div>
-                        <div className="text-primary-800 text-xs mt-0.5">
-                          Расстояние: {nearestRestaurant.distance} км
-                          {nearestRestaurant.id !== restaurant.id ? ' • заказ будет передан на эту точку' : ''}
-                        </div>
-                        {!nearestInfo?.inDeliveryZone && (
-                          <div className="text-amber-700 text-xs mt-1">Адрес вне радиуса доставки ближайшей точки</div>
-                        )}
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-primary-700">Ближайшая точка доставки</div>
+                  {(nearestStatus === 'idle' || nearestStatus === 'locating') && (
+                    <div className="text-sm text-primary-800 mt-1">Определяем ваше местоположение...</div>
+                  )}
+                  {nearestStatus === 'ready' && nearestRestaurant && (
+                    <div className="text-sm text-primary-900 mt-1">
+                      <div className="font-semibold">{nearestRestaurant.name}</div>
+                      <div className="text-primary-800 text-xs mt-0.5">
+                        Расстояние: {nearestRestaurant.distance} км
+                        {nearestRestaurant.id !== restaurant.id ? ' • заказ будет передан на эту точку' : ''}
                       </div>
-                    )}
-                    {(nearestStatus === 'denied' || nearestStatus === 'error' || nearestStatus === 'unavailable') && (
-                      <div className="text-sm text-primary-900 mt-1">
-                        {nearestError || 'Не удалось определить ближайшую точку'}
-                      </div>
-                    )}
-                    {nearestStatus === 'idle' && (
-                      <div className="text-sm text-primary-900 mt-1">
-                        Нажмите "Определить", чтобы показать ближайшую точку сети
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={requestNearestByCurrentLocation}
-                    disabled={nearestStatus === 'locating'}
-                    className="shrink-0 rounded-md border border-primary-300 bg-white px-2.5 py-1.5 text-xs font-medium text-primary-700 hover:bg-primary-100 disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    {nearestStatus === 'locating' ? 'Поиск...' : 'Определить'}
-                  </button>
+                      {!nearestInfo?.inDeliveryZone && (
+                        <div className="text-amber-700 text-xs mt-1">Адрес вне радиуса доставки ближайшей точки</div>
+                      )}
+                    </div>
+                  )}
+                  {(nearestStatus === 'denied' || nearestStatus === 'error' || nearestStatus === 'unavailable') && (
+                    <div className="text-sm text-primary-900 mt-1">
+                      {nearestError || 'Не удалось определить ближайшую точку'}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
