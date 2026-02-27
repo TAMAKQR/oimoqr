@@ -5,9 +5,11 @@ import api from '../services/api';
 import { confirmDialog } from '../utils/confirmDialog';
 import DashboardLayout from '../components/DashboardLayout';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 
 const AdminPage = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { user, logout } = useAuthStore();
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
@@ -73,7 +75,7 @@ const AdminPage = () => {
       setPricingTiers(pricingRes.data);
     } catch (err) {
       console.error('Error loading data:', err);
-      showNotification('Ошибка загрузки данных', 'error');
+      showNotification(t('common.error'), 'error');
     } finally {
       setLoading(false);
     }
@@ -84,12 +86,12 @@ const AdminPage = () => {
       const payload = { pricingTierId, ...options };
       await api.put(`/admin/users/${userId}/subscriptions`, payload);
       await loadData();
-      showNotification('Подписка пользователя обновлена успешно!');
+      showNotification(t('admin.messages.subscriptionUpdated'));
       setShowSubscriptionModal(false);
     } catch (err) {
       console.error('Error updating user subscription:', err);
-      const errorMessage = err.response?.data?.error || err.message || 'Неизвестная ошибка';
-      showNotification(`Ошибка обновления подписки: ${errorMessage}`, 'error');
+      const errorMessage = err.response?.data?.error || err.message || t('common.error');
+      showNotification(`${t('common.error')}: ${errorMessage}`, 'error');
     }
   };
 
@@ -136,10 +138,10 @@ const AdminPage = () => {
 
   const handleDeactivateUser = async (user) => {
     const confirmed = await confirmDialog(
-      `Вы уверены, что хотите деактивировать пользователя ${user.name} и все его подписки?`,
+      t('admin.messages.confirmDeactivate', { name: user.name }),
       {
-        confirmText: 'Деактивировать',
-        cancelText: 'Отмена',
+        confirmText: t('common.yes'),
+        cancelText: t('common.cancel'),
         icon: '⚠️'
       }
     );
@@ -150,20 +152,20 @@ const AdminPage = () => {
     try {
       await api.post(`/admin/users/${user.id}/deactivate`);
       await loadData();
-      showNotification('Пользователь успешно деактивирован');
+      showNotification(t('admin.messages.userDeactivated'));
     } catch (err) {
       console.error('Error deactivating user:', err);
-      const errorMessage = err.response?.data?.error || err.message || 'Неизвестная ошибка';
-      showNotification(`Ошибка деактивации: ${errorMessage}`, 'error');
+      const errorMessage = err.response?.data?.error || err.message || t('common.error');
+      showNotification(`${t('common.error')}: ${errorMessage}`, 'error');
     }
   };
 
   const handleDeleteUser = async (user) => {
     const confirmed = await confirmDialog(
-      `⚠️ ВНИМАНИЕ! Это действие необратимо!\n\nВы действительно хотите удалить пользователя ${user.name} и все его рестораны?\nВсе данные будут удалены без возможности восстановления.`,
+      t('admin.messages.confirmDelete', { name: user.name }),
       {
-        confirmText: 'Удалить навсегда',
-        cancelText: 'Отмена',
+        confirmText: t('common.delete'),
+        cancelText: t('common.cancel'),
         icon: '🗑️',
         duration: 10000
       }
@@ -175,11 +177,11 @@ const AdminPage = () => {
     try {
       await api.delete(`/admin/users/${user.id}`);
       await loadData();
-      showNotification('Пользователь и все его данные успешно удалены');
+      showNotification(t('admin.messages.userDeleted'));
     } catch (err) {
       console.error('Error deleting user:', err);
-      const errorMessage = err.response?.data?.error || err.message || 'Неизвестная ошибка';
-      showNotification(`Ошибка удаления: ${errorMessage}`, 'error');
+      const errorMessage = err.response?.data?.error || err.message || t('common.error');
+      showNotification(`${t('common.error')}: ${errorMessage}`, 'error');
     }
   };
 
@@ -187,12 +189,12 @@ const AdminPage = () => {
     e.preventDefault();
 
     if (!editForm.email && !editForm.password) {
-      showNotification('Введите email или пароль для изменения', 'error');
+      showNotification(t('auth.fillAllFields'), 'error');
       return;
     }
 
     if (editForm.password && editForm.password.length < 6) {
-      showNotification('Пароль должен содержать минимум 6 символов', 'error');
+      showNotification(t('auth.passwordMismatch'), 'error'); // Using existing error or add new one
       return;
     }
 
@@ -208,11 +210,11 @@ const AdminPage = () => {
       await api.put(`/admin/users/${editingUser.id}/credentials`, updateData);
       await loadData();
       handleCloseEditModal();
-      showNotification('Учетные данные обновлены успешно!');
+      showNotification(t('admin.messages.credentialsUpdated'));
     } catch (err) {
       console.error('Error updating credentials:', err);
-      const errorMessage = err.response?.data?.error || err.message || 'Неизвестная ошибка';
-      showNotification(`Ошибка обновления: ${errorMessage}`, 'error');
+      const errorMessage = err.response?.data?.error || err.message || t('common.error');
+      showNotification(`${t('common.error')}: ${errorMessage}`, 'error');
     }
   };
 
@@ -233,7 +235,7 @@ const AdminPage = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">Загрузка...</div>
+        <div className="text-xl">{t('common.loading')}</div>
       </div>
     );
   }
@@ -242,29 +244,29 @@ const AdminPage = () => {
     <DashboardLayout userData={user} selectedRestaurantId={null}>
       <div className="max-w-6xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Админ-панель</h1>
-          <p className="text-gray-500 text-sm mt-1">Управление платформой</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('admin.title')}</h1>
+          <p className="text-gray-500 text-sm mt-1">{t('admin.subtitle')}</p>
         </div>
 
         {/* Stats */}
         {stats && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div className="bg-white rounded-xl border border-gray-100 p-5">
-              <p className="text-sm text-gray-500 mb-2">Пользователи</p>
+              <p className="text-sm text-gray-500 mb-2">{t('admin.users')}</p>
               <p className="text-2xl font-bold text-gray-900">{users.length}</p>
             </div>
             <div className="bg-white rounded-xl border border-gray-100 p-5">
-              <p className="text-sm text-gray-500 mb-2">Рестораны</p>
+              <p className="text-sm text-gray-500 mb-2">{t('admin.restaurants')}</p>
               <p className="text-2xl font-bold text-gray-900">{getTotalRestaurants()}</p>
             </div>
             <div className="bg-white rounded-xl border border-gray-100 p-5">
-              <p className="text-sm text-gray-500 mb-2">Активные подписки</p>
+              <p className="text-sm text-gray-500 mb-2">{t('admin.activeSubscriptions')}</p>
               <p className="text-2xl font-bold text-green-600">
                 {stats.stats.find(s => s.status === 'ACTIVE')?._count || 0}
               </p>
             </div>
             <div className="bg-white rounded-xl border border-gray-100 p-5">
-              <p className="text-sm text-gray-500 mb-2">Trial период</p>
+              <p className="text-sm text-gray-500 mb-2">{t('admin.trialPeriod')}</p>
               <p className="text-2xl font-bold text-blue-600">
                 {stats.stats.find(s => s.status === 'TRIAL')?._count || 0}
               </p>
@@ -275,11 +277,11 @@ const AdminPage = () => {
         {/* Search and Users Table */}
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold">Пользователи ({filteredUsers.length})</h2>
+            <h2 className="text-2xl font-bold">{t('admin.users')} ({filteredUsers.length})</h2>
             <div className="w-80">
               <input
                 type="text"
-                placeholder="🔍 Поиск по имени, email или ресторану..."
+                placeholder={t('admin.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="input w-full"
@@ -291,12 +293,12 @@ const AdminPage = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b-2 border-gray-200">
-                  <th className="text-left py-3 px-4 font-semibold">Пользователь</th>
-                  <th className="text-left py-3 px-4 font-semibold">Рестораны</th>
-                  <th className="text-left py-3 px-4 font-semibold">Тариф</th>
-                  <th className="text-left py-3 px-4 font-semibold">Статус</th>
-                  <th className="text-left py-3 px-4 font-semibold">Изменить тариф</th>
-                  <th className="text-center py-3 px-4 font-semibold">Действия</th>
+                  <th className="text-left py-3 px-4 font-semibold">{t('admin.table.user')}</th>
+                  <th className="text-left py-3 px-4 font-semibold">{t('admin.table.restaurants')}</th>
+                  <th className="text-left py-3 px-4 font-semibold">{t('admin.table.pricing')}</th>
+                  <th className="text-left py-3 px-4 font-semibold">{t('admin.table.status')}</th>
+                  <th className="text-left py-3 px-4 font-semibold">{t('admin.table.changePricing')}</th>
+                  <th className="text-center py-3 px-4 font-semibold">{t('admin.table.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -316,7 +318,7 @@ const AdminPage = () => {
                         {user.restaurants.length > 0 && (
                           <details className="text-sm">
                             <summary className="cursor-pointer text-primary-600 hover:text-primary-700">
-                              Показать рестораны
+                              {t('admin.table.showRestaurants')}
                             </summary>
                             <div className="mt-2 space-y-1 pl-4">
                               {user.restaurants.map((restaurant) => (
@@ -359,7 +361,7 @@ const AdminPage = () => {
                           className="text-sm border rounded px-3 py-1.5 min-w-[150px] focus:outline-none focus:ring-2 focus:ring-primary-500"
                           defaultValue=""
                         >
-                          <option value="">Выбрать тариф...</option>
+                          <option value="">{t('admin.table.selectPricing')}</option>
                           {pricingTiers.map((tier) => (
                             <option key={tier.id} value={tier.id}>
                               {tier.name} (${tier.price})
@@ -369,7 +371,7 @@ const AdminPage = () => {
                         <button
                           onClick={() => handleOpenSubscriptionModal(user)}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                          title="Расширенные настройки подписки"
+                          title={t('admin.modals.subscriptionTitle')}
                         >
                           ⚙️
                         </button>
@@ -380,21 +382,21 @@ const AdminPage = () => {
                         <button
                           onClick={() => handleOpenEditModal(user)}
                           className="p-2 text-primary-600 hover:bg-primary-50 rounded transition-colors"
-                          title="Изменить учетные данные"
+                          title={t('admin.actions.editCredentials')}
                         >
                           ✏️
                         </button>
                         <button
                           onClick={() => handleDeactivateUser(user)}
                           className="p-2 text-yellow-600 hover:bg-yellow-50 rounded transition-colors"
-                          title="Деактивировать пользователя"
+                          title={t('admin.actions.deactivate')}
                         >
                           🔒
                         </button>
                         <button
                           onClick={() => handleDeleteUser(user)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
-                          title="Удалить пользователя"
+                          title={t('admin.actions.delete')}
                         >
                           ❌
                         </button>
@@ -408,7 +410,7 @@ const AdminPage = () => {
 
           {filteredUsers.length === 0 && (
             <div className="text-center py-12 text-gray-500">
-              {searchQuery ? 'Пользователи не найдены' : 'Нет пользователей'}
+              {searchQuery ? t('common.noData') : t('common.noData')}
             </div>
           )}
         </div>
@@ -418,15 +420,15 @@ const AdminPage = () => {
       {showEditModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h2 className="text-xl font-bold mb-4">Изменить учетные данные</h2>
+            <h2 className="text-xl font-bold mb-4">{t('admin.modals.editCredentialsTitle')}</h2>
             <p className="text-sm text-gray-600 mb-4">
-              Пользователь: <strong>{editingUser?.name}</strong>
+              {t('admin.table.user')}: <strong>{editingUser?.name}</strong>
             </p>
 
             <form onSubmit={handleUpdateCredentials} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email
+                  {t('auth.email')}
                 </label>
                 <input
                   type="email"
@@ -439,18 +441,18 @@ const AdminPage = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Новый пароль
+                  {t('admin.modals.newPassword')}
                 </label>
                 <input
                   type="password"
                   value={editForm.password}
                   onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
                   className="input w-full"
-                  placeholder="Оставьте пустым, чтобы не менять"
+                  placeholder=""
                   minLength={6}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Минимум 6 символов. Оставьте пустым, если не хотите менять пароль.
+                  {t('admin.modals.passwordHint')}
                 </p>
               </div>
 
@@ -460,13 +462,13 @@ const AdminPage = () => {
                   onClick={handleCloseEditModal}
                   className="flex-1 btn-secondary"
                 >
-                  Отмена
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="submit"
                   className="flex-1 btn-primary"
                 >
-                  Сохранить
+                  {t('common.save')}
                 </button>
               </div>
             </form>
@@ -478,13 +480,13 @@ const AdminPage = () => {
       {showSubscriptionModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h2 className="text-xl font-bold mb-4">Настройки подписки</h2>
+            <h2 className="text-xl font-bold mb-4">{t('admin.modals.subscriptionTitle')}</h2>
             <p className="text-sm text-gray-600 mb-4">
-              Пользователь: <strong>{editingUser?.name}</strong>
+              {t('admin.table.user')}: <strong>{editingUser?.name}</strong>
               {editingUser?.restaurants?.[0]?.businessType && (
                 <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-medium ${editingUser.restaurants[0].businessType === 'ONLINE_STORE' ? 'bg-purple-100 text-purple-700' :
-                    editingUser.restaurants[0].businessType === 'HOTEL' ? 'bg-green-100 text-green-700' :
-                      'bg-blue-100 text-blue-700'
+                  editingUser.restaurants[0].businessType === 'HOTEL' ? 'bg-green-100 text-green-700' :
+                    'bg-blue-100 text-blue-700'
                   }`}>
                   {editingUser.restaurants[0].businessType === 'ONLINE_STORE' ? '🛍 Магазин' : editingUser.restaurants[0].businessType === 'HOTEL' ? '🏨 Отель' : '🍽 Ресторан'}
                 </span>
@@ -494,7 +496,7 @@ const AdminPage = () => {
             <form onSubmit={handleSubmitSubscription} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Тариф
+                  {t('admin.table.pricing')}
                 </label>
                 <select
                   value={subscriptionForm.pricingTierId}
@@ -502,7 +504,7 @@ const AdminPage = () => {
                   className="input w-full"
                   required
                 >
-                  <option value="">Выберите тариф</option>
+                  <option value="">{t('admin.table.selectPricing')}</option>
                   {pricingTiers.map((tier) => (
                     <option key={tier.id} value={tier.id}>
                       {tier.name} (${tier.price}/мес) {tier.businessType === 'ONLINE_STORE' ? '🛍' : tier.businessType === 'HOTEL' ? '🏨' : tier.businessType === 'ALL' ? '📦' : '🍽'}
@@ -513,7 +515,7 @@ const AdminPage = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Длительность (месяцев)
+                  {t('admin.modals.duration')}
                 </label>
                 <input
                   type="number"
@@ -525,13 +527,13 @@ const AdminPage = () => {
                   placeholder="Количество месяцев"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  По умолчанию используется 1 месяц если не указаны конкретные даты
+                  {t('admin.modals.durationHint')}
                 </p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Дата начала
+                  {t('admin.modals.startDate')}
                 </label>
                 <input
                   type="date"
@@ -543,7 +545,7 @@ const AdminPage = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Дата окончания (опционально)
+                  {t('admin.modals.endDate')}
                 </label>
                 <input
                   type="date"
@@ -552,7 +554,7 @@ const AdminPage = () => {
                   className="input w-full"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Если указана, длительность игнорируется
+                  {t('admin.modals.endDateHint')}
                 </p>
               </div>
 
@@ -562,13 +564,13 @@ const AdminPage = () => {
                   onClick={() => setShowSubscriptionModal(false)}
                   className="flex-1 btn-secondary"
                 >
-                  Отмена
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="submit"
                   className="flex-1 btn-primary"
                 >
-                  Применить
+                  {t('admin.actions.apply')}
                 </button>
               </div>
             </form>

@@ -44,9 +44,13 @@ const getNearestServingRestaurant = async ({ restaurantId, latitude, longitude }
     },
     select: {
       id: true,
+      deliveryEnabled: true,
       latitude: true,
       longitude: true,
-      deliveryRadius: true
+      deliveryRadius: true,
+      minOrderAmount: true,
+      deliveryFee: true,
+      freeDeliveryThreshold: true
     }
   });
 
@@ -60,7 +64,7 @@ const getNearestServingRestaurant = async ({ restaurantId, latitude, longitude }
     })
     .sort((a, b) => a.distance - b.distance);
 
-  return withDistance.find((r) => r.inDeliveryZone) || withDistance[0];
+  return withDistance.find((r) => r.inDeliveryZone) || null;
 };
 
 export const createOrder = async (req, res, next) => {
@@ -86,24 +90,13 @@ export const createOrder = async (req, res, next) => {
       });
     }
 
-    // Проверяем минимальную сумму заказа для доставки
-    if (deliveryType === 'delivery') {
-      const restaurantData = await prisma.restaurant.findUnique({
-        where: { id: restaurantId },
-        select: { minOrderAmount: true, deliveryEnabled: true }
-      });
-      if (restaurantData && !restaurantData.deliveryEnabled) {
-        return res.status(400).json({ error: 'Доставка не доступна для этого ресторана' });
-      }
-      if (restaurantData?.minOrderAmount && parseFloat(total) < restaurantData.minOrderAmount) {
-        return res.status(400).json({ error: `Минимальная сумма заказа для доставки: ${restaurantData.minOrderAmount}` });
-      }
+    const parsedTotal = parseFloat(total);
+    if (!Number.isFinite(parsedTotal)) {
+      return res.status(400).json({ error: 'Invalid total amount' });
     }
 
-    // Фильтруем товары без ID, чтобы избежать ошибок
     const validItems = items.filter(item => item && item.id);
 
-    // Проверка существования всех блюд перед созданием заказа
     const dishIds = validItems.map(item => item.id);
     const menuSourceRestaurantId = await getMenuSourceRestaurantId(restaurantId);
     if (!menuSourceRestaurantId) {
@@ -123,22 +116,44 @@ export const createOrder = async (req, res, next) => {
       return res.status(400).json({ error: `One or more dishes not found: ${notFoundIds.join(', ')}` });
     }
 
-    const orderNumber = generateOrderNumber();
-    let assignedRestaurantId = null;
+    let normalizedDeliveryLatitude = deliveryLatitude !== undefined && deliveryLatitude !== null
+      ? parseFloat(deliveryLatitude)
+      : null;
+    let normalizedDeliveryLongitude = deliveryLongitude !== undefined && deliveryLongitude !== null
+      ? parseFloat(deliveryLongitude)
+      : null;
 
-    if (deliveryType === 'delivery' && deliveryLatitude && deliveryLongitude) {
+    if (!Number.isFinite(normalizedDeliveryLatitude)) normalizedDeliveryLatitude = null;
+    if (!Number.isFinite(normalizedDeliveryLongitude)) normalizedDeliveryLongitude = null;
+
+    let assignedRestaurantId = null;
+    let servingRestaurantId = restaurantId;
+
+    if (deliveryType === 'delivery') {
+      if (!Number.isFinite(normalizedDeliveryLatitude) || !Number.isFinite(normalizedDeliveryLongitude)) {
+        return res.status(400).json({ error: 'Delivery coordinates are required' });
+      }
+
       const nearest = await getNearestServingRestaurant({
         restaurantId,
-        latitude: parseFloat(deliveryLatitude),
-        longitude: parseFloat(deliveryLongitude)
+        latitude: normalizedDeliveryLatitude,
+        longitude: normalizedDeliveryLongitude
       });
 
-      if (nearest?.id && nearest.id !== restaurantId) {
+      if (!nearest?.id) {
+        return res.status(400).json({ error: 'Delivery is unavailable for this address' });
+      }
+
+      servingRestaurantId = nearest.id;
+      if (nearest.id !== restaurantId) {
         assignedRestaurantId = nearest.id;
+      }
+
+      if (nearest.minOrderAmount && parsedTotal < nearest.minOrderAmount) {
+        return res.status(400).json({ error: `Minimum order amount for delivery: ${nearest.minOrderAmount}` });
       }
     }
 
-    const servingRestaurantId = assignedRestaurantId || restaurantId;
     const stoppedDishes = await prisma.dishStop.findMany({
       where: {
         restaurantId: servingRestaurantId,
@@ -165,18 +180,20 @@ export const createOrder = async (req, res, next) => {
       });
     }
 
+    const orderNumber = generateOrderNumber();
+
     const order = await prisma.order.create({
       data: {
         orderNumber,
         restaurantId,
         assignedRestaurantId,
-        totalAmount: parseFloat(total),
-        customerName: customerName || 'Клиент',
-        customerPhone: customerPhone || 'Не указан',
+        totalAmount: parsedTotal,
+        customerName: customerName || 'Customer',
+        customerPhone: customerPhone || 'Not specified',
         customerEmail: customerEmail || null,
         deliveryAddress: deliveryAddress || null,
-        deliveryLatitude: deliveryLatitude ? parseFloat(deliveryLatitude) : null,
-        deliveryLongitude: deliveryLongitude ? parseFloat(deliveryLongitude) : null,
+        deliveryLatitude: normalizedDeliveryLatitude,
+        deliveryLongitude: normalizedDeliveryLongitude,
         deliveryType: deliveryType || 'delivery',
         tableNumber: tableNumber || null,
         paymentMethod: paymentMethod || 'cash',
@@ -184,7 +201,7 @@ export const createOrder = async (req, res, next) => {
           create: validItems.map(item => ({
             dishId: item.id,
             quantity: parseInt(item.quantity, 10),
-            price: item.price ?? 0, // Цена за единицу на момент заказа, с fallback на 0
+            price: item.price ?? 0,
             selectedModifiers: item.selectedModifiers?.length > 0 ? item.selectedModifiers : undefined
           }))
         }
@@ -204,9 +221,19 @@ export const createOrder = async (req, res, next) => {
       }
     });
 
-    // 🔔 Отправляем уведомление в Telegram (асинхронно, не блокируем ответ)
-    if (order.restaurant.telegramGroupId) {
-      telegramService.sendNewOrderNotification(order, order.restaurant).catch(err => {
+    let notificationRestaurant = order.restaurant;
+    if (order.assignedRestaurantId) {
+      const assignedRestaurant = await prisma.restaurant.findUnique({
+        where: { id: order.assignedRestaurantId },
+        include: { socialLinks: true }
+      });
+      if (assignedRestaurant) {
+        notificationRestaurant = assignedRestaurant;
+      }
+    }
+
+    if (notificationRestaurant?.telegramGroupId) {
+      telegramService.sendNewOrderNotification(order, notificationRestaurant).catch(err => {
         console.error('Failed to send Telegram notification:', err);
       });
     }
@@ -214,7 +241,7 @@ export const createOrder = async (req, res, next) => {
     res.status(201).json({
       message: 'Order created successfully',
       order: order,
-      orderNumber: order.orderNumber // Добавляем номер заказа на верхний уровень ответа
+      orderNumber: order.orderNumber
     });
   } catch (error) {
     console.error('Order creation error:', error);
@@ -399,20 +426,6 @@ export const reassignOrder = async (req, res, next) => {
   }
 };
 
-// Функция для расчета расстояния по формуле гаверсинусов
-function getDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Радиус Земли в км
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  const distance = R * c;
-  return distance;
-}
-
 // Функция для извлечения координат из Google Maps ссылки
 function extractCoordinatesFromUrl(url) {
   if (!url || typeof url !== 'string') {
@@ -533,14 +546,18 @@ export const autoReassignOrder = async (req, res, next) => {
     })).sort((a, b) => a.distance - b.distance);
 
     // Сначала ищем ближайший ресторан В ЗОНЕ доставки
-    let nearest = restaurantsWithDistance.find(r => r.inDeliveryZone);
-    let assignmentStatus = 'in_zone'; // 'in_zone', 'out_of_zone', 'no_radius'
+    const nearest = restaurantsWithDistance.find(r => r.inDeliveryZone);
 
-    // Если ни один ресторан не покрывает зону доставки, берем просто ближайший
     if (!nearest) {
-      nearest = restaurantsWithDistance[0];
-      assignmentStatus = 'out_of_zone';
-    } else if (!nearest.restaurant.deliveryRadius) {
+      return res.status(400).json({
+        error: 'No restaurant in delivery zone found for this location',
+        code: 'OUT_OF_DELIVERY_ZONE'
+      });
+    }
+
+    let assignmentStatus = 'in_zone'; // 'in_zone', 'no_radius'
+
+    if (!nearest.restaurant.deliveryRadius) {
       assignmentStatus = 'no_radius';
     }
 
@@ -568,10 +585,7 @@ export const autoReassignOrder = async (req, res, next) => {
     let warning = null;
     let statusMessage = 'Заказ назначен на ближайший ресторан в зоне доставки';
 
-    if (assignmentStatus === 'out_of_zone') {
-      warning = 'OUT_OF_DELIVERY_ZONE';
-      statusMessage = 'ВНИМАНИЕ: Вы находитесь вне зоны доставки. Ресторан назначен как ближайший, но доставка может быть недоступна. Пожалуйста, свяжитесь с рестораном для уточнения.';
-    } else if (assignmentStatus === 'no_radius') {
+    if (assignmentStatus === 'no_radius') {
       statusMessage = 'Заказ назначен на ближайший ресторан (радиус доставки не настроен)';
     }
 

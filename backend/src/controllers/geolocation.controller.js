@@ -1,10 +1,9 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../config/prisma.js';
 
-const prisma = new PrismaClient();
 const YANDEX_GEOCODER_KEY = process.env.YANDEX_GEOCODER_KEY || '';
 
 // Функция для расчета расстояния по формуле гаверсинусов
-function getDistance(lat1, lon1, lat2, lon2) {
+export function getDistance(lat1, lon1, lat2, lon2) {
   const R = 6371; // Радиус Земли в км
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
@@ -17,36 +16,136 @@ function getDistance(lat1, lon1, lat2, lon2) {
   return distance;
 }
 
-export const checkDelivery = async (req, res, next) => {
-  const { restaurantId, latitude, longitude } = req.query;
+export const getNetworkRankedDeliveryPoints = async ({ ownerId, latitude, longitude }) => {
+  const networkRestaurants = await prisma.restaurant.findMany({
+    where: {
+      ownerId,
+      deliveryEnabled: true,
+      latitude: { not: null },
+      longitude: { not: null }
+    },
+    select: {
+      id: true,
+      name: true,
+      subdomain: true,
+      address: true,
+      latitude: true,
+      longitude: true,
+      deliveryRadius: true,
+      minOrderAmount: true,
+      deliveryFee: true,
+      freeDeliveryThreshold: true,
+      currency: true
+    }
+  });
 
-  if (!restaurantId || !latitude || !longitude) {
-    return res.status(400).json({ error: 'restaurantId, latitude, and longitude are required' });
+  if (networkRestaurants.length === 0) {
+    return [];
+  }
+
+  return networkRestaurants
+    .map((restaurant) => {
+      const distance = getDistance(latitude, longitude, restaurant.latitude, restaurant.longitude);
+      const inDeliveryZone = restaurant.deliveryRadius ? distance <= restaurant.deliveryRadius : true;
+
+      return {
+        ...restaurant,
+        distance,
+        inDeliveryZone
+      };
+    })
+    .sort((a, b) => a.distance - b.distance);
+};
+
+export const checkDelivery = async (req, res, next) => {
+  const { restaurantId, subdomain, latitude, longitude } = req.query;
+
+  if ((!restaurantId && !subdomain) || !latitude || !longitude) {
+    return res.status(400).json({ error: 'restaurantId or subdomain, latitude, and longitude are required' });
   }
 
   try {
-    const restaurant = await prisma.restaurant.findUnique({
-      where: { id: restaurantId },
-      select: { latitude: true, longitude: true, deliveryRadius: true }
-    });
-
-    if (!restaurant || !restaurant.latitude || !restaurant.longitude || !restaurant.deliveryRadius) {
-      return res.json({ deliveryAvailable: false, message: 'Для этого ресторана не настроена зона доставки.' });
-    }
-
     const userLat = parseFloat(latitude);
     const userLon = parseFloat(longitude);
 
-    const distance = getDistance(userLat, userLon, restaurant.latitude, restaurant.longitude);
-    const deliveryAvailable = distance <= restaurant.deliveryRadius;
+    if (!Number.isFinite(userLat) || !Number.isFinite(userLon)) {
+      return res.status(400).json({ error: 'Invalid latitude or longitude' });
+    }
+
+    const baseRestaurant = subdomain
+      ? await prisma.restaurant.findUnique({
+        where: { subdomain },
+        select: { id: true, ownerId: true }
+      })
+      : await prisma.restaurant.findUnique({
+        where: { id: restaurantId },
+        select: { id: true, ownerId: true }
+      });
+
+    if (!baseRestaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    const ranked = await getNetworkRankedDeliveryPoints({
+      ownerId: baseRestaurant.ownerId,
+      latitude: userLat,
+      longitude: userLon
+    });
+
+    if (ranked.length === 0) {
+      return res.json({
+        deliveryAvailable: false,
+        inDeliveryZone: false,
+        message: 'No active delivery points found in this network',
+        servingRestaurant: null,
+        alternatives: []
+      });
+    }
+
+    const nearestInZone = ranked.find((r) => r.inDeliveryZone);
+
+    if (!nearestInZone) {
+      return res.json({
+        deliveryAvailable: false,
+        inDeliveryZone: false,
+        message: 'Address is outside the network delivery zone',
+        servingRestaurant: null,
+        alternatives: ranked.slice(0, 5).map((r) => ({
+          id: r.id,
+          name: r.name,
+          subdomain: r.subdomain,
+          address: r.address,
+          distance: Number(r.distance.toFixed(2)),
+          inDeliveryZone: r.inDeliveryZone
+        }))
+      });
+    }
 
     res.json({
-      deliveryAvailable,
-      distance: distance.toFixed(2),
-      deliveryRadius: restaurant.deliveryRadius,
-      message: deliveryAvailable
-        ? 'Доставка доступна по вашему адресу'
-        : `Вы находитесь за пределами зоны доставки (${restaurant.deliveryRadius} км)`
+      deliveryAvailable: true,
+      inDeliveryZone: true,
+      distance: Number(nearestInZone.distance.toFixed(2)),
+      deliveryRadius: nearestInZone.deliveryRadius,
+      message: 'Delivery is available for this address',
+      servingRestaurant: {
+        id: nearestInZone.id,
+        name: nearestInZone.name,
+        subdomain: nearestInZone.subdomain,
+        distance: Number(nearestInZone.distance.toFixed(2)),
+        deliveryRadius: nearestInZone.deliveryRadius,
+        deliveryFee: nearestInZone.deliveryFee,
+        minOrderAmount: nearestInZone.minOrderAmount,
+        freeDeliveryThreshold: nearestInZone.freeDeliveryThreshold,
+        currency: nearestInZone.currency
+      },
+      alternatives: ranked.slice(0, 5).map((r) => ({
+        id: r.id,
+        name: r.name,
+        subdomain: r.subdomain,
+        address: r.address,
+        distance: Number(r.distance.toFixed(2)),
+        inDeliveryZone: r.inDeliveryZone
+      }))
     });
   } catch (error) {
     next(error);
@@ -112,51 +211,30 @@ export const getNearestRestaurantBySubdomain = async (req, res, next) => {
     const userLat = parseFloat(latitude);
     const userLon = parseFloat(longitude);
 
-    const networkRestaurants = await prisma.restaurant.findMany({
-      where: {
-        ownerId: baseRestaurant.ownerId,
-        deliveryEnabled: true,
-        latitude: { not: null },
-        longitude: { not: null }
-      },
-      select: {
-        id: true,
-        name: true,
-        subdomain: true,
-        address: true,
-        latitude: true,
-        longitude: true,
-        deliveryRadius: true,
-        sharedMenuSourceRestaurantId: true
-      }
+    if (!Number.isFinite(userLat) || !Number.isFinite(userLon)) {
+      return res.status(400).json({ error: 'Invalid latitude or longitude' });
+    }
+
+    const ranked = await getNetworkRankedDeliveryPoints({
+      ownerId: baseRestaurant.ownerId,
+      latitude: userLat,
+      longitude: userLon
     });
 
-    if (networkRestaurants.length === 0) {
+    if (ranked.length === 0) {
       return res.status(404).json({ error: 'No delivery points found for this network' });
     }
 
-    const ranked = networkRestaurants
-      .map((r) => {
-        const distance = getDistance(userLat, userLon, r.latitude, r.longitude);
-        const inDeliveryZone = r.deliveryRadius ? distance <= r.deliveryRadius : true;
-
-        return {
-          ...r,
-          distance,
-          inDeliveryZone
-        };
-      })
-      .sort((a, b) => a.distance - b.distance);
-
     const nearestInZone = ranked.find((r) => r.inDeliveryZone);
-    const nearest = nearestInZone || ranked[0];
 
     res.json({
-      nearestRestaurant: {
-        ...nearest,
-        distance: Number(nearest.distance.toFixed(2))
-      },
-      inDeliveryZone: nearest.inDeliveryZone,
+      nearestRestaurant: nearestInZone
+        ? {
+          ...nearestInZone,
+          distance: Number(nearestInZone.distance.toFixed(2))
+        }
+        : null,
+      inDeliveryZone: Boolean(nearestInZone),
       alternatives: ranked.slice(0, 5).map((r) => ({
         ...r,
         distance: Number(r.distance.toFixed(2))
@@ -167,7 +245,7 @@ export const getNearestRestaurantBySubdomain = async (req, res, next) => {
   }
 };
 
-// Подсказки адресов через Yandex Geocoder API (множественные результаты)
+// Address suggestions via Yandex Geocoder API
 export const suggestAddress = async (req, res, next) => {
   const { text, city, country } = req.query;
 
