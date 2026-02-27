@@ -640,7 +640,12 @@ export const getAllUsers = async (req, res, next) => {
   try {
     const users = await prisma.user.findMany({
       where: {
-        isAdmin: false
+        isAdmin: false,
+        // Только пользователи, у которых есть хотя бы один ресторан (владельцы)
+        // Это исключит из списка персонал (менеджеров)
+        restaurants: {
+          some: {}
+        }
       },
       // Оптимизированный запрос: выбираем только то, что нужно для таблицы
       select: {
