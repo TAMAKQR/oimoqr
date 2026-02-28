@@ -121,8 +121,13 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
             longitude: lon
           });
 
-          // Находим ближайший ресторан, который обслуживает эту зону И ОТКРЫТ
-          const nearest = ranked.find(r => r.inDeliveryZone && isRestaurantOpen(r));
+          // 1) Ближайший открытый в зоне доставки
+          let nearest = ranked.find(r => r.inDeliveryZone && isRestaurantOpen(r));
+
+          // 2) Фолбэк: просто ближайший открытый, даже вне зоны доставки
+          if (!nearest) {
+            nearest = ranked.find(r => isRestaurantOpen(r));
+          }
 
           // Если нашли ближайший и это не текущий ресторан - переключаемся
           if (nearest && nearest.id !== restaurantBase.id) {
