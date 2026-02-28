@@ -292,6 +292,7 @@ const RestaurantSettingsPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
+    const currentRestaurantId = selectedRestaurantId;
 
     try {
       const data = {
@@ -354,6 +355,11 @@ const RestaurantSettingsPage = () => {
 
       toast.success('Настройки сохранены!');
       await refreshUserData();
+
+      // Сохраняем выбранный ресторан после refresh, чтобы не перескакивало на главный
+      if (currentRestaurantId) {
+        setSelectedRestaurantId(currentRestaurantId);
+      }
     } catch (err) {
       toast.error('Ошибка при сохранении настроек');
       console.error(err);
