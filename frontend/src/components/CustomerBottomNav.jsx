@@ -1,13 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-const IconRestaurants = ({ className = 'w-6 h-6' }) => (
+const IconBonuses = ({ className = 'w-6 h-6' }) => (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4 10h16" />
-        <path d="M7 10V7a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v3" />
-        <path d="M6 10v9" />
-        <path d="M18 10v9" />
-        <path d="M9 19v-4h6v4" />
+        <path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8" />
+        <path d="M2 7h20v5H2z" />
+        <path d="M12 22V7" />
+        <path d="M12 7h5a2 2 0 0 0 0-4c-3 0-5 4-5 4" />
+        <path d="M12 7H7a2 2 0 0 1 0-4c3 0 5 4 5 4" />
     </svg>
 );
 const IconOrders = ({ className = 'w-6 h-6' }) => (
@@ -30,10 +30,10 @@ const IconUser = ({ className = 'w-6 h-6' }) => (
 
 const menuItems = [
     {
-        id: 'restaurants',
-        label: 'Рестораны',
-        Icon: IconRestaurants,
-        path: '/customer/restaurants'
+        id: 'bonuses',
+        label: 'Бонусы',
+        Icon: IconBonuses,
+        path: '/customer/bonuses'
     },
     {
         id: 'orders',
@@ -85,7 +85,7 @@ export default function CustomerBottomNav() {
                 <div className="grid grid-cols-4 gap-1">
                     {menuItems.map((item) => {
                         const isActive = location.pathname === item.path ||
-                            (item.id === 'restaurants' && location.pathname.startsWith('/customer/restaurants'));
+                            (item.id === 'bonuses' && location.pathname.startsWith('/customer/bonuses'));
                         const Icon = item.Icon;
 
                         return (

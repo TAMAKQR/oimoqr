@@ -21,7 +21,7 @@ import LanguageSettingsPage from './pages/LanguageSettingsPage';
 import CustomerLoginPage from './pages/CustomerLoginPage';
 import WhatsAppLoginPage from './pages/WhatsAppLoginPage';
 import CustomerProfilePage from './pages/CustomerProfilePage';
-import CustomerRestaurantsPage from './pages/CustomerRestaurantsPage';
+import CustomerBonusesPage from './pages/CustomerBonusesPage';
 import PricingPage from './pages/PricingPage';
 import CustomersPage from './pages/CustomersPage';
 import CheckoutPage from './pages/CheckoutPage';
@@ -117,7 +117,7 @@ function App() {
           <Route path="/customer/login" element={<WhatsAppLoginPage />} />
           <Route path="/customer/whatsapp-login" element={<WhatsAppLoginPage />} />
           <Route path="/customer/profile" element={<CustomerPrivateRoute><CustomerProfilePage /></CustomerPrivateRoute>} />
-          <Route path="/customer/restaurants" element={<CustomerPrivateRoute><CustomerRestaurantsPage /></CustomerPrivateRoute>} />
+          <Route path="/customer/bonuses" element={<CustomerPrivateRoute><CustomerBonusesPage /></CustomerPrivateRoute>} />
           <Route path="/customer/orders" element={<CustomerPrivateRoute><CustomerProfilePage /></CustomerPrivateRoute>} />
           <Route path="/customer/orders/:orderId" element={<CustomerPrivateRoute><CustomerProfilePage /></CustomerPrivateRoute>} />
           <Route path="/customer/favorites" element={<CustomerPrivateRoute><CustomerProfilePage /></CustomerPrivateRoute>} />
