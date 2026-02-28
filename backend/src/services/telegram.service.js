@@ -132,6 +132,21 @@ class TelegramService {
                     : '🏃 Самовывоз';
             const paymentMethod = order.paymentMethod === 'cash' ? '💵 Наличные' : '💳 Карта';
 
+            // Формируем адрес (приоритет у customerAddress с деталями)
+            let addressLine = '';
+            if (order.customerAddress) {
+                const addressParts = [
+                    order.customerAddress.address,
+                    order.customerAddress.entrance && `подъезд ${order.customerAddress.entrance}`,
+                    order.customerAddress.floor && `${order.customerAddress.floor} этаж`,
+                    order.customerAddress.apartment && `кв. ${order.customerAddress.apartment}`
+                ].filter(Boolean).join(', ');
+                const comment = order.customerAddress.comment ? ` (${order.customerAddress.comment})` : '';
+                addressLine = `📍 **Адрес:** ${addressParts}${comment}`;
+            } else if (order.deliveryAddress) {
+                addressLine = `📍 **Адрес:** ${order.deliveryAddress}`;
+            }
+
             const message = `
 🆕 **НОВЫЙ ЗАКАЗ ${order.orderNumber}**
 🏪 **Ресторан:** ${restaurant.name || 'Не указано'}
@@ -140,8 +155,7 @@ class TelegramService {
 📞 **Телефон:** ${order.customerPhone || 'Не указано'}
 
 **Тип заказа:** ${deliveryType}
-${order.deliveryAddress ? `📍 **Адрес:** ${order.deliveryAddress}` : ''}
-${order.customerAddress ? `📍 **Адрес:** ${[order.customerAddress.address, order.customerAddress.entrance && `подъезд ${order.customerAddress.entrance}`, order.customerAddress.floor && `${order.customerAddress.floor} этаж`, order.customerAddress.apartment && `кв. ${order.customerAddress.apartment}`].filter(Boolean).join(', ')}${order.customerAddress.comment ? ` (${order.customerAddress.comment})` : ''}` : ''}
+${addressLine}
 
 **Состав заказа:**
 ${itemsList}
