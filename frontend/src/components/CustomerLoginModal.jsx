@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import { useCustomerAuthStore } from '../store/customerAuthStore';
 import api from '../services/api';
 
-const COUNTRIES = [
+const COUNTRIES = [ // Вынесено за пределы компонента для предотвращения пересоздания
     { code: 'KG', dial: '+996', flag: '🇰🇬', name: 'Кыргызстан', placeholder: '555 123 456' },
     { code: 'KZ', dial: '+7', flag: '🇰🇿', name: 'Казахстан', placeholder: '700 123 4567' },
     { code: 'RU', dial: '+7', flag: '🇷🇺', name: 'Россия', placeholder: '912 345 6789' },
@@ -250,4 +250,3 @@ export default function CustomerLoginModal({ isOpen, onClose, onLoginSuccess, re
         </div>
     );
 }
-

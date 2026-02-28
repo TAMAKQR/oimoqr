@@ -127,6 +127,7 @@ const MenuPage = () => {
   const [searchParams] = useSearchParams();
   const tableFromUrl = searchParams.get('table');
   const dineInParam = searchParams.has('dine_in');
+  const orderMode = useCartStore((state) => state.orderMode);
   const setOrderMode = useCartStore((state) => state.setOrderMode);
   const { setTheme, themes, setCustomColors } = useTheme();
   const [restaurant, setRestaurant] = useState(null);
@@ -630,22 +631,29 @@ const MenuPage = () => {
                       ? 'grid grid-cols-2'
                       : 'flex flex-col'
                   }`}>
-                  {category.dishes.map((dish) => (
-                    <DishCard
-                      key={dish.id}
-                      dish={dish}
-                      currency={getCurrencySymbol(restaurant.currency)}
-                      style={restaurant.menuCardStyle || 'horizontal'}
-                      restaurantId={restaurant.id}
-                      restaurantName={restaurant.name}
-                      onFavoriteToggle={(action) => {
-                        if (action === 'login') {
-                          setShowLoginModal(true);
-                        }
-                      }}
-                      onModalStateChange={(isOpen) => setIsDishModalOpen(isOpen)}
-                    />
-                  ))}
+                  {category.dishes.map((dish) => {
+                    // Если режим не "В зале" и есть цена доставки - используем её
+                    const displayDish = { ...dish };
+                    if (orderMode !== 'dine_in' && dish.deliveryPrice) {
+                      displayDish.price = dish.deliveryPrice;
+                    }
+                    return (
+                      <DishCard
+                        key={dish.id}
+                        dish={displayDish}
+                        currency={getCurrencySymbol(restaurant.currency)}
+                        style={restaurant.menuCardStyle || 'horizontal'}
+                        restaurantId={restaurant.id}
+                        restaurantName={restaurant.name}
+                        onFavoriteToggle={(action) => {
+                          if (action === 'login') {
+                            setShowLoginModal(true);
+                          }
+                        }}
+                        onModalStateChange={(isOpen) => setIsDishModalOpen(isOpen)}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -670,22 +678,28 @@ const MenuPage = () => {
                         ? 'grid grid-cols-2'
                         : 'flex flex-col'
                     }`}>
-                    {category.dishes.map((dish) => (
-                      <DishCard
-                        key={dish.id}
-                        dish={dish}
-                        currency={getCurrencySymbol(restaurant.currency)}
-                        style={restaurant.menuCardStyle || 'horizontal'}
-                        restaurantId={restaurant.id}
-                        restaurantName={restaurant.name}
-                        onFavoriteToggle={(action) => {
-                          if (action === 'login') {
-                            setShowLoginModal(true);
-                          }
-                        }}
-                        onModalStateChange={(isOpen) => setIsDishModalOpen(isOpen)}
-                      />
-                    ))}
+                    {category.dishes.map((dish) => {
+                      const displayDish = { ...dish };
+                      if (orderMode !== 'dine_in' && dish.deliveryPrice) {
+                        displayDish.price = dish.deliveryPrice;
+                      }
+                      return (
+                        <DishCard
+                          key={dish.id}
+                          dish={displayDish}
+                          currency={getCurrencySymbol(restaurant.currency)}
+                          style={restaurant.menuCardStyle || 'horizontal'}
+                          restaurantId={restaurant.id}
+                          restaurantName={restaurant.name}
+                          onFavoriteToggle={(action) => {
+                            if (action === 'login') {
+                              setShowLoginModal(true);
+                            }
+                          }}
+                          onModalStateChange={(isOpen) => setIsDishModalOpen(isOpen)}
+                        />
+                      );
+                    })}
                   </div>
                 </div>
               ))}
@@ -770,22 +784,28 @@ const MenuPage = () => {
                         ? 'grid grid-cols-2'
                         : 'flex flex-col'
                     }`}>
-                    {searchResults.map((dish) => (
-                      <DishCard
-                        key={dish.id}
-                        dish={dish}
-                        currency={getCurrencySymbol(restaurant.currency)}
-                        style={restaurant.menuCardStyle || 'horizontal'}
-                        restaurantId={restaurant.id}
-                        restaurantName={restaurant.name}
-                        onFavoriteToggle={(action) => {
-                          if (action === 'login') {
-                            setShowLoginModal(true);
-                          }
-                        }}
-                        onModalStateChange={(isOpen) => setIsDishModalOpen(isOpen)}
-                      />
-                    ))}
+                    {searchResults.map((dish) => {
+                      const displayDish = { ...dish };
+                      if (orderMode !== 'dine_in' && dish.deliveryPrice) {
+                        displayDish.price = dish.deliveryPrice;
+                      }
+                      return (
+                        <DishCard
+                          key={dish.id}
+                          dish={displayDish}
+                          currency={getCurrencySymbol(restaurant.currency)}
+                          style={restaurant.menuCardStyle || 'horizontal'}
+                          restaurantId={restaurant.id}
+                          restaurantName={restaurant.name}
+                          onFavoriteToggle={(action) => {
+                            if (action === 'login') {
+                              setShowLoginModal(true);
+                            }
+                          }}
+                          onModalStateChange={(isOpen) => setIsDishModalOpen(isOpen)}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </div>

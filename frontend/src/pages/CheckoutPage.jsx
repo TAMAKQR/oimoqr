@@ -59,6 +59,16 @@ const CheckoutPage = () => {
     const [addresses, setAddresses] = useState([]);
     const [selectedAddressId, setSelectedAddressId] = useState(null);
     const [deliveryType, setDeliveryType] = useState(isDineIn ? 'dine_in' : 'delivery');
+
+    // Гарантируем правильный режим при переключении (QR vs Доставка)
+    useEffect(() => {
+        if (isDineIn) {
+            setDeliveryType('dine_in');
+        } else if (deliveryType === 'dine_in') {
+            setDeliveryType('delivery');
+        }
+    }, [isDineIn]);
+
     const [paymentMethod, setPaymentMethod] = useState('cash');
     const [comment, setComment] = useState('');
     const [showNewAddressForm, setShowNewAddressForm] = useState(false);
