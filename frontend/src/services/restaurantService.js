@@ -21,23 +21,26 @@ export const restaurantService = {
     return response.data;
   },
 
-  getBySubdomain: async (subdomain, language) => {
-    // Создаем уникальный ключ кэша
+  getBySubdomain: async (subdomain, language, options = {}) => {
+    const { latitude, longitude, forceRefresh = false } = options;
+
+    // Создаем ключ кэша только по домену/языку (гео-зависимые запросы не кэшируем)
     const cacheKey = `restaurant_${subdomain}_${language || 'default'}`;
 
-    // Проверяем кэш
-    const cached = getFromCache(cacheKey);
-    if (cached) {
-      return cached;
+    if (!forceRefresh && !latitude && !longitude) {
+      const cached = getFromCache(cacheKey);
+      if (cached) {
+        return cached;
+      }
     }
 
-    // Если нет в кэше, делаем запрос
-    console.log(`🌐 Loading restaurant from API: ${subdomain}`);
-    const params = language ? { language } : {};
+    const params = { ...(language ? { language } : {}), ...(latitude && longitude ? { latitude, longitude } : {}) };
     const response = await api.get(`/restaurants/${subdomain}`, { params });
 
-    // Сохраняем в кэш (5 минут)
-    setToCache(cacheKey, response.data);
+    // Кэшируем только если запрос не завязан на гео и не принудительный refresh
+    if (!forceRefresh && !latitude && !longitude) {
+      setToCache(cacheKey, response.data);
+    }
 
     return response.data;
   },

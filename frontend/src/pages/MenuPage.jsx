@@ -3,7 +3,6 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { restaurantService } from '../services/restaurantService';
 import customerService from '../services/customerService';
 import { useCartStore } from '../store/cartStore';
-import api from '../services/api';
 import BannerSlider from '../components/BannerSlider';
 import DishCard from '../components/DishCard';
 import Cart from '../components/Cart';
@@ -143,7 +142,6 @@ const MenuPage = () => {
   const [isDishModalOpen, setIsDishModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [dynamicRestaurantInfo, setDynamicRestaurantInfo] = useState(null);
   const categoryRefs = useRef({});
   const categoryButtonRefs = useRef({});
   const categoryMenuRef = useRef(null);
@@ -262,46 +260,30 @@ const MenuPage = () => {
     loadRestaurant(selectedLanguage);
   }, [subdomain, selectedLanguage, loadRestaurant]);
 
-  // Определение ближайшего филиала для доставки
+  // Определение ближайшего филиала для доставки (перезагружаем данные с гео)
   useEffect(() => {
-    if (restaurant?.subdomain && !tableFromUrl && !dineInParam) {
-      if ("geolocation" in navigator) {
-        navigator.geolocation.getCurrentPosition(async (position) => {
-          try {
-            const { latitude, longitude } = position.coords;
-            const { data } = await api.get(`/geolocation/nearest-by-subdomain`, {
-              params: {
-                subdomain: restaurant.subdomain,
-                latitude,
-                longitude
-              }
-            });
+    if (!restaurant || !restaurant.subdomain || tableFromUrl || dineInParam) return;
+    if (!('geolocation' in navigator)) return;
 
-            if (data?.nearestRestaurant && data.nearestRestaurant.id !== restaurant.id) {
-              const nearest = data.nearestRestaurant;
-              setDynamicRestaurantInfo({
-                name: nearest.name,
-                address: nearest.address,
-                phone: nearest.phone,
-                workingHours: nearest.workingHours,
-                isTemporarilyClosed: nearest.isTemporarilyClosed,
-                closureReason: nearest.closureReason
-              });
-              toast.success(`Ближайший филиал: ${nearest.name} (${nearest.distance} км)`, { icon: '📍', duration: 4000 });
-            }
-          } catch (e) {
-            // Игнорируем ошибки геолокации
-          }
-        }, null, { timeout: 10000 });
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      try {
+        const { latitude, longitude } = position.coords;
+        const nearestData = await restaurantService.getBySubdomain(
+          restaurant.subdomain,
+          selectedLanguage,
+          { latitude, longitude, forceRefresh: true }
+        );
+
+        if (nearestData?.id && restaurant.id && nearestData.id !== restaurant.id) {
+          setRestaurant(nearestData);
+        }
+      } catch (e) {
+        // Игнорируем ошибки геолокации
       }
-    }
-  }, [restaurant?.id, tableFromUrl, dineInParam]);
+    }, null, { timeout: 10000 });
+  }, [restaurant?.id, restaurant?.subdomain, selectedLanguage, tableFromUrl, dineInParam]);
 
-  const displayRestaurant = useMemo(() => {
-    if (!restaurant) return null;
-    if (!dynamicRestaurantInfo) return restaurant;
-    return { ...restaurant, ...dynamicRestaurantInfo };
-  }, [restaurant, dynamicRestaurantInfo]);
+  const displayRestaurant = restaurant;
 
   // Плавное переключение категорий при скролле с помощью Intersection Observer
   useEffect(() => {
