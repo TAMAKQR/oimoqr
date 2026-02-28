@@ -128,6 +128,27 @@ const DashboardPage = () => {
   const restaurantsCount = userData?.restaurants?.length || 0;
   const isFirstRestaurantCreation = restaurantsCount === 0;
 
+  const openCreateRestaurantModal = () => {
+    const primaryRestaurant = selectedRestaurant || userData?.restaurants?.[0] || null;
+
+    setNewRestaurant((prev) => ({
+      name: isFirstRestaurantCreation
+        ? (prev.name || '')
+        : (primaryRestaurant?.name || prev.name || ''),
+      subdomain: '',
+      businessType: 'RESTAURANT',
+      country: isFirstRestaurantCreation
+        ? (prev.country || '')
+        : (primaryRestaurant?.country || prev.country || ''),
+      city: isFirstRestaurantCreation
+        ? (prev.city || '')
+        : (primaryRestaurant?.city || prev.city || '')
+    }));
+
+    setError('');
+    setShowCreateModal(true);
+  };
+
   const ORDER_STATUSES = [
     { value: 'new', label: 'Новый' },
     { value: 'confirmed', label: 'Подтвержден' },
@@ -423,7 +444,7 @@ const DashboardPage = () => {
             <h2 className="text-2xl font-bold text-gray-900 mb-3">Создайте свой первый бизнес</h2>
             <p className="text-gray-500 mb-8 max-w-md mx-auto">У вас ещё нет ресторанов или магазинов. Создайте первый, чтобы начать работу с платформой.</p>
             <button
-              onClick={() => setShowCreateModal(true)}
+              onClick={openCreateRestaurantModal}
               className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -437,7 +458,9 @@ const DashboardPage = () => {
           {showCreateModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
               <div className="bg-white rounded-lg max-w-md w-full p-6 sm:p-8">
-                <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Создать новый бизнес</h2>
+                <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">
+                  {isFirstRestaurantCreation ? 'Создать ресторан' : 'Добавить филиал'}
+                </h2>
 
                 {error && (
                   <div className="bg-red-50 text-red-700 p-3 rounded mb-4 text-sm">
@@ -582,15 +605,14 @@ const DashboardPage = () => {
 
                     if (currentRestaurantCount === 0) {
                       // Первый ресторан - всегда разрешаем создание (trial)
-                      setShowCreateModal(true);
-                      setError('');
+                      openCreateRestaurantModal();
                       return;
                     }
 
                     if (!activeSubscription) {
                       // Для админа эта логика не нужна, он может создавать рестораны без подписки
                       if (userData?.isAdmin) {
-                        setShowCreateModal(true);
+                        openCreateRestaurantModal();
                         return;
                       }
                       const pricingMessage = pricingTiers.length > 0
@@ -614,8 +636,7 @@ const DashboardPage = () => {
                       setShowCreateModal(false);
                     } else {
                       // Есть место в рамках тарифа
-                      setShowCreateModal(true);
-                      setError('');
+                      openCreateRestaurantModal();
                     }
                   }}
                   className="text-sm text-primary-600 hover:text-primary-700 font-medium"
