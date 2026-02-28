@@ -5,6 +5,29 @@ import customerService from '../services/customerService';
 import { cacheBustImage } from '../utils/imageCache';
 import ImageWithLoader from './ImageWithLoader';
 
+// Иконки и названия аллергенов вынесены за пределы компонента, чтобы не создаваться при каждом рендере
+const allergenIcons = {
+  gluten: '🌾',
+  dairy: '🥛',
+  nuts: '🥜',
+  eggs: '🥚',
+  fish: '🐟',
+  shellfish: '🦐',
+  soy: '🫘',
+  sesame: '🌰'
+};
+
+const allergenNames = {
+  gluten: 'Глютен',
+  dairy: 'Молоко',
+  nuts: 'Орехи',
+  eggs: 'Яйца',
+  fish: 'Рыба',
+  shellfish: 'Морепродукты',
+  soy: 'Соя',
+  sesame: 'Кунжут'
+};
+
 const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteToggle, onModalStateChange, restaurantId, restaurantName }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
@@ -15,29 +38,6 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
   const switchRestaurant = useCartStore((state) => state.switchRestaurant);
   const isAvailable = dish.isAvailable !== false; // По умолчанию true если поле отсутствует
   const hasModifiers = dish.modifiers && dish.modifiers.length > 0;
-
-  // Иконки аллергенов
-  const allergenIcons = {
-    gluten: '🌾',
-    dairy: '🥛',
-    nuts: '🥜',
-    eggs: '🥚',
-    fish: '🐟',
-    shellfish: '🦐',
-    soy: '🫘',
-    sesame: '🌰'
-  };
-
-  const allergenNames = {
-    gluten: 'Глютен',
-    dairy: 'Молоко',
-    nuts: 'Орехи',
-    eggs: 'Яйца',
-    fish: 'Рыба',
-    shellfish: 'Морепродукты',
-    soy: 'Соя',
-    sesame: 'Кунжут'
-  };
 
   // Парсим аллергены из JSON строки
   const allergens = dish.allergens ? JSON.parse(dish.allergens) : [];

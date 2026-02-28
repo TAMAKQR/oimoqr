@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { restaurantService } from '../services/restaurantService';
 import customerService from '../services/customerService';
 import { useCartStore } from '../store/cartStore';
+import api from '../services/api';
 import BannerSlider from '../components/BannerSlider';
 import DishCard from '../components/DishCard';
 import Cart from '../components/Cart';
@@ -127,6 +128,7 @@ const MenuPage = () => {
   const [searchParams] = useSearchParams();
   const tableFromUrl = searchParams.get('table');
   const dineInParam = searchParams.has('dine_in');
+  const orderMode = useCartStore((state) => state.orderMode);
   const setOrderMode = useCartStore((state) => state.setOrderMode);
   const { setTheme, themes, setCustomColors } = useTheme();
   const [restaurant, setRestaurant] = useState(null);
@@ -141,6 +143,7 @@ const MenuPage = () => {
   const [isDishModalOpen, setIsDishModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [dynamicRestaurantInfo, setDynamicRestaurantInfo] = useState(null);
   const categoryRefs = useRef({});
   const categoryButtonRefs = useRef({});
   const categoryMenuRef = useRef(null);
@@ -258,6 +261,41 @@ const MenuPage = () => {
     loadRestaurant(selectedLanguage);
   }, [subdomain, selectedLanguage, loadRestaurant]);
 
+  // Определение ближайшего филиала для доставки
+  useEffect(() => {
+    if (restaurant?.id && !tableFromUrl && !dineInParam) {
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(async (position) => {
+          try {
+            const { latitude, longitude } = position.coords;
+            const { data } = await api.get(`/restaurants/${restaurant.id}/nearest`, {
+              params: { latitude, longitude }
+            });
+
+            if (data && data.id !== restaurant.id) {
+              setDynamicRestaurantInfo({
+                name: data.name,
+                address: data.address,
+                phone: data.phone,
+                workingHours: data.workingHours,
+                isTemporarilyClosed: data.isTemporarilyClosed,
+                closureReason: data.closureReason
+              });
+              toast.success(`Ближайший филиал: ${data.name}`, { icon: '📍', duration: 4000 });
+            }
+          } catch (e) {
+            // Игнорируем ошибки геолокации
+          }
+        }, null, { timeout: 10000 });
+      }
+    }
+  }, [restaurant?.id, tableFromUrl, dineInParam]);
+
+  const displayRestaurant = useMemo(() => {
+    if (!restaurant) return null;
+    if (!dynamicRestaurantInfo) return restaurant;
+    return { ...restaurant, ...dynamicRestaurantInfo };
+  }, [restaurant, dynamicRestaurantInfo]);
 
   // Плавное переключение категорий при скролле с помощью Intersection Observer
   useEffect(() => {
@@ -438,7 +476,7 @@ const MenuPage = () => {
         <CustomerLoginModal
           isOpen={showLoginModal}
           onClose={() => setShowLoginModal(false)}
-          restaurantId={restaurant.id}
+          restaurantId={displayRestaurant.id}
           onLoginSuccess={() => {
             setIsCustomerLoggedIn(true);
             setShowLoginModal(false);
@@ -446,38 +484,38 @@ const MenuPage = () => {
         />
 
         {/* Banner Slider */}
-        <BannerSlider banners={restaurant.banners} />
+        <BannerSlider banners={displayRestaurant.banners} />
 
         {/* Restaurant Info */}
         <div className="bg-white shadow-sm">
           <div className="px-4 py-4">
             <div className="flex items-start gap-4 mb-4">
-              {restaurant.logo && (
+              {displayRestaurant.logo && (
                 <img
-                  src={restaurant.logo}
-                  alt={`${restaurant.name} logo`}
+                  src={displayRestaurant.logo}
+                  alt={`${displayRestaurant.name} logo`}
                   className="w-16 h-16 object-contain rounded border-2 border-primary-200 bg-white p-1 flex-shrink-0"
                 />
               )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-2 flex-wrap">
-                  <h1 className="text-2xl font-bold break-words">{restaurant.name}</h1>
-                  <WorkingHoursSection restaurant={restaurant} />
+                  <h1 className="text-2xl font-bold break-words">{displayRestaurant.name}</h1>
+                  <WorkingHoursSection restaurant={displayRestaurant} />
                 </div>
-                {restaurant.address && (
-                  <p className="text-sm text-gray-600 mb-2 break-words">📍 {restaurant.address}</p>
+                {displayRestaurant.address && (
+                  <p className="text-sm text-gray-600 mb-2 break-words">📍 {displayRestaurant.address}</p>
                 )}
-                {restaurant.phone && (
-                  <p className="text-sm text-gray-600 mb-2">📞 {restaurant.phone}</p>
+                {displayRestaurant.phone && (
+                  <p className="text-sm text-gray-600 mb-2">📞 {displayRestaurant.phone}</p>
                 )}
               </div>
             </div>
             {/* Social Links */}
-            {(restaurant.instagram || restaurant.facebook || restaurant.whatsapp) && (
+            {(displayRestaurant.instagram || displayRestaurant.facebook || displayRestaurant.whatsapp) && (
               <div className="flex flex-wrap gap-2 mt-3">
-                {restaurant.instagram && (
+                {displayRestaurant.instagram && (
                   <a
-                    href={`https://www.instagram.com/${restaurant.instagram.replace('@', '')}`}
+                    href={`https://www.instagram.com/${displayRestaurant.instagram.replace('@', '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center rounded-full border border-primary-200 bg-white w-10 h-10 shadow-sm text-primary-700 hover:-translate-y-0.5 hover:shadow hover:border-primary-400 transition-transform"
@@ -489,9 +527,9 @@ const MenuPage = () => {
                     </svg>
                   </a>
                 )}
-                {restaurant.facebook && (
+                {displayRestaurant.facebook && (
                   <a
-                    href={`https://www.facebook.com/${restaurant.facebook}`}
+                    href={`https://www.facebook.com/${displayRestaurant.facebook}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center rounded-full border border-primary-200 bg-white w-10 h-10 shadow-sm text-primary-700 hover:-translate-y-0.5 hover:shadow hover:border-primary-400 transition-transform"
@@ -501,9 +539,9 @@ const MenuPage = () => {
                     </svg>
                   </a>
                 )}
-                {restaurant.whatsapp && (
+                {displayRestaurant.whatsapp && (
                   <a
-                    href={`https://wa.me/${restaurant.whatsapp.replace(/\D/g, '')}`}
+                    href={`https://wa.me/${displayRestaurant.whatsapp.replace(/\D/g, '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center rounded-full border border-primary-200 bg-white w-10 h-10 shadow-sm text-primary-700 hover:-translate-y-0.5 hover:shadow hover:border-primary-400 transition-transform"
@@ -519,10 +557,10 @@ const MenuPage = () => {
         </div>
 
         {/* Category Groups - Stories стиль с градиентом */}
-        {restaurant.categoryGroups && restaurant.categoryGroups.length > 0 && (
+        {displayRestaurant.categoryGroups && displayRestaurant.categoryGroups.length > 0 && (
           <div className="px-4 py-5 bg-gradient-to-b from-gray-50 to-white">
             <div className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-2">
-              {restaurant.categoryGroups.map((group) => {
+              {displayRestaurant.categoryGroups.map((group) => {
                 const dishCount = group.categories?.reduce((sum, cat) =>
                   sum + (cat.dishes?.length || 0), 0
                 ) || 0;
@@ -586,7 +624,7 @@ const MenuPage = () => {
               ref={categoryMenuRef}
               className="flex gap-2 overflow-x-auto py-3 pl-[4px] scrollbar-hide scroll-smooth"
             >
-              {restaurant.categories.map((category) => (
+              {displayRestaurant.categories.map((category) => (
                 <button
                   key={category.id}
                   ref={(el) => (categoryButtonRefs.current[category.id] = el)}
@@ -604,8 +642,8 @@ const MenuPage = () => {
         </div>
 
         {/* All Categories with Dishes */}
-        <div className={`${restaurant.menuCardStyle === 'gallery' ? 'px-2 sm:px-3' : 'px-4'} py-6 pb-20 sm:pb-6`}>
-          {!isSearching && restaurant.categories.map((category) => (
+        <div className={`${displayRestaurant.menuCardStyle === 'gallery' ? 'px-2 sm:px-3' : 'px-4'} py-6 pb-20 sm:pb-6`}>
+          {!isSearching && displayRestaurant.categories.map((category) => (
             <div
               key={category.id}
               ref={(el) => (categoryRefs.current[category.id] = el)}
@@ -622,30 +660,37 @@ const MenuPage = () => {
                   В этой категории пока нет блюд
                 </p>
               ) : (
-                <div className={`${restaurant.menuCardStyle === 'gallery' ? 'grid grid-cols-2 gap-2 sm:gap-3 items-stretch' : 'gap-4'} ${restaurant.menuCardStyle === 'vertical'
+                <div className={`${displayRestaurant.menuCardStyle === 'gallery' ? 'grid grid-cols-2 gap-2 sm:gap-3 items-stretch' : 'gap-4'} ${displayRestaurant.menuCardStyle === 'vertical'
                   ? 'grid grid-cols-1'
-                  : restaurant.menuCardStyle === 'grid'
+                  : displayRestaurant.menuCardStyle === 'grid'
                     ? 'grid grid-cols-2'
-                    : restaurant.menuCardStyle === 'gallery'
+                    : displayRestaurant.menuCardStyle === 'gallery'
                       ? 'grid grid-cols-2'
                       : 'flex flex-col'
                   }`}>
-                  {category.dishes.map((dish) => (
-                    <DishCard
-                      key={dish.id}
-                      dish={dish}
-                      currency={getCurrencySymbol(restaurant.currency)}
-                      style={restaurant.menuCardStyle || 'horizontal'}
-                      restaurantId={restaurant.id}
-                      restaurantName={restaurant.name}
-                      onFavoriteToggle={(action) => {
-                        if (action === 'login') {
-                          setShowLoginModal(true);
-                        }
-                      }}
-                      onModalStateChange={(isOpen) => setIsDishModalOpen(isOpen)}
-                    />
-                  ))}
+                  {category.dishes.map((dish) => {
+                    // Если режим не "В зале" и есть цена доставки - используем её
+                    const displayDish = { ...dish };
+                    if (orderMode !== 'dine_in' && dish.deliveryPrice) {
+                      displayDish.price = dish.deliveryPrice;
+                    }
+                    return (
+                      <DishCard
+                        key={dish.id}
+                        dish={displayDish}
+                        currency={getCurrencySymbol(displayRestaurant.currency)}
+                        style={displayRestaurant.menuCardStyle || 'horizontal'}
+                        restaurantId={displayRestaurant.id}
+                        restaurantName={displayRestaurant.name}
+                        onFavoriteToggle={(action) => {
+                          if (action === 'login') {
+                            setShowLoginModal(true);
+                          }
+                        }}
+                        onModalStateChange={(isOpen) => setIsDishModalOpen(isOpen)}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -662,30 +707,36 @@ const MenuPage = () => {
               {categoriesToRender.map((category) => (
                 <div key={category.id} className="mb-4">
                   <h2 className="text-lg font-semibold mb-3 break-words">{category.name}</h2>
-                  <div className={`${restaurant.menuCardStyle === 'gallery' ? 'grid grid-cols-2 gap-2 sm:gap-3 items-stretch' : 'gap-4'} ${restaurant.menuCardStyle === 'vertical'
+                  <div className={`${displayRestaurant.menuCardStyle === 'gallery' ? 'grid grid-cols-2 gap-2 sm:gap-3 items-stretch' : 'gap-4'} ${displayRestaurant.menuCardStyle === 'vertical'
                     ? 'grid grid-cols-1'
-                    : restaurant.menuCardStyle === 'grid'
+                    : displayRestaurant.menuCardStyle === 'grid'
                       ? 'grid grid-cols-2'
-                      : restaurant.menuCardStyle === 'gallery'
+                      : displayRestaurant.menuCardStyle === 'gallery'
                         ? 'grid grid-cols-2'
                         : 'flex flex-col'
                     }`}>
-                    {category.dishes.map((dish) => (
-                      <DishCard
-                        key={dish.id}
-                        dish={dish}
-                        currency={getCurrencySymbol(restaurant.currency)}
-                        style={restaurant.menuCardStyle || 'horizontal'}
-                        restaurantId={restaurant.id}
-                        restaurantName={restaurant.name}
-                        onFavoriteToggle={(action) => {
-                          if (action === 'login') {
-                            setShowLoginModal(true);
-                          }
-                        }}
-                        onModalStateChange={(isOpen) => setIsDishModalOpen(isOpen)}
-                      />
-                    ))}
+                    {category.dishes.map((dish) => {
+                      const displayDish = { ...dish };
+                      if (orderMode !== 'dine_in' && dish.deliveryPrice) {
+                        displayDish.price = dish.deliveryPrice;
+                      }
+                      return (
+                        <DishCard
+                          key={dish.id}
+                          dish={displayDish}
+                          currency={getCurrencySymbol(displayRestaurant.currency)}
+                          style={displayRestaurant.menuCardStyle || 'horizontal'}
+                          restaurantId={displayRestaurant.id}
+                          restaurantName={displayRestaurant.name}
+                          onFavoriteToggle={(action) => {
+                            if (action === 'login') {
+                              setShowLoginModal(true);
+                            }
+                          }}
+                          onModalStateChange={(isOpen) => setIsDishModalOpen(isOpen)}
+                        />
+                      );
+                    })}
                   </div>
                 </div>
               ))}
@@ -694,7 +745,7 @@ const MenuPage = () => {
         </div>
 
         {/* Cart */}
-        <Cart restaurant={restaurant} isDishModalOpen={isDishModalOpen} />
+        <Cart restaurant={displayRestaurant} isDishModalOpen={isDishModalOpen} />
 
         {/* Fullscreen Search Overlay */}
         {isSearchOpen && (
@@ -762,30 +813,36 @@ const MenuPage = () => {
                 )}
 
                 {isSearching && searchResults.length > 0 && (
-                  <div className={`${restaurant.menuCardStyle === 'gallery' ? 'grid grid-cols-2 gap-2 sm:gap-3 items-stretch' : 'gap-4'} ${restaurant.menuCardStyle === 'vertical'
+                  <div className={`${displayRestaurant.menuCardStyle === 'gallery' ? 'grid grid-cols-2 gap-2 sm:gap-3 items-stretch' : 'gap-4'} ${displayRestaurant.menuCardStyle === 'vertical'
                     ? 'grid grid-cols-1'
-                    : restaurant.menuCardStyle === 'grid'
+                    : displayRestaurant.menuCardStyle === 'grid'
                       ? 'grid grid-cols-2'
-                      : restaurant.menuCardStyle === 'gallery'
+                      : displayRestaurant.menuCardStyle === 'gallery'
                         ? 'grid grid-cols-2'
                         : 'flex flex-col'
                     }`}>
-                    {searchResults.map((dish) => (
-                      <DishCard
-                        key={dish.id}
-                        dish={dish}
-                        currency={getCurrencySymbol(restaurant.currency)}
-                        style={restaurant.menuCardStyle || 'horizontal'}
-                        restaurantId={restaurant.id}
-                        restaurantName={restaurant.name}
-                        onFavoriteToggle={(action) => {
-                          if (action === 'login') {
-                            setShowLoginModal(true);
-                          }
-                        }}
-                        onModalStateChange={(isOpen) => setIsDishModalOpen(isOpen)}
-                      />
-                    ))}
+                    {searchResults.map((dish) => {
+                      const displayDish = { ...dish };
+                      if (orderMode !== 'dine_in' && dish.deliveryPrice) {
+                        displayDish.price = dish.deliveryPrice;
+                      }
+                      return (
+                        <DishCard
+                          key={dish.id}
+                          dish={displayDish}
+                          currency={getCurrencySymbol(displayRestaurant.currency)}
+                          style={displayRestaurant.menuCardStyle || 'horizontal'}
+                          restaurantId={displayRestaurant.id}
+                          restaurantName={displayRestaurant.name}
+                          onFavoriteToggle={(action) => {
+                            if (action === 'login') {
+                              setShowLoginModal(true);
+                            }
+                          }}
+                          onModalStateChange={(isOpen) => setIsDishModalOpen(isOpen)}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </div>
