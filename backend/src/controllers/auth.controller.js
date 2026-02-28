@@ -38,39 +38,48 @@ export const register = async (req, res, next) => {
     // const trialConfig = await prisma.trialConfig.findFirst();
     const trialDays = parseInt(process.env.TRIAL_PERIOD_DAYS) || 7;
 
-    // Create user with restaurant and trial subscription
+    // Create user with brand, restaurant and trial subscription
     const trialEndDate = calculateTrialEndDate(trialDays);
 
+    // Create user, brand and restaurant in a transaction
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         name,
         phone,
-        restaurants: {
+        brands: {
           create: {
-            name: restaurantName,
-            subdomain,
-            currency: 'KGS',
-            isTrialDefault: true
+            name: `${name}'s Restaurants`,
+            description: 'Default brand',
+            restaurants: {
+              create: {
+                name: restaurantName,
+                subdomain,
+                currency: 'KGS',
+                isTrialDefault: true,
+                ownerId: undefined // Will be set automatically via brand relation
+              }
+            },
+            subscription: {
+              create: {
+                plan: 'TRIAL',
+                status: 'TRIAL',
+                trialEndsAt: trialEndDate,
+                currentPeriodStart: new Date(),
+                currentPeriodEnd: trialEndDate
+              }
+            }
           }
         }
       },
       include: {
-        restaurants: true
-      }
-    });
-
-    // Create subscription after user and restaurant are created
-    await prisma.subscription.create({
-      data: {
-        userId: user.id,
-        restaurantId: user.restaurants[0].id,
-        plan: 'TRIAL',
-        status: 'TRIAL',
-        trialEndsAt: trialEndDate,
-        currentPeriodStart: new Date(),
-        currentPeriodEnd: trialEndDate
+        brands: {
+          include: {
+            restaurants: true,
+            subscription: true
+          }
+        }
       }
     });
 
@@ -88,19 +97,36 @@ export const register = async (req, res, next) => {
     const userWithRestaurants = await prisma.user.findUnique({
       where: { id: user.id },
       include: {
-        restaurants: {
+        brands: {
           include: {
-            subscriptions: {
+            subscription: {
               include: {
                 pricingTier: true
               }
-            },
-            socialLinks: true
+            }
           }
         },
-        subscriptions: {
+        restaurants: {
           include: {
-            pricingTier: true
+            brand: {
+              select: {
+                id: true,
+                name: true,
+                subscription: {
+                  select: {
+                    status: true,
+                    plan: true,
+                    currentPeriodEnd: true,
+                    pricingTier: {
+                      select: {
+                        name: true
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            socialLinks: true
           }
         }
       }
@@ -163,15 +189,22 @@ export const login = async (req, res, next) => {
         id: true,
         name: true,
         subdomain: true,
-        socialLinks: true, // Добавляем socialLinks в ответ при логине
-        subscriptions: {
+        socialLinks: true,
+        brandId: true,
+        brand: {
           select: {
-            status: true,
-            plan: true,
-            currentPeriodEnd: true,
-            pricingTier: {
+            id: true,
+            name: true,
+            subscription: {
               select: {
-                name: true
+                status: true,
+                plan: true,
+                currentPeriodEnd: true,
+                pricingTier: {
+                  select: {
+                    name: true
+                  }
+                }
               }
             }
           }
@@ -206,17 +239,27 @@ export const getMe = async (req, res, next) => {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
       include: {
-        subscriptions: {
+        brands: {
           include: {
-            pricingTier: true
+            subscription: {
+              include: {
+                pricingTier: true
+              }
+            }
           }
         },
         restaurants: {
           include: {
-            subscriptions: {
+            brand: {
               select: {
-                status: true,
-                plan: true
+                id: true,
+                name: true,
+                subscription: {
+                  select: {
+                    status: true,
+                    plan: true
+                  }
+                }
               }
             },
             socialLinks: true
@@ -226,10 +269,16 @@ export const getMe = async (req, res, next) => {
           include: {
             restaurant: {
               include: {
-                subscriptions: {
+                brand: {
                   select: {
-                    status: true,
-                    plan: true
+                    id: true,
+                    name: true,
+                    subscription: {
+                      select: {
+                        status: true,
+                        plan: true
+                      }
+                    }
                   }
                 },
                 socialLinks: true

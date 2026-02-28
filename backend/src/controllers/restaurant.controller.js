@@ -147,35 +147,49 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
       language = restaurantBase.defaultLanguage;
     }
 
-    // 2) Проверка активной подписки именно для этого ресторана
+    // 2) Проверка активной подписки через brand
     const t2 = Date.now();
-    const activeSubscription = await prisma.subscription.findFirst({
-      where: {
-        restaurantId: restaurantBase.id,
-        OR: [
-          { status: 'TRIAL', trialEndsAt: { gt: now } },
-          { status: 'ACTIVE', currentPeriodEnd: { gt: now } }
-        ]
-      },
-      include: {
-        pricingTier: true,
-        user: { select: { id: true } }
+    const restaurantWithBrand = await prisma.restaurant.findUnique({
+      where: { id: restaurantBase.id },
+      select: {
+        id: true,
+        brandId: true,
+        brand: {
+          select: {
+            id: true,
+            subscription: {
+              include: {
+                pricingTier: true
+              }
+            }
+          }
+        }
       }
     });
+
+    const activeSubscription = restaurantWithBrand?.brand?.subscription;
     console.log(`⏱️ [Menu Load] Subscription check: ${Date.now() - t2}ms`);
 
     if (!activeSubscription) {
       return res.status(403).json({ error: 'Restaurant subscription is not active' });
     }
 
-    // Лимит ресторанов по тарифу (быстрый count вместо include всех ресторанов)
+    // Проверка активности подписки
+    const isTrialActive = activeSubscription.status === 'TRIAL' && new Date(activeSubscription.trialEndsAt) > now;
+    const isSubscriptionActive = activeSubscription.status === 'ACTIVE' && new Date(activeSubscription.currentPeriodEnd) > now;
+
+    if (!isTrialActive && !isSubscriptionActive) {
+      return res.status(403).json({ error: 'Restaurant subscription is not active' });
+    }
+
+    // Лимит ресторанов по тарифу (быстрый count через brand)
     if (activeSubscription.pricingTier?.maxRestaurants) {
-      const ownerRestaurantsCount = await prisma.restaurant.count({
-        where: { ownerId: activeSubscription.userId }
+      const brandRestaurantsCount = await prisma.restaurant.count({
+        where: { brandId: restaurantWithBrand.brandId }
       });
       const maxRestaurants = activeSubscription.pricingTier.maxRestaurants;
 
-      if (ownerRestaurantsCount > maxRestaurants) {
+      if (brandRestaurantsCount > maxRestaurants) {
         return res.status(403).json({
           error: 'Subscription limit exceeded',
           message: `Превышен лимит ресторанов для текущей подписки (${maxRestaurants})`
