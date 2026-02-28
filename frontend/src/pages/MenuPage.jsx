@@ -150,6 +150,7 @@ const MenuPage = () => {
   const searchInputRef = useRef(null);
   const isUserClick = useRef(false);
   const lastScrollY = useRef(0);
+  const ticking = useRef(false);
 
   const isSearching = Boolean(searchTerm.trim());
 
@@ -308,7 +309,7 @@ const MenuPage = () => {
 
     const observerOptions = {
       root: null,
-      rootMargin: '-100px 0px -50% 0px', // Триггер когда категория в верхней части экрана (100px от верха)
+      rootMargin: '-100px 0px -50% 0px',
       threshold: 0
     };
 
@@ -316,39 +317,40 @@ const MenuPage = () => {
       // Игнорируем изменения если пользователь только что кликнул на категорию
       if (isUserClick.current) return;
 
-      // Находим самую верхнюю видимую категорию
-      const visibleEntries = entries.filter(entry => entry.isIntersecting);
-      if (visibleEntries.length > 0) {
-        // Сортируем по позиции на экране (самая верхняя первая)
-        visibleEntries.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        const topEntry = visibleEntries[0];
+      // Используем requestAnimationFrame для оптимизации
+      if (!ticking.current) {
+        requestAnimationFrame(() => {
+          // Находим самую верхнюю видимую категорию
+          const visibleEntries = entries.filter(entry => entry.isIntersecting);
+          if (visibleEntries.length > 0) {
+            // Сортируем по позиции на экране (самая верхняя первая)
+            visibleEntries.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+            const topEntry = visibleEntries[0];
+            const categoryId = topEntry.target.dataset.categoryId;
 
-        const categoryId = topEntry.target.dataset.categoryId;
-        setSelectedCategory(categoryId);
+            // Обновляем state только если категория действительно изменилась
+            setSelectedCategory(prev => prev === categoryId ? prev : categoryId);
 
-        // Автоматически скроллим горизонтальное меню к активной кнопке
-        const categoryButton = categoryButtonRefs.current[categoryId];
-        const categoryMenu = categoryMenuRef.current;
+            // Автоматически скроллим горизонтальное меню к активной кнопке
+            const categoryButton = categoryButtonRefs.current[categoryId];
+            const categoryMenu = categoryMenuRef.current;
 
-        if (categoryButton && categoryMenu) {
-          // Используем getBoundingClientRect для точного расчета позиций
-          const menuRect = categoryMenu.getBoundingClientRect();
-          const buttonRect = categoryButton.getBoundingClientRect();
+            if (categoryButton && categoryMenu) {
+              const menuRect = categoryMenu.getBoundingClientRect();
+              const buttonRect = categoryButton.getBoundingClientRect();
+              const buttonRelativeLeft = buttonRect.left - menuRect.left + categoryMenu.scrollLeft;
+              const targetScrollLeft = buttonRelativeLeft - (menuRect.width / 2) + (buttonRect.width / 2);
 
-          // Вычисляем смещение кнопки относительно текущей позиции скролла
-          const buttonRelativeLeft = buttonRect.left - menuRect.left + categoryMenu.scrollLeft;
-          const buttonWidth = buttonRect.width;
-          const menuWidth = menuRect.width;
-
-          // Вычисляем позицию для центрирования кнопки
-          const targetScrollLeft = buttonRelativeLeft - (menuWidth / 2) + (buttonWidth / 2);
-
-          // Плавный скролл горизонтального меню
-          categoryMenu.scrollTo({
-            left: targetScrollLeft,
-            behavior: 'smooth'
-          });
-        }
+              // Используем instant вместо smooth для лучшей производительности
+              categoryMenu.scrollTo({
+                left: targetScrollLeft,
+                behavior: 'instant'
+              });
+            }
+          }
+          ticking.current = false;
+        });
+        ticking.current = true;
       }
     };
 
@@ -362,27 +364,37 @@ const MenuPage = () => {
     return () => observer.disconnect();
   }, [restaurant]);
 
-  // Скрытие переключателя языка при скролле вниз
+  // Скрытие переключателя языка при скролле вниз (с оптимизацией)
   useEffect(() => {
+    let rafId = null;
+
     const handleScroll = () => {
-      const currentScrollY = window.scrollY;
+      if (rafId) return; // Пропускаем если уже запланирован update
 
-      if (currentScrollY < 50) {
-        // Если в самом верху страницы - всегда показываем
-        setShowLanguageSwitcher(true);
-      } else if (currentScrollY > lastScrollY.current) {
-        // Прокрутка вниз - скрываем
-        setShowLanguageSwitcher(false);
-      } else {
-        // Прокрутка вверх - показываем
-        setShowLanguageSwitcher(true);
-      }
+      rafId = requestAnimationFrame(() => {
+        const currentScrollY = window.scrollY;
+        let newValue;
 
-      lastScrollY.current = currentScrollY;
+        if (currentScrollY < 50) {
+          newValue = true;
+        } else if (currentScrollY > lastScrollY.current) {
+          newValue = false;
+        } else {
+          newValue = true;
+        }
+
+        // Обновляем state только если значение действительно изменилось
+        setShowLanguageSwitcher(prev => prev === newValue ? prev : newValue);
+        lastScrollY.current = currentScrollY;
+        rafId = null;
+      });
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
   }, []);
 
   // Обработка клика на категорию
