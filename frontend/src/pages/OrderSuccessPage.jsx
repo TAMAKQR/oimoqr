@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import FloatingMenuWidget from '../components/FloatingMenuWidget';
 
 const OrderSuccessPage = () => {
     const navigate = useNavigate();
@@ -278,6 +279,8 @@ const OrderSuccessPage = () => {
                 </div>
 
             </div>
+
+            <FloatingMenuWidget />
         </div>
     );
 };
