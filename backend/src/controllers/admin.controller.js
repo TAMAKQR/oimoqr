@@ -715,7 +715,18 @@ export const getPricingTiers = async (req, res, next) => {
 
 export const createPricingTier = async (req, res, next) => {
   try {
-    const { name, price, description, features, maxRestaurants, businessType, order } = req.body;
+    const {
+      name,
+      price,
+      description,
+      features,
+      maxRestaurants,
+      businessType,
+      order,
+      bonusProgramEnabled,
+      bonusAccrualRate,
+      bonusExpiryDays
+    } = req.body;
 
     if (!name || price === undefined) {
       return res.status(400).json({ error: 'Name and price are required' });
@@ -723,6 +734,21 @@ export const createPricingTier = async (req, res, next) => {
 
     if (price < 0) {
       return res.status(400).json({ error: 'Price must be >= 0' });
+    }
+
+    const parsedBonusRate = bonusAccrualRate !== undefined && bonusAccrualRate !== null
+      ? parseFloat(bonusAccrualRate)
+      : 0;
+    const parsedBonusExpiryDays = bonusExpiryDays !== undefined && bonusExpiryDays !== null
+      ? parseInt(bonusExpiryDays)
+      : 90;
+
+    if (parsedBonusRate < 0 || parsedBonusRate > 1) {
+      return res.status(400).json({ error: 'bonusAccrualRate must be between 0 and 1' });
+    }
+
+    if (parsedBonusExpiryDays < 1) {
+      return res.status(400).json({ error: 'bonusExpiryDays must be >= 1' });
     }
 
     const tier = await prisma.pricingTier.create({
@@ -733,7 +759,10 @@ export const createPricingTier = async (req, res, next) => {
         features,
         maxRestaurants: maxRestaurants ? parseInt(maxRestaurants) : null,
         businessType: businessType || 'RESTAURANT',
-        order: order || 0
+        order: order || 0,
+        bonusProgramEnabled: Boolean(bonusProgramEnabled),
+        bonusAccrualRate: parsedBonusRate,
+        bonusExpiryDays: parsedBonusExpiryDays
       }
     });
 
@@ -749,7 +778,19 @@ export const createPricingTier = async (req, res, next) => {
 export const updatePricingTier = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, price, description, features, maxRestaurants, businessType, order, isActive } = req.body;
+    const {
+      name,
+      price,
+      description,
+      features,
+      maxRestaurants,
+      businessType,
+      order,
+      isActive,
+      bonusProgramEnabled,
+      bonusAccrualRate,
+      bonusExpiryDays
+    } = req.body;
 
     if (!name || price === undefined) {
       return res.status(400).json({ error: 'Name and price are required' });
@@ -757,6 +798,21 @@ export const updatePricingTier = async (req, res, next) => {
 
     if (price < 0) {
       return res.status(400).json({ error: 'Price must be >= 0' });
+    }
+
+    const parsedBonusRate = bonusAccrualRate !== undefined && bonusAccrualRate !== null
+      ? parseFloat(bonusAccrualRate)
+      : 0;
+    const parsedBonusExpiryDays = bonusExpiryDays !== undefined && bonusExpiryDays !== null
+      ? parseInt(bonusExpiryDays)
+      : 90;
+
+    if (parsedBonusRate < 0 || parsedBonusRate > 1) {
+      return res.status(400).json({ error: 'bonusAccrualRate must be between 0 and 1' });
+    }
+
+    if (parsedBonusExpiryDays < 1) {
+      return res.status(400).json({ error: 'bonusExpiryDays must be >= 1' });
     }
 
     const tier = await prisma.pricingTier.update({
@@ -769,7 +825,10 @@ export const updatePricingTier = async (req, res, next) => {
         maxRestaurants: maxRestaurants ? parseInt(maxRestaurants) : null,
         businessType: businessType || 'RESTAURANT',
         order: order || 0,
-        isActive
+        isActive,
+        bonusProgramEnabled: Boolean(bonusProgramEnabled),
+        bonusAccrualRate: parsedBonusRate,
+        bonusExpiryDays: parsedBonusExpiryDays
       }
     });
 

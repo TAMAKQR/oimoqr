@@ -4,8 +4,8 @@ import toast from 'react-hot-toast';
 import customerService from '../services/customerService';
 import CustomerBottomNav from '../components/CustomerBottomNav';
 
-const BONUS_RATE = 0.05;
-const BONUS_EXPIRY_DAYS = 90;
+const DEFAULT_BONUS_RATE = 0;
+const DEFAULT_BONUS_EXPIRY_DAYS = 90;
 
 const isDeliveredStatus = (status) => {
     const normalized = String(status || '').toLowerCase();
@@ -28,6 +28,31 @@ const toOrderTotal = (order) => {
     const raw = order?.totalAmount ?? order?.total;
     const parsed = Number(raw);
     return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const getActiveTierBonusConfig = (subscriptions = []) => {
+    if (!Array.isArray(subscriptions) || subscriptions.length === 0) return null;
+    const active = subscriptions.find((s) => s?.status === 'ACTIVE') || subscriptions[0];
+    return active?.pricingTier || null;
+};
+
+const getEffectiveBonusConfig = (restaurant) => {
+    const tier = getActiveTierBonusConfig(restaurant?.subscriptions || []);
+    const useTier = restaurant?.useTierBonusSettings !== false;
+
+    if (useTier) {
+        return {
+            enabled: Boolean(tier?.bonusProgramEnabled),
+            rate: Number.isFinite(Number(tier?.bonusAccrualRate)) ? Number(tier?.bonusAccrualRate) : DEFAULT_BONUS_RATE,
+            expiryDays: Number.isFinite(Number(tier?.bonusExpiryDays)) ? Number(tier?.bonusExpiryDays) : DEFAULT_BONUS_EXPIRY_DAYS
+        };
+    }
+
+    return {
+        enabled: Boolean(restaurant?.bonusProgramEnabled),
+        rate: Number.isFinite(Number(restaurant?.bonusAccrualRate)) ? Number(restaurant?.bonusAccrualRate) : DEFAULT_BONUS_RATE,
+        expiryDays: Number.isFinite(Number(restaurant?.bonusExpiryDays)) ? Number(restaurant?.bonusExpiryDays) : DEFAULT_BONUS_EXPIRY_DAYS
+    };
 };
 
 const getTier = (activeDeliveryOrders) => {
@@ -88,11 +113,16 @@ export default function CustomerBonusesPage() {
         const transactions = orders
             .filter((order) => isDeliveryOrder(order) && isDeliveredStatus(order?.status))
             .map((order) => {
+                const config = getEffectiveBonusConfig(order?.restaurant);
+                if (!config.enabled || config.rate <= 0) {
+                    return null;
+                }
+
                 const total = toOrderTotal(order);
-                const earned = Math.floor(total * BONUS_RATE);
+                const earned = Math.floor(total * config.rate);
                 const orderDate = toOrderDate(order);
                 const expiresAt = orderDate
-                    ? new Date(orderDate.getTime() + BONUS_EXPIRY_DAYS * 24 * 60 * 60 * 1000)
+                    ? new Date(orderDate.getTime() + config.expiryDays * 24 * 60 * 60 * 1000)
                     : null;
                 const isActive = expiresAt ? expiresAt > now : false;
 
@@ -101,11 +131,14 @@ export default function CustomerBonusesPage() {
                     orderNumber: order?.orderNumber || order?.id,
                     total,
                     earned,
+                    rate: config.rate,
+                    expiryDays: config.expiryDays,
                     orderDate,
                     expiresAt,
                     isActive
                 };
             })
+            .filter(Boolean)
             .filter((tx) => tx.earned > 0)
             .sort((a, b) => {
                 const aTime = a.orderDate ? a.orderDate.getTime() : 0;
@@ -185,8 +218,9 @@ export default function CustomerBonusesPage() {
                     <div className="bg-white rounded-xl p-4 border border-gray-100">
                         <h3 className="text-sm font-semibold text-gray-900 mb-2">Правила бонусной программы (доставка)</h3>
                         <ul className="space-y-1.5 text-xs text-gray-600">
-                            <li>• За каждый доставленный заказ начисляется 5% от суммы в бонусах.</li>
-                            <li>• Бонусы действуют 90 дней с даты начисления.</li>
+                            <li>• Начисление и срок жизни бонусов управляются тарифом и/или настройками точки.</li>
+                            <li>• Начисление идёт только за доставленные заказы доставки.</li>
+                            <li>• Если в точке включено «Использовать настройки тарифа», применяются лимиты тарифа.</li>
                             <li>• Списывать бонусы можно при оплате заказа (MVP: скоро в следующем шаге).</li>
                             <li>• Уровень (Bronze/Silver/Gold) зависит от количества доставленных заказов.</li>
                         </ul>
@@ -204,7 +238,7 @@ export default function CustomerBonusesPage() {
                                         <div>
                                             <p className="text-sm font-medium text-gray-900">Заказ #{tx.orderNumber}</p>
                                             <p className="text-xs text-gray-500">
-                                                Сумма {tx.total.toFixed(2)} · {tx.orderDate ? tx.orderDate.toLocaleDateString('ru-RU') : 'дата неизвестна'}
+                                                Сумма {tx.total.toFixed(2)} · {tx.orderDate ? tx.orderDate.toLocaleDateString('ru-RU') : 'дата неизвестна'} · {Math.round(tx.rate * 100)}%
                                             </p>
                                         </div>
                                         <div className="text-right">

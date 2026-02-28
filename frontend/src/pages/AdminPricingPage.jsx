@@ -23,6 +23,9 @@ const AdminPricingPage = () => {
     description: '',
     features: '',
     maxRestaurants: '',
+    bonusProgramEnabled: false,
+    bonusAccrualRate: '0',
+    bonusExpiryDays: '90',
     businessType: 'RESTAURANT',
     order: ''
   });
@@ -70,6 +73,9 @@ const AdminPricingPage = () => {
       description: tier.description || '',
       features: tier.features || '',
       maxRestaurants: tier.maxRestaurants || '',
+      bonusProgramEnabled: Boolean(tier.bonusProgramEnabled),
+      bonusAccrualRate: tier.bonusAccrualRate?.toString?.() || '0',
+      bonusExpiryDays: tier.bonusExpiryDays?.toString?.() || '90',
       businessType: tier.businessType || 'RESTAURANT',
       order: tier.order || ''
     });
@@ -84,6 +90,9 @@ const AdminPricingPage = () => {
       description: '',
       features: '',
       maxRestaurants: '',
+      bonusProgramEnabled: false,
+      bonusAccrualRate: '0',
+      bonusExpiryDays: '90',
       businessType: 'RESTAURANT',
       order: ''
     });
@@ -99,16 +108,19 @@ const AdminPricingPage = () => {
       description: '',
       features: '',
       maxRestaurants: '',
+      bonusProgramEnabled: false,
+      bonusAccrualRate: '0',
+      bonusExpiryDays: '90',
       businessType: 'RESTAURANT',
       order: ''
     });
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     }));
   };
 
@@ -128,6 +140,9 @@ const AdminPricingPage = () => {
           description: formData.description || null,
           features: formData.features || null,
           maxRestaurants: formData.maxRestaurants ? parseInt(formData.maxRestaurants) : null,
+          bonusProgramEnabled: Boolean(formData.bonusProgramEnabled),
+          bonusAccrualRate: formData.bonusAccrualRate === '' ? 0 : parseFloat(formData.bonusAccrualRate),
+          bonusExpiryDays: formData.bonusExpiryDays ? parseInt(formData.bonusExpiryDays) : 90,
           businessType: formData.businessType || 'RESTAURANT',
           order: formData.order ? parseInt(formData.order) : 0
         });
@@ -139,6 +154,9 @@ const AdminPricingPage = () => {
           description: formData.description || null,
           features: formData.features || null,
           maxRestaurants: formData.maxRestaurants ? parseInt(formData.maxRestaurants) : null,
+          bonusProgramEnabled: Boolean(formData.bonusProgramEnabled),
+          bonusAccrualRate: formData.bonusAccrualRate === '' ? 0 : parseFloat(formData.bonusAccrualRate),
+          bonusExpiryDays: formData.bonusExpiryDays ? parseInt(formData.bonusExpiryDays) : 90,
           businessType: formData.businessType || 'RESTAURANT',
           order: formData.order ? parseInt(formData.order) : 0
         });
@@ -315,6 +333,54 @@ const AdminPricingPage = () => {
                 />
               </div>
 
+              <div className="md:col-span-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <input
+                    type="checkbox"
+                    name="bonusProgramEnabled"
+                    checked={formData.bonusProgramEnabled}
+                    onChange={handleInputChange}
+                    disabled={saving}
+                  />
+                  Включить бонусную программу для этого тарифа
+                </label>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Начисление бонусов (доля, 0..1)
+                </label>
+                <input
+                  type="number"
+                  name="bonusAccrualRate"
+                  value={formData.bonusAccrualRate}
+                  onChange={handleInputChange}
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  placeholder="0.05"
+                  className="input w-full"
+                  disabled={saving}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Срок жизни бонусов (дни)
+                </label>
+                <input
+                  type="number"
+                  name="bonusExpiryDays"
+                  value={formData.bonusExpiryDays}
+                  onChange={handleInputChange}
+                  min="1"
+                  step="1"
+                  placeholder="90"
+                  className="input w-full"
+                  disabled={saving}
+                />
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Тип бизнеса
@@ -424,6 +490,9 @@ const AdminPricingPage = () => {
                       {tier.maxRestaurants && (
                         <p className="text-sm text-gray-500">До {tier.maxRestaurants} ресторанов</p>
                       )}
+                      <p className="text-sm text-gray-500">
+                        Бонусы: {tier.bonusProgramEnabled ? `вкл, ${Math.round((tier.bonusAccrualRate || 0) * 100)}% · ${tier.bonusExpiryDays || 90} дн.` : 'выкл'}
+                      </p>
                       <p className="text-xs text-gray-400">
                         Обновлено: {new Date(tier.updatedAt).toLocaleDateString('ru-RU')}
                       </p>

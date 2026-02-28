@@ -62,6 +62,10 @@ model Restaurant {
   deliveryFee            Float?
   minOrderAmount         Float?
   freeDeliveryThreshold  Float?    // Бесплатная доставка при заказе от этой суммы
+  useTierBonusSettings   Boolean   @default(true)
+  bonusProgramEnabled    Boolean?
+  bonusAccrualRate       Float?
+  bonusExpiryDays        Int?
   defaultLanguage   String    @default("ru")
   
   // Business type
@@ -469,6 +473,9 @@ model PricingTier {
   smsOveragePrice   Float     @default(0.10)       // Цена за SMS сверх лимита
   maxCustomers      Int?                           // Лимит базы клиентов (NULL = безлимит)
   maxStaff          Int?                           // Лимит персонала (NULL = безлимит)
+  bonusProgramEnabled Boolean @default(false)      // Доступна ли бонусная программа по тарифу
+  bonusAccrualRate    Float   @default(0)          // Процент начисления (0..1)
+  bonusExpiryDays     Int     @default(90)         // Срок жизни бонусов в днях
   
   businessType      String    @default("RESTAURANT") // RESTAURANT | ONLINE_STORE | HOTEL | ALL
   order             Int       @default(0)

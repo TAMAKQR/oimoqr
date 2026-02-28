@@ -39,6 +39,10 @@ model Restaurant {
   deliveryEnabled   Boolean   @default(false)
   deliveryFee       Float?
   minOrderAmount    Float?
+  useTierBonusSettings Boolean @default(true)
+  bonusProgramEnabled  Boolean?
+  bonusAccrualRate     Float?
+  bonusExpiryDays      Int?
   defaultLanguage   String    @default("ru")
   
   // Geolocation fields
@@ -272,6 +276,9 @@ model PricingTier {
   description       String?
   features          String?
   maxRestaurants    Int?
+  bonusProgramEnabled Boolean @default(false)
+  bonusAccrualRate    Float   @default(0)
+  bonusExpiryDays     Int     @default(90)
   order             Int       @default(0)
   isActive          Boolean   @default(true)
   

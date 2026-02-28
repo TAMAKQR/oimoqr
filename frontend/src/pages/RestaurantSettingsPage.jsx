@@ -47,6 +47,10 @@ const RestaurantSettingsPage = () => {
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
   const [deliveryRadius, setDeliveryRadius] = useState('');
+  const [useTierBonusSettings, setUseTierBonusSettings] = useState(true);
+  const [bonusProgramEnabled, setBonusProgramEnabled] = useState(false);
+  const [bonusAccrualRate, setBonusAccrualRate] = useState('0.05');
+  const [bonusExpiryDays, setBonusExpiryDays] = useState('90');
   const [geocoding, setGeocoding] = useState(false);
   const [bannerFile, setBannerFile] = useState(null);
   const [logoFile, setLogoFile] = useState(null);
@@ -142,6 +146,10 @@ const RestaurantSettingsPage = () => {
     setLatitude(r.latitude || '');
     setLongitude(r.longitude || '');
     setDeliveryRadius(r.deliveryRadius || '');
+    setUseTierBonusSettings(r.useTierBonusSettings !== undefined ? r.useTierBonusSettings : true);
+    setBonusProgramEnabled(Boolean(r.bonusProgramEnabled));
+    setBonusAccrualRate((r.bonusAccrualRate ?? 0.05).toString());
+    setBonusExpiryDays((r.bonusExpiryDays ?? 90).toString());
     setTelegramGroupId(r.telegramGroupId || '');
 
     // Load working hours with defaults to ensure all days are defined
@@ -310,6 +318,10 @@ const RestaurantSettingsPage = () => {
         deliveryFee: deliveryFee ? parseFloat(deliveryFee) : null,
         minOrderAmount: minOrderAmount ? parseFloat(minOrderAmount) : null,
         freeDeliveryThreshold: freeDeliveryThreshold ? parseFloat(freeDeliveryThreshold) : null,
+        useTierBonusSettings,
+        bonusProgramEnabled: useTierBonusSettings ? null : bonusProgramEnabled,
+        bonusAccrualRate: useTierBonusSettings ? null : (bonusAccrualRate !== '' ? parseFloat(bonusAccrualRate) : null),
+        bonusExpiryDays: useTierBonusSettings ? null : (bonusExpiryDays !== '' ? parseInt(bonusExpiryDays) : null),
         latitude: latitude ? parseFloat(latitude) : null,
         longitude: longitude ? parseFloat(longitude) : null,
         deliveryRadius: deliveryRadius ? parseFloat(deliveryRadius) : null,
@@ -978,6 +990,77 @@ const RestaurantSettingsPage = () => {
                           Максимальное расстояние доставки от вашего ресторана. Зона показана на карте.
                         </p>
                       </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Bonus Program Settings */}
+            <div className="bg-white rounded-xl border border-gray-100 p-5">
+              <h2 className="text-xl font-bold mb-4">Бонусная программа доставки</h2>
+
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="useTierBonusSettings"
+                    checked={useTierBonusSettings}
+                    onChange={(e) => setUseTierBonusSettings(e.target.checked)}
+                    className="w-5 h-5"
+                  />
+                  <label htmlFor="useTierBonusSettings" className="font-medium">
+                    Использовать настройки бонусов из тарифа
+                  </label>
+                </div>
+
+                {!useTierBonusSettings && (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        id="bonusProgramEnabled"
+                        checked={bonusProgramEnabled}
+                        onChange={(e) => setBonusProgramEnabled(e.target.checked)}
+                        className="w-5 h-5"
+                      />
+                      <label htmlFor="bonusProgramEnabled" className="font-medium">
+                        Включить бонусную программу в этой точке
+                      </label>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        Начисление бонусов (доля, 0..1)
+                      </label>
+                      <input
+                        type="number"
+                        value={bonusAccrualRate}
+                        onChange={(e) => setBonusAccrualRate(e.target.value)}
+                        className="input w-full"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        placeholder="0.05"
+                      />
+                      <p className="text-sm text-gray-500 mt-1">
+                        Пример: 0.05 = 5% бонусов от суммы доставленного заказа
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        Срок жизни бонусов (дни)
+                      </label>
+                      <input
+                        type="number"
+                        value={bonusExpiryDays}
+                        onChange={(e) => setBonusExpiryDays(e.target.value)}
+                        className="input w-full"
+                        min="1"
+                        step="1"
+                        placeholder="90"
+                      />
                     </div>
                   </>
                 )}

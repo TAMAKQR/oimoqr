@@ -175,7 +175,23 @@ export const getOrderHistory = async (req, res, next) => {
                         name: true,
                         subdomain: true,
                         logo: true,
-                        currency: true
+                        currency: true,
+                        useTierBonusSettings: true,
+                        bonusProgramEnabled: true,
+                        bonusAccrualRate: true,
+                        bonusExpiryDays: true,
+                        subscriptions: {
+                            select: {
+                                status: true,
+                                pricingTier: {
+                                    select: {
+                                        bonusProgramEnabled: true,
+                                        bonusAccrualRate: true,
+                                        bonusExpiryDays: true
+                                    }
+                                }
+                            }
+                        }
                     }
                 },
                 customerAddress: true

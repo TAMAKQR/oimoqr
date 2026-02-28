@@ -336,6 +336,10 @@ export const updateRestaurant = async (req, res, next) => {
       deliveryFee,
       minOrderAmount,
       freeDeliveryThreshold,
+      useTierBonusSettings,
+      bonusProgramEnabled,
+      bonusAccrualRate,
+      bonusExpiryDays,
       currency,
       menuCardStyle,
       primaryColor,
@@ -368,6 +372,20 @@ export const updateRestaurant = async (req, res, next) => {
 
     const isOutlet = Boolean(existingRestaurant.sharedMenuSourceRestaurantId);
 
+    if (bonusAccrualRate !== undefined && bonusAccrualRate !== null) {
+      const parsedRate = parseFloat(bonusAccrualRate);
+      if (Number.isNaN(parsedRate) || parsedRate < 0 || parsedRate > 1) {
+        return res.status(400).json({ error: 'bonusAccrualRate must be between 0 and 1' });
+      }
+    }
+
+    if (bonusExpiryDays !== undefined && bonusExpiryDays !== null) {
+      const parsedDays = parseInt(bonusExpiryDays);
+      if (Number.isNaN(parsedDays) || parsedDays < 1) {
+        return res.status(400).json({ error: 'bonusExpiryDays must be >= 1' });
+      }
+    }
+
     const updateData = {
       name,
       address,
@@ -376,6 +394,18 @@ export const updateRestaurant = async (req, res, next) => {
       deliveryFee: deliveryFee ? parseFloat(deliveryFee) : null,
       minOrderAmount: minOrderAmount ? parseFloat(minOrderAmount) : null,
       freeDeliveryThreshold: freeDeliveryThreshold ? parseFloat(freeDeliveryThreshold) : null,
+      useTierBonusSettings: useTierBonusSettings !== undefined ? Boolean(useTierBonusSettings) : undefined,
+      bonusProgramEnabled: bonusProgramEnabled !== undefined ? Boolean(bonusProgramEnabled) : undefined,
+      bonusAccrualRate: bonusAccrualRate !== undefined && bonusAccrualRate !== null
+        ? parseFloat(bonusAccrualRate)
+        : bonusAccrualRate === null
+          ? null
+          : undefined,
+      bonusExpiryDays: bonusExpiryDays !== undefined && bonusExpiryDays !== null
+        ? parseInt(bonusExpiryDays)
+        : bonusExpiryDays === null
+          ? null
+          : undefined,
       latitude: latitude ? parseFloat(latitude) : null,
       longitude: longitude ? parseFloat(longitude) : null,
       deliveryRadius: deliveryRadius ? parseFloat(deliveryRadius) : null,
