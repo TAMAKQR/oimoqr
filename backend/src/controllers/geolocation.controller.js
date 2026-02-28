@@ -35,7 +35,9 @@ export const getNetworkRankedDeliveryPoints = async ({ ownerId, latitude, longit
       minOrderAmount: true,
       deliveryFee: true,
       freeDeliveryThreshold: true,
-      currency: true
+      currency: true,
+      workingHours: true,
+      isTemporarilyClosed: true
     }
   });
 

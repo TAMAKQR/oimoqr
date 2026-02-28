@@ -1,67 +1,146 @@
 import { prisma } from '../config/prisma.js';
 import { calculateTrialEndDate, calculateSubscriptionPrice, getTrialDaysRemaining } from '../utils/subscription.js';
+import { getNetworkRankedDeliveryPoints } from './geolocation.controller.js';
+
+const isRestaurantOpen = (restaurant) => {
+  if (restaurant.isTemporarilyClosed) return false;
+
+  let workingHours = restaurant.workingHours;
+  if (!workingHours) return true;
+
+  if (typeof workingHours === 'string') {
+    try {
+      workingHours = JSON.parse(workingHours);
+    } catch (e) {
+      return true;
+    }
+  }
+
+  if (!Array.isArray(workingHours) || workingHours.length === 0) return true;
+
+  const now = new Date();
+  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const currentDay = days[now.getDay()];
+
+  const todaySchedule = workingHours.find(day => day.day === currentDay);
+
+  if (!todaySchedule || !todaySchedule.isOpen) return false;
+
+  if (!todaySchedule.openTime || !todaySchedule.closeTime) return true;
+
+  const currentTime = now.getHours() * 60 + now.getMinutes();
+  const [openH, openM] = todaySchedule.openTime.split(':').map(Number);
+  const [closeH, closeM] = todaySchedule.closeTime.split(':').map(Number);
+
+  const openTime = openH * 60 + openM;
+  const closeTime = closeH * 60 + closeM;
+
+  if (closeTime < openTime) {
+    return currentTime >= openTime || currentTime < closeTime;
+  }
+
+  return currentTime >= openTime && currentTime < closeTime;
+};
+
+const RESTAURANT_SELECT = {
+  id: true,
+  subdomain: true,
+  name: true,
+  description: true,
+  phone: true,
+  address: true,
+  city: true,
+  country: true,
+  currency: true,
+  banners: true,
+  logo: true,
+  cardStyle: true,
+  primaryColor: true,
+  themePalette: true,
+  defaultLanguage: true,
+  deliveryEnabled: true,
+  deliveryFee: true,
+  minOrderAmount: true,
+  freeDeliveryThreshold: true,
+  workingHours: true,
+  isTemporarilyClosed: true,
+  closureReason: true,
+  latitude: true,
+  longitude: true,
+  deliveryRadius: true,
+  businessType: true,
+  telegramGroupId: true,
+  telegramBotToken: true,
+  ownerId: true,
+  sharedMenuSourceRestaurantId: true,
+  socialLinks: true,
+  languages: {
+    where: { isEnabled: true },
+    orderBy: { order: 'asc' }
+  },
+  categoryGroups: {
+    orderBy: { order: 'asc' },
+    include: {
+      categories: { orderBy: { order: 'asc' } }
+    }
+  }
+};
 
 export const getRestaurantBySubdomain = async (req, res, next) => {
   try {
     const startTime = Date.now();
     const { subdomain } = req.params;
-    let { language } = req.query;
+    let { language, latitude, longitude } = req.query;
     const now = new Date();
 
     console.log(`⏱️ [Menu Load] Starting for subdomain: ${subdomain}, language: ${language}`);
 
     // 1) Быстро получаем базовую информацию ресторана (нужно для defaultLanguage)
     const t1 = Date.now();
-    const restaurantBase = await prisma.restaurant.findUnique({
+    let restaurantBase = await prisma.restaurant.findUnique({
       where: { subdomain },
-      select: {
-        id: true,
-        subdomain: true,
-        name: true,
-        description: true,
-        phone: true,
-        address: true,
-        city: true,
-        country: true,
-        currency: true,
-        banners: true,
-        logo: true,
-        cardStyle: true,
-        primaryColor: true,
-        themePalette: true,
-        defaultLanguage: true,
-        deliveryEnabled: true,
-        deliveryFee: true,
-        minOrderAmount: true,
-        freeDeliveryThreshold: true,
-        workingHours: true,
-        isTemporarilyClosed: true,
-        closureReason: true,
-        latitude: true,
-        longitude: true,
-        deliveryRadius: true,
-        businessType: true,
-        telegramGroupId: true,
-        telegramBotToken: true,
-        ownerId: true,
-        sharedMenuSourceRestaurantId: true,
-        socialLinks: true,
-        languages: {
-          where: { isEnabled: true },
-          orderBy: { order: 'asc' }
-        },
-        categoryGroups: {
-          orderBy: { order: 'asc' },
-          include: {
-            categories: { orderBy: { order: 'asc' } }
-          }
-        }
-      }
+      select: RESTAURANT_SELECT
     });
     console.log(`⏱️ [Menu Load] Restaurant base: ${Date.now() - t1}ms`);
 
     if (!restaurantBase) {
       return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    // Если переданы координаты, пытаемся найти ближайший ресторан сети
+    if (latitude && longitude) {
+      const lat = parseFloat(latitude);
+      const lon = parseFloat(longitude);
+
+      if (!isNaN(lat) && !isNaN(lon)) {
+        try {
+          // Ищем рестораны ТОГО ЖЕ владельца (ownerId), сортируем по расстоянию
+          const ranked = await getNetworkRankedDeliveryPoints({
+            ownerId: restaurantBase.ownerId,
+            latitude: lat,
+            longitude: lon
+          });
+
+          // Находим ближайший ресторан, который обслуживает эту зону И ОТКРЫТ
+          const nearest = ranked.find(r => r.inDeliveryZone && isRestaurantOpen(r));
+
+          // Если нашли ближайший и это не текущий ресторан - переключаемся
+          if (nearest && nearest.id !== restaurantBase.id) {
+            console.log(`📍 [Menu Load] Switching to nearest open restaurant: ${nearest.name} (${nearest.id})`);
+
+            const nearestRestaurant = await prisma.restaurant.findUnique({
+              where: { id: nearest.id },
+              select: RESTAURANT_SELECT
+            });
+
+            if (nearestRestaurant) {
+              restaurantBase = nearestRestaurant;
+            }
+          }
+        } catch (geoError) {
+          console.error('Error finding nearest restaurant:', geoError);
+        }
+      }
     }
 
     if (!language) {
