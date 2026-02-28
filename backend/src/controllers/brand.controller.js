@@ -26,11 +26,6 @@ export const getBrands = async (req, res) => {
                         logo: true,
                         city: true
                     }
-                },
-                subscription: {
-                    include: {
-                        pricingTier: true
-                    }
                 }
             },
             orderBy: { createdAt: 'desc' }
@@ -67,11 +62,6 @@ export const getBrandById = async (req, res) => {
                                 dishes: true
                             }
                         }
-                    }
-                },
-                subscription: {
-                    include: {
-                        pricingTier: true
                     }
                 },
                 owner: {
@@ -154,12 +144,7 @@ export const updateBrand = async (req, res) => {
                 ...(logo !== undefined && { logo })
             },
             include: {
-                restaurants: true,
-                subscription: {
-                    include: {
-                        pricingTier: true
-                    }
-                }
+                restaurants: true
             }
         });
 
@@ -187,18 +172,6 @@ export const deleteBrand = async (req, res) => {
 
         if (!brand) {
             return res.status(404).json({ error: 'Brand not found' });
-        }
-
-        // Нельзя удалить бренд с активной подпиской
-        const subscription = await prisma.subscription.findUnique({
-            where: { brandId: id }
-        });
-
-        if (subscription && subscription.status === 'ACTIVE') {
-            return res.status(400).json({
-                error: 'Cannot delete brand with active subscription. Cancel subscription first.',
-                code: 'ACTIVE_SUBSCRIPTION'
-            });
         }
 
         // Отвязываем рестораны от бренда
@@ -235,10 +208,7 @@ export const addRestaurantToBrand = async (req, res) => {
         const brand = await prisma.restaurantBrand.findFirst({
             where: { id: brandId, ownerId: userId },
             include: {
-                restaurants: true,
-                subscription: {
-                    include: { pricingTier: true }
-                }
+                restaurants: true
             }
         });
 
@@ -253,17 +223,6 @@ export const addRestaurantToBrand = async (req, res) => {
 
         if (!restaurant) {
             return res.status(404).json({ error: 'Restaurant not found' });
-        }
-
-        // Проверяем лимит ресторанов по подписке
-        const tier = brand.subscription?.pricingTier;
-        if (tier?.maxRestaurants && brand.restaurants.length >= tier.maxRestaurants) {
-            return res.status(402).json({
-                error: `Restaurant limit reached (${tier.maxRestaurants}). Please upgrade your plan.`,
-                code: 'RESTAURANT_LIMIT_REACHED',
-                currentCount: brand.restaurants.length,
-                limit: tier.maxRestaurants
-            });
         }
 
         // Добавляем ресторан в бренд
