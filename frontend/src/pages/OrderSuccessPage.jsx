@@ -53,6 +53,7 @@ const OrderSuccessPage = () => {
     if (!order) return null;
 
     const orderNumber = order.orderNumber || order.id;
+    const displayOrderNumber = `#${String(orderNumber || '').replace(/^#+/, '')}`;
     const total = order.totalAmount || order.total;
     const deliveryType = order.deliveryType;
     const items = order.items || [];
@@ -124,7 +125,7 @@ const OrderSuccessPage = () => {
                         <div className="flex items-center justify-between">
                             <div>
                                 <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Номер заказа</span>
-                                <div className="text-3xl font-bold text-gray-900 mt-0.5">#{orderNumber}</div>
+                                <div className="text-3xl font-bold text-gray-900 mt-0.5">{displayOrderNumber}</div>
                             </div>
                             <div className="text-right">
                                 <span className="text-xs font-medium text-gray-400">Сумма</span>

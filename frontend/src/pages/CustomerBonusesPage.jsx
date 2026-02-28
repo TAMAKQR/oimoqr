@@ -254,7 +254,7 @@ export default function CustomerBonusesPage() {
                                 {bonusData.transactions.slice(0, 10).map((tx) => (
                                     <div key={tx.id} className="flex items-center justify-between border-b last:border-0 border-gray-100 pb-2 last:pb-0">
                                         <div>
-                                            <p className="text-sm font-medium text-gray-900">Заказ #{tx.orderNumber}</p>
+                                            <p className="text-sm font-medium text-gray-900">Заказ #{String(tx.orderNumber || '').replace(/^#+/, '')}</p>
                                             <p className="text-xs text-gray-500">
                                                 Сумма {tx.total.toFixed(2)} · {tx.orderDate ? tx.orderDate.toLocaleDateString('ru-RU') : 'дата неизвестна'} · {Math.round(tx.rate * 100)}%
                                             </p>

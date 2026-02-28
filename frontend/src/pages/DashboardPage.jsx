@@ -922,7 +922,7 @@ const DashboardPage = () => {
                                 onClick={() => openOrderDetails(order.id)}
                               >
                                 <td className="py-3 pr-3">
-                                  <span className="font-semibold text-gray-900">#{order.orderNumber}</span>
+                                  <span className="font-semibold text-gray-900">#{String(order.orderNumber || '').replace(/^#+/, '')}</span>
                                 </td>
                                 <td className="py-3 pr-3">
                                   <span className="text-gray-700">{order.customerName || '—'}</span>
