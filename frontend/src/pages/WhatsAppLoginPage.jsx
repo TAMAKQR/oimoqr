@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useCustomerAuthStore } from '../store/customerAuthStore';
-import { geolocate } from '@abstractapi/javascript-ip-geolocation';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -43,9 +42,23 @@ const WhatsAppLoginPage = () => {
         const detectCountry = async () => {
             try {
 
-                const response = await geolocate('791460b74e2b4fb0ba86f332fb591e96', {}, { timeout: 3000 });
-                if (response.country_code) {
-                    const found = COUNTRIES.find(c => c.code === response.country_code);
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+                const response = await fetch('https://ipapi.co/json/', {
+                    signal: controller.signal,
+                    headers: { Accept: 'application/json' }
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    return;
+                }
+
+                const data = await response.json();
+                if (data?.country_code) {
+                    const found = COUNTRIES.find(c => c.code === data.country_code);
                     if (found) {
                         setSelectedCountry(found);
                     }
