@@ -992,14 +992,31 @@ export const createRestaurant = async (req, res, next) => {
       }
     }
 
+    const inheritedTemplateData = !isFirstRestaurant && primaryRestaurant
+      ? {
+        description: primaryRestaurant.description || null,
+        country: req.body.country || primaryRestaurant.country || null,
+        city: req.body.city || primaryRestaurant.city || null,
+        currency: primaryRestaurant.currency || 'RUB',
+        logo: primaryRestaurant.logo || null,
+        banners: primaryRestaurant.banners || null,
+        cardStyle: primaryRestaurant.cardStyle || 'horizontal',
+        primaryColor: primaryRestaurant.primaryColor || null,
+        themePalette: primaryRestaurant.themePalette || null,
+      }
+      : {
+        description: req.body.description || null,
+        country: req.body.country || null,
+        city: req.body.city || null,
+      };
+
     // Ð¡Ð¾Ð·Ð´Ð°ÐµÐ¼ Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ ÐµÑÐ»Ð¸ Ð²ÑÐµ Ð¿Ñ€Ð¾Ð²ÐµÑ€ÐºÐ¸ Ð¿Ñ€Ð¾Ð¹Ð´ÐµÐ½Ñ‹
     const restaurant = await prisma.restaurant.create({
       data: {
         name,
         subdomain,
         businessType: businessType || 'RESTAURANT',
-        country: req.body.country || null,
-        city: req.body.city || null,
+        ...inheritedTemplateData,
         ownerId: req.user.id,
         sharedMenuSourceRestaurantId: isFirstRestaurant ? null : primaryRestaurant?.id || null
       }
@@ -1161,15 +1178,21 @@ export const copyMenu = async (req, res, next) => {
       });
     }
 
-    // Get source restaurant with all categories and dishes
+    // Get source restaurant with category groups, categories and dishes
     const sourceRestaurant = await prisma.restaurant.findUnique({
       where: { id: sourceRestaurantId },
       include: {
+        categoryGroups: {
+          orderBy: { order: 'asc' }
+        },
         categories: {
+          orderBy: { order: 'asc' },
           include: {
             dishes: {
+              orderBy: { order: 'asc' },
               include: {
                 modifiers: {
+                  orderBy: { order: 'asc' },
                   include: {
                     options: true
                   }
@@ -1205,10 +1228,31 @@ export const copyMenu = async (req, res, next) => {
       });
     });
 
-    // Delete existing categories and dishes in target restaurant
+    // Delete existing categories and groups in target restaurant
     await prisma.category.deleteMany({
       where: { restaurantId: targetRestaurantId }
     });
+
+    await prisma.categoryGroup.deleteMany({
+      where: { restaurantId: targetRestaurantId }
+    });
+
+    const groupIdMap = new Map();
+
+    // Copy category groups first (to preserve categoryGroupId links)
+    for (const sourceGroup of sourceRestaurant.categoryGroups || []) {
+      const createdGroup = await prisma.categoryGroup.create({
+        data: {
+          name: sourceGroup.name,
+          description: sourceGroup.description,
+          image: sourceGroup.image,
+          order: sourceGroup.order,
+          restaurantId: targetRestaurantId
+        }
+      });
+
+      groupIdMap.set(sourceGroup.id, createdGroup.id);
+    }
 
     // Copy categories and dishes
     for (const sourceCategory of sourceRestaurant.categories) {
@@ -1218,6 +1262,9 @@ export const copyMenu = async (req, res, next) => {
           description: sourceCategory.description,
           image: sourceCategory.image,
           order: sourceCategory.order,
+          categoryGroupId: sourceCategory.categoryGroupId
+            ? (groupIdMap.get(sourceCategory.categoryGroupId) || null)
+            : null,
           restaurantId: targetRestaurantId,
           dishes: {
             create: sourceCategory.dishes.map(dish => ({
@@ -1285,6 +1332,7 @@ export const copyMenu = async (req, res, next) => {
 
     res.json({
       message: 'Menu copied successfully',
+      categoryGroupsCount: sourceRestaurant.categoryGroups?.length || 0,
       categoriesCount: sourceRestaurant.categories.length,
       dishesCount: sourceRestaurant.categories.reduce((sum, cat) => sum + cat.dishes.length, 0)
     });
