@@ -1,0 +1,36 @@
+import { useNavigate } from 'react-router-dom';
+
+const getLastRestaurantPath = () => {
+    try {
+        const raw = localStorage.getItem('customer-last-restaurant');
+        if (raw) {
+            const data = JSON.parse(raw);
+            if (data?.subdomain) {
+                return `/${data.subdomain}`;
+            }
+        }
+    } catch (e) {
+        // ignore JSON errors and fall back
+    }
+    return '/';
+};
+
+export default function FloatingMenuWidget() {
+    const navigate = useNavigate();
+
+    return (
+        <button
+            type="button"
+            title="В меню"
+            onClick={() => navigate(getLastRestaurantPath())}
+            className="fixed right-4 z-[65] w-12 h-12 rounded-full bg-white border border-gray-200 shadow-lg flex items-center justify-center text-primary-700 active:scale-95 transition"
+            style={{ bottom: 'calc(var(--customer-bottom-nav-height, 0px) + 14px)' }}
+        >
+            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 6h18" />
+                <path d="M7 12h10" />
+                <path d="M10 18h4" />
+            </svg>
+        </button>
+    );
+}

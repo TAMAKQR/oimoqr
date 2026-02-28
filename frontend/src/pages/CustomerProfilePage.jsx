@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import customerService from '../services/customerService';
 import CustomerBottomNav from '../components/CustomerBottomNav';
 import DishModal from '../components/DishModal';
+import FloatingMenuWidget from '../components/FloatingMenuWidget';
 import { useCartStore } from '../store/cartStore';
 
 const currencySymbols = {
@@ -229,41 +230,11 @@ export default function CustomerProfilePage() {
                                     <p className="text-xs text-gray-500">{customer?.phone}</p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => navigate(getLastRestaurantPath())}
-                                    className="px-3 py-1.5 text-xs font-medium text-primary-700 bg-primary-50 active:bg-primary-100 rounded-lg transition"
-                                >
-                                    В меню
-                                </button>
-                                <button
-                                    onClick={handleLogout}
-                                    className="px-3 py-1.5 text-xs font-medium text-red-600 active:bg-red-50 rounded-lg transition"
-                                >
-                                    Выйти
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Tab selector */}
-                        <div className="grid grid-cols-3 gap-2 pb-3">
                             <button
-                                onClick={() => setActiveTab('profile')}
-                                className={`py-2 rounded-lg text-sm font-semibold ${activeTab === 'profile' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}
+                                onClick={handleLogout}
+                                className="px-3 py-1.5 text-xs font-medium text-red-600 active:bg-red-50 rounded-lg transition"
                             >
-                                Профиль
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('orders')}
-                                className={`py-2 rounded-lg text-sm font-semibold ${activeTab === 'orders' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}
-                            >
-                                Заказы
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('favorites')}
-                                className={`py-2 rounded-lg text-sm font-semibold ${activeTab === 'favorites' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}
-                            >
-                                Избранное
+                                Выйти
                             </button>
                         </div>
                     </div>
@@ -288,6 +259,7 @@ export default function CustomerProfilePage() {
                 </div>
 
                 {/* Bottom Navigation */}
+                <FloatingMenuWidget />
                 <CustomerBottomNav />
             </div>
 

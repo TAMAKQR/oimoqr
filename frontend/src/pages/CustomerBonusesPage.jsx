@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import customerService from '../services/customerService';
 import CustomerBottomNav from '../components/CustomerBottomNav';
+import FloatingMenuWidget from '../components/FloatingMenuWidget';
 
 const DEFAULT_BONUS_RATE = 0;
 const DEFAULT_BONUS_EXPIRY_DAYS = 90;
@@ -271,6 +272,7 @@ export default function CustomerBonusesPage() {
                     </div>
                 </div>
 
+                <FloatingMenuWidget />
                 <CustomerBottomNav />
             </div>
         </div>
