@@ -368,13 +368,6 @@ export const updateRestaurant = async (req, res, next) => {
 
     const isOutlet = Boolean(existingRestaurant.sharedMenuSourceRestaurantId);
 
-    if (isOutlet && (primaryColor !== undefined || themePalette !== undefined || menuCardStyle !== undefined)) {
-      return res.status(403).json({
-        error: 'Shared template locked',
-        message: 'Этот ресторан наследует меню и оформление от главного. Измените оформление в главном ресторане.'
-      });
-    }
-
     const updateData = {
       name,
       address,
