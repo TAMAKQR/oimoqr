@@ -20,21 +20,21 @@ model User {
   
   restaurants       Restaurant[]
   restaurantStaff   RestaurantStaff[]
-  brands            RestaurantBrand[]  // Бренды/сети ресторанов
+  subscriptions     Subscription[]
+  brands            RestaurantBrand[]  // Опциональная функция для будущего
 }
 
-// Бренд/сеть ресторанов - объединяет несколько ресторанов под одной подпиской
+// Бренд/сеть ресторанов - ОПЦИОНАЛЬНАЯ функция (для Enterprise тарифов)
 model RestaurantBrand {
   id                String    @id @default(cuid())
-  name              String    // Название бренда/сети (например: "Тануки", "Кофемания")
-  description       String?   // Описание бренда
-  logo              String?   // Логотип бренда
+  name              String
+  description       String?
+  logo              String?
   
   ownerId           String
   owner             User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   
-  restaurants       Restaurant[]      // Все рестораны в сети
-  subscription      Subscription?     // Одна подписка на весь бренд
+  restaurants       Restaurant[]  // Рестораны могут опционально входить в бренд
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -84,7 +84,7 @@ model Restaurant {
   ownerId           String
   owner             User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   
-  // Принадлежность к бренду/сети (опционально)
+  // Принадлежность к бренду/сети (ОПЦИОНАЛЬНО - только для Enterprise)
   brandId           String?
   brand             RestaurantBrand? @relation(fields: [brandId], references: [id], onDelete: SetNull)
   
@@ -115,6 +115,8 @@ model Restaurant {
   // Customers who registered from this restaurant
   registeredCustomers Customer[] @relation("CustomerRegisteredRestaurant")
   
+  subscriptions     Subscription[]
+  
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 }
@@ -137,9 +139,13 @@ model RestaurantStaff {
 model Subscription {
   id                String    @id @default(cuid())
   
-  // Подписка привязана к бренду (сети ресторанов), а не к отдельному ресторану
-  brandId           String    @unique
-  brand             RestaurantBrand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  restaurantId      String
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, restaurantId])
   
   plan              String    @default("TRIAL")
   status            String    @default("TRIAL")
@@ -151,9 +157,9 @@ model Subscription {
   pricingTierId     String?
   pricingTier       PricingTier? @relation(fields: [pricingTierId], references: [id], onDelete: SetNull)
   
-  // Add-ons and usage tracking (на уровне всего бренда)
+  // Add-ons and usage tracking
   addons            String[]  @default([])         // ["delivery", "analytics", "customers_pro"]
-  smsUsedThisMonth  Int       @default(0)          // Счетчик SMS за месяц для всех ресторанов бренда
+  smsUsedThisMonth  Int       @default(0)          // Счетчик SMS за месяц
   smsResetDate      DateTime?                      // Дата сброса счетчика
   smsOverageCharges Float     @default(0)          // Накопленные charges за overage
   

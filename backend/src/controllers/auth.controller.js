@@ -38,48 +38,39 @@ export const register = async (req, res, next) => {
     // const trialConfig = await prisma.trialConfig.findFirst();
     const trialDays = parseInt(process.env.TRIAL_PERIOD_DAYS) || 7;
 
-    // Create user with brand, restaurant and trial subscription
+    // Create user with restaurant and trial subscription
     const trialEndDate = calculateTrialEndDate(trialDays);
 
-    // Create user, brand and restaurant in a transaction
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         name,
         phone,
-        brands: {
+        restaurants: {
           create: {
-            name: `${name}'s Restaurants`,
-            description: 'Default brand',
-            restaurants: {
-              create: {
-                name: restaurantName,
-                subdomain,
-                currency: 'KGS',
-                isTrialDefault: true,
-                ownerId: undefined // Will be set automatically via brand relation
-              }
-            },
-            subscription: {
-              create: {
-                plan: 'TRIAL',
-                status: 'TRIAL',
-                trialEndsAt: trialEndDate,
-                currentPeriodStart: new Date(),
-                currentPeriodEnd: trialEndDate
-              }
-            }
+            name: restaurantName,
+            subdomain,
+            currency: 'KGS',
+            isTrialDefault: true
           }
         }
       },
       include: {
-        brands: {
-          include: {
-            restaurants: true,
-            subscription: true
-          }
-        }
+        restaurants: true
+      }
+    });
+
+    // Create subscription after user and restaurant are created
+    await prisma.subscription.create({
+      data: {
+        userId: user.id,
+        restaurantId: user.restaurants[0].id,
+        plan: 'TRIAL',
+        status: 'TRIAL',
+        trialEndsAt: trialEndDate,
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: trialEndDate
       }
     });
 
@@ -97,36 +88,19 @@ export const register = async (req, res, next) => {
     const userWithRestaurants = await prisma.user.findUnique({
       where: { id: user.id },
       include: {
-        brands: {
+        restaurants: {
           include: {
-            subscription: {
+            subscriptions: {
               include: {
                 pricingTier: true
               }
-            }
-          }
-        },
-        restaurants: {
-          include: {
-            brand: {
-              select: {
-                id: true,
-                name: true,
-                subscription: {
-                  select: {
-                    status: true,
-                    plan: true,
-                    currentPeriodEnd: true,
-                    pricingTier: {
-                      select: {
-                        name: true
-                      }
-                    }
-                  }
-                }
-              }
             },
             socialLinks: true
+          }
+        },
+        subscriptions: {
+          include: {
+            pricingTier: true
           }
         }
       }
@@ -190,21 +164,14 @@ export const login = async (req, res, next) => {
         name: true,
         subdomain: true,
         socialLinks: true,
-        brandId: true,
-        brand: {
+        subscriptions: {
           select: {
-            id: true,
-            name: true,
-            subscription: {
+            status: true,
+            plan: true,
+            currentPeriodEnd: true,
+            pricingTier: {
               select: {
-                status: true,
-                plan: true,
-                currentPeriodEnd: true,
-                pricingTier: {
-                  select: {
-                    name: true
-                  }
-                }
+                name: true
               }
             }
           }
@@ -239,27 +206,17 @@ export const getMe = async (req, res, next) => {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
       include: {
-        brands: {
+        subscriptions: {
           include: {
-            subscription: {
-              include: {
-                pricingTier: true
-              }
-            }
+            pricingTier: true
           }
         },
         restaurants: {
           include: {
-            brand: {
+            subscriptions: {
               select: {
-                id: true,
-                name: true,
-                subscription: {
-                  select: {
-                    status: true,
-                    plan: true
-                  }
-                }
+                status: true,
+                plan: true
               }
             },
             socialLinks: true
@@ -269,16 +226,10 @@ export const getMe = async (req, res, next) => {
           include: {
             restaurant: {
               include: {
-                brand: {
+                subscriptions: {
                   select: {
-                    id: true,
-                    name: true,
-                    subscription: {
-                      select: {
-                        status: true,
-                        plan: true
-                      }
-                    }
+                    status: true,
+                    plan: true
                   }
                 },
                 socialLinks: true
