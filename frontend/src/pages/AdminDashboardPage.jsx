@@ -346,7 +346,7 @@ const AdminDashboardPage = () => {
                                 <div key={o.id} className="flex items-center gap-3">
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
-                                            <span className="text-sm font-medium text-gray-900">{o.orderNumber}</span>
+                                            <span className="text-sm font-medium text-gray-900">#{String(o.orderNumber || '').replace(/^#+/, '')}</span>
                                             <StatusBadge status={o.status} />
                                         </div>
                                         <div className="text-[10px] text-gray-400">

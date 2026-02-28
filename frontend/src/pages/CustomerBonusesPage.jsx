@@ -17,7 +17,10 @@ const isDeliveredStatus = (status) => {
         normalized.includes('success');
 };
 
-const isDeliveryOrder = (order) => String(order?.deliveryType || '').toLowerCase() === 'delivery';
+const isBonusEligibleOrderType = (order) => {
+    const deliveryType = String(order?.deliveryType || '').toLowerCase();
+    return deliveryType === 'delivery' || deliveryType === 'pickup';
+};
 
 const toOrderDate = (order) => {
     const value = order?.createdAt || order?.updatedAt || order?.date;
@@ -122,7 +125,7 @@ export default function CustomerBonusesPage() {
     const bonusData = useMemo(() => {
         const now = new Date();
         const transactions = orders
-            .filter((order) => isDeliveryOrder(order) && isDeliveredStatus(order?.status))
+            .filter((order) => isBonusEligibleOrderType(order) && isDeliveredStatus(order?.status))
             .map((order) => {
                 const config = getEffectiveBonusConfig(order?.restaurant);
                 if (!config.enabled || config.rate <= 0) {
@@ -199,7 +202,7 @@ export default function CustomerBonusesPage() {
                 <div className="bg-white shadow-sm sticky top-0 z-10">
                     <div className="px-3 py-4">
                         <h1 className="text-xl font-bold text-gray-900">Мои бонусы</h1>
-                        <p className="text-xs text-gray-500 mt-1">Бонусы начисляются за доставленные заказы</p>
+                        <p className="text-xs text-gray-500 mt-1">Бонусы начисляются за выполненные заказы доставки и самовывоза</p>
                     </div>
                 </div>
 
@@ -234,10 +237,10 @@ export default function CustomerBonusesPage() {
                     </div>
 
                     <div className="bg-white rounded-xl p-4 border border-gray-100">
-                        <h3 className="text-sm font-semibold text-gray-900 mb-2">Правила бонусной программы (доставка)</h3>
+                        <h3 className="text-sm font-semibold text-gray-900 mb-2">Правила бонусной программы</h3>
                         <ul className="space-y-1.5 text-xs text-gray-600">
                             <li>• Начисление и срок жизни бонусов управляются тарифом и/или настройками точки.</li>
-                            <li>• Начисление идёт только за доставленные заказы доставки.</li>
+                            <li>• Начисление идёт за выполненные заказы доставки и самовывоза.</li>
                             <li>• Если в точке включено «Использовать настройки тарифа», применяются лимиты тарифа.</li>
                             <li>• Списывать бонусы можно при оплате заказа (MVP: скоро в следующем шаге).</li>
                             <li>• Названия и пороги уровней задаются в админке тарифа.</li>
@@ -248,7 +251,7 @@ export default function CustomerBonusesPage() {
                         <h3 className="text-sm font-semibold text-gray-900 mb-2">Последние начисления</h3>
 
                         {bonusData.transactions.length === 0 ? (
-                            <p className="text-sm text-gray-500">Пока нет доставленных заказов для начисления бонусов</p>
+                            <p className="text-sm text-gray-500">Пока нет выполненных заказов для начисления бонусов</p>
                         ) : (
                             <div className="space-y-2">
                                 {bonusData.transactions.slice(0, 10).map((tx) => (

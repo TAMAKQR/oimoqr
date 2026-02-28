@@ -131,6 +131,7 @@ class TelegramService {
                     ? '🚗 Доставка'
                     : '🏃 Самовывоз';
             const paymentMethod = order.paymentMethod === 'cash' ? '💵 Наличные' : '💳 Карта';
+            const normalizedOrderNumber = `#${String(order?.orderNumber || '').replace(/^#+/, '')}`;
 
             // Формируем адрес (приоритет у customerAddress с деталями)
             let addressLine = '';
@@ -173,7 +174,7 @@ ${order.notes ? `📝 **Комментарий:** ${order.notes}` : ''}
                 disable_web_page_preview: true
             });
 
-            console.log(`✅ Telegram notification sent for order #${order.orderNumber}`);
+            console.log(`✅ Telegram notification sent for order ${normalizedOrderNumber}`);
         } catch (error) {
             console.error('❌ Failed to send Telegram notification:', error.message);
         }

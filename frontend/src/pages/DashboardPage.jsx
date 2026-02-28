@@ -228,7 +228,8 @@ const DashboardPage = () => {
       if (latestId) {
         if (lastOrderIdRef.current && lastOrderIdRef.current !== latestId) {
           const latestOrder = statsData.recentOrders[0];
-          toast.success(`Новый заказ ${latestOrder.orderNumber || ''}`.trim());
+          const normalizedOrderNumber = `#${String(latestOrder.orderNumber || '').replace(/^#+/, '')}`;
+          toast.success(`Новый заказ ${normalizedOrderNumber}`.trim());
         }
         lastOrderIdRef.current = latestId;
       }
@@ -1001,7 +1002,7 @@ const DashboardPage = () => {
             <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
               <div className="flex items-start justify-between p-5 border-b">
                 <div>
-                  <h3 className="text-xl font-semibold">Заказ {selectedOrder?.orderNumber}</h3>
+                  <h3 className="text-xl font-semibold">Заказ #{String(selectedOrder?.orderNumber || '').replace(/^#+/, '')}</h3>
                   <p className="text-sm text-gray-500">
                     {selectedOrder?.customerName || 'Клиент'} · {selectedOrder ? new Date(selectedOrder.createdAt).toLocaleString('ru-RU') : ''}
                   </p>

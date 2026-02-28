@@ -42,6 +42,11 @@ const isDeliveredStatus = (status) => {
         normalized.includes('success');
 };
 
+const isBonusEligibleOrderType = (deliveryType) => {
+    const normalized = String(deliveryType || '').toLowerCase();
+    return normalized === 'delivery' || normalized === 'pickup';
+};
+
 const getActiveTierBonusConfig = (subscriptions = []) => {
     if (!Array.isArray(subscriptions) || subscriptions.length === 0) return null;
     const active = subscriptions.find((s) => s?.status === 'ACTIVE') || subscriptions[0];
@@ -95,9 +100,10 @@ const getRestaurantBonusSettings = async (restaurantId) => {
 const getCustomerAvailableBonusPoints = async (customerId) => {
     const now = new Date();
     const orders = await prisma.order.findMany({
-        where: { customerId, deliveryType: 'delivery' },
+        where: { customerId },
         select: {
             status: true,
+            deliveryType: true,
             totalAmount: true,
             createdAt: true,
             bonusSpent: true,
@@ -130,6 +136,7 @@ const getCustomerAvailableBonusPoints = async (customerId) => {
     }, 0);
 
     const activeEarned = orders.reduce((sum, order) => {
+        if (!isBonusEligibleOrderType(order?.deliveryType)) return sum;
         if (!isDeliveredStatus(order?.status)) return sum;
 
         const config = getEffectiveBonusConfig(order?.restaurant);
