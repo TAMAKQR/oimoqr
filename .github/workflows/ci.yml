@@ -11,6 +11,10 @@ jobs:
     name: 🔍 Validate & Build
     runs-on: ubuntu-latest
 
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v4
