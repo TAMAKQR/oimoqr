@@ -1,8 +1,10 @@
 import { Navigate } from 'react-router-dom';
-import customerService from '../services/customerService';
+import { useCustomerAuthStore } from '../store/customerAuthStore';
 
 const CustomerPrivateRoute = ({ children }) => {
-    if (!customerService.isAuthenticated()) {
+    const isAuthenticated = useCustomerAuthStore((state) => state.isAuthenticated);
+
+    if (!isAuthenticated) {
         return <Navigate to="/customer/login" replace />;
     }
 

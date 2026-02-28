@@ -1,14 +1,14 @@
 import { useTranslation } from 'react-i18next';
 
+const languages = [
+  { code: 'ru', name: '🇷🇺 Русский' },
+  { code: 'en', name: '🇬🇧 English' },
+  { code: 'kg', name: '🇰🇬 Kyrgyz' },
+  { code: 'tr', name: '🇹🇷 Türkçe' }
+];
+
 const LanguageSwitcher = () => {
   const { i18n } = useTranslation();
-
-  const languages = [
-    { code: 'ru', name: '🇷🇺 Русский' },
-    { code: 'en', name: '🇬🇧 English' },
-    { code: 'kg', name: '🇰🇬 Kyrgyz' },
-    { code: 'tr', name: '🇹🇷 Türkçe' }
-  ];
 
   const currentLang = languages.find(l => l.code === i18n.language) || languages[0];
 

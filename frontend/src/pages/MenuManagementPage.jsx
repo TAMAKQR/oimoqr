@@ -929,6 +929,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
   const [name, setName] = useState(dish?.name || '');
   const [description, setDescription] = useState(dish?.description || '');
   const [price, setPrice] = useState(dish?.price || '');
+  const [deliveryPrice, setDeliveryPrice] = useState(dish?.deliveryPrice || '');
   const [imageFile, setImageFile] = useState(null);
   const [currentImageUrl, setCurrentImageUrl] = useState(
     dish?.imageUrl ? `${dish.imageUrl}?t=${Date.now()}` : null
@@ -1288,6 +1289,12 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
       return;
     }
 
+    const parsedDeliveryPrice = deliveryPrice ? parseFloat(deliveryPrice) : null;
+    if (parsedDeliveryPrice !== null && (isNaN(parsedDeliveryPrice) || parsedDeliveryPrice < 0)) {
+      toast.error('Цена доставки должна быть числом больше или равным 0');
+      return;
+    }
+
     const parsedDiscount = discount ? parseInt(discount) : null;
     if (parsedDiscount !== null && (parsedDiscount < 0 || parsedDiscount > 100)) {
       toast.error('Скидка должна быть от 0 до 100%');
@@ -1301,6 +1308,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
         name,
         description,
         price: parsedPrice,
+        deliveryPrice: parsedDeliveryPrice,
         categoryId,
         allergens: allergens.length > 0 ? JSON.stringify(allergens) : null,
         discount: parsedDiscount,
@@ -1421,20 +1429,35 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Цена ({currency})</label>
-            <input
-              type="number"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              onWheel={(e) => e.currentTarget.blur()}
-              className="input w-full"
-              step="0.01"
-              min="0"
-              required
-            />
-            <p className="text-xs text-gray-500 mt-1">Цена должна быть 0 или больше</p>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Цена в зале ({currency})</label>
+              <input
+                type="number"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                onWheel={(e) => e.currentTarget.blur()}
+                className="input w-full"
+                step="0.01"
+                min="0"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Цена доставки ({currency})</label>
+              <input
+                type="number"
+                value={deliveryPrice}
+                onChange={(e) => setDeliveryPrice(e.target.value)}
+                onWheel={(e) => e.currentTarget.blur()}
+                className="input w-full"
+                step="0.01"
+                min="0"
+                placeholder="Как в зале"
+              />
+            </div>
           </div>
+          <p className="text-xs text-gray-500 -mt-2">Если цена доставки не указана, используется цена в зале</p>
 
           <div>
             <label className="block text-sm font-medium mb-1">Скидка (%)</label>
