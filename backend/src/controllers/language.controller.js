@@ -7,6 +7,28 @@ const AVAILABLE_LANGUAGES = [
   { code: 'tr', name: 'Türkçe' }
 ];
 
+const getLanguageManagementContext = async (restaurantId) => {
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { id: restaurantId },
+    select: {
+      id: true,
+      sharedMenuSourceRestaurantId: true
+    }
+  });
+
+  if (!restaurant) {
+    return null;
+  }
+
+  const managementRestaurantId = restaurant.sharedMenuSourceRestaurantId || restaurant.id;
+
+  return {
+    selectedRestaurantId: restaurant.id,
+    managementRestaurantId,
+    isInherited: Boolean(restaurant.sharedMenuSourceRestaurantId)
+  };
+};
+
 export const getAvailableLanguages = async (req, res, next) => {
   try {
     res.json(AVAILABLE_LANGUAGES);
@@ -19,19 +41,27 @@ export const getRestaurantLanguages = async (req, res, next) => {
   try {
     const { restaurantId } = req.params;
 
+    const context = await getLanguageManagementContext(restaurantId);
+
+    if (!context) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
     const restaurant = await prisma.restaurant.findUnique({
-      where: { id: restaurantId },
+      where: { id: context.managementRestaurantId },
       select: { defaultLanguage: true }
     });
 
     const languages = await prisma.restaurantLanguage.findMany({
-      where: { restaurantId },
+      where: { restaurantId: context.managementRestaurantId },
       orderBy: { order: 'asc' }
     });
 
     res.json({
       languages,
-      defaultLanguage: restaurant.defaultLanguage
+      defaultLanguage: restaurant.defaultLanguage,
+      isInherited: context.isInherited,
+      managementRestaurantId: context.managementRestaurantId
     });
   } catch (error) {
     next(error);
@@ -43,6 +73,19 @@ export const updateRestaurantLanguages = async (req, res, next) => {
     const { restaurantId } = req.params;
     const { languages, defaultLanguage } = req.body;
 
+    const context = await getLanguageManagementContext(restaurantId);
+
+    if (!context) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    if (context.isInherited) {
+      return res.status(403).json({
+        error: 'Shared template locked',
+        message: 'Языки для филиала наследуются от главного ресторана. Измените их в главном ресторане.'
+      });
+    }
+
     if (!Array.isArray(languages)) {
       return res.status(400).json({ error: 'Languages must be an array' });
     }
@@ -50,20 +93,20 @@ export const updateRestaurantLanguages = async (req, res, next) => {
     // Update default language if provided
     if (defaultLanguage) {
       await prisma.restaurant.update({
-        where: { id: restaurantId },
+        where: { id: context.managementRestaurantId },
         data: { defaultLanguage }
       });
     }
 
     await prisma.restaurantLanguage.deleteMany({
-      where: { restaurantId }
+      where: { restaurantId: context.managementRestaurantId }
     });
 
     const createdLanguages = await Promise.all(
       languages.map((lang, index) =>
         prisma.restaurantLanguage.create({
           data: {
-            restaurantId,
+            restaurantId: context.managementRestaurantId,
             languageCode: lang.languageCode || lang.code,
             isEnabled: lang.isEnabled !== false,
             order: lang.order !== undefined ? lang.order : index
@@ -82,10 +125,16 @@ export const getDishTranslations = async (req, res, next) => {
   try {
     const { restaurantId, dishId } = req.params;
 
+    const context = await getLanguageManagementContext(restaurantId);
+
+    if (!context) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
     const translations = await prisma.dishTranslation.findMany({
       where: {
         dishId,
-        restaurantId
+        restaurantId: context.managementRestaurantId
       }
     });
 
@@ -99,8 +148,14 @@ export const getAllDishTranslations = async (req, res, next) => {
   try {
     const { restaurantId } = req.params;
 
+    const context = await getLanguageManagementContext(restaurantId);
+
+    if (!context) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
     const translations = await prisma.dishTranslation.findMany({
-      where: { restaurantId },
+      where: { restaurantId: context.managementRestaurantId },
       include: { dish: { select: { id: true, name: true } } }
     });
 
@@ -115,6 +170,19 @@ export const createDishTranslation = async (req, res, next) => {
     const { restaurantId, dishId } = req.params;
     const { languageCode, name, description } = req.body;
 
+    const context = await getLanguageManagementContext(restaurantId);
+
+    if (!context) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    if (context.isInherited) {
+      return res.status(403).json({
+        error: 'Shared template locked',
+        message: 'Переводы для филиала наследуются от главного ресторана. Редактируйте их в главном ресторане.'
+      });
+    }
+
     if (!languageCode || !name) {
       return res.status(400).json({ error: 'Language code and name are required' });
     }
@@ -123,7 +191,7 @@ export const createDishTranslation = async (req, res, next) => {
       where: { id: dishId }
     });
 
-    if (!dish || dish.restaurantId !== restaurantId) {
+    if (!dish || dish.restaurantId !== context.managementRestaurantId) {
       return res.status(404).json({ error: 'Dish not found' });
     }
 
@@ -136,7 +204,7 @@ export const createDishTranslation = async (req, res, next) => {
       },
       create: {
         dishId,
-        restaurantId,
+        restaurantId: context.managementRestaurantId,
         languageCode,
         name,
         description
@@ -211,10 +279,16 @@ export const getCategoryTranslations = async (req, res, next) => {
   try {
     const { restaurantId, categoryId } = req.params;
 
+    const context = await getLanguageManagementContext(restaurantId);
+
+    if (!context) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
     const translations = await prisma.categoryTranslation.findMany({
       where: {
         categoryId,
-        restaurantId
+        restaurantId: context.managementRestaurantId
       }
     });
 
@@ -229,6 +303,19 @@ export const createCategoryTranslation = async (req, res, next) => {
     const { restaurantId, categoryId } = req.params;
     const { languageCode, name, description } = req.body;
 
+    const context = await getLanguageManagementContext(restaurantId);
+
+    if (!context) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    if (context.isInherited) {
+      return res.status(403).json({
+        error: 'Shared template locked',
+        message: 'Переводы для филиала наследуются от главного ресторана. Редактируйте их в главном ресторане.'
+      });
+    }
+
     if (!languageCode || !name) {
       return res.status(400).json({ error: 'Language code and name are required' });
     }
@@ -237,7 +324,7 @@ export const createCategoryTranslation = async (req, res, next) => {
       where: { id: categoryId }
     });
 
-    if (!category || category.restaurantId !== restaurantId) {
+    if (!category || category.restaurantId !== context.managementRestaurantId) {
       return res.status(404).json({ error: 'Category not found' });
     }
 
@@ -250,7 +337,7 @@ export const createCategoryTranslation = async (req, res, next) => {
       },
       create: {
         categoryId,
-        restaurantId,
+        restaurantId: context.managementRestaurantId,
         languageCode,
         name,
         description

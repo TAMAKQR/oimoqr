@@ -34,6 +34,8 @@ const LanguageSettingsPage = () => {
   const [categoryTranslations, setCategoryTranslations] = useState([]);
   const [activeTab, setActiveTab] = useState('languages');
   const [translationType, setTranslationType] = useState('dishes'); // 'dishes' or 'categories'
+  const [isLanguageInherited, setIsLanguageInherited] = useState(false);
+  const [languageManagementRestaurantId, setLanguageManagementRestaurantId] = useState(null);
 
   // Load languages when restaurant selected
   useEffect(() => {
@@ -73,13 +75,19 @@ const LanguageSettingsPage = () => {
       if (data.languages && Array.isArray(data.languages)) {
         setRestaurantLanguages(data.languages);
         setDefaultLanguage(data.defaultLanguage || 'ru');
+        setIsLanguageInherited(Boolean(data.isInherited));
+        setLanguageManagementRestaurantId(data.managementRestaurantId || selectedRestaurantId);
       } else {
         // Fallback for old format
         setRestaurantLanguages(Array.isArray(data) ? data : []);
+        setIsLanguageInherited(false);
+        setLanguageManagementRestaurantId(selectedRestaurantId);
       }
     } catch (err) {
       console.error('Error loading languages:', err);
       setRestaurantLanguages([]);
+      setIsLanguageInherited(false);
+      setLanguageManagementRestaurantId(null);
       if (err.message.includes('401')) {
         toast.error('Сессия истекла. Пожалуйста, войдите снова.');
         navigate('/login');
@@ -276,6 +284,8 @@ const LanguageSettingsPage = () => {
     ...(userData?.restaurantStaff?.map(s => s.restaurant) || [])
   ];
 
+  const languageManagementRestaurant = allRestaurants.find(r => r.id === languageManagementRestaurantId);
+
   if (!userData || allRestaurants.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -315,6 +325,13 @@ const LanguageSettingsPage = () => {
 
         {selectedRestaurantId && (
           <div>
+            {isLanguageInherited && (
+              <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-800 text-sm">
+                Языки и переводы для этого филиала наследуются от главного ресторана
+                {languageManagementRestaurant ? ` «${languageManagementRestaurant.name}»` : ''}. Изменения доступны только в главном ресторане.
+              </div>
+            )}
+
             <div className="tabs flex gap-4 mb-6 border-b">
               <button
                 onClick={() => setActiveTab('languages')}
@@ -349,6 +366,7 @@ const LanguageSettingsPage = () => {
                           checked={restaurantLanguages.some(l => l.languageCode === lang.code)}
                           onChange={() => toggleLanguage(lang.code)}
                           className="w-5 h-5 rounded border-gray-300"
+                          disabled={isLanguageInherited}
                         />
                         <span className="text-lg">{lang.name}</span>
                         <span className="text-gray-500 ml-auto">{lang.label}</span>
@@ -367,11 +385,11 @@ const LanguageSettingsPage = () => {
                           return (
                             <div
                               key={lang.languageCode}
-                              draggable
+                              draggable={!isLanguageInherited}
                               onDragStart={() => handleDragStart(lang)}
                               onDragOver={handleDragOver}
                               onDrop={() => handleDrop(lang)}
-                              className="p-3 bg-white border rounded cursor-move hover:bg-gray-50 flex items-center gap-3"
+                              className={`p-3 bg-white border rounded flex items-center gap-3 ${isLanguageInherited ? 'cursor-not-allowed opacity-70' : 'cursor-move hover:bg-gray-50'}`}
                             >
                               <span className="text-lg">⋮⋮</span>
                               <span className="text-lg">{langInfo?.name}</span>
@@ -388,6 +406,7 @@ const LanguageSettingsPage = () => {
                         value={defaultLanguage}
                         onChange={(e) => setDefaultLanguage(e.target.value)}
                         className="input w-full"
+                        disabled={isLanguageInherited}
                       >
                         {AVAILABLE_LANGUAGES.map(lang => (
                           <option key={lang.code} value={lang.code}>
@@ -401,8 +420,8 @@ const LanguageSettingsPage = () => {
 
                 <button
                   onClick={saveLanguages}
-                  disabled={saving}
-                  className="w-full px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                  disabled={saving || isLanguageInherited}
+                  className="w-full px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors text-sm font-medium"
                 >
                   {saving ? 'Сохранение...' : 'Сохранить языки'}
                 </button>
@@ -471,7 +490,8 @@ const LanguageSettingsPage = () => {
                                 {!isEditing && (
                                   <button
                                     onClick={() => setEditingTranslation({ languageCode: lang.languageCode, name: translation?.name || '', description: translation?.description || '' })}
-                                    className="text-primary-600 hover:text-primary-700"
+                                    className="text-primary-600 hover:text-primary-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                                    disabled={isLanguageInherited}
                                   >
                                     Редактировать
                                   </button>
@@ -503,7 +523,8 @@ const LanguageSettingsPage = () => {
                                   <div className="flex gap-2">
                                     <button
                                       onClick={() => saveTranslation(editingTranslation)}
-                                      className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                                      className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                                      disabled={isLanguageInherited}
                                     >
                                       Сохранить
                                     </button>
@@ -559,7 +580,8 @@ const LanguageSettingsPage = () => {
                                 {!isEditing && (
                                   <button
                                     onClick={() => setEditingTranslation({ languageCode: lang.languageCode, name: translation?.name || '', description: translation?.description || '' })}
-                                    className="text-primary-600 hover:text-primary-700"
+                                    className="text-primary-600 hover:text-primary-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                                    disabled={isLanguageInherited}
                                   >
                                     Редактировать
                                   </button>
@@ -591,7 +613,8 @@ const LanguageSettingsPage = () => {
                                   <div className="flex gap-2">
                                     <button
                                       onClick={() => saveCategoryTranslation(editingTranslation)}
-                                      className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                                      className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                                      disabled={isLanguageInherited}
                                     >
                                       Сохранить
                                     </button>
