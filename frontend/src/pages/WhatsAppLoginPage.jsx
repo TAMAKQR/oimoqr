@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useCustomerAuthStore } from '../store/customerAuthStore';
+import { geolocate } from '@abstractapi/javascript-ip-geolocation';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -41,11 +42,21 @@ const WhatsAppLoginPage = () => {
     useEffect(() => {
         const detectCountry = async () => {
             try {
+<<<<<<< HEAD
                 const res = await fetch('https://ip-api.com/json/?fields=countryCode', { signal: AbortSignal.timeout(3000) });
                 const data = await res.json();
                 if (data?.countryCode) {
                     const found = COUNTRIES.find(c => c.code === data.countryCode);
                     if (found) setSelectedCountry(found);
+=======
+
+                const response = await geolocate('791460b74e2b4fb0ba86f332fb591e96', {}, { timeout: 3000 });
+                if (response.country_code) {
+                    const found = COUNTRIES.find(c => c.code === response.country_code);
+                    if (found) {
+                        setSelectedCountry(found);
+                    }
+>>>>>>> bc86915bbe1e3ec2d9fc2303e6db25ad1d475506
                 }
             } catch {
                 // Не критично — оставляем KG по умолчанию

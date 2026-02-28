@@ -678,10 +678,17 @@ const MenuPage = () => {
                       <DishCard
                         key={dish.id}
                         dish={displayDish}
+<<<<<<< HEAD
                         currency={getCurrencySymbol(displayRestaurant.currency)}
                         style={displayRestaurant.menuCardStyle || 'horizontal'}
                         restaurantId={displayRestaurant.id}
                         restaurantName={displayRestaurant.name}
+=======
+                        currency={getCurrencySymbol(restaurant.currency)}
+                        style={restaurant.menuCardStyle || 'horizontal'}
+                        restaurantId={restaurant.id}
+                        restaurantName={restaurant.name}
+>>>>>>> bc86915bbe1e3ec2d9fc2303e6db25ad1d475506
                         onFavoriteToggle={(action) => {
                           if (action === 'login') {
                             setShowLoginModal(true);
@@ -724,10 +731,17 @@ const MenuPage = () => {
                         <DishCard
                           key={dish.id}
                           dish={displayDish}
+<<<<<<< HEAD
                           currency={getCurrencySymbol(displayRestaurant.currency)}
                           style={displayRestaurant.menuCardStyle || 'horizontal'}
                           restaurantId={displayRestaurant.id}
                           restaurantName={displayRestaurant.name}
+=======
+                          currency={getCurrencySymbol(restaurant.currency)}
+                          style={restaurant.menuCardStyle || 'horizontal'}
+                          restaurantId={restaurant.id}
+                          restaurantName={restaurant.name}
+>>>>>>> bc86915bbe1e3ec2d9fc2303e6db25ad1d475506
                           onFavoriteToggle={(action) => {
                             if (action === 'login') {
                               setShowLoginModal(true);
@@ -830,10 +844,17 @@ const MenuPage = () => {
                         <DishCard
                           key={dish.id}
                           dish={displayDish}
+<<<<<<< HEAD
                           currency={getCurrencySymbol(displayRestaurant.currency)}
                           style={displayRestaurant.menuCardStyle || 'horizontal'}
                           restaurantId={displayRestaurant.id}
                           restaurantName={displayRestaurant.name}
+=======
+                          currency={getCurrencySymbol(restaurant.currency)}
+                          style={restaurant.menuCardStyle || 'horizontal'}
+                          restaurantId={restaurant.id}
+                          restaurantName={restaurant.name}
+>>>>>>> bc86915bbe1e3ec2d9fc2303e6db25ad1d475506
                           onFavoriteToggle={(action) => {
                             if (action === 'login') {
                               setShowLoginModal(true);
