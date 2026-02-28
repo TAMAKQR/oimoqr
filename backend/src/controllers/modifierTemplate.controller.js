@@ -1,12 +1,40 @@
 import { prisma } from '../config/prisma.js';
 
+const getModifierManagementContext = async (restaurantId) => {
+  if (!restaurantId) return null;
+
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { id: restaurantId },
+    select: {
+      id: true,
+      sharedMenuSourceRestaurantId: true
+    }
+  });
+
+  if (!restaurant) {
+    return null;
+  }
+
+  return {
+    selectedRestaurantId: restaurant.id,
+    managementRestaurantId: restaurant.sharedMenuSourceRestaurantId || restaurant.id,
+    isInherited: Boolean(restaurant.sharedMenuSourceRestaurantId)
+  };
+};
+
 // Получить все шаблоны модификаторов ресторана
 export const getModifierTemplates = async (req, res, next) => {
   try {
     const { restaurantId } = req.params;
 
+    const context = await getModifierManagementContext(restaurantId);
+
+    if (!context) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
     const templates = await prisma.modifierTemplate.findMany({
-      where: { restaurantId },
+      where: { restaurantId: context.managementRestaurantId },
       include: {
         options: true,
         _count: {
@@ -16,7 +44,11 @@ export const getModifierTemplates = async (req, res, next) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    res.json(templates);
+    res.json({
+      templates,
+      isInherited: context.isInherited,
+      managementRestaurantId: context.managementRestaurantId
+    });
   } catch (error) {
     next(error);
   }
@@ -27,6 +59,19 @@ export const createModifierTemplate = async (req, res, next) => {
   try {
     const { name, type, isRequired, options, restaurantId } = req.body;
 
+    const context = await getModifierManagementContext(restaurantId);
+
+    if (!context) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    if (context.isInherited) {
+      return res.status(403).json({
+        error: 'Shared template locked',
+        message: 'Модификаторы филиала наследуются от главного ресторана. Создавайте шаблоны в главном ресторане.'
+      });
+    }
+
     console.log('📝 Creating modifier template:', { name, type, isRequired, optionsCount: options?.length });
 
     const template = await prisma.modifierTemplate.create({
@@ -34,7 +79,7 @@ export const createModifierTemplate = async (req, res, next) => {
         name,
         type,
         isRequired: isRequired || false,
-        restaurantId,
+        restaurantId: context.managementRestaurantId,
         options: {
           create: options || []
         }
@@ -56,7 +101,30 @@ export const createModifierTemplate = async (req, res, next) => {
 export const updateModifierTemplate = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, type, isRequired, options } = req.body;
+    const { name, type, isRequired, options, restaurantId } = req.body;
+
+    const templateToUpdate = await prisma.modifierTemplate.findUnique({
+      where: { id },
+      select: { id: true, restaurantId: true }
+    });
+
+    if (!templateToUpdate) {
+      return res.status(404).json({ error: 'Шаблон не найден' });
+    }
+
+    const contextRestaurantId = restaurantId || templateToUpdate.restaurantId;
+    const context = await getModifierManagementContext(contextRestaurantId);
+
+    if (!context) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    if (context.isInherited) {
+      return res.status(403).json({
+        error: 'Shared template locked',
+        message: 'Модификаторы филиала наследуются от главного ресторана. Изменяйте шаблоны в главном ресторане.'
+      });
+    }
 
     console.log('📝 Updating modifier template:', id);
 
@@ -106,6 +174,30 @@ export const updateModifierTemplate = async (req, res, next) => {
 export const deleteModifierTemplate = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const { restaurantId } = req.query;
+
+    const template = await prisma.modifierTemplate.findUnique({
+      where: { id },
+      select: { id: true, restaurantId: true }
+    });
+
+    if (!template) {
+      return res.status(404).json({ error: 'Шаблон не найден' });
+    }
+
+    const contextRestaurantId = restaurantId || template.restaurantId;
+    const context = await getModifierManagementContext(contextRestaurantId);
+
+    if (!context) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    if (context.isInherited) {
+      return res.status(403).json({
+        error: 'Shared template locked',
+        message: 'Модификаторы филиала наследуются от главного ресторана. Удаляйте шаблоны в главном ресторане.'
+      });
+    }
 
     console.log('🗑️ Deleting modifier template:', id);
 
@@ -135,7 +227,20 @@ export const deleteModifierTemplate = async (req, res, next) => {
 // Применить шаблон к блюду
 export const applyTemplateToDish = async (req, res, next) => {
   try {
-    const { templateId, dishId } = req.body;
+    const { templateId, dishId, restaurantId } = req.body;
+
+    const context = await getModifierManagementContext(restaurantId);
+
+    if (!context) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    if (context.isInherited) {
+      return res.status(403).json({
+        error: 'Shared template locked',
+        message: 'Модификаторы филиала наследуются от главного ресторана. Применяйте шаблоны в главном ресторане.'
+      });
+    }
 
     console.log('🔧 Applying template to dish:', { templateId, dishId });
 
@@ -183,10 +288,8 @@ export const applyTemplateToDish = async (req, res, next) => {
 export const syncModifiersWithTemplate = async (req, res, next) => {
   try {
     const { id } = req.params; // templateId
+    const { restaurantId } = req.body;
 
-    console.log('🔄 Syncing modifiers with template:', id);
-
-    // Получаем шаблон с опциями
     const template = await prisma.modifierTemplate.findUnique({
       where: { id },
       include: { options: true }
@@ -195,6 +298,22 @@ export const syncModifiersWithTemplate = async (req, res, next) => {
     if (!template) {
       return res.status(404).json({ error: 'Шаблон не найден' });
     }
+
+    const contextRestaurantId = restaurantId || template.restaurantId;
+    const context = await getModifierManagementContext(contextRestaurantId);
+
+    if (!context) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    if (context.isInherited) {
+      return res.status(403).json({
+        error: 'Shared template locked',
+        message: 'Модификаторы филиала наследуются от главного ресторана. Синхронизацию запускайте в главном ресторане.'
+      });
+    }
+
+    console.log('🔄 Syncing modifiers with template:', id);
 
     // Находим все модификаторы, созданные из этого шаблона
     const modifiers = await prisma.modifier.findMany({

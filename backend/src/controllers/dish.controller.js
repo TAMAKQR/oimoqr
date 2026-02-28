@@ -1,5 +1,29 @@
 import { prisma } from '../config/prisma.js';
 
+const ensureModifierManagementAllowed = async (selectedRestaurantId) => {
+  if (!selectedRestaurantId) {
+    return;
+  }
+
+  const selectedRestaurant = await prisma.restaurant.findUnique({
+    where: { id: selectedRestaurantId },
+    select: { id: true, sharedMenuSourceRestaurantId: true }
+  });
+
+  if (!selectedRestaurant) {
+    const error = new Error('Restaurant not found');
+    error.status = 404;
+    throw error;
+  }
+
+  if (selectedRestaurant.sharedMenuSourceRestaurantId) {
+    const error = new Error('Shared template locked');
+    error.status = 403;
+    error.message = 'Модификаторы филиала наследуются от главного ресторана. Изменяйте их в главном ресторане.';
+    throw error;
+  }
+};
+
 export const getDishes = async (req, res, next) => {
   try {
     const { categoryId } = req.params;
@@ -456,7 +480,9 @@ export const toggleDishAvailability = async (req, res, next) => {
 export const createModifier = async (req, res, next) => {
   try {
     const { dishId } = req.params;
-    const { name, price = 0, isRequired, type = "default" } = req.body;
+    const { name, price = 0, isRequired, type = "default", restaurantId: selectedRestaurantId } = req.body;
+
+    await ensureModifierManagementAllowed(selectedRestaurantId);
 
     // Validate price
     let parsedPrice = 0;
@@ -509,7 +535,9 @@ export const createModifier = async (req, res, next) => {
 export const updateModifier = async (req, res, next) => {
   try {
     const { modifierId: id } = req.params;
-    const { name, price, isRequired } = req.body;
+    const { name, price, isRequired, restaurantId: selectedRestaurantId } = req.body;
+
+    await ensureModifierManagementAllowed(selectedRestaurantId || req.query.restaurantId);
 
     // Validate price if provided
     let parsedPrice = undefined;
@@ -554,6 +582,8 @@ export const updateModifier = async (req, res, next) => {
 export const deleteModifier = async (req, res, next) => {
   try {
     const { id } = req.params;
+
+    await ensureModifierManagementAllowed(req.query.restaurantId);
 
     // Check if user has access to this modifier's restaurant
     const modifier = await prisma.modifier.findUnique({
@@ -626,7 +656,9 @@ export const reorderDishes = async (req, res, next) => {
 export const createModifierOption = async (req, res, next) => {
   try {
     const { modifierId } = req.params;
-    const { name, price = 0 } = req.body;
+    const { name, price = 0, restaurantId: selectedRestaurantId } = req.body;
+
+    await ensureModifierManagementAllowed(selectedRestaurantId || req.query.restaurantId);
 
     // Validate price
     const parsedPrice = parseFloat(price);
@@ -668,7 +700,9 @@ export const createModifierOption = async (req, res, next) => {
 export const updateModifierOption = async (req, res, next) => {
   try {
     const { optionId } = req.params;
-    const { name, price } = req.body;
+    const { name, price, restaurantId: selectedRestaurantId } = req.body;
+
+    await ensureModifierManagementAllowed(selectedRestaurantId || req.query.restaurantId);
 
     // Validate price if provided
     let parsedPrice = undefined;
@@ -718,6 +752,8 @@ export const deleteModifierOption = async (req, res, next) => {
   try {
     const { optionId } = req.params;
 
+    await ensureModifierManagementAllowed(req.query.restaurantId);
+
     // Check if option exists and user has access
     const option = await prisma.modifierOption.findUnique({
       where: { id: optionId },
@@ -752,6 +788,7 @@ export const deleteModifierOption = async (req, res, next) => {
 export const uploadModifierOptionImage = async (req, res, next) => {
   try {
     const { optionId } = req.params;
+    await ensureModifierManagementAllowed(req.query.restaurantId || req.body.restaurantId);
     console.log('📸 [Backend] Upload modifier option image request received');
     console.log('📸 [Backend] Option ID:', optionId);
     console.log('📸 [Backend] Request file:', req.file);
@@ -859,6 +896,8 @@ export const uploadModifierOptionImage = async (req, res, next) => {
 export const deleteModifierOptionImage = async (req, res, next) => {
   try {
     const { optionId } = req.params;
+
+    await ensureModifierManagementAllowed(req.query.restaurantId);
 
     const option = await prisma.modifierOption.findUnique({
       where: { id: optionId }

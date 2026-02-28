@@ -15,6 +15,8 @@ const ModifierTemplatesPage = () => {
     const [showModal, setShowModal] = useState(false);
     const [editingTemplate, setEditingTemplate] = useState(null);
     const [syncingId, setSyncingId] = useState(null);
+    const [isInherited, setIsInherited] = useState(false);
+    const [managementRestaurantId, setManagementRestaurantId] = useState(null);
 
     // Форма шаблона
     const [formData, setFormData] = useState({
@@ -33,6 +35,8 @@ const ModifierTemplatesPage = () => {
     }, [selectedRestaurantId]);
 
     const getSelectedRestaurant = () => selectedRestaurant;
+    const managementRestaurant = (userData?.restaurants || []).find(r => r.id === managementRestaurantId)
+        || (userData?.restaurantStaff || []).map(s => s.restaurant).find(r => r?.id === managementRestaurantId);
 
     const currency = getSelectedRestaurant()?.currency || 'KGS';
 
@@ -44,7 +48,10 @@ const ModifierTemplatesPage = () => {
                 return;
             }
             const data = await modifierTemplateService.getTemplates(selectedRestaurantId);
-            setTemplates(data);
+            const templates = Array.isArray(data) ? data : (data.templates || []);
+            setTemplates(templates);
+            setIsInherited(Boolean(data?.isInherited));
+            setManagementRestaurantId(data?.managementRestaurantId || selectedRestaurantId);
         } catch (error) {
             console.error('Error loading templates:', error);
             toast.error('Ошибка загрузки шаблонов');
@@ -156,7 +163,7 @@ const ModifierTemplatesPage = () => {
         if (!confirmed) return;
 
         try {
-            await modifierTemplateService.deleteTemplate(template.id);
+            await modifierTemplateService.deleteTemplate(template.id, selectedRestaurantId);
             toast.success('Шаблон удален');
             loadTemplates();
         } catch (error) {
@@ -180,7 +187,7 @@ const ModifierTemplatesPage = () => {
 
         try {
             setSyncingId(template.id);
-            const result = await modifierTemplateService.syncTemplate(template.id);
+            const result = await modifierTemplateService.syncTemplate(template.id, selectedRestaurantId);
             toast.success(result.message || `Обновлено ${result.count} модификаторов`);
             loadTemplates();
         } catch (error) {
@@ -244,7 +251,8 @@ const ModifierTemplatesPage = () => {
                         />
                         <button
                             onClick={() => handleOpenModal()}
-                            className="flex items-center gap-2 justify-center px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                            disabled={isInherited}
+                            className="flex items-center gap-2 justify-center px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors text-sm font-medium"
                         >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -253,6 +261,13 @@ const ModifierTemplatesPage = () => {
                         </button>
                     </div>
                 </div>
+
+                {isInherited && (
+                    <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-800 text-sm">
+                        Модификаторы филиала наследуются от главного ресторана
+                        {managementRestaurant ? ` «${managementRestaurant.name}»` : ''}. Управление шаблонами доступно только в главном ресторане.
+                    </div>
+                )}
 
                 {/* Templates List */}
                 {templates.length === 0 ? (
@@ -264,7 +279,8 @@ const ModifierTemplatesPage = () => {
                         <p className="text-gray-600 mb-4">Создайте первый шаблон модификатора</p>
                         <button
                             onClick={() => handleOpenModal()}
-                            className="px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                            disabled={isInherited}
+                            className="px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors text-sm font-medium"
                         >
                             Создать шаблон
                         </button>
@@ -303,7 +319,8 @@ const ModifierTemplatesPage = () => {
                                     <div className="flex items-center gap-2">
                                         <button
                                             onClick={() => handleOpenModal(template)}
-                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                            disabled={isInherited}
+                                            className="p-2 text-blue-600 hover:bg-blue-50 disabled:opacity-60 disabled:cursor-not-allowed rounded-lg transition-colors"
                                             title="Редактировать"
                                         >
                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -312,7 +329,8 @@ const ModifierTemplatesPage = () => {
                                         </button>
                                         <button
                                             onClick={() => handleDelete(template)}
-                                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                            disabled={isInherited}
+                                            className="p-2 text-red-600 hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed rounded-lg transition-colors"
                                             title="Удалить"
                                         >
                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -338,8 +356,8 @@ const ModifierTemplatesPage = () => {
                                 {template._count?.usedInModifiers > 0 && (
                                     <button
                                         onClick={() => handleSync(template)}
-                                        disabled={syncingId === template.id}
-                                        className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors text-sm"
+                                        disabled={syncingId === template.id || isInherited}
+                                        className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-60 disabled:cursor-not-allowed transition-colors text-sm"
                                     >
                                         {syncingId === template.id ? (
                                             <>

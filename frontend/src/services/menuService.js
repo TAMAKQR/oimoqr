@@ -94,13 +94,15 @@ export const menuService = {
     return response.data;
   },
 
-  updateModifier: async (modifierId, data) => {
+  updateModifier: async (modifierId, data, restaurantId) => {
     const response = await api.put(`/dishes/modifiers/${modifierId}`, data);
     return response.data;
   },
 
-  deleteModifier: async (modifierId) => {
-    const response = await api.delete(`/dishes/modifiers/${modifierId}`);
+  deleteModifier: async (modifierId, restaurantId) => {
+    const response = await api.delete(`/dishes/modifiers/${modifierId}`, {
+      params: restaurantId ? { restaurantId } : undefined
+    });
     return response.data;
   },
 
@@ -110,13 +112,15 @@ export const menuService = {
     return response.data;
   },
 
-  updateModifierOption: async (optionId, data) => {
+  updateModifierOption: async (optionId, data, restaurantId) => {
     const response = await api.put(`/dishes/modifiers/options/${optionId}`, data);
     return response.data;
   },
 
-  deleteModifierOption: async (optionId) => {
-    const response = await api.delete(`/dishes/modifiers/options/${optionId}`);
+  deleteModifierOption: async (optionId, restaurantId) => {
+    const response = await api.delete(`/dishes/modifiers/options/${optionId}`, {
+      params: restaurantId ? { restaurantId } : undefined
+    });
     return response.data;
   },
 
@@ -131,7 +135,7 @@ export const menuService = {
   },
 
   // ✅ Modifier Options - Image upload/delete
-  uploadModifierOptionImage: async (optionId, file, onProgress) => {
+  uploadModifierOptionImage: async (optionId, file, onProgress, restaurantId) => {
     console.log('📡 [API Service] uploadModifierOptionImage called');
     console.log('📡 [API Service] Option ID:', optionId);
     console.log('📡 [API Service] File:', file?.name, file?.size, file?.type);
@@ -144,6 +148,7 @@ export const menuService = {
 
     try {
       const response = await api.post(`/dishes/modifiers/options/${optionId}/upload-image`, formData, {
+        params: restaurantId ? { restaurantId } : undefined,
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -165,8 +170,10 @@ export const menuService = {
     }
   },
 
-  deleteModifierOptionImage: async (optionId) => {
-    const response = await api.delete(`/dishes/modifiers/options/${optionId}/image`);
+  deleteModifierOptionImage: async (optionId, restaurantId) => {
+    const response = await api.delete(`/dishes/modifiers/options/${optionId}/image`, {
+      params: restaurantId ? { restaurantId } : undefined
+    });
     return response.data;
   },
 };

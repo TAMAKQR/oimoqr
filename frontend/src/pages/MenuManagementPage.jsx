@@ -17,8 +17,8 @@ import { useSelectedRestaurant } from '../hooks/useSelectedRestaurant';
 const MenuManagementPage = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
-  const { userData, loading, refresh: refreshUserData } = useUserData();
-  const { selectedRestaurantId, setSelectedRestaurantId, selectedRestaurant, isOwner: isOwnerFlag } = useSelectedRestaurant(userData);
+  const { userData, loading } = useUserData();
+  const { selectedRestaurantId, setSelectedRestaurantId, selectedRestaurant } = useSelectedRestaurant(userData);
   const [categories, setCategories] = useState([]);
   const [dishes, setDishes] = useState({});
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -39,20 +39,10 @@ const MenuManagementPage = () => {
   const [showCategoryGroupsModal, setShowCategoryGroupsModal] = useState(false);
   const [categoryGroups, setCategoryGroups] = useState([]);
   const [dataTimestamp, setDataTimestamp] = useState(Date.now());
-  const [sharedMenuSourceId, setSharedMenuSourceId] = useState('');
-  const [savingSharedSource, setSavingSharedSource] = useState(false);
 
   // Автоматически выбираем ресторан при загрузке (handled by useSelectedRestaurant)
 
   const getSelectedRestaurant = () => selectedRestaurant;
-  const ownedRestaurants = userData?.restaurants || [];
-  const allAccessibleRestaurants = [
-    ...ownedRestaurants,
-    ...(userData?.restaurantStaff?.map((s) => s.restaurant) || [])
-  ];
-  const sharedSourceRestaurant = allAccessibleRestaurants.find(
-    (r) => r.id === selectedRestaurant?.sharedMenuSourceRestaurantId
-  );
   const isSharedMenuConsumer = Boolean(
     selectedRestaurant?.sharedMenuSourceRestaurantId &&
     selectedRestaurant?.sharedMenuSourceRestaurantId !== selectedRestaurantId
@@ -98,10 +88,6 @@ const MenuManagementPage = () => {
     }
   }, [selectedRestaurantId, userData]);
 
-  useEffect(() => {
-    setSharedMenuSourceId(selectedRestaurant?.sharedMenuSourceRestaurantId || '');
-  }, [selectedRestaurant?.id, selectedRestaurant?.sharedMenuSourceRestaurantId]);
-
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -145,32 +131,6 @@ const MenuManagementPage = () => {
       toast.error(err.message || 'Ошибка при копировании меню');
     } finally {
       setCopying(false);
-    }
-  };
-
-  const handleSaveSharedMenuSource = async () => {
-    if (!selectedRestaurantId) return;
-    if (!isOwnerFlag) {
-      toast.error('Только владелец может менять источник общего меню');
-      return;
-    }
-    if (sharedMenuSourceId && sharedMenuSourceId === selectedRestaurantId) {
-      toast.error('Нельзя выбрать этот же ресторан как источник');
-      return;
-    }
-
-    setSavingSharedSource(true);
-    try {
-      await restaurantService.setSharedMenuSource(selectedRestaurantId, sharedMenuSourceId || null);
-      await refreshUserData();
-      await loadCategories(selectedRestaurantId);
-      await loadCategoryGroups(selectedRestaurantId);
-      toast.success(sharedMenuSourceId ? 'Источник общего меню сохранен' : 'Общее меню отключено');
-    } catch (err) {
-      const message = err.response?.data?.error || 'Не удалось сохранить источник общего меню';
-      toast.error(message);
-    } finally {
-      setSavingSharedSource(false);
     }
   };
 
@@ -414,54 +374,9 @@ const MenuManagementPage = () => {
           </div>
         )}
 
-        {selectedRestaurantId && (
-          <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 space-y-3">
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900">Общее меню между точками</h3>
-              <p className="text-xs text-gray-500 mt-1">
-                Можно выбрать ресторан-источник. Для текущей точки будет доступен локальный стоп-лист блюд.
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <select
-                value={sharedMenuSourceId}
-                onChange={(e) => setSharedMenuSourceId(e.target.value)}
-                className="input w-full"
-                disabled={!isOwnerFlag || savingSharedSource}
-              >
-                <option value="">Использовать свое меню</option>
-                {ownedRestaurants
-                  .filter((r) => r.id !== selectedRestaurantId)
-                  .map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                    </option>
-                  ))}
-              </select>
-              <button
-                type="button"
-                onClick={handleSaveSharedMenuSource}
-                disabled={
-                  !isOwnerFlag ||
-                  savingSharedSource ||
-                  sharedMenuSourceId === (selectedRestaurant?.sharedMenuSourceRestaurantId || '')
-                }
-                className="px-4 py-2 rounded-lg text-sm font-medium bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {savingSharedSource ? 'Сохранение...' : 'Сохранить источник'}
-              </button>
-            </div>
-            {isSharedMenuConsumer && (
-              <div className="text-xs rounded-lg bg-amber-50 text-amber-800 border border-amber-200 px-3 py-2">
-                Меню этой точки берется из: <span className="font-semibold">{sharedSourceRestaurant?.name || 'другой точки'}</span>.
-                Прямое редактирование категорий и блюд отключено, доступен только локальный стоп-лист.
-              </div>
-            )}
-            {!isOwnerFlag && (
-              <div className="text-xs text-gray-500">
-                Изменять источник общего меню может только владелец ресторана.
-              </div>
-            )}
+        {selectedRestaurantId && isSharedMenuConsumer && (
+          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Для этой точки используется общее меню главного ресторана. Редактирование категорий и блюд отключено, доступен только локальный стоп-лист.
           </div>
         )}
 
@@ -1003,7 +918,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
     setLoadingTemplates(true);
     try {
       const data = await modifierTemplateService.getTemplates(restaurantId);
-      setTemplates(data);
+      setTemplates(Array.isArray(data) ? data : (data.templates || []));
     } catch (err) {
       console.error('Error loading templates:', err);
       toast.error('Ошибка загрузки шаблонов');
@@ -1065,7 +980,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
     if (dish?.id) {
       // Если блюдо уже сохранено - создаем модификатор сразу
       try {
-        const created = await menuService.createModifier(dish.id, modifierData);
+        const created = await menuService.createModifier(dish.id, { ...modifierData, restaurantId });
         setModifiers(prev => [...prev, created]);
         toast.success('Модификатор создан');
       } catch (err) {
@@ -1102,7 +1017,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
     } else {
       // Удаляем из базы данных
       try {
-        await menuService.deleteModifier(modifier.id);
+        await menuService.deleteModifier(modifier.id, restaurantId);
         setModifiers(modifiers.filter(m => m.id !== modifier.id));
         toast.success('Модификатор удален');
       } catch (err) {
@@ -1119,7 +1034,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
     }
 
     try {
-      await modifierTemplateService.applyToDish(template.id, dish.id);
+      await modifierTemplateService.applyToDish(template.id, dish.id, restaurantId);
       toast.success(`Шаблон "${template.name}" применен к блюду`);
       setShowTemplates(false);
       // Перезагружаем данные блюда
@@ -1146,7 +1061,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
     if (!modifier.isNew && dish?.id) {
       // Создаем опцию сразу в базе
       try {
-        const created = await menuService.createModifierOption(modifier.id, optionData);
+        const created = await menuService.createModifierOption(modifier.id, { ...optionData, restaurantId });
         setModifiers(prev => prev.map(m =>
           m.id === modifier.id
             ? { ...m, options: [...(m.options || []), created] }
@@ -1183,7 +1098,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
 
     if (!option.isNew && dish?.id) {
       try {
-        await menuService.deleteModifierOption(option.id);
+        await menuService.deleteModifierOption(option.id, restaurantId);
         toast.success('Опция удалена');
       } catch (err) {
         toast.error('Ошибка при удалении опции');
@@ -1221,7 +1136,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
       console.log('📤 [Upload API] Calling uploadModifierOptionImage...');
       const result = await menuService.uploadModifierOptionImage(option.id, file, (progress) => {
         console.log(`📊 [Upload Progress] ${progress}%`);
-      });
+      }, restaurantId);
 
       console.log('✅ [Upload Success] Result:', result);
       console.log('✅ [Upload Success] Image URL:', result.imageUrl);
@@ -1261,7 +1176,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
     if (!confirmed) return;
 
     try {
-      await menuService.deleteModifierOptionImage(option.id);
+      await menuService.deleteModifierOptionImage(option.id, restaurantId);
       setModifiers(modifiers.map(m =>
         m.id === modifier.id
           ? {
@@ -1366,7 +1281,8 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
         const createdModifier = await menuService.createModifier(savedDish.id, {
           name: modifier.name,
           type: modifier.type,
-          isRequired: modifier.isRequired
+          isRequired: modifier.isRequired,
+          restaurantId
         });
 
         // Создаем опции для модификатора
@@ -1374,7 +1290,8 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
         for (const option of newOptions) {
           await menuService.createModifierOption(createdModifier.id, {
             name: option.name,
-            price: option.price
+            price: option.price,
+            restaurantId
           });
         }
       }

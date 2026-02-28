@@ -20,23 +20,28 @@ const modifierTemplateService = {
   },
 
   // Удалить шаблон
-  deleteTemplate: async (id) => {
-    const response = await api.delete(`/modifiers/templates/${id}`);
+  deleteTemplate: async (id, restaurantId) => {
+    const response = await api.delete(`/modifiers/templates/${id}`, {
+      params: restaurantId ? { restaurantId } : undefined
+    });
     return response.data;
   },
 
   // Применить шаблон к блюду
-  applyToDish: async (templateId, dishId) => {
+  applyToDish: async (templateId, dishId, restaurantId) => {
     const response = await api.post('/modifiers/templates/apply', {
       templateId,
-      dishId
+      dishId,
+      restaurantId
     });
     return response.data;
   },
 
   // Синхронизировать все модификаторы с шаблоном
-  syncTemplate: async (id) => {
-    const response = await api.post(`/modifiers/templates/${id}/sync`);
+  syncTemplate: async (id, restaurantId) => {
+    const response = await api.post(`/modifiers/templates/${id}/sync`, {
+      restaurantId
+    });
     return response.data;
   }
 };
