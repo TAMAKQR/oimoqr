@@ -285,13 +285,17 @@ const CheckoutPage = () => {
             const response = await api.post(endpoint, payload);
             clearCart();
             const orderData = response?.data?.order || response?.data;
+            const successPayload = {
+                order: orderData,
+                restaurant,
+                currency
+            };
+
+            sessionStorage.setItem('last-order-success', JSON.stringify(successPayload));
+
             navigate('/order-success', {
                 replace: true,
-                state: {
-                    order: orderData,
-                    restaurant: restaurant,
-                    currency: currency
-                }
+                state: successPayload
             });
         } catch (error) {
             console.error('Failed to place order', error);

@@ -114,11 +114,21 @@ const WhatsAppLoginPage = () => {
             // Сохраняем авторизацию (zustand + localStorage совместимость)
             setAuth(response.data.customer, response.data.token, restaurantId || null);
 
-            // Редирект в меню или профиль
-            if (restaurantId) {
-                navigate(`/menu/${restaurantId}`);
+            // Редирект в меню текущего ресторана (если известен subdomain) или в профиль
+            const rawRestaurant = localStorage.getItem('customer-last-restaurant');
+            let lastRestaurant = null;
+            if (rawRestaurant) {
+                try {
+                    lastRestaurant = JSON.parse(rawRestaurant);
+                } catch (e) {
+                    lastRestaurant = null;
+                }
+            }
+
+            if (lastRestaurant?.subdomain) {
+                navigate(`/menu/${lastRestaurant.subdomain}`);
             } else {
-                navigate('/profile');
+                navigate('/customer/profile');
             }
         } catch (error) {
             console.error('Failed to verify code:', error);

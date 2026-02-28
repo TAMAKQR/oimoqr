@@ -4,7 +4,19 @@ import { useNavigate, useLocation } from 'react-router-dom';
 const OrderSuccessPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { order, restaurant, currency } = location.state || {};
+
+    const [fallbackPayload, setFallbackPayload] = useState(() => {
+        try {
+            const raw = sessionStorage.getItem('last-order-success');
+            return raw ? JSON.parse(raw) : null;
+        } catch (e) {
+            return null;
+        }
+    });
+
+    const order = location.state?.order || fallbackPayload?.order;
+    const restaurant = location.state?.restaurant || fallbackPayload?.restaurant;
+    const currency = location.state?.currency || fallbackPayload?.currency;
 
     const [showCheck, setShowCheck] = useState(false);
     const [showContent, setShowContent] = useState(false);
@@ -17,6 +29,17 @@ const OrderSuccessPage = () => {
         const t3 = setTimeout(() => setShowItems(true), 1000);
         return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
     }, []);
+
+    useEffect(() => {
+        if (location.state?.order) {
+            try {
+                sessionStorage.setItem('last-order-success', JSON.stringify(location.state));
+                setFallbackPayload(location.state);
+            } catch (e) {
+                // ignore storage errors
+            }
+        }
+    }, [location.state]);
 
     // If no order data, redirect back
     useEffect(() => {
