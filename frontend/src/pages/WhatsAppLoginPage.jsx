@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useCustomerAuthStore } from '../store/customerAuthStore';
-import { geolocate } from '@abstractapi/javascript-ip-geolocation';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
