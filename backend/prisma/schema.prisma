@@ -476,6 +476,11 @@ model PricingTier {
   bonusProgramEnabled Boolean @default(false)      // Доступна ли бонусная программа по тарифу
   bonusAccrualRate    Float   @default(0)          // Процент начисления (0..1)
   bonusExpiryDays     Int     @default(90)         // Срок жизни бонусов в днях
+  bonusBronzeLabel    String  @default("Bronze")  // Название бронзового уровня
+  bonusSilverLabel    String  @default("Silver")  // Название серебряного уровня
+  bonusGoldLabel      String  @default("Gold")    // Название золотого уровня
+  bonusSilverFromOrders Int   @default(8)          // Порог заказов для Silver
+  bonusGoldFromOrders   Int   @default(20)         // Порог заказов для Gold
   
   businessType      String    @default("RESTAURANT") // RESTAURANT | ONLINE_STORE | HOTEL | ALL
   order             Int       @default(0)

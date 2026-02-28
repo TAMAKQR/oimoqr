@@ -279,6 +279,11 @@ model PricingTier {
   bonusProgramEnabled Boolean @default(false)
   bonusAccrualRate    Float   @default(0)
   bonusExpiryDays     Int     @default(90)
+  bonusBronzeLabel    String  @default("Bronze")
+  bonusSilverLabel    String  @default("Silver")
+  bonusGoldLabel      String  @default("Gold")
+  bonusSilverFromOrders Int   @default(8)
+  bonusGoldFromOrders   Int   @default(20)
   order             Int       @default(0)
   isActive          Boolean   @default(true)
   

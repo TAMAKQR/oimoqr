@@ -55,30 +55,40 @@ const getEffectiveBonusConfig = (restaurant) => {
     };
 };
 
-const getTier = (activeDeliveryOrders) => {
-    if (activeDeliveryOrders >= 20) {
+const getTier = (activeDeliveryOrders, tierConfig) => {
+    const silverFromOrders = Number.isFinite(Number(tierConfig?.bonusSilverFromOrders))
+        ? Number(tierConfig.bonusSilverFromOrders)
+        : 8;
+    const goldFromOrders = Number.isFinite(Number(tierConfig?.bonusGoldFromOrders))
+        ? Number(tierConfig.bonusGoldFromOrders)
+        : 20;
+    const bronzeLabel = tierConfig?.bonusBronzeLabel || 'Bronze';
+    const silverLabel = tierConfig?.bonusSilverLabel || 'Silver';
+    const goldLabel = tierConfig?.bonusGoldLabel || 'Gold';
+
+    if (activeDeliveryOrders >= goldFromOrders) {
         return {
-            name: 'Gold',
+            name: goldLabel,
             color: 'text-amber-600',
             bg: 'bg-amber-50',
             nextAt: null
         };
     }
 
-    if (activeDeliveryOrders >= 8) {
+    if (activeDeliveryOrders >= silverFromOrders) {
         return {
-            name: 'Silver',
+            name: silverLabel,
             color: 'text-slate-600',
             bg: 'bg-slate-50',
-            nextAt: 20
+            nextAt: goldFromOrders
         };
     }
 
     return {
-        name: 'Bronze',
+        name: bronzeLabel,
         color: 'text-orange-600',
         bg: 'bg-orange-50',
-        nextAt: 8
+        nextAt: silverFromOrders
     };
 };
 
@@ -150,7 +160,14 @@ export default function CustomerBonusesPage() {
         const lifetimePoints = transactions.reduce((sum, tx) => sum + tx.earned, 0);
         const expiredPoints = Math.max(0, lifetimePoints - activePoints);
         const deliveryOrdersCount = transactions.length;
-        const tier = getTier(deliveryOrdersCount);
+        const tierSourceOrder = orders.find((order) => {
+            const config = getEffectiveBonusConfig(order?.restaurant);
+            return config.enabled;
+        });
+        const activeSubscription = tierSourceOrder?.restaurant?.subscriptions?.find((s) => s?.status === 'ACTIVE')
+            || tierSourceOrder?.restaurant?.subscriptions?.[0];
+        const tierConfig = activeSubscription?.pricingTier || null;
+        const tier = getTier(deliveryOrdersCount, tierConfig);
 
         return {
             transactions,
@@ -222,7 +239,7 @@ export default function CustomerBonusesPage() {
                             <li>• Начисление идёт только за доставленные заказы доставки.</li>
                             <li>• Если в точке включено «Использовать настройки тарифа», применяются лимиты тарифа.</li>
                             <li>• Списывать бонусы можно при оплате заказа (MVP: скоро в следующем шаге).</li>
-                            <li>• Уровень (Bronze/Silver/Gold) зависит от количества доставленных заказов.</li>
+                            <li>• Названия и пороги уровней задаются в админке тарифа.</li>
                         </ul>
                     </div>
 

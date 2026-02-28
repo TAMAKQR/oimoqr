@@ -229,12 +229,20 @@ export default function CustomerProfilePage() {
                                     <p className="text-xs text-gray-500">{customer?.phone}</p>
                                 </div>
                             </div>
-                            <button
-                                onClick={handleLogout}
-                                className="px-3 py-1.5 text-xs font-medium text-red-600 active:bg-red-50 rounded-lg transition"
-                            >
-                                Выйти
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => navigate(getLastRestaurantPath())}
+                                    className="px-3 py-1.5 text-xs font-medium text-primary-700 bg-primary-50 active:bg-primary-100 rounded-lg transition"
+                                >
+                                    В меню
+                                </button>
+                                <button
+                                    onClick={handleLogout}
+                                    className="px-3 py-1.5 text-xs font-medium text-red-600 active:bg-red-50 rounded-lg transition"
+                                >
+                                    Выйти
+                                </button>
+                            </div>
                         </div>
 
                         {/* Tab selector */}

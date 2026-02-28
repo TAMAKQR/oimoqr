@@ -725,7 +725,12 @@ export const createPricingTier = async (req, res, next) => {
       order,
       bonusProgramEnabled,
       bonusAccrualRate,
-      bonusExpiryDays
+      bonusExpiryDays,
+      bonusBronzeLabel,
+      bonusSilverLabel,
+      bonusGoldLabel,
+      bonusSilverFromOrders,
+      bonusGoldFromOrders
     } = req.body;
 
     if (!name || price === undefined) {
@@ -742,6 +747,12 @@ export const createPricingTier = async (req, res, next) => {
     const parsedBonusExpiryDays = bonusExpiryDays !== undefined && bonusExpiryDays !== null
       ? parseInt(bonusExpiryDays)
       : 90;
+    const parsedSilverFromOrders = bonusSilverFromOrders !== undefined && bonusSilverFromOrders !== null
+      ? parseInt(bonusSilverFromOrders)
+      : 8;
+    const parsedGoldFromOrders = bonusGoldFromOrders !== undefined && bonusGoldFromOrders !== null
+      ? parseInt(bonusGoldFromOrders)
+      : 20;
 
     if (parsedBonusRate < 0 || parsedBonusRate > 1) {
       return res.status(400).json({ error: 'bonusAccrualRate must be between 0 and 1' });
@@ -749,6 +760,14 @@ export const createPricingTier = async (req, res, next) => {
 
     if (parsedBonusExpiryDays < 1) {
       return res.status(400).json({ error: 'bonusExpiryDays must be >= 1' });
+    }
+
+    if (parsedSilverFromOrders < 1) {
+      return res.status(400).json({ error: 'bonusSilverFromOrders must be >= 1' });
+    }
+
+    if (parsedGoldFromOrders <= parsedSilverFromOrders) {
+      return res.status(400).json({ error: 'bonusGoldFromOrders must be greater than bonusSilverFromOrders' });
     }
 
     const tier = await prisma.pricingTier.create({
@@ -762,7 +781,12 @@ export const createPricingTier = async (req, res, next) => {
         order: order || 0,
         bonusProgramEnabled: Boolean(bonusProgramEnabled),
         bonusAccrualRate: parsedBonusRate,
-        bonusExpiryDays: parsedBonusExpiryDays
+        bonusExpiryDays: parsedBonusExpiryDays,
+        bonusBronzeLabel: bonusBronzeLabel || 'Bronze',
+        bonusSilverLabel: bonusSilverLabel || 'Silver',
+        bonusGoldLabel: bonusGoldLabel || 'Gold',
+        bonusSilverFromOrders: parsedSilverFromOrders,
+        bonusGoldFromOrders: parsedGoldFromOrders
       }
     });
 
@@ -789,7 +813,12 @@ export const updatePricingTier = async (req, res, next) => {
       isActive,
       bonusProgramEnabled,
       bonusAccrualRate,
-      bonusExpiryDays
+      bonusExpiryDays,
+      bonusBronzeLabel,
+      bonusSilverLabel,
+      bonusGoldLabel,
+      bonusSilverFromOrders,
+      bonusGoldFromOrders
     } = req.body;
 
     if (!name || price === undefined) {
@@ -806,6 +835,12 @@ export const updatePricingTier = async (req, res, next) => {
     const parsedBonusExpiryDays = bonusExpiryDays !== undefined && bonusExpiryDays !== null
       ? parseInt(bonusExpiryDays)
       : 90;
+    const parsedSilverFromOrders = bonusSilverFromOrders !== undefined && bonusSilverFromOrders !== null
+      ? parseInt(bonusSilverFromOrders)
+      : 8;
+    const parsedGoldFromOrders = bonusGoldFromOrders !== undefined && bonusGoldFromOrders !== null
+      ? parseInt(bonusGoldFromOrders)
+      : 20;
 
     if (parsedBonusRate < 0 || parsedBonusRate > 1) {
       return res.status(400).json({ error: 'bonusAccrualRate must be between 0 and 1' });
@@ -813,6 +848,14 @@ export const updatePricingTier = async (req, res, next) => {
 
     if (parsedBonusExpiryDays < 1) {
       return res.status(400).json({ error: 'bonusExpiryDays must be >= 1' });
+    }
+
+    if (parsedSilverFromOrders < 1) {
+      return res.status(400).json({ error: 'bonusSilverFromOrders must be >= 1' });
+    }
+
+    if (parsedGoldFromOrders <= parsedSilverFromOrders) {
+      return res.status(400).json({ error: 'bonusGoldFromOrders must be greater than bonusSilverFromOrders' });
     }
 
     const tier = await prisma.pricingTier.update({
@@ -828,7 +871,12 @@ export const updatePricingTier = async (req, res, next) => {
         isActive,
         bonusProgramEnabled: Boolean(bonusProgramEnabled),
         bonusAccrualRate: parsedBonusRate,
-        bonusExpiryDays: parsedBonusExpiryDays
+        bonusExpiryDays: parsedBonusExpiryDays,
+        bonusBronzeLabel: bonusBronzeLabel || 'Bronze',
+        bonusSilverLabel: bonusSilverLabel || 'Silver',
+        bonusGoldLabel: bonusGoldLabel || 'Gold',
+        bonusSilverFromOrders: parsedSilverFromOrders,
+        bonusGoldFromOrders: parsedGoldFromOrders
       }
     });
 

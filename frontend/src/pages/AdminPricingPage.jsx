@@ -26,6 +26,11 @@ const AdminPricingPage = () => {
     bonusProgramEnabled: false,
     bonusAccrualRate: '0',
     bonusExpiryDays: '90',
+    bonusBronzeLabel: 'Bronze',
+    bonusSilverLabel: 'Silver',
+    bonusGoldLabel: 'Gold',
+    bonusSilverFromOrders: '8',
+    bonusGoldFromOrders: '20',
     businessType: 'RESTAURANT',
     order: ''
   });
@@ -76,6 +81,11 @@ const AdminPricingPage = () => {
       bonusProgramEnabled: Boolean(tier.bonusProgramEnabled),
       bonusAccrualRate: tier.bonusAccrualRate?.toString?.() || '0',
       bonusExpiryDays: tier.bonusExpiryDays?.toString?.() || '90',
+      bonusBronzeLabel: tier.bonusBronzeLabel || 'Bronze',
+      bonusSilverLabel: tier.bonusSilverLabel || 'Silver',
+      bonusGoldLabel: tier.bonusGoldLabel || 'Gold',
+      bonusSilverFromOrders: tier.bonusSilverFromOrders?.toString?.() || '8',
+      bonusGoldFromOrders: tier.bonusGoldFromOrders?.toString?.() || '20',
       businessType: tier.businessType || 'RESTAURANT',
       order: tier.order || ''
     });
@@ -93,6 +103,11 @@ const AdminPricingPage = () => {
       bonusProgramEnabled: false,
       bonusAccrualRate: '0',
       bonusExpiryDays: '90',
+      bonusBronzeLabel: 'Bronze',
+      bonusSilverLabel: 'Silver',
+      bonusGoldLabel: 'Gold',
+      bonusSilverFromOrders: '8',
+      bonusGoldFromOrders: '20',
       businessType: 'RESTAURANT',
       order: ''
     });
@@ -111,6 +126,11 @@ const AdminPricingPage = () => {
       bonusProgramEnabled: false,
       bonusAccrualRate: '0',
       bonusExpiryDays: '90',
+      bonusBronzeLabel: 'Bronze',
+      bonusSilverLabel: 'Silver',
+      bonusGoldLabel: 'Gold',
+      bonusSilverFromOrders: '8',
+      bonusGoldFromOrders: '20',
       businessType: 'RESTAURANT',
       order: ''
     });
@@ -143,6 +163,11 @@ const AdminPricingPage = () => {
           bonusProgramEnabled: Boolean(formData.bonusProgramEnabled),
           bonusAccrualRate: formData.bonusAccrualRate === '' ? 0 : parseFloat(formData.bonusAccrualRate),
           bonusExpiryDays: formData.bonusExpiryDays ? parseInt(formData.bonusExpiryDays) : 90,
+          bonusBronzeLabel: formData.bonusBronzeLabel || 'Bronze',
+          bonusSilverLabel: formData.bonusSilverLabel || 'Silver',
+          bonusGoldLabel: formData.bonusGoldLabel || 'Gold',
+          bonusSilverFromOrders: formData.bonusSilverFromOrders ? parseInt(formData.bonusSilverFromOrders) : 8,
+          bonusGoldFromOrders: formData.bonusGoldFromOrders ? parseInt(formData.bonusGoldFromOrders) : 20,
           businessType: formData.businessType || 'RESTAURANT',
           order: formData.order ? parseInt(formData.order) : 0
         });
@@ -157,6 +182,11 @@ const AdminPricingPage = () => {
           bonusProgramEnabled: Boolean(formData.bonusProgramEnabled),
           bonusAccrualRate: formData.bonusAccrualRate === '' ? 0 : parseFloat(formData.bonusAccrualRate),
           bonusExpiryDays: formData.bonusExpiryDays ? parseInt(formData.bonusExpiryDays) : 90,
+          bonusBronzeLabel: formData.bonusBronzeLabel || 'Bronze',
+          bonusSilverLabel: formData.bonusSilverLabel || 'Silver',
+          bonusGoldLabel: formData.bonusGoldLabel || 'Gold',
+          bonusSilverFromOrders: formData.bonusSilverFromOrders ? parseInt(formData.bonusSilverFromOrders) : 8,
+          bonusGoldFromOrders: formData.bonusGoldFromOrders ? parseInt(formData.bonusGoldFromOrders) : 20,
           businessType: formData.businessType || 'RESTAURANT',
           order: formData.order ? parseInt(formData.order) : 0
         });
@@ -383,6 +413,80 @@ const AdminPricingPage = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Bronze label
+                </label>
+                <input
+                  type="text"
+                  name="bonusBronzeLabel"
+                  value={formData.bonusBronzeLabel}
+                  onChange={handleInputChange}
+                  className="input w-full"
+                  disabled={saving}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Silver label
+                </label>
+                <input
+                  type="text"
+                  name="bonusSilverLabel"
+                  value={formData.bonusSilverLabel}
+                  onChange={handleInputChange}
+                  className="input w-full"
+                  disabled={saving}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Gold label
+                </label>
+                <input
+                  type="text"
+                  name="bonusGoldLabel"
+                  value={formData.bonusGoldLabel}
+                  onChange={handleInputChange}
+                  className="input w-full"
+                  disabled={saving}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Silver от заказов
+                </label>
+                <input
+                  type="number"
+                  name="bonusSilverFromOrders"
+                  value={formData.bonusSilverFromOrders}
+                  onChange={handleInputChange}
+                  min="1"
+                  step="1"
+                  className="input w-full"
+                  disabled={saving}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Gold от заказов
+                </label>
+                <input
+                  type="number"
+                  name="bonusGoldFromOrders"
+                  value={formData.bonusGoldFromOrders}
+                  onChange={handleInputChange}
+                  min="1"
+                  step="1"
+                  className="input w-full"
+                  disabled={saving}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Тип бизнеса
                 </label>
                 <select
@@ -493,6 +597,11 @@ const AdminPricingPage = () => {
                       <p className="text-sm text-gray-500">
                         Бонусы: {tier.bonusProgramEnabled ? `вкл, ${Math.round((tier.bonusAccrualRate || 0) * 100)}% · ${tier.bonusExpiryDays || 90} дн.` : 'выкл'}
                       </p>
+                      {tier.bonusProgramEnabled && (
+                        <p className="text-sm text-gray-500">
+                          Уровни: {tier.bonusBronzeLabel || 'Bronze'} → {tier.bonusSilverLabel || 'Silver'} от {tier.bonusSilverFromOrders || 8}, {tier.bonusGoldLabel || 'Gold'} от {tier.bonusGoldFromOrders || 20}
+                        </p>
+                      )}
                       <p className="text-xs text-gray-400">
                         Обновлено: {new Date(tier.updatedAt).toLocaleDateString('ru-RU')}
                       </p>

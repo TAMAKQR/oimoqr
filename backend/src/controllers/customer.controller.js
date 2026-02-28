@@ -187,7 +187,12 @@ export const getOrderHistory = async (req, res, next) => {
                                     select: {
                                         bonusProgramEnabled: true,
                                         bonusAccrualRate: true,
-                                        bonusExpiryDays: true
+                                        bonusExpiryDays: true,
+                                        bonusBronzeLabel: true,
+                                        bonusSilverLabel: true,
+                                        bonusGoldLabel: true,
+                                        bonusSilverFromOrders: true,
+                                        bonusGoldFromOrders: true
                                     }
                                 }
                             }
