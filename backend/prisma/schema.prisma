@@ -133,11 +133,11 @@ model Subscription {
   pricingTierId     String?
   pricingTier       PricingTier? @relation(fields: [pricingTierId], references: [id], onDelete: SetNull)
   
-  // Add-ons and usage tracking
-  addons            String[]  @default([])         // ["delivery", "analytics", "customers_pro"]
-  smsUsedThisMonth  Int       @default(0)          // Счетчик SMS за месяц
-  smsResetDate      DateTime?                      // Дата сброса счетчика
-  smsOverageCharges Float     @default(0)          // Накопленные charges за overage
+  // Add-ons and usage tracking (ВРЕМЕННО ЗАКОММЕНТИРОВАНО - применить миграцию!)
+  // addons            String[]  @default([])         // ["delivery", "analytics", "customers_pro"]
+  // smsUsedThisMonth  Int       @default(0)          // Счетчик SMS за месяц
+  // smsResetDate      DateTime?                      // Дата сброса счетчика
+  // smsOverageCharges Float     @default(0)          // Накопленные charges за overage
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -439,14 +439,12 @@ model PricingTier {
   features          String?
   maxRestaurants    Int?
   
-  // Delivery & SMS limits
-  includesDelivery  Boolean   @default(false)      // Включен ли модуль доставки
-  includedSmsCount  Int       @default(0)          // Количество SMS в месяц (0 = нет, -1 = безлимит)
-  smsOveragePrice   Float     @default(0.10)       // Цена за SMS сверх лимита
-  
-  // Customer limits
-  maxCustomers      Int?                           // Лимит базы клиентов (NULL = безлимит)
-  maxStaff          Int?                           // Лимит персонала (NULL = безлимит)
+  // Delivery & SMS limits (ВРЕМЕННО ЗАКОММЕНТИРОВАНО - применить миграцию!)
+  // includesDelivery  Boolean   @default(false)      // Включен ли модуль доставки
+  // includedSmsCount  Int       @default(0)          // Количество SMS в месяц (0 = нет, -1 = безлимит)
+  // smsOveragePrice   Float     @default(0.10)       // Цена за SMS сверх лимита
+  // maxCustomers      Int?                           // Лимит базы клиентов (NULL = безлимит)
+  // maxStaff          Int?                           // Лимит персонала (NULL = безлимит)
   
   businessType      String    @default("RESTAURANT") // RESTAURANT | ONLINE_STORE | HOTEL | ALL
   order             Int       @default(0)
