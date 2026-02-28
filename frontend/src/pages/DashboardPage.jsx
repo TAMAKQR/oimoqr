@@ -125,6 +125,9 @@ const DashboardPage = () => {
   const lastOrderIdRef = useRef(null);
   const [updatingStatusId, setUpdatingStatusId] = useState(null);
 
+  const restaurantsCount = userData?.restaurants?.length || 0;
+  const isFirstRestaurantCreation = restaurantsCount === 0;
+
   const ORDER_STATUSES = [
     { value: 'new', label: 'Новый' },
     { value: 'confirmed', label: 'Подтвержден' },
@@ -264,8 +267,8 @@ const DashboardPage = () => {
   };
 
   const handleCreateRestaurant = async () => {
-    if (!newRestaurant.name.trim() || !newRestaurant.subdomain.trim()) {
-      setError('Название и субдомен обязательны');
+    if (!newRestaurant.name.trim()) {
+      setError('Название обязательно');
       return;
     }
 
@@ -277,6 +280,10 @@ const DashboardPage = () => {
         ...newRestaurant,
         ownerId: userData.id, // Добавляем ID владельца
       };
+
+      if (!restaurantData.subdomain?.trim()) {
+        delete restaurantData.subdomain; // Пусть бэкенд сгенерирует автоматически для филиалов
+      }
       const response = await restaurantService.createRestaurant(restaurantData);
 
       // Проверяем только на настоящие ошибки (не requiresPayment - это просто информация)
@@ -502,16 +509,24 @@ const DashboardPage = () => {
                     <div className="flex items-center">
                       <input
                         type="text"
-                        value={newRestaurant.subdomain}
-                        onChange={(e) => setNewRestaurant({ ...newRestaurant, subdomain: e.target.value.toLowerCase() })}
-                        placeholder={getBusinessType(newRestaurant.businessType).subdomainPlaceholder}
+                        value={isFirstRestaurantCreation ? newRestaurant.subdomain : ''}
+                        onChange={(e) => {
+                          if (!isFirstRestaurantCreation) return;
+                          setNewRestaurant({ ...newRestaurant, subdomain: e.target.value.toLowerCase() });
+                        }}
+                        placeholder={isFirstRestaurantCreation
+                          ? getBusinessType(newRestaurant.businessType).subdomainPlaceholder
+                          : 'Сгенерируется автоматически'}
                         className="input-field flex-1"
-                        disabled={creating}
+                        disabled={creating || !isFirstRestaurantCreation}
+                        readOnly={!isFirstRestaurantCreation}
                       />
                       <span className="ml-2 text-gray-500 text-sm">.oimoqr.com</span>
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
-                      Только буквы, цифры и дефисы
+                      {isFirstRestaurantCreation
+                        ? 'Только буквы, цифры и дефисы'
+                        : 'Для филиалов субдомен создадим автоматически на базе главного ресторана'}
                     </p>
                   </div>
                 </div>

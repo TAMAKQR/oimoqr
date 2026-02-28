@@ -349,31 +349,62 @@ export const updateRestaurant = async (req, res, next) => {
       telegramGroupId
     } = req.body;
 
+    const existingRestaurant = await prisma.restaurant.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        ownerId: true,
+        sharedMenuSourceRestaurantId: true
+      }
+    });
+
+    if (!existingRestaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    if (existingRestaurant.ownerId !== req.user.id) {
+      return res.status(403).json({ error: 'Only owner can update restaurant' });
+    }
+
+    const isOutlet = Boolean(existingRestaurant.sharedMenuSourceRestaurantId);
+
+    if (isOutlet && (primaryColor !== undefined || themePalette !== undefined || menuCardStyle !== undefined)) {
+      return res.status(403).json({
+        error: 'Shared template locked',
+        message: 'Этот ресторан наследует меню и оформление от главного. Измените оформление в главном ресторане.'
+      });
+    }
+
+    const updateData = {
+      name,
+      address,
+      country: country !== undefined ? (country || null) : undefined,
+      city: city !== undefined ? (city || null) : undefined,
+      phone,
+      description,
+      deliveryEnabled,
+      deliveryFee: deliveryFee ? parseFloat(deliveryFee) : null,
+      minOrderAmount: minOrderAmount ? parseFloat(minOrderAmount) : null,
+      freeDeliveryThreshold: freeDeliveryThreshold ? parseFloat(freeDeliveryThreshold) : null,
+      currency,
+      latitude: latitude ? parseFloat(latitude) : null,
+      longitude: longitude ? parseFloat(longitude) : null,
+      deliveryRadius: deliveryRadius ? parseFloat(deliveryRadius) : null,
+      workingHours: workingHours ? JSON.stringify(workingHours) : null,
+      isTemporarilyClosed: isTemporarilyClosed || false,
+      closureReason: closureReason || null,
+      telegramGroupId: telegramGroupId || null,
+    };
+
+    if (!isOutlet) {
+      updateData.cardStyle = menuCardStyle || 'horizontal';
+      updateData.primaryColor = primaryColor || null;
+      updateData.themePalette = themePalette || null;
+    }
+
     const restaurant = await prisma.restaurant.update({
       where: { id },
-      data: {
-        name,
-        address,
-        country: country !== undefined ? (country || null) : undefined,
-        city: city !== undefined ? (city || null) : undefined,
-        phone,
-        description,
-        deliveryEnabled,
-        deliveryFee: deliveryFee ? parseFloat(deliveryFee) : null,
-        minOrderAmount: minOrderAmount ? parseFloat(minOrderAmount) : null,
-        freeDeliveryThreshold: freeDeliveryThreshold ? parseFloat(freeDeliveryThreshold) : null,
-        currency,
-        cardStyle: menuCardStyle || 'horizontal',
-        primaryColor: primaryColor || null,
-        themePalette: themePalette || null,
-        latitude: latitude ? parseFloat(latitude) : null,
-        longitude: longitude ? parseFloat(longitude) : null,
-        deliveryRadius: deliveryRadius ? parseFloat(deliveryRadius) : null,
-        workingHours: workingHours ? JSON.stringify(workingHours) : null,
-        isTemporarilyClosed: isTemporarilyClosed || false,
-        closureReason: closureReason || null,
-        telegramGroupId: telegramGroupId || null,
-      },
+      data: updateData,
       include: {
         subscriptions: true,
         socialLinks: true
@@ -455,6 +486,26 @@ export const uploadBanner = async (req, res, next) => {
   try {
     const { id } = req.params;
 
+    const restaurantOwner = await prisma.restaurant.findUnique({
+      where: { id },
+      select: { ownerId: true, sharedMenuSourceRestaurantId: true }
+    });
+
+    if (!restaurantOwner) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    if (restaurantOwner.ownerId !== req.user.id) {
+      return res.status(403).json({ error: 'Only owner can update restaurant' });
+    }
+
+    if (restaurantOwner.sharedMenuSourceRestaurantId) {
+      return res.status(403).json({
+        error: 'Shared template locked',
+        message: 'Этот ресторан наследует оформление от главного. Добавьте баннеры в главном ресторане.'
+      });
+    }
+
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
@@ -521,6 +572,26 @@ export const deleteBanner = async (req, res, next) => {
     const { id } = req.params;
     const { bannerUrl } = req.body;
 
+    const restaurantOwner = await prisma.restaurant.findUnique({
+      where: { id },
+      select: { ownerId: true, sharedMenuSourceRestaurantId: true }
+    });
+
+    if (!restaurantOwner) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    if (restaurantOwner.ownerId !== req.user.id) {
+      return res.status(403).json({ error: 'Only owner can update restaurant' });
+    }
+
+    if (restaurantOwner.sharedMenuSourceRestaurantId) {
+      return res.status(403).json({
+        error: 'Shared template locked',
+        message: 'Этот ресторан наследует оформление от главного. Удалять баннеры можно только в главном ресторане.'
+      });
+    }
+
     const restaurant = await prisma.restaurant.findUnique({
       where: { id },
       select: { banners: true }
@@ -571,6 +642,26 @@ export const uploadLogo = async (req, res, next) => {
   try {
     const { id } = req.params;
 
+    const restaurantOwner = await prisma.restaurant.findUnique({
+      where: { id },
+      select: { ownerId: true, sharedMenuSourceRestaurantId: true }
+    });
+
+    if (!restaurantOwner) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    if (restaurantOwner.ownerId !== req.user.id) {
+      return res.status(403).json({ error: 'Only owner can update restaurant' });
+    }
+
+    if (restaurantOwner.sharedMenuSourceRestaurantId) {
+      return res.status(403).json({
+        error: 'Shared template locked',
+        message: 'Этот ресторан наследует оформление от главного. Измените логотип в главном ресторане.'
+      });
+    }
+
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
@@ -614,6 +705,26 @@ export const deleteLogo = async (req, res, next) => {
   try {
     const { id } = req.params;
 
+    const restaurantOwner = await prisma.restaurant.findUnique({
+      where: { id },
+      select: { ownerId: true, sharedMenuSourceRestaurantId: true }
+    });
+
+    if (!restaurantOwner) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    if (restaurantOwner.ownerId !== req.user.id) {
+      return res.status(403).json({ error: 'Only owner can update restaurant' });
+    }
+
+    if (restaurantOwner.sharedMenuSourceRestaurantId) {
+      return res.status(403).json({
+        error: 'Shared template locked',
+        message: 'Этот ресторан наследует оформление от главного. Удалить логотип можно только в главном ресторане.'
+      });
+    }
+
     const updatedRestaurant = await prisma.restaurant.update({
       where: { id },
       data: { logo: null }
@@ -642,6 +753,26 @@ export const updateMenuCardStyle = async (req, res, next) => {
     const { id } = req.params;
     const { menuCardStyle } = req.body;
 
+    const restaurantOwner = await prisma.restaurant.findUnique({
+      where: { id },
+      select: { ownerId: true, sharedMenuSourceRestaurantId: true }
+    });
+
+    if (!restaurantOwner) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    if (restaurantOwner.ownerId !== req.user.id) {
+      return res.status(403).json({ error: 'Only owner can update restaurant' });
+    }
+
+    if (restaurantOwner.sharedMenuSourceRestaurantId) {
+      return res.status(403).json({
+        error: 'Shared template locked',
+        message: 'Этот ресторан наследует оформление от главного. Менять стиль карточек нужно в главном ресторане.'
+      });
+    }
+
     if (!menuCardStyle || !['horizontal', 'vertical'].includes(menuCardStyle)) {
       return res.status(400).json({ error: 'Invalid menuCardStyle. Must be "horizontal" or "vertical"' });
     }
@@ -668,21 +799,25 @@ export const updateMenuCardStyle = async (req, res, next) => {
 
 export const createRestaurant = async (req, res, next) => {
   try {
-    const { name, subdomain, businessType } = req.body;
+    const { name, subdomain: providedSubdomain, businessType } = req.body;
 
-    if (!name || !subdomain) {
-      return res.status(400).json({ error: 'Restaurant name and subdomain are required' });
+    if (!name) {
+      return res.status(400).json({ error: 'Restaurant name is required' });
     }
 
-    // Check if subdomain is taken
-    const existingRestaurant = await prisma.restaurant.findUnique({ where: { subdomain } });
-    if (existingRestaurant) {
-      return res.status(400).json({ error: 'Subdomain already taken' });
-    }
+    const normalizedSubdomain = providedSubdomain?.trim();
+    let subdomain = normalizedSubdomain;
 
-    // Validate subdomain format
-    if (!/^[a-z0-9-]+$/.test(subdomain)) {
-      return res.status(400).json({ error: 'Subdomain can only contain lowercase letters, numbers, and hyphens' });
+    // Validate provided subdomain format and uniqueness
+    if (subdomain) {
+      if (!/^[a-z0-9-]+$/.test(subdomain)) {
+        return res.status(400).json({ error: 'Subdomain can only contain lowercase letters, numbers, and hyphens' });
+      }
+
+      const existingRestaurant = await prisma.restaurant.findUnique({ where: { subdomain } });
+      if (existingRestaurant) {
+        return res.status(400).json({ error: 'Subdomain already taken' });
+      }
     }
 
     // ÐŸÐ¾Ð»ÑƒÑ‡Ð°ÐµÐ¼ Ð²ÑÐµ Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½Ñ‹ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»Ñ Ð²Ð¼ÐµÑÑ‚Ðµ Ñ Ð¸Ñ… Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ°Ð¼Ð¸
@@ -705,6 +840,15 @@ export const createRestaurant = async (req, res, next) => {
         }
       }
     });
+
+    // Choose the earliest created restaurant as the primary source for shared menu/branding.
+    const primaryRestaurant = userRestaurants.reduce((earliest, restaurant) => {
+      if (!earliest) return restaurant;
+      if (earliest.createdAt && restaurant.createdAt && new Date(restaurant.createdAt) < new Date(earliest.createdAt)) {
+        return restaurant;
+      }
+      return earliest;
+    }, null);
 
     // ÐŸÐ¾Ð´ÑÑ‡Ð¸Ñ‚Ñ‹Ð²Ð°ÐµÐ¼ Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½Ñ‹ Ñ Ð°ÐºÑ‚Ð¸Ð²Ð½Ñ‹Ð¼Ð¸ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ°Ð¼Ð¸
     const restaurantsWithActiveSubscriptions = userRestaurants.filter(
@@ -817,6 +961,37 @@ export const createRestaurant = async (req, res, next) => {
       });
     }
 
+    // Auto-generate subdomain if not provided, based on the primary restaurant's subdomain.
+    if (!subdomain) {
+      const baseSubdomainFromPrimary = primaryRestaurant?.subdomain || null;
+
+      const normalizeSlug = value => value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .replace(/--+/g, '-');
+
+      const ensureUniqueSubdomain = async (base, suffixStart = 2) => {
+        let candidate = base;
+        let counter = suffixStart;
+
+        // Keep incrementing suffix until we find a free subdomain
+        while (await prisma.restaurant.findUnique({ where: { subdomain: candidate } })) {
+          candidate = `${base}-${counter}`;
+          counter += 1;
+        }
+
+        return candidate;
+      };
+
+      if (baseSubdomainFromPrimary) {
+        subdomain = await ensureUniqueSubdomain(baseSubdomainFromPrimary, 2);
+      } else {
+        const fallbackBase = normalizeSlug(name) || 'restaurant';
+        subdomain = await ensureUniqueSubdomain(fallbackBase, 2);
+      }
+    }
+
     // Ð¡Ð¾Ð·Ð´Ð°ÐµÐ¼ Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ ÐµÑÐ»Ð¸ Ð²ÑÐµ Ð¿Ñ€Ð¾Ð²ÐµÑ€ÐºÐ¸ Ð¿Ñ€Ð¾Ð¹Ð´ÐµÐ½Ñ‹
     const restaurant = await prisma.restaurant.create({
       data: {
@@ -825,7 +1000,8 @@ export const createRestaurant = async (req, res, next) => {
         businessType: businessType || 'RESTAURANT',
         country: req.body.country || null,
         city: req.body.city || null,
-        ownerId: req.user.id
+        ownerId: req.user.id,
+        sharedMenuSourceRestaurantId: isFirstRestaurant ? null : primaryRestaurant?.id || null
       }
     });
 
@@ -963,6 +1139,26 @@ export const copyMenu = async (req, res, next) => {
 
     if (!sourceRestaurantId) {
       return res.status(400).json({ error: 'sourceRestaurantId is required' });
+    }
+
+    const targetRestaurant = await prisma.restaurant.findUnique({
+      where: { id: targetRestaurantId },
+      select: { ownerId: true, sharedMenuSourceRestaurantId: true }
+    });
+
+    if (!targetRestaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    if (targetRestaurant.ownerId !== req.user.id) {
+      return res.status(403).json({ error: 'Only owner can copy menu' });
+    }
+
+    if (targetRestaurant.sharedMenuSourceRestaurantId) {
+      return res.status(403).json({
+        error: 'Shared template locked',
+        message: 'Меню этого филиала наследуется от главного ресторана. Редактируйте меню в главном ресторане.'
+      });
     }
 
     // Get source restaurant with all categories and dishes
@@ -1128,6 +1324,10 @@ export const setSharedMenuSource = async (req, res, next) => {
       if (sourceRestaurant.ownerId !== req.user.id) {
         return res.status(403).json({ error: 'Source restaurant must belong to the same owner' });
       }
+    }
+
+    if (sourceRestaurantId && sourceRestaurantId === restaurantId) {
+      return res.status(400).json({ error: 'Cannot set restaurant as its own source' });
     }
 
     const updated = await prisma.restaurant.update({
