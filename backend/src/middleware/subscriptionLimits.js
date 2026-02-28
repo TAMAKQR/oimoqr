@@ -1,7 +1,7 @@
 /**
- * Middleware для проверки лимитов подписки
- * - SMS лимиты
- * - Лимиты базы клиентов
+ * Middleware для проверки лимитов подписки на уровне бренда
+ * - SMS лимиты (общие для всех ресторанов бренда)
+ * - Лимиты базы клиентов (суммарно по всему бренду)
  * - Проверка доступа к модулю доставки
  */
 
@@ -9,6 +9,7 @@ import { prisma } from '../config/prisma.js';
 
 /**
  * Проверка доступности модуля доставки
+ * Подписка проверяется на уровне бренда, к которому принадлежит ресторан
  */
 export const checkDeliveryAccess = async (req, res, next) => {
     try {
@@ -17,8 +18,12 @@ export const checkDeliveryAccess = async (req, res, next) => {
         const restaurant = await prisma.restaurant.findUnique({
             where: { id: restaurantId },
             include: {
-                subscriptions: {
-                    include: { pricingTier: true }
+                brand: {
+                    include: {
+                        subscription: {
+                            include: { pricingTier: true }
+                        }
+                    }
                 }
             }
         });
@@ -27,10 +32,18 @@ export const checkDeliveryAccess = async (req, res, next) => {
             return res.status(404).json({ error: 'Restaurant not found' });
         }
 
-        const subscription = restaurant.subscriptions?.[0];
+        // Если ресторан не привязан к бренду, требуется создать бренд
+        if (!restaurant.brand) {
+            return res.status(402).json({
+                error: 'Restaurant must be part of a brand. Please create a brand first.',
+                code: 'BRAND_REQUIRED'
+            });
+        }
+
+        const subscription = restaurant.brand.subscription;
         if (!subscription) {
             return res.status(402).json({
-                error: 'No active subscription',
+                error: 'No active subscription for this brand',
                 code: 'SUBSCRIPTION_REQUIRED'
             });
         }
@@ -54,6 +67,7 @@ export const checkDeliveryAccess = async (req, res, next) => {
 
         // Сохраняем подписку в req для дальнейшего использования
         req.subscription = subscription;
+        req.brand = restaurant.brand;
         next();
     } catch (error) {
         console.error('Error checking delivery access:', error);
@@ -63,6 +77,7 @@ export const checkDeliveryAccess = async (req, res, next) => {
 
 /**
  * Проверка и учет использования SMS
+ * SMS счетчик общий для всех ресторанов бренда
  */
 export const checkSmsLimit = async (req, res, next) => {
     try {
@@ -75,26 +90,31 @@ export const checkSmsLimit = async (req, res, next) => {
         const restaurant = await prisma.restaurant.findUnique({
             where: { id: restaurantId },
             include: {
-                subscriptions: {
-                    include: { pricingTier: true }
+                brand: {
+                    include: {
+                        subscription: {
+                            include: { pricingTier: true }
+                        }
+                    }
                 }
             }
         });
 
-        const subscription = restaurant?.subscriptions?.[0];
-        if (!subscription?.pricingTier) {
+        if (!restaurant?.brand?.subscription?.pricingTier) {
             return res.status(402).json({
                 error: 'Active subscription required to send SMS',
                 code: 'SUBSCRIPTION_REQUIRED'
             });
         }
 
+        const subscription = restaurant.brand.subscription;
         const tier = subscription.pricingTier;
 
         // Безлимитный тариф (-1)
         if (tier.includedSmsCount === -1) {
             req.smsCharge = 0;
             req.subscription = subscription;
+            req.brand = restaurant.brand;
             return next();
         }
 
@@ -129,6 +149,7 @@ export const checkSmsLimit = async (req, res, next) => {
         // Сохраняем информацию в req для использования в контроллере
         req.smsCharge = smsCharge;
         req.subscription = subscription;
+        req.brand = restaurant.brand;
         req.shouldIncrementSmsCounter = true;
 
         next();
@@ -158,6 +179,7 @@ export const incrementSmsCounter = async (subscriptionId, smsCharge = 0) => {
 
 /**
  * Проверка лимита базы клиентов
+ * Считаем клиентов по ВСЕМ ресторанам бренда
  */
 export const checkCustomerLimit = async (req, res, next) => {
     try {
@@ -170,20 +192,25 @@ export const checkCustomerLimit = async (req, res, next) => {
         const restaurant = await prisma.restaurant.findUnique({
             where: { id: restaurantId },
             include: {
-                subscriptions: {
-                    include: { pricingTier: true }
+                brand: {
+                    include: {
+                        subscription: {
+                            include: { pricingTier: true }
+                        },
+                        restaurants: true // Получаем все рестораны бренда
+                    }
                 }
             }
         });
 
-        const subscription = restaurant?.subscriptions?.[0];
-        if (!subscription?.pricingTier) {
+        if (!restaurant?.brand?.subscription?.pricingTier) {
             return res.status(402).json({
                 error: 'Active subscription required',
                 code: 'SUBSCRIPTION_REQUIRED'
             });
         }
 
+        const subscription = restaurant.brand.subscription;
         const tier = subscription.pricingTier;
 
         // Если лимита нет (NULL) - пропускаем
@@ -191,17 +218,23 @@ export const checkCustomerLimit = async (req, res, next) => {
             return next();
         }
 
-        // Считаем текущее количество клиентов
+        // Считаем клиентов по ВСЕМ ресторанам бренда
+        const brandRestaurantIds = restaurant.brand.restaurants.map(r => r.id);
         const customerCount = await prisma.customer.count({
-            where: { registeredRestaurantId: restaurantId }
+            where: {
+                registeredRestaurantId: {
+                    in: brandRestaurantIds
+                }
+            }
         });
 
         if (customerCount >= tier.maxCustomers) {
             return res.status(402).json({
-                error: `Customer limit reached (${tier.maxCustomers}). Please upgrade your plan.`,
+                error: `Customer limit reached for your brand (${tier.maxCustomers}). Please upgrade your plan.`,
                 code: 'CUSTOMER_LIMIT_REACHED',
                 currentCount: customerCount,
                 limit: tier.maxCustomers,
+                brandName: restaurant.brand.name,
                 upgrade: {
                     message: 'Upgrade to Professional plan for unlimited customers',
                     suggestedPlan: 'PROFESSIONAL'
@@ -218,6 +251,7 @@ export const checkCustomerLimit = async (req, res, next) => {
 
 /**
  * Получение информации об использовании для dashboard
+ * Показывает статистику по всему бренду (все рестораны)
  */
 export const getSubscriptionUsage = async (req, res) => {
     try {
@@ -226,8 +260,13 @@ export const getSubscriptionUsage = async (req, res) => {
         const restaurant = await prisma.restaurant.findUnique({
             where: { id: restaurantId },
             include: {
-                subscriptions: {
-                    include: { pricingTier: true }
+                brand: {
+                    include: {
+                        subscription: {
+                            include: { pricingTier: true }
+                        },
+                        restaurants: true
+                    }
                 }
             }
         });
@@ -236,19 +275,36 @@ export const getSubscriptionUsage = async (req, res) => {
             return res.status(404).json({ error: 'Restaurant not found' });
         }
 
-        const subscription = restaurant.subscriptions?.[0];
+        if (!restaurant.brand) {
+            return res.status(404).json({ error: 'Restaurant is not part of a brand' });
+        }
+
+        const brand = restaurant.brand;
+        const subscription = brand.subscription;
+
         if (!subscription) {
-            return res.status(404).json({ error: 'No active subscription' });
+            return res.status(404).json({ error: 'No active subscription for this brand' });
         }
 
         const tier = subscription.pricingTier;
 
-        // Считаем использование
+        // Считаем использование по всем ресторанам бренда
+        const brandRestaurantIds = brand.restaurants.map(r => r.id);
+
         const customerCount = await prisma.customer.count({
-            where: { registeredRestaurantId: restaurantId }
+            where: {
+                registeredRestaurantId: {
+                    in: brandRestaurantIds
+                }
+            }
         });
 
         const usage = {
+            brand: {
+                id: brand.id,
+                name: brand.name,
+                restaurantCount: brand.restaurants.length
+            },
             sms: {
                 used: subscription.smsUsedThisMonth,
                 included: tier?.includedSmsCount === -1 ? 'unlimited' : tier?.includedSmsCount || 0,
@@ -266,10 +322,11 @@ export const getSubscriptionUsage = async (req, res) => {
                     : 0
             },
             restaurants: {
-                used: await prisma.restaurant.count({
-                    where: { ownerId: restaurant.ownerId }
-                }),
-                limit: tier?.maxRestaurants || 'unlimited'
+                used: brand.restaurants.length,
+                limit: tier?.maxRestaurants || 'unlimited',
+                percentage: tier?.maxRestaurants
+                    ? Math.round((brand.restaurants.length / tier.maxRestaurants) * 100)
+                    : 0
             },
             modules: {
                 delivery: tier?.includesDelivery || subscription.addons?.includes('delivery'),
