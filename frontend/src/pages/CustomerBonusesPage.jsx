@@ -43,8 +43,9 @@ const getActiveTierBonusConfig = (subscriptions = []) => {
 const getEffectiveBonusConfig = (restaurant) => {
     const tier = getActiveTierBonusConfig(restaurant?.subscriptions || []);
     const useTier = restaurant?.useTierBonusSettings !== false;
+    const hasTierBonusConfig = Boolean(tier);
 
-    if (useTier) {
+    if (useTier && hasTierBonusConfig) {
         return {
             enabled: Boolean(tier?.bonusProgramEnabled),
             rate: Number.isFinite(Number(tier?.bonusAccrualRate)) ? Number(tier?.bonusAccrualRate) : DEFAULT_BONUS_RATE,
