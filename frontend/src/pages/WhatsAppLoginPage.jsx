@@ -37,22 +37,8 @@ const WhatsAppLoginPage = () => {
     const [loading, setLoading] = useState(false);
     const [retryAfter, setRetryAfter] = useState(0);
 
-    // Автоопределение страны по IP при загрузке
-    useEffect(() => {
-        const detectCountry = async () => {
-            try {
-                const res = await fetch('https://ip-api.com/json/?fields=countryCode', { signal: AbortSignal.timeout(3000) });
-                const data = await res.json();
-                if (data?.countryCode) {
-                    const found = COUNTRIES.find(c => c.code === data.countryCode);
-                    if (found) setSelectedCountry(found);
-                }
-            } catch {
-                // Не критично — оставляем KG по умолчанию
-            }
-        };
-        detectCountry();
-    }, []);
+    // По умолчанию KG (можно вручную выбрать другую страну)
+    // IP detection отключен из-за блокировки ip-api.com
 
     // Обратный отсчет для повторной отправки
     useEffect(() => {

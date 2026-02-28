@@ -263,25 +263,30 @@ const MenuPage = () => {
 
   // Определение ближайшего филиала для доставки
   useEffect(() => {
-    if (restaurant?.id && !tableFromUrl && !dineInParam) {
+    if (restaurant?.subdomain && !tableFromUrl && !dineInParam) {
       if ("geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition(async (position) => {
           try {
             const { latitude, longitude } = position.coords;
-            const { data } = await api.get(`/restaurants/${restaurant.id}/nearest`, {
-              params: { latitude, longitude }
+            const { data } = await api.get(`/geolocation/nearest-by-subdomain`, {
+              params: {
+                subdomain: restaurant.subdomain,
+                latitude,
+                longitude
+              }
             });
 
-            if (data && data.id !== restaurant.id) {
+            if (data?.nearestRestaurant && data.nearestRestaurant.id !== restaurant.id) {
+              const nearest = data.nearestRestaurant;
               setDynamicRestaurantInfo({
-                name: data.name,
-                address: data.address,
-                phone: data.phone,
-                workingHours: data.workingHours,
-                isTemporarilyClosed: data.isTemporarilyClosed,
-                closureReason: data.closureReason
+                name: nearest.name,
+                address: nearest.address,
+                phone: nearest.phone,
+                workingHours: nearest.workingHours,
+                isTemporarilyClosed: nearest.isTemporarilyClosed,
+                closureReason: nearest.closureReason
               });
-              toast.success(`Ближайший филиал: ${data.name}`, { icon: '📍', duration: 4000 });
+              toast.success(`Ближайший филиал: ${nearest.name} (${nearest.distance} км)`, { icon: '📍', duration: 4000 });
             }
           } catch (e) {
             // Игнорируем ошибки геолокации
