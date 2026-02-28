@@ -371,15 +371,11 @@ export const updateRestaurant = async (req, res, next) => {
     const updateData = {
       name,
       address,
-      country: country !== undefined ? (country || null) : undefined,
-      city: city !== undefined ? (city || null) : undefined,
       phone,
-      description,
       deliveryEnabled,
       deliveryFee: deliveryFee ? parseFloat(deliveryFee) : null,
       minOrderAmount: minOrderAmount ? parseFloat(minOrderAmount) : null,
       freeDeliveryThreshold: freeDeliveryThreshold ? parseFloat(freeDeliveryThreshold) : null,
-      currency,
       latitude: latitude ? parseFloat(latitude) : null,
       longitude: longitude ? parseFloat(longitude) : null,
       deliveryRadius: deliveryRadius ? parseFloat(deliveryRadius) : null,
@@ -390,6 +386,10 @@ export const updateRestaurant = async (req, res, next) => {
     };
 
     if (!isOutlet) {
+      updateData.description = description;
+      updateData.country = country !== undefined ? (country || null) : undefined;
+      updateData.city = city !== undefined ? (city || null) : undefined;
+      updateData.currency = currency;
       updateData.cardStyle = menuCardStyle || 'horizontal';
       updateData.primaryColor = primaryColor || null;
       updateData.themePalette = themePalette || null;
