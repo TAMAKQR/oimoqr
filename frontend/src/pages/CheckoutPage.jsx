@@ -117,18 +117,19 @@ const CheckoutPage = () => {
     const [zoneStatus, setZoneStatus] = useState(null); // null | 'checking' | 'ok' | 'outside' | 'error' | 'no-zone'
     const [zoneMessage, setZoneMessage] = useState('');
     const [zoneDistance, setZoneDistance] = useState(null);
+    const [isCompletingOrder, setIsCompletingOrder] = useState(false);
     const [bonusBalance, setBonusBalance] = useState(0);
     const [bonusLoading, setBonusLoading] = useState(false);
     const [useBonuses, setUseBonuses] = useState(false);
     const [bonusRequested, setBonusRequested] = useState('0');
 
     useEffect(() => {
-        if (!restaurant || !cartItems || cartItems.length === 0) {
+        if (!isCompletingOrder && (!restaurant || !cartItems || cartItems.length === 0)) {
             navigate(-1);
             return;
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [restaurant, cartItems?.length]);
+    }, [restaurant, cartItems?.length, isCompletingOrder]);
 
     useEffect(() => {
         if (!customer?.id) {
@@ -363,6 +364,7 @@ const CheckoutPage = () => {
 
         setLoading(true);
         try {
+            setIsCompletingOrder(true);
             const payload = {
                 restaurantId: restaurant?.id,
                 items: cartItems.map(item => ({
@@ -398,6 +400,7 @@ const CheckoutPage = () => {
                 state: successPayload
             });
         } catch (error) {
+            setIsCompletingOrder(false);
             console.error('Failed to place order', error);
             const stoppedDishes = error.response?.data?.stoppedDishes;
             if (Array.isArray(stoppedDishes) && stoppedDishes.length > 0) {
