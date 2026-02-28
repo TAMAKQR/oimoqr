@@ -7,6 +7,7 @@ import { useTheme } from '../theme/ThemeProvider';
 import CustomerLoginModal from '../components/CustomerLoginModal';
 import AddressAutocomplete from '../components/AddressAutocomplete';
 import api from '../services/api';
+import customerService from '../services/customerService';
 
 /* ---- palette builder (same as MenuPage) ---- */
 const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
@@ -32,6 +33,43 @@ const buildPaletteFromBase = (baseHex = '#374B6A') => {
     const palette = {};
     Object.entries(steps).forEach(([tone, delta]) => { palette[tone] = hslToHex({ h: hsl.h, s: hsl.s, l: clamp(hsl.l + delta, 0.05, 0.95) }); });
     return palette;
+};
+
+const DEFAULT_BONUS_RATE = 0;
+const DEFAULT_BONUS_EXPIRY_DAYS = 90;
+
+const isDeliveredStatus = (status) => {
+    const normalized = String(status || '').toLowerCase();
+    return normalized.includes('delivered') ||
+        normalized.includes('completed') ||
+        normalized.includes('finished') ||
+        normalized.includes('done') ||
+        normalized.includes('success');
+};
+
+const getActiveTierBonusConfig = (subscriptions = []) => {
+    if (!Array.isArray(subscriptions) || subscriptions.length === 0) return null;
+    const active = subscriptions.find((s) => s?.status === 'ACTIVE') || subscriptions[0];
+    return active?.pricingTier || null;
+};
+
+const getEffectiveBonusConfig = (restaurant) => {
+    const tier = getActiveTierBonusConfig(restaurant?.subscriptions || []);
+    const useTier = restaurant?.useTierBonusSettings !== false;
+
+    if (useTier) {
+        return {
+            enabled: Boolean(tier?.bonusProgramEnabled),
+            rate: Number.isFinite(Number(tier?.bonusAccrualRate)) ? Number(tier?.bonusAccrualRate) : DEFAULT_BONUS_RATE,
+            expiryDays: Number.isFinite(Number(tier?.bonusExpiryDays)) ? Number(tier?.bonusExpiryDays) : DEFAULT_BONUS_EXPIRY_DAYS
+        };
+    }
+
+    return {
+        enabled: Boolean(restaurant?.bonusProgramEnabled),
+        rate: Number.isFinite(Number(restaurant?.bonusAccrualRate)) ? Number(restaurant?.bonusAccrualRate) : DEFAULT_BONUS_RATE,
+        expiryDays: Number.isFinite(Number(restaurant?.bonusExpiryDays)) ? Number(restaurant?.bonusExpiryDays) : DEFAULT_BONUS_EXPIRY_DAYS
+    };
 };
 
 const CheckoutPage = () => {
@@ -79,6 +117,10 @@ const CheckoutPage = () => {
     const [zoneStatus, setZoneStatus] = useState(null); // null | 'checking' | 'ok' | 'outside' | 'error' | 'no-zone'
     const [zoneMessage, setZoneMessage] = useState('');
     const [zoneDistance, setZoneDistance] = useState(null);
+    const [bonusBalance, setBonusBalance] = useState(0);
+    const [bonusLoading, setBonusLoading] = useState(false);
+    const [useBonuses, setUseBonuses] = useState(false);
+    const [bonusRequested, setBonusRequested] = useState('0');
 
     useEffect(() => {
         if (!restaurant || !cartItems || cartItems.length === 0) {
@@ -87,6 +129,63 @@ const CheckoutPage = () => {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [restaurant, cartItems?.length]);
+
+    useEffect(() => {
+        if (!customer?.id) {
+            setBonusBalance(0);
+            setUseBonuses(false);
+            setBonusRequested('0');
+            return;
+        }
+
+        const loadAvailableBonuses = async () => {
+            setBonusLoading(true);
+            try {
+                const response = await customerService.getOrderHistory(1000, 0);
+                const orders = response?.orders || [];
+                const now = new Date();
+
+                const spentTotal = orders.reduce((sum, order) => {
+                    const spent = Math.floor(Number(order?.bonusSpent || 0));
+                    return sum + (Number.isFinite(spent) && spent > 0 ? spent : 0);
+                }, 0);
+
+                const activeEarned = orders.reduce((sum, order) => {
+                    if (String(order?.deliveryType || '').toLowerCase() !== 'delivery') return sum;
+                    if (!isDeliveredStatus(order?.status)) return sum;
+
+                    const config = getEffectiveBonusConfig(order?.restaurant);
+                    if (!config.enabled || config.rate <= 0) return sum;
+
+                    const orderTotal = Number(order?.totalAmount || 0);
+                    if (!Number.isFinite(orderTotal) || orderTotal <= 0) return sum;
+
+                    const orderDate = order?.createdAt ? new Date(order.createdAt) : null;
+                    if (!orderDate || Number.isNaN(orderDate.getTime())) return sum;
+
+                    const expiryDays = Number.isFinite(Number(config.expiryDays)) ? Number(config.expiryDays) : DEFAULT_BONUS_EXPIRY_DAYS;
+                    const expiresAt = new Date(orderDate.getTime() + expiryDays * 24 * 60 * 60 * 1000);
+                    if (expiresAt <= now) return sum;
+
+                    const earned = Math.floor(orderTotal * config.rate);
+                    return earned > 0 ? sum + earned : sum;
+                }, 0);
+
+                const available = Math.max(0, activeEarned - spentTotal);
+                setBonusBalance(available);
+                setBonusRequested(String(available));
+            } catch (error) {
+                console.error('Failed to load bonus balance', error);
+                setBonusBalance(0);
+                setUseBonuses(false);
+                setBonusRequested('0');
+            } finally {
+                setBonusLoading(false);
+            }
+        };
+
+        loadAvailableBonuses();
+    }, [customer?.id]);
 
     // Загружаем адреса только когда выбран тип "доставка"
     useEffect(() => {
@@ -272,7 +371,8 @@ const CheckoutPage = () => {
                     price: item.totalPrice,
                     selectedModifiers: item.modifiers?.map(m => ({ id: m.id, name: m.name, price: m.price })) || []
                 })),
-                total: Number(finalTotal),
+                total: Number(baseTotalWithDelivery.toFixed(2)),
+                bonusToSpend: customer?.id ? appliedBonus : 0,
                 deliveryType: isDineIn ? 'dine_in' : deliveryType,
                 tableNumber: isDineIn ? tableNumber : null,
                 customerAddressId: deliveryType === 'delivery' ? selectedAddressId : null,
@@ -318,7 +418,14 @@ const CheckoutPage = () => {
     const freeDeliveryThreshold = Number(restaurant?.freeDeliveryThreshold || 0);
     const isFreeDelivery = freeDeliveryThreshold > 0 && total >= freeDeliveryThreshold;
     const deliveryFee = deliveryType === 'delivery' && !isFreeDelivery ? Number(restaurant?.deliveryFee || 0) : 0;
-    const finalTotal = (total + deliveryFee).toFixed(2);
+    const baseTotalWithDelivery = total + deliveryFee;
+    const maxBonusApplicable = Math.max(0, Math.floor(baseTotalWithDelivery));
+    const normalizedRequestedBonus = Math.floor(Number(bonusRequested || 0));
+    const safeRequestedBonus = Number.isFinite(normalizedRequestedBonus) && normalizedRequestedBonus > 0 ? normalizedRequestedBonus : 0;
+    const appliedBonus = useBonuses
+        ? Math.min(safeRequestedBonus, bonusBalance, maxBonusApplicable)
+        : 0;
+    const finalTotal = (baseTotalWithDelivery - appliedBonus).toFixed(2);
 
     const orderSection = (
         <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm space-y-3">
@@ -376,6 +483,12 @@ const CheckoutPage = () => {
                 {deliveryType === 'delivery' && !isFreeDelivery && freeDeliveryThreshold > 0 && (
                     <div className="text-xs text-green-600 bg-green-50 rounded-lg px-3 py-1.5">
                         🎁 Бесплатная доставка от {freeDeliveryThreshold.toFixed(0)} {currency} — добавьте ещё {(freeDeliveryThreshold - total).toFixed(0)} {currency}
+                    </div>
+                )}
+                {customer?.id && appliedBonus > 0 && (
+                    <div className="flex justify-between text-green-700">
+                        <span>Списано бонусов</span>
+                        <span>-{appliedBonus} {currency}</span>
                     </div>
                 )}
                 <div className="flex justify-between text-base font-bold text-gray-900">
@@ -623,6 +736,49 @@ const CheckoutPage = () => {
                                         <option value="cash">Наличными</option>
                                         <option value="card">Картой курьеру</option>
                                     </select>
+                                </div>
+                            )}
+
+                            {customer?.id && (
+                                <div className="bg-white rounded-lg shadow-sm p-4">
+                                    <h2 className="font-semibold text-base mb-3">Списание бонусов</h2>
+                                    {bonusLoading ? (
+                                        <p className="text-sm text-gray-500">Загрузка бонусного баланса...</p>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            <p className="text-sm text-gray-600">Доступно: <span className="font-semibold text-gray-900">{bonusBalance}</span></p>
+                                            <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={useBonuses}
+                                                    onChange={(e) => {
+                                                        const enabled = e.target.checked;
+                                                        setUseBonuses(enabled);
+                                                        if (enabled) {
+                                                            setBonusRequested(String(Math.min(bonusBalance, maxBonusApplicable)));
+                                                        }
+                                                    }}
+                                                    disabled={bonusBalance <= 0}
+                                                />
+                                                Использовать бонусы в этом заказе
+                                            </label>
+                                            {useBonuses && (
+                                                <div>
+                                                    <label className="block text-xs font-medium text-gray-600 mb-1.5">Сколько списать</label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        max={Math.min(bonusBalance, maxBonusApplicable)}
+                                                        step="1"
+                                                        value={bonusRequested}
+                                                        onChange={(e) => setBonusRequested(e.target.value)}
+                                                        className="input-field w-full text-sm"
+                                                    />
+                                                    <p className="mt-1 text-xs text-gray-500">Будет применено: {appliedBonus}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             )}
 

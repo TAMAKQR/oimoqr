@@ -30,6 +30,130 @@ const getNearestServingRestaurant = async ({ restaurantId, latitude, longitude }
     return ranked.find((r) => r.inDeliveryZone) || null;
 };
 
+const DEFAULT_BONUS_RATE = 0;
+const DEFAULT_BONUS_EXPIRY_DAYS = 90;
+
+const isDeliveredStatus = (status) => {
+    const normalized = String(status || '').toLowerCase();
+    return normalized.includes('delivered') ||
+        normalized.includes('completed') ||
+        normalized.includes('finished') ||
+        normalized.includes('done') ||
+        normalized.includes('success');
+};
+
+const getActiveTierBonusConfig = (subscriptions = []) => {
+    if (!Array.isArray(subscriptions) || subscriptions.length === 0) return null;
+    const active = subscriptions.find((s) => s?.status === 'ACTIVE') || subscriptions[0];
+    return active?.pricingTier || null;
+};
+
+const getEffectiveBonusConfig = (restaurant) => {
+    const tier = getActiveTierBonusConfig(restaurant?.subscriptions || []);
+    const useTier = restaurant?.useTierBonusSettings !== false;
+
+    if (useTier) {
+        return {
+            enabled: Boolean(tier?.bonusProgramEnabled),
+            rate: Number.isFinite(Number(tier?.bonusAccrualRate)) ? Number(tier?.bonusAccrualRate) : DEFAULT_BONUS_RATE,
+            expiryDays: Number.isFinite(Number(tier?.bonusExpiryDays)) ? Number(tier?.bonusExpiryDays) : DEFAULT_BONUS_EXPIRY_DAYS
+        };
+    }
+
+    return {
+        enabled: Boolean(restaurant?.bonusProgramEnabled),
+        rate: Number.isFinite(Number(restaurant?.bonusAccrualRate)) ? Number(restaurant?.bonusAccrualRate) : DEFAULT_BONUS_RATE,
+        expiryDays: Number.isFinite(Number(restaurant?.bonusExpiryDays)) ? Number(restaurant?.bonusExpiryDays) : DEFAULT_BONUS_EXPIRY_DAYS
+    };
+};
+
+const getRestaurantBonusSettings = async (restaurantId) => {
+    if (!restaurantId) return null;
+    return prisma.restaurant.findUnique({
+        where: { id: restaurantId },
+        select: {
+            useTierBonusSettings: true,
+            bonusProgramEnabled: true,
+            bonusAccrualRate: true,
+            bonusExpiryDays: true,
+            subscriptions: {
+                select: {
+                    status: true,
+                    pricingTier: {
+                        select: {
+                            bonusProgramEnabled: true,
+                            bonusAccrualRate: true,
+                            bonusExpiryDays: true
+                        }
+                    }
+                }
+            }
+        }
+    });
+};
+
+const getCustomerAvailableBonusPoints = async (customerId) => {
+    const now = new Date();
+    const orders = await prisma.order.findMany({
+        where: { customerId, deliveryType: 'delivery' },
+        select: {
+            status: true,
+            totalAmount: true,
+            createdAt: true,
+            bonusSpent: true,
+            restaurant: {
+                select: {
+                    useTierBonusSettings: true,
+                    bonusProgramEnabled: true,
+                    bonusAccrualRate: true,
+                    bonusExpiryDays: true,
+                    subscriptions: {
+                        select: {
+                            status: true,
+                            pricingTier: {
+                                select: {
+                                    bonusProgramEnabled: true,
+                                    bonusAccrualRate: true,
+                                    bonusExpiryDays: true
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    const spentTotal = orders.reduce((sum, order) => {
+        const value = Math.floor(Number(order?.bonusSpent || 0));
+        return sum + (Number.isFinite(value) && value > 0 ? value : 0);
+    }, 0);
+
+    const activeEarned = orders.reduce((sum, order) => {
+        if (!isDeliveredStatus(order?.status)) return sum;
+
+        const config = getEffectiveBonusConfig(order?.restaurant);
+        if (!config.enabled || config.rate <= 0) return sum;
+
+        const totalAmount = Number(order?.totalAmount || 0);
+        if (!Number.isFinite(totalAmount) || totalAmount <= 0) return sum;
+
+        const earned = Math.floor(totalAmount * config.rate);
+        if (earned <= 0) return sum;
+
+        const expiryDays = Number.isFinite(Number(config.expiryDays)) ? Number(config.expiryDays) : DEFAULT_BONUS_EXPIRY_DAYS;
+        const orderDate = order?.createdAt ? new Date(order.createdAt) : null;
+        if (!orderDate || Number.isNaN(orderDate.getTime())) return sum;
+
+        const expiresAt = new Date(orderDate.getTime() + expiryDays * 24 * 60 * 60 * 1000);
+        if (expiresAt <= now) return sum;
+
+        return sum + earned;
+    }, 0);
+
+    return Math.max(0, activeEarned - spentTotal);
+};
+
 /**
  * Получить профиль клиента
  */
@@ -514,7 +638,8 @@ export const createCustomerOrder = async (req, res, next) => {
             comment,
             customerAddressId,
             deliveryAddress,
-            tableNumber
+            tableNumber,
+            bonusToSpend
         } = req.body;
 
         if (!restaurantId || !items || !Array.isArray(items) || items.length === 0 || total === undefined) {
@@ -526,6 +651,14 @@ export const createCustomerOrder = async (req, res, next) => {
         const parsedTotal = parseFloat(total);
         if (!Number.isFinite(parsedTotal)) {
             return res.status(400).json({ error: 'Invalid total amount' });
+        }
+
+        const requestedBonusToSpend = bonusToSpend !== undefined && bonusToSpend !== null
+            ? parseInt(bonusToSpend, 10)
+            : 0;
+
+        if (!Number.isFinite(requestedBonusToSpend) || requestedBonusToSpend < 0) {
+            return res.status(400).json({ error: 'bonusToSpend must be a non-negative integer' });
         }
 
         const customer = await prisma.customer.findUnique({
@@ -637,13 +770,34 @@ export const createCustomerOrder = async (req, res, next) => {
             });
         }
 
+        let appliedBonusSpent = 0;
+        if (requestedBonusToSpend > 0) {
+            const servingRestaurantBonusSettings = await getRestaurantBonusSettings(servingRestaurantId);
+            const servingRestaurantBonusConfig = getEffectiveBonusConfig(servingRestaurantBonusSettings);
+
+            if (!servingRestaurantBonusConfig.enabled) {
+                return res.status(400).json({ error: 'Bonus program is disabled for this restaurant' });
+            }
+
+            const availableBonusPoints = await getCustomerAvailableBonusPoints(customerId);
+            const maxByOrderTotal = Math.max(0, Math.floor(parsedTotal));
+            appliedBonusSpent = Math.min(requestedBonusToSpend, availableBonusPoints, maxByOrderTotal);
+
+            if (appliedBonusSpent <= 0) {
+                return res.status(400).json({ error: 'No available bonuses to spend' });
+            }
+        }
+
+        const finalTotal = Math.max(0, parsedTotal - appliedBonusSpent);
+
         const order = await prisma.order.create({
             data: {
                 orderNumber,
                 restaurantId,
                 assignedRestaurantId,
                 customerId,
-                totalAmount: parsedTotal,
+                totalAmount: finalTotal,
+                bonusSpent: appliedBonusSpent,
                 customerName: customer.name || 'Customer',
                 customerPhone: customer.phone,
                 customerEmail: customer.email,

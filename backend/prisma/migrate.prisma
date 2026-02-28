@@ -238,6 +238,7 @@ model Order {
   deliveryLatitude  Float?
   deliveryLongitude Float?
   totalAmount       Float
+  bonusSpent        Int       @default(0)
   status            String    @default("new")
   notes             String?
   
