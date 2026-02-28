@@ -98,7 +98,7 @@ export const checkDelivery = async (req, res, next) => {
       return res.json({
         deliveryAvailable: false,
         inDeliveryZone: false,
-        message: 'No active delivery points found in this network',
+        message: 'Активные точки доставки сети не найдены',
         servingRestaurant: null,
         alternatives: []
       });
@@ -110,7 +110,7 @@ export const checkDelivery = async (req, res, next) => {
       return res.json({
         deliveryAvailable: false,
         inDeliveryZone: false,
-        message: 'Address is outside the network delivery zone',
+        message: 'Адрес вне зоны доставки сети',
         servingRestaurant: null,
         alternatives: ranked.slice(0, 5).map((r) => ({
           id: r.id,
@@ -128,7 +128,7 @@ export const checkDelivery = async (req, res, next) => {
       inDeliveryZone: true,
       distance: Number(nearestInZone.distance.toFixed(2)),
       deliveryRadius: nearestInZone.deliveryRadius,
-      message: 'Delivery is available for this address',
+      message: 'Доставка доступна для этого адреса',
       servingRestaurant: {
         id: nearestInZone.id,
         name: nearestInZone.name,
