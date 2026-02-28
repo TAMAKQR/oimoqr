@@ -5,6 +5,20 @@ export const getRestaurantStats = async (req, res, next) => {
   try {
     const { restaurantId } = req.params;
 
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: restaurantId },
+      select: {
+        id: true,
+        sharedMenuSourceRestaurantId: true
+      }
+    });
+
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    const menuSourceRestaurantId = restaurant.sharedMenuSourceRestaurantId || restaurant.id;
+
     // Условие для фильтрации заказов:
     // Заказ принадлежит ресторану, если:
     // 1. assignedRestaurantId === restaurantId (приоритет - переназначенные заказы)
@@ -33,12 +47,12 @@ export const getRestaurantStats = async (req, res, next) => {
     ] = await Promise.all([
       // Общее количество блюд
       prisma.dish.count({
-        where: { restaurantId }
+        where: { restaurantId: menuSourceRestaurantId }
       }),
 
       // Общее количество категорий
       prisma.category.count({
-        where: { restaurantId }
+        where: { restaurantId: menuSourceRestaurantId }
       }),
 
       // Все заказы (с учетом assignedRestaurantId)
