@@ -90,6 +90,24 @@ const customerService = {
         return response.data;
     },
 
+    async uploadAvatar(file) {
+        const formData = new FormData();
+        formData.append('image', file);
+
+        const response = await api.post('/customers/profile/avatar', formData, {
+            headers: {
+                Authorization: `Bearer ${this.getToken()}`,
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+
+        if (response.data?.customer) {
+            localStorage.setItem('customer', JSON.stringify(response.data.customer));
+        }
+
+        return response.data;
+    },
+
     async changePassword(currentPassword, newPassword) {
         const response = await api.post('/customers/change-password', {
             currentPassword,

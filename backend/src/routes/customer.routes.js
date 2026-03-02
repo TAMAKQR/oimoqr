@@ -9,6 +9,7 @@ import {
 import {
     getProfile,
     updateProfile,
+    uploadCustomerAvatar,
     changePassword,
     getOrderHistory,
     getBonusSummary,
@@ -23,6 +24,7 @@ import {
     getMyRestaurants
 } from '../controllers/customer.controller.js';
 import { authenticateCustomer } from '../middleware/customerAuth.js';
+import { upload } from '../middleware/upload.js';
 
 const router = express.Router();
 
@@ -50,6 +52,7 @@ router.get('/me', authenticateCustomer, getCurrentCustomer);
 // Профиль
 router.get('/profile', authenticateCustomer, getProfile);
 router.put('/profile', authenticateCustomer, updateProfile);
+router.post('/profile/avatar', authenticateCustomer, upload.single('image'), uploadCustomerAvatar);
 router.post('/change-password', authenticateCustomer, changePassword);
 
 // История заказов

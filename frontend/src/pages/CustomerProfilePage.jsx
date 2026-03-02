@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import customerService from '../services/customerService';
@@ -53,6 +53,17 @@ const setLastRestaurantFromDish = (dish) => {
     } catch (e) {
         // ignore
     }
+};
+
+const resolveMediaUrl = (path) => {
+    if (!path) return '';
+    if (path.startsWith('http')) return path;
+
+    const apiBase = import.meta.env.VITE_API_URL || '';
+    const fileHost = apiBase.replace(/\/?api\/?$/, '');
+    if (!fileHost) return path;
+
+    return path.startsWith('/') ? `${fileHost}${path}` : `${fileHost}/${path}`;
 };
 
 export default function CustomerProfilePage() {
@@ -232,7 +243,7 @@ export default function CustomerProfilePage() {
                             <div className="flex items-center space-x-3">
                                 <div className="w-10 h-10 bg-green-100 rounded-full overflow-hidden flex items-center justify-center">
                                     {customer?.avatar ? (
-                                        <img src={customer.avatar} alt={customer?.name || 'avatar'} className="w-full h-full object-cover" />
+                                        <img src={resolveMediaUrl(customer.avatar)} alt={customer?.name || 'avatar'} className="w-full h-full object-cover" />
                                     ) : (
                                         <span className="text-lg font-bold text-green-600">
                                             {customer?.name?.charAt(0) || customer?.phone?.charAt(0) || '?'}
@@ -321,10 +332,13 @@ export default function CustomerProfilePage() {
 
 // Profile Tab Component
 function ProfileTab({ customer, onUpdate }) {
+    const avatarInputRef = useRef(null);
     const [editing, setEditing] = useState(false);
     const [name, setName] = useState(customer?.name || '');
     const [email, setEmail] = useState(customer?.email || '');
     const [avatar, setAvatar] = useState(customer?.avatar || '');
+    const [avatarFile, setAvatarFile] = useState(null);
+    const [avatarPreview, setAvatarPreview] = useState(resolveMediaUrl(customer?.avatar || ''));
     const [birthDate, setBirthDate] = useState(customer?.preferences?.profile?.birthDate || '');
     const [instagram, setInstagram] = useState(customer?.preferences?.profile?.social?.instagram || '');
     const [facebook, setFacebook] = useState(customer?.preferences?.profile?.social?.facebook || '');
@@ -347,6 +361,8 @@ function ProfileTab({ customer, onUpdate }) {
         setName(customer?.name || '');
         setEmail(customer?.email || '');
         setAvatar(customer?.avatar || '');
+        setAvatarFile(null);
+        setAvatarPreview(resolveMediaUrl(customer?.avatar || ''));
         setBirthDate(customer?.preferences?.profile?.birthDate || '');
         setInstagram(customer?.preferences?.profile?.social?.instagram || '');
         setFacebook(customer?.preferences?.profile?.social?.facebook || '');
@@ -356,7 +372,7 @@ function ProfileTab({ customer, onUpdate }) {
 
     const socialFilled = [instagram, facebook, telegram, tiktok].some((value) => String(value || '').trim().length > 0);
     const completionChecklist = [
-        { label: 'Фото профиля', done: Boolean(avatar) },
+        { label: 'Фото профиля', done: Boolean(avatarPreview || avatar) },
         { label: 'Имя', done: Boolean(String(name || '').trim()) },
         { label: 'Дата рождения', done: Boolean(birthDate) },
         { label: 'Соцсети', done: socialFilled }
@@ -367,6 +383,14 @@ function ProfileTab({ customer, onUpdate }) {
     const handleSave = async () => {
         setSaving(true);
         try {
+            let avatarValue = avatar || null;
+
+            if (avatarFile) {
+                const uploaded = await customerService.uploadAvatar(avatarFile);
+                avatarValue = uploaded?.avatar || uploaded?.customer?.avatar || avatarValue;
+                setAvatar(avatarValue || '');
+            }
+
             const existingPreferences = (customer?.preferences && typeof customer.preferences === 'object')
                 ? customer.preferences
                 : {};
@@ -388,7 +412,7 @@ function ProfileTab({ customer, onUpdate }) {
             await customerService.updateProfile({
                 name,
                 email,
-                avatar: avatar || null,
+                avatar: avatarValue,
                 preferences: updatedPreferences
             });
 
@@ -401,6 +425,24 @@ function ProfileTab({ customer, onUpdate }) {
         } finally {
             setSaving(false);
         }
+    };
+
+    const handleAvatarSelect = (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            toast.error('Выберите изображение');
+            return;
+        }
+
+        if (file.size > 10 * 1024 * 1024) {
+            toast.error('Максимальный размер файла 10MB');
+            return;
+        }
+
+        setAvatarFile(file);
+        setAvatarPreview(URL.createObjectURL(file));
     };
 
     return (
@@ -440,23 +482,55 @@ function ProfileTab({ customer, onUpdate }) {
 
                 <div className="space-y-3">
                     <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-0.5">Фото профиля (URL)</label>
-                        <input
-                            type="url"
-                            value={avatar}
-                            onChange={(e) => setAvatar(e.target.value)}
-                            disabled={!editing}
-                            placeholder="https://..."
-                            className={`w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm ${!editing ? 'bg-gray-50' : ''}`}
-                        />
-                    </div>
-
-                    {avatar && (
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Фото профиля</label>
                         <div className="flex items-center gap-3 p-2 rounded-lg bg-gray-50 border border-gray-200">
-                            <img src={avatar} alt="preview" className="w-12 h-12 rounded-full object-cover" />
-                            <span className="text-xs text-gray-500">Предпросмотр фото профиля</span>
+                            <div className="w-12 h-12 rounded-full overflow-hidden bg-white border border-gray-200 flex items-center justify-center">
+                                {avatarPreview ? (
+                                    <img src={avatarPreview} alt="preview" className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="text-xs text-gray-400">Нет фото</span>
+                                )}
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                                <input
+                                    ref={avatarInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleAvatarSelect}
+                                    disabled={!editing}
+                                    className="hidden"
+                                />
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        disabled={!editing}
+                                        onClick={() => avatarInputRef.current?.click()}
+                                        className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 text-gray-700 disabled:opacity-50"
+                                    >
+                                        Загрузить фото
+                                    </button>
+                                    {editing && (avatarPreview || avatar) && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setAvatar('');
+                                                setAvatarFile(null);
+                                                setAvatarPreview('');
+                                                if (avatarInputRef.current) {
+                                                    avatarInputRef.current.value = '';
+                                                }
+                                            }}
+                                            className="px-2.5 py-1.5 text-xs font-medium rounded-lg text-red-600 border border-red-200"
+                                        >
+                                            Удалить
+                                        </button>
+                                    )}
+                                </div>
+                                <p className="text-[11px] text-gray-500 mt-1">PNG, JPG, WEBP до 10MB</p>
+                            </div>
                         </div>
-                    )}
+                    </div>
 
                     <div>
                         <label className="block text-xs font-medium text-gray-700 mb-0.5">Телефон</label>
@@ -555,6 +629,8 @@ function ProfileTab({ customer, onUpdate }) {
                                     setName(customer?.name || '');
                                     setEmail(customer?.email || '');
                                     setAvatar(customer?.avatar || '');
+                                    setAvatarFile(null);
+                                    setAvatarPreview(resolveMediaUrl(customer?.avatar || ''));
                                     setBirthDate(customer?.preferences?.profile?.birthDate || '');
                                     setInstagram(customer?.preferences?.profile?.social?.instagram || '');
                                     setFacebook(customer?.preferences?.profile?.social?.facebook || '');

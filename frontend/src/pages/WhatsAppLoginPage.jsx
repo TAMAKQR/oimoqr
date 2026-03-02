@@ -214,13 +214,13 @@ const WhatsAppLoginPage = () => {
                             <label className="block text-sm font-semibold text-gray-700 mb-2">
                                 Номер телефона
                             </label>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 items-stretch">
                                 {/* Выбор страны */}
-                                <div className="relative">
+                                <div className="relative shrink-0">
                                     <button
                                         type="button"
                                         onClick={() => setShowCountryPicker(!showCountryPicker)}
-                                        className="flex items-center gap-1.5 px-3 py-3 border border-gray-200 rounded-xl hover:bg-gray-50 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all min-w-[105px]"
+                                        className="flex items-center gap-1.5 px-3 py-3 border border-gray-200 rounded-xl hover:bg-gray-50 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all min-w-[105px] text-base"
                                     >
                                         <span className="text-lg">{selectedCountry.flag}</span>
                                         <span className="text-sm font-medium text-gray-700">{selectedCountry.dial}</span>
@@ -261,7 +261,7 @@ const WhatsAppLoginPage = () => {
                                         setPhoneNumber(val);
                                     }}
                                     placeholder={selectedCountry.placeholder}
-                                    className="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                                    className="flex-1 min-w-0 w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-base"
                                     disabled={loading}
                                     autoFocus
                                 />

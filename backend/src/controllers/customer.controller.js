@@ -364,6 +364,38 @@ export const updateProfile = async (req, res, next) => {
 };
 
 /**
+ * Загрузить аватар клиента
+ */
+export const uploadCustomerAvatar = async (req, res, next) => {
+    try {
+        const customerId = req.customerId;
+
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        const avatarUrl = req.file.path?.startsWith('http')
+            ? req.file.path
+            : `/uploads/${req.file.filename}`;
+
+        const updatedCustomer = await prisma.customer.update({
+            where: { id: customerId },
+            data: { avatar: avatarUrl }
+        });
+
+        const { password: _, ...customerData } = updatedCustomer;
+
+        res.json({
+            message: 'Avatar uploaded successfully',
+            avatar: avatarUrl,
+            customer: customerData
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
  * Изменить пароль
  */
 export const changePassword = async (req, res, next) => {
