@@ -230,10 +230,14 @@ export default function CustomerProfilePage() {
                     <div className="px-3">
                         <div className="flex justify-between items-center py-4">
                             <div className="flex items-center space-x-3">
-                                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                                    <span className="text-lg font-bold text-green-600">
-                                        {customer?.name?.charAt(0) || customer?.phone?.charAt(0) || '?'}
-                                    </span>
+                                <div className="w-10 h-10 bg-green-100 rounded-full overflow-hidden flex items-center justify-center">
+                                    {customer?.avatar ? (
+                                        <img src={customer.avatar} alt={customer?.name || 'avatar'} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span className="text-lg font-bold text-green-600">
+                                            {customer?.name?.charAt(0) || customer?.phone?.charAt(0) || '?'}
+                                        </span>
+                                    )}
                                 </div>
                                 <div>
                                     <h1 className="text-lg font-bold text-gray-900">
@@ -320,6 +324,12 @@ function ProfileTab({ customer, onUpdate }) {
     const [editing, setEditing] = useState(false);
     const [name, setName] = useState(customer?.name || '');
     const [email, setEmail] = useState(customer?.email || '');
+    const [avatar, setAvatar] = useState(customer?.avatar || '');
+    const [birthDate, setBirthDate] = useState(customer?.preferences?.profile?.birthDate || '');
+    const [instagram, setInstagram] = useState(customer?.preferences?.profile?.social?.instagram || '');
+    const [facebook, setFacebook] = useState(customer?.preferences?.profile?.social?.facebook || '');
+    const [telegram, setTelegram] = useState(customer?.preferences?.profile?.social?.telegram || '');
+    const [tiktok, setTiktok] = useState(customer?.preferences?.profile?.social?.tiktok || '');
     const [saving, setSaving] = useState(false);
     const [showNewAddress, setShowNewAddress] = useState(false);
     const [addingAddress, setAddingAddress] = useState(false);
@@ -333,10 +343,56 @@ function ProfileTab({ customer, onUpdate }) {
         isDefault: false,
     });
 
+    useEffect(() => {
+        setName(customer?.name || '');
+        setEmail(customer?.email || '');
+        setAvatar(customer?.avatar || '');
+        setBirthDate(customer?.preferences?.profile?.birthDate || '');
+        setInstagram(customer?.preferences?.profile?.social?.instagram || '');
+        setFacebook(customer?.preferences?.profile?.social?.facebook || '');
+        setTelegram(customer?.preferences?.profile?.social?.telegram || '');
+        setTiktok(customer?.preferences?.profile?.social?.tiktok || '');
+    }, [customer]);
+
+    const socialFilled = [instagram, facebook, telegram, tiktok].some((value) => String(value || '').trim().length > 0);
+    const completionChecklist = [
+        { label: 'Фото профиля', done: Boolean(avatar) },
+        { label: 'Имя', done: Boolean(String(name || '').trim()) },
+        { label: 'Дата рождения', done: Boolean(birthDate) },
+        { label: 'Соцсети', done: socialFilled }
+    ];
+    const completedCount = completionChecklist.filter((item) => item.done).length;
+    const profileCompletion = Math.round((completedCount / completionChecklist.length) * 100);
+
     const handleSave = async () => {
         setSaving(true);
         try {
-            await customerService.updateProfile({ name, email });
+            const existingPreferences = (customer?.preferences && typeof customer.preferences === 'object')
+                ? customer.preferences
+                : {};
+
+            const updatedPreferences = {
+                ...existingPreferences,
+                profile: {
+                    ...(existingPreferences.profile || {}),
+                    birthDate: birthDate || null,
+                    social: {
+                        instagram: instagram || '',
+                        facebook: facebook || '',
+                        telegram: telegram || '',
+                        tiktok: tiktok || ''
+                    }
+                }
+            };
+
+            await customerService.updateProfile({
+                name,
+                email,
+                avatar: avatar || null,
+                preferences: updatedPreferences
+            });
+
+            toast.success('Профиль обновлён');
             setEditing(false);
             onUpdate();
         } catch (error) {
@@ -362,7 +418,46 @@ function ProfileTab({ customer, onUpdate }) {
                     )}
                 </div>
 
+                <div className="mb-4 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold text-gray-800">Профиль заполнен</span>
+                        <span className="text-sm font-bold text-primary-700">{profileCompletion}%</span>
+                    </div>
+                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div className="h-full bg-primary-600 rounded-full transition-all" style={{ width: `${profileCompletion}%` }} />
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                        {completionChecklist.map((item) => (
+                            <span
+                                key={item.label}
+                                className={`text-[11px] px-2 py-1 rounded-full ${item.done ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
+                            >
+                                {item.done ? '✓' : '○'} {item.label}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+
                 <div className="space-y-3">
+                    <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-0.5">Фото профиля (URL)</label>
+                        <input
+                            type="url"
+                            value={avatar}
+                            onChange={(e) => setAvatar(e.target.value)}
+                            disabled={!editing}
+                            placeholder="https://..."
+                            className={`w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm ${!editing ? 'bg-gray-50' : ''}`}
+                        />
+                    </div>
+
+                    {avatar && (
+                        <div className="flex items-center gap-3 p-2 rounded-lg bg-gray-50 border border-gray-200">
+                            <img src={avatar} alt="preview" className="w-12 h-12 rounded-full object-cover" />
+                            <span className="text-xs text-gray-500">Предпросмотр фото профиля</span>
+                        </div>
+                    )}
+
                     <div>
                         <label className="block text-xs font-medium text-gray-700 mb-0.5">Телефон</label>
                         <input
@@ -395,6 +490,56 @@ function ProfileTab({ customer, onUpdate }) {
                         />
                     </div>
 
+                    <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-0.5">Год рождения</label>
+                        <input
+                            type="date"
+                            value={birthDate}
+                            onChange={(e) => setBirthDate(e.target.value)}
+                            disabled={!editing}
+                            max={new Date().toISOString().split('T')[0]}
+                            className={`w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm ${!editing ? 'bg-gray-50' : ''}`}
+                        />
+                    </div>
+
+                    <div className="pt-1">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Соцсети</label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <input
+                                type="text"
+                                value={instagram}
+                                onChange={(e) => setInstagram(e.target.value)}
+                                disabled={!editing}
+                                placeholder="Instagram"
+                                className={`w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm ${!editing ? 'bg-gray-50' : ''}`}
+                            />
+                            <input
+                                type="text"
+                                value={telegram}
+                                onChange={(e) => setTelegram(e.target.value)}
+                                disabled={!editing}
+                                placeholder="Telegram"
+                                className={`w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm ${!editing ? 'bg-gray-50' : ''}`}
+                            />
+                            <input
+                                type="text"
+                                value={facebook}
+                                onChange={(e) => setFacebook(e.target.value)}
+                                disabled={!editing}
+                                placeholder="Facebook"
+                                className={`w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm ${!editing ? 'bg-gray-50' : ''}`}
+                            />
+                            <input
+                                type="text"
+                                value={tiktok}
+                                onChange={(e) => setTiktok(e.target.value)}
+                                disabled={!editing}
+                                placeholder="TikTok"
+                                className={`w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm ${!editing ? 'bg-gray-50' : ''}`}
+                            />
+                        </div>
+                    </div>
+
                     {editing && (
                         <div className="flex space-x-3 pt-4">
                             <button
@@ -409,6 +554,12 @@ function ProfileTab({ customer, onUpdate }) {
                                     setEditing(false);
                                     setName(customer?.name || '');
                                     setEmail(customer?.email || '');
+                                    setAvatar(customer?.avatar || '');
+                                    setBirthDate(customer?.preferences?.profile?.birthDate || '');
+                                    setInstagram(customer?.preferences?.profile?.social?.instagram || '');
+                                    setFacebook(customer?.preferences?.profile?.social?.facebook || '');
+                                    setTelegram(customer?.preferences?.profile?.social?.telegram || '');
+                                    setTiktok(customer?.preferences?.profile?.social?.tiktok || '');
                                 }}
                                 className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200"
                             >
