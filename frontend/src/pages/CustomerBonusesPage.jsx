@@ -189,17 +189,6 @@ export default function CustomerBonusesPage() {
                         </div>
 
                         <div className="bg-white rounded-xl p-4 border border-gray-100">
-                            <h3 className="text-sm font-semibold text-gray-900 mb-2">Правила бонусной программы</h3>
-                            <ul className="space-y-1.5 text-xs text-gray-600">
-                                <li>• Начисление и срок жизни бонусов управляются тарифом и/или настройками точки.</li>
-                                <li>• Начисление идёт за выполненные заказы доставки и самовывоза.</li>
-                                <li>• Если в точке включено «Использовать настройки тарифа», применяются лимиты тарифа.</li>
-                                <li>• Списывать бонусы можно при оплате заказа (MVP: скоро в следующем шаге).</li>
-                                <li>• Названия и пороги уровней задаются в админке тарифа.</li>
-                            </ul>
-                        </div>
-
-                        <div className="bg-white rounded-xl p-4 border border-gray-100">
                             <h3 className="text-sm font-semibold text-gray-900 mb-2">Последние начисления</h3>
 
                             {bonusData.transactions.length === 0 ? (
