@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import customerService from '../services/customerService';
@@ -65,6 +65,8 @@ export default function CustomerProfilePage() {
     const [orders, setOrders] = useState([]);
     const [favorites, setFavorites] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [loadError, setLoadError] = useState('');
     const [selectedDish, setSelectedDish] = useState(null);
     const [dishCurrency, setDishCurrency] = useState('₽');
     const [isDishModalOpen, setDishModalOpen] = useState(false);
@@ -80,15 +82,11 @@ export default function CustomerProfilePage() {
         }
     }, [location.pathname]);
 
-    useEffect(() => {
-        if (!customerService.isAuthenticated()) {
-            navigate('/customer/login');
-            return;
+    const loadData = useCallback(async ({ isRefresh = false } = {}) => {
+        if (isRefresh) {
+            setRefreshing(true);
         }
-        loadData();
-    }, []);
-
-    const loadData = async () => {
+        setLoadError('');
         try {
             const [profileData, ordersData, favoritesData] = await Promise.all([
                 customerService.getProfile(),
@@ -103,11 +101,25 @@ export default function CustomerProfilePage() {
             if (error.response?.status === 401) {
                 customerService.logout();
                 navigate('/customer/login');
+                return;
             }
+            setLoadError('Не удалось загрузить данные профиля. Проверьте подключение и попробуйте снова.');
+            toast.error('Не удалось загрузить данные профиля');
         } finally {
             setLoading(false);
+            if (isRefresh) {
+                setRefreshing(false);
+            }
         }
-    };
+    }, [navigate]);
+
+    useEffect(() => {
+        if (!customerService.isAuthenticated()) {
+            navigate('/customer/login');
+            return;
+        }
+        loadData();
+    }, [navigate, loadData]);
 
     const handleLogout = () => {
         customerService.logout();
@@ -237,8 +249,33 @@ export default function CustomerProfilePage() {
                                 Выйти
                             </button>
                         </div>
+                        <div className="pb-3 flex justify-end">
+                            <button
+                                type="button"
+                                onClick={() => loadData({ isRefresh: true })}
+                                disabled={refreshing}
+                                className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 text-gray-700 bg-white disabled:opacity-50"
+                            >
+                                {refreshing ? 'Обновляем…' : 'Обновить'}
+                            </button>
+                        </div>
                     </div>
                 </div>
+
+                {loadError && (
+                    <div className="px-3 mt-4">
+                        <div className="bg-red-50 border border-red-100 rounded-xl p-3">
+                            <p className="text-sm text-red-700">{loadError}</p>
+                            <button
+                                type="button"
+                                onClick={() => loadData()}
+                                className="mt-2 text-xs font-medium text-red-700 underline"
+                            >
+                                Повторить загрузку
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Tab Content */}
                 <div className="px-3 mt-4 pb-20">
@@ -546,6 +583,17 @@ function OrdersTab({ orders }) {
         return order.deliveryAddress || (order.deliveryType === 'pickup' ? 'Самовывоз' : '—');
     };
 
+    const formatDateTime = (value) => {
+        if (!value) return 'Дата неизвестна';
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? 'Дата неизвестна' : date.toLocaleString('ru-RU');
+    };
+
+    const formatMoney = (value) => {
+        const amount = Number(value);
+        return Number.isFinite(amount) ? amount.toFixed(2) : '0.00';
+    };
+
     if (orders.length === 0) {
         return (
             <div className="text-center py-12">
@@ -584,7 +632,7 @@ function OrdersTab({ orders }) {
                                 Заказ #{String(order.orderNumber || '').replace(/^#+/, '')}
                             </h3>
                             <p className="text-sm text-gray-500">
-                                {new Date(order.createdAt).toLocaleString('ru-RU')}
+                                {formatDateTime(order.createdAt)}
                             </p>
                         </div>
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusColors[order.status] || 'bg-gray-100 text-gray-800'}`}>
@@ -597,6 +645,7 @@ function OrdersTab({ orders }) {
                             const modifiers = parseModifiers(item.selectedModifiers);
                             const name = item.dish?.name || item.product?.name || item.dishName || item.productName || 'Блюдо';
                             const currency = order.restaurant?.currency || 'RUB';
+                            const quantity = Number(item.quantity) || 0;
                             return (
                                 <div key={idx} className="flex justify-between text-sm items-start">
                                     <div>
@@ -606,7 +655,7 @@ function OrdersTab({ orders }) {
                                         )}
                                     </div>
                                     <div className="text-right text-gray-600">
-                                        <span>{item.quantity} × {item.price} {getCurrencySymbol(currency)}</span>
+                                        <span>{quantity} × {formatMoney(item.price)} {getCurrencySymbol(currency)}</span>
                                     </div>
                                 </div>
                             );
@@ -616,11 +665,11 @@ function OrdersTab({ orders }) {
                     <div className="pt-4 border-t border-gray-200 space-y-1">
                         <div className="flex justify-between items-center">
                             <span className="text-sm text-gray-600">{order.restaurant?.name}</span>
-                            <span className="text-lg font-semibold text-gray-900">{order.totalAmount} {getCurrencySymbol(order.restaurant?.currency || 'RUB')}</span>
+                            <span className="text-lg font-semibold text-gray-900">{formatMoney(order.totalAmount)} {getCurrencySymbol(order.restaurant?.currency || 'RUB')}</span>
                         </div>
                         <div className="text-xs text-gray-600">Способ: {order.deliveryType === 'dine_in' ? '🍽️ В зале' : order.deliveryType === 'pickup' ? '🏃 Самовывоз' : '🚗 Доставка'}{order.deliveryType !== 'dine_in' ? ` · Оплата: ${order.paymentMethod === 'card' ? 'Картой' : 'Наличные'}` : ''}</div>
                         <div className="text-xs text-gray-700">Адрес: {formatAddress(order)}</div>
-                        <div className="text-sm font-semibold text-gray-900 mt-1">Итого: {order.totalAmount} {getCurrencySymbol(order.restaurant?.currency || 'RUB')}</div>
+                        <div className="text-sm font-semibold text-gray-900 mt-1">Итого: {formatMoney(order.totalAmount)} {getCurrencySymbol(order.restaurant?.currency || 'RUB')}</div>
                     </div>
                 </div>
             ))}
