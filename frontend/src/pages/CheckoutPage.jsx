@@ -455,7 +455,16 @@ const CheckoutPage = () => {
         <div className="min-h-screen bg-gray-50 pb-32">
             <div className="max-w-[480px] mx-auto px-4 pt-4 pb-24 space-y-4">
                 <div className="flex items-center gap-3">
-                    <button onClick={() => navigate(-1)} className="text-primary-600 text-sm">← Назад</button>
+                    <button
+                        onClick={() => navigate(-1)}
+                        aria-label="Назад"
+                        title="Назад"
+                        className="w-8 h-8 rounded-full border border-primary-200 text-primary-600 flex items-center justify-center"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
                     <h1 className="text-xl font-bold">Оформление заказа</h1>
                 </div>
 
@@ -463,8 +472,15 @@ const CheckoutPage = () => {
                     <div className="flex items-center justify-between text-sm text-gray-600 mb-3">
                         <span>Шаг {checkoutStep} из 2</span>
                         {checkoutStep === 2 && (
-                            <button onClick={() => setCheckoutStep(1)} className="text-primary-600 font-semibold">
-                                ← К блюдам
+                            <button
+                                onClick={() => setCheckoutStep(1)}
+                                aria-label="Назад к блюдам"
+                                title="Назад к блюдам"
+                                className="w-8 h-8 rounded-full border border-primary-200 text-primary-600 flex items-center justify-center"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                </svg>
                             </button>
                         )}
                     </div>
