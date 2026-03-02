@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import customerService from '../services/customerService';
@@ -23,33 +23,78 @@ const defaultBonusData = {
 export default function CustomerBonusesPage() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [loadError, setLoadError] = useState('');
     const [bonusData, setBonusData] = useState(defaultBonusData);
+
+    const normalizeSummary = (summary) => ({
+        ...defaultBonusData,
+        ...summary,
+        transactions: Array.isArray(summary?.transactions) ? summary.transactions : [],
+        tier: summary?.tier || defaultBonusData.tier
+    });
+
+    const loadSummary = useCallback(async ({ isRefresh = false } = {}) => {
+        if (isRefresh) {
+            setRefreshing(true);
+        } else {
+            setLoading(true);
+        }
+
+        setLoadError('');
+
+        try {
+            const summary = await customerService.getBonusSummary(10);
+            setBonusData(normalizeSummary(summary));
+        } catch (error) {
+            console.error('Error loading customer bonuses:', error);
+            setLoadError('Не удалось загрузить бонусы. Проверьте подключение и попробуйте снова.');
+            toast.error('Не удалось загрузить бонусы');
+        } finally {
+            if (isRefresh) {
+                setRefreshing(false);
+            } else {
+                setLoading(false);
+            }
+        }
+    }, []);
+
+    const remainingToNextTier = useMemo(() => {
+        if (!bonusData.tier?.nextAt) return 0;
+        return Math.max(0, Number(bonusData.tier.nextAt) - Number(bonusData.deliveryOrdersCount || 0));
+    }, [bonusData.tier?.nextAt, bonusData.deliveryOrdersCount]);
+
+    const tierProgress = useMemo(() => {
+        if (!bonusData.tier?.nextAt) return 100;
+        const target = Number(bonusData.tier.nextAt);
+        if (!target || target <= 0) return 0;
+        const current = Number(bonusData.deliveryOrdersCount || 0);
+        return Math.max(0, Math.min(100, Math.round((current / target) * 100)));
+    }, [bonusData.tier?.nextAt, bonusData.deliveryOrdersCount]);
+
+    const formatMoney = (value) => {
+        const amount = Number(value);
+        return Number.isFinite(amount) ? amount.toFixed(2) : '0.00';
+    };
+
+    const formatPercent = (value) => {
+        const percent = Number(value);
+        return Number.isFinite(percent) ? Math.round(percent * 100) : 0;
+    };
+
+    const formatOrderDate = (value) => {
+        if (!value) return 'дата неизвестна';
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? 'дата неизвестна' : date.toLocaleDateString('ru-RU');
+    };
 
     useEffect(() => {
         if (!customerService.isAuthenticated()) {
             navigate('/customer/login');
             return;
         }
-
-        const loadSummary = async () => {
-            try {
-                const summary = await customerService.getBonusSummary(10);
-                setBonusData({
-                    ...defaultBonusData,
-                    ...summary,
-                    transactions: Array.isArray(summary?.transactions) ? summary.transactions : [],
-                    tier: summary?.tier || defaultBonusData.tier
-                });
-            } catch (error) {
-                console.error('Error loading customer bonuses:', error);
-                toast.error('Не удалось загрузить бонусы');
-            } finally {
-                setLoading(false);
-            }
-        };
-
         loadSummary();
-    }, [navigate]);
+    }, [navigate, loadSummary]);
 
     if (loading) {
         return (
@@ -68,11 +113,36 @@ export default function CustomerBonusesPage() {
         <div className="min-h-screen bg-gray-100 flex justify-center">
             <div className="w-full max-w-[480px] min-h-screen bg-gray-50 shadow-2xl relative pb-20">
                 <div className="bg-white shadow-sm sticky top-0 z-10">
-                    <div className="px-3 py-4">
-                        <h1 className="text-xl font-bold text-gray-900">Мои бонусы</h1>
-                        <p className="text-xs text-gray-500 mt-1">Бонусы начисляются за выполненные заказы доставки и самовывоза</p>
+                    <div className="px-3 py-4 flex items-start justify-between gap-3">
+                        <div>
+                            <h1 className="text-xl font-bold text-gray-900">Мои бонусы</h1>
+                            <p className="text-xs text-gray-500 mt-1">Бонусы начисляются за выполненные заказы доставки и самовывоза</p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => loadSummary({ isRefresh: true })}
+                            disabled={refreshing || loading}
+                            className="shrink-0 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 text-gray-700 bg-white disabled:opacity-50"
+                        >
+                            {refreshing ? 'Обновляем…' : 'Обновить'}
+                        </button>
                     </div>
                 </div>
+
+                {loadError && (
+                    <div className="px-3 pt-3">
+                        <div className="bg-red-50 border border-red-100 rounded-xl p-3">
+                            <p className="text-sm text-red-700">{loadError}</p>
+                            <button
+                                type="button"
+                                onClick={() => loadSummary()}
+                                className="mt-2 text-xs font-medium text-red-700 underline"
+                            >
+                                Повторить загрузку
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {!bonusData.bonusSystemActive ? (
                     <div className="px-3 py-8">
@@ -108,11 +178,14 @@ export default function CustomerBonusesPage() {
                             <p className={`text-lg font-semibold mt-1 ${bonusData.tier.color}`}>{bonusData.tier.name}</p>
                             {bonusData.tier.nextAt ? (
                                 <p className="text-xs text-gray-600 mt-1">
-                                    До следующего уровня: {Math.max(0, bonusData.tier.nextAt - bonusData.deliveryOrdersCount)} доставок
+                                    До следующего уровня: {remainingToNextTier} доставок
                                 </p>
                             ) : (
                                 <p className="text-xs text-gray-600 mt-1">Максимальный уровень достигнут</p>
                             )}
+                            <div className="mt-2 h-1.5 bg-white/70 rounded-full overflow-hidden">
+                                <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${tierProgress}%` }} />
+                            </div>
                         </div>
 
                         <div className="bg-white rounded-xl p-4 border border-gray-100">
@@ -138,11 +211,11 @@ export default function CustomerBonusesPage() {
                                             <div>
                                                 <p className="text-sm font-medium text-gray-900">Заказ #{String(tx.orderNumber || '').replace(/^#+/, '')}</p>
                                                 <p className="text-xs text-gray-500">
-                                                    Сумма {tx.total.toFixed(2)} · {tx.orderDate ? tx.orderDate.toLocaleDateString('ru-RU') : 'дата неизвестна'} · {Math.round(tx.rate * 100)}%
+                                                    Сумма {formatMoney(tx.total)} · {formatOrderDate(tx.orderDate)} · {formatPercent(tx.rate)}%
                                                 </p>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-sm font-semibold text-green-600">+{tx.earned}</p>
+                                                <p className="text-sm font-semibold text-green-600">+{Math.max(0, Number(tx.earned) || 0)}</p>
                                                 <p className={`text-[11px] ${tx.isActive ? 'text-gray-500' : 'text-red-500'}`}>
                                                     {tx.isActive ? 'активны' : 'сгорели'}
                                                 </p>
