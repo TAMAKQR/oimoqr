@@ -1,4 +1,5 @@
 import { prisma } from '../config/prisma.js';
+import { ensureRestaurantAccess } from '../utils/restaurantAccess.js';
 
 // Get all product categories for a store
 export const getProductCategories = async (req, res, next) => {
@@ -26,6 +27,10 @@ export const createProductCategory = async (req, res, next) => {
     try {
         const { name, description, order, restaurantId } = req.body;
 
+        if (!ensureRestaurantAccess(req, res, restaurantId)) {
+            return;
+        }
+
         const category = await prisma.productCategory.create({
             data: {
                 name,
@@ -46,6 +51,19 @@ export const updateProductCategory = async (req, res, next) => {
     try {
         const { id } = req.params;
         const { name, description, order, isActive, image } = req.body;
+
+        const existingCategory = await prisma.productCategory.findUnique({
+            where: { id },
+            select: { id: true, restaurantId: true }
+        });
+
+        if (!existingCategory) {
+            return res.status(404).json({ error: 'Category not found' });
+        }
+
+        if (!ensureRestaurantAccess(req, res, existingCategory.restaurantId)) {
+            return;
+        }
 
         const category = await prisma.productCategory.update({
             where: { id },
@@ -68,6 +86,19 @@ export const updateProductCategory = async (req, res, next) => {
 export const deleteProductCategory = async (req, res, next) => {
     try {
         const { id } = req.params;
+
+        const existingCategory = await prisma.productCategory.findUnique({
+            where: { id },
+            select: { id: true, restaurantId: true }
+        });
+
+        if (!existingCategory) {
+            return res.status(404).json({ error: 'Category not found' });
+        }
+
+        if (!ensureRestaurantAccess(req, res, existingCategory.restaurantId)) {
+            return;
+        }
 
         await prisma.productCategory.delete({
             where: { id }
@@ -155,6 +186,21 @@ export const createProduct = async (req, res, next) => {
             return res.status(400).json({ error: 'Price must be a number greater than or equal to 0' });
         }
 
+        if (!ensureRestaurantAccess(req, res, restaurantId)) {
+            return;
+        }
+
+        if (categoryId) {
+            const category = await prisma.productCategory.findUnique({
+                where: { id: categoryId },
+                select: { id: true, restaurantId: true }
+            });
+
+            if (!category || category.restaurantId !== restaurantId) {
+                return res.status(400).json({ error: 'Invalid category for this restaurant' });
+            }
+        }
+
         const product = await prisma.product.create({
             data: {
                 name,
@@ -187,6 +233,30 @@ export const updateProduct = async (req, res, next) => {
         const { id } = req.params;
         const updateData = req.body;
 
+        const existingProduct = await prisma.product.findUnique({
+            where: { id },
+            select: { id: true, restaurantId: true }
+        });
+
+        if (!existingProduct) {
+            return res.status(404).json({ error: 'Product not found' });
+        }
+
+        if (!ensureRestaurantAccess(req, res, existingProduct.restaurantId)) {
+            return;
+        }
+
+        if (updateData.categoryId) {
+            const targetCategory = await prisma.productCategory.findUnique({
+                where: { id: updateData.categoryId },
+                select: { id: true, restaurantId: true }
+            });
+
+            if (!targetCategory || targetCategory.restaurantId !== existingProduct.restaurantId) {
+                return res.status(400).json({ error: 'Invalid category for this restaurant' });
+            }
+        }
+
         if (updateData.price !== undefined) {
             const parsedPrice = parseFloat(updateData.price);
             if (isNaN(parsedPrice) || parsedPrice < 0) {
@@ -215,6 +285,19 @@ export const deleteProduct = async (req, res, next) => {
     try {
         const { id } = req.params;
 
+        const existingProduct = await prisma.product.findUnique({
+            where: { id },
+            select: { id: true, restaurantId: true }
+        });
+
+        if (!existingProduct) {
+            return res.status(404).json({ error: 'Product not found' });
+        }
+
+        if (!ensureRestaurantAccess(req, res, existingProduct.restaurantId)) {
+            return;
+        }
+
         await prisma.product.delete({
             where: { id }
         });
@@ -236,6 +319,10 @@ export const uploadProductImage = async (req, res, next) => {
         const product = await prisma.product.findUnique({ where: { id } });
         if (!product) {
             return res.status(404).json({ error: 'Product not found' });
+        }
+
+        if (!ensureRestaurantAccess(req, res, product.restaurantId)) {
+            return;
         }
 
         const imageUrl = req.file.path || `/uploads/${req.file.filename}`;
@@ -265,6 +352,10 @@ export const deleteProductImage = async (req, res, next) => {
             return res.status(404).json({ error: 'Product not found' });
         }
 
+        if (!ensureRestaurantAccess(req, res, product.restaurantId)) {
+            return;
+        }
+
         const currentImages = Array.isArray(product.images) ? product.images : [];
         const updatedImages = currentImages.filter(img => img !== imageUrl);
 
@@ -292,6 +383,10 @@ export const updateStock = async (req, res, next) => {
 
         if (!product) {
             return res.status(404).json({ error: 'Product not found' });
+        }
+
+        if (!ensureRestaurantAccess(req, res, product.restaurantId)) {
+            return;
         }
 
         let newQuantity;

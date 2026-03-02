@@ -1,9 +1,14 @@
 import { prisma } from '../config/prisma.js';
 import bcrypt from 'bcryptjs';
+import { ensureRestaurantOwnerAccess } from '../utils/restaurantAccess.js';
 
 export const getRestaurantStaff = async (req, res, next) => {
   try {
     const { restaurantId } = req.params;
+
+    if (!ensureRestaurantOwnerAccess(req, res, restaurantId)) {
+      return;
+    }
 
     const staff = await prisma.restaurantStaff.findMany({
       where: { restaurantId },
@@ -38,6 +43,10 @@ export const addStaff = async (req, res, next) => {
     const { restaurantId } = req.params;
     const { email, password, name } = req.body;
 
+    if (!ensureRestaurantOwnerAccess(req, res, restaurantId)) {
+      return;
+    }
+
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
@@ -53,7 +62,7 @@ export const addStaff = async (req, res, next) => {
     // Если пользователь не существует - создаем нового (только для менеджера)
     if (!user) {
       const hashedPassword = await bcrypt.hash(password, 10);
-      
+
       user = await prisma.user.create({
         data: {
           email,
@@ -111,6 +120,10 @@ export const updateStaff = async (req, res, next) => {
     const { restaurantId, staffId } = req.params;
     const { role, permissions } = req.body;
 
+    if (!ensureRestaurantOwnerAccess(req, res, restaurantId)) {
+      return;
+    }
+
     if (!role && permissions === undefined) {
       return res.status(400).json({ error: 'At least one field (role or permissions) must be provided' });
     }
@@ -156,6 +169,10 @@ export const removeStaff = async (req, res, next) => {
   try {
     const { restaurantId, staffId } = req.params;
 
+    if (!ensureRestaurantOwnerAccess(req, res, restaurantId)) {
+      return;
+    }
+
     const staff = await prisma.restaurantStaff.findUnique({
       where: { id: staffId }
     });
@@ -178,6 +195,10 @@ export const getStaffPermissions = async (req, res, next) => {
   try {
     const { restaurantId, staffId } = req.params;
 
+    if (!ensureRestaurantOwnerAccess(req, res, restaurantId)) {
+      return;
+    }
+
     const staff = await prisma.restaurantStaff.findUnique({
       where: { id: staffId }
     });
@@ -199,6 +220,10 @@ export const updateStaffPermissions = async (req, res, next) => {
   try {
     const { restaurantId, staffId } = req.params;
     const { permissions } = req.body;
+
+    if (!ensureRestaurantOwnerAccess(req, res, restaurantId)) {
+      return;
+    }
 
     if (!Array.isArray(permissions)) {
       return res.status(400).json({ error: 'Permissions must be an array' });

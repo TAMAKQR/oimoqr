@@ -1,4 +1,5 @@
 import { prisma } from '../config/prisma.js';
+import { ensureRestaurantAccess } from '../utils/restaurantAccess.js';
 
 export const getCategories = async (req, res, next) => {
   try {
@@ -77,6 +78,10 @@ export const createCategory = async (req, res, next) => {
   try {
     const { name, description, restaurantId, order, categoryGroupId } = req.body;
 
+    if (!ensureRestaurantAccess(req, res, restaurantId)) {
+      return;
+    }
+
     console.log('📝 Creating category:', {
       name,
       description,
@@ -136,6 +141,10 @@ export const updateCategory = async (req, res, next) => {
       return res.status(404).json({ error: 'Category not found' });
     }
 
+    if (!ensureRestaurantAccess(req, res, category.restaurantId)) {
+      return;
+    }
+
     const updatedCategory = await prisma.category.update({
       where: { id },
       data: {
@@ -168,6 +177,10 @@ export const deleteCategory = async (req, res, next) => {
       return res.status(404).json({ error: 'Category not found' });
     }
 
+    if (!ensureRestaurantAccess(req, res, category.restaurantId)) {
+      return;
+    }
+
     await prisma.category.delete({
       where: { id }
     });
@@ -187,6 +200,22 @@ export const reorderCategories = async (req, res, next) => {
 
     if (!Array.isArray(categoryIds) || categoryIds.length === 0) {
       return res.status(400).json({ error: 'Invalid categoryIds' });
+    }
+
+    if (!ensureRestaurantAccess(req, res, restaurantId)) {
+      return;
+    }
+
+    const categories = await prisma.category.findMany({
+      where: {
+        id: { in: categoryIds },
+        restaurantId
+      },
+      select: { id: true }
+    });
+
+    if (categories.length !== categoryIds.length) {
+      return res.status(400).json({ error: 'One or more categories do not belong to this restaurant' });
     }
 
     // Update order for each category sequentially

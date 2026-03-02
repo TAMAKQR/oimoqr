@@ -1,9 +1,14 @@
 import { prisma } from '../config/prisma.js';
+import { ensureRestaurantOwnerAccess } from '../utils/restaurantAccess.js';
 
 // Получить статистику по ресторану
 export const getRestaurantStats = async (req, res, next) => {
   try {
     const { restaurantId } = req.params;
+
+    if (!ensureRestaurantOwnerAccess(req, res, restaurantId)) {
+      return;
+    }
 
     const restaurant = await prisma.restaurant.findUnique({
       where: { id: restaurantId },
@@ -281,6 +286,10 @@ export const getRestaurantStats = async (req, res, next) => {
 export const getRestaurantViews = async (req, res, next) => {
   try {
     const { restaurantId } = req.params;
+
+    if (!ensureRestaurantOwnerAccess(req, res, restaurantId)) {
+      return;
+    }
 
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
