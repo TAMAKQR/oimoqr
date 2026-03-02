@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useCustomerAuthStore } from '../store/customerAuthStore';
@@ -58,6 +58,7 @@ const CheckoutPage = () => {
     const [loading, setLoading] = useState(false);
     const [showLoginModal, setShowLoginModal] = useState(false);
     const [addresses, setAddresses] = useState([]);
+    const [addressesLoading, setAddressesLoading] = useState(false);
     const [selectedAddressId, setSelectedAddressId] = useState(null);
     const [deliveryType, setDeliveryType] = useState(isDineIn ? 'dine_in' : 'delivery');
 
@@ -206,6 +207,7 @@ const CheckoutPage = () => {
     };
 
     const loadAddresses = async () => {
+        setAddressesLoading(true);
         try {
             const response = await api.get('/customers/addresses');
             const list = response.data?.addresses || response.data || [];
@@ -219,6 +221,8 @@ const CheckoutPage = () => {
         } catch (error) {
             console.error('Failed to load addresses', error);
             toast.error('Не удалось загрузить адреса');
+        } finally {
+            setAddressesLoading(false);
         }
     };
 
@@ -363,6 +367,17 @@ const CheckoutPage = () => {
         ? Math.min(safeRequestedBonus, bonusBalance, maxBonusApplicable)
         : 0;
     const finalTotal = (baseTotalWithDelivery - appliedBonus).toFixed(2);
+
+    const placeOrderDisabledReason = useMemo(() => {
+        if (loading) return 'Оформляем заказ...';
+        if (!isDineIn && deliveryType === 'delivery' && addressesLoading) return 'Загружаем адреса...';
+        if (!isDineIn && deliveryType === 'delivery' && !selectedAddressId) return 'Выберите адрес доставки';
+        if (!isDineIn && deliveryType === 'delivery' && zoneStatus === 'checking') return 'Проверяем зону доставки...';
+        if (!isDineIn && deliveryType === 'delivery' && zoneStatus === 'outside') return 'Адрес вне зоны доставки';
+        return '';
+    }, [loading, isDineIn, deliveryType, addressesLoading, selectedAddressId, zoneStatus]);
+
+    const isPlaceOrderDisabled = Boolean(placeOrderDisabledReason);
 
     const orderSection = (
         <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm space-y-3">
@@ -629,7 +644,11 @@ const CheckoutPage = () => {
                                     )}
 
                                     <div className="space-y-2">
-                                        {addresses.length === 0 ? (
+                                        {addressesLoading ? (
+                                            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-center">
+                                                <p className="text-gray-600 text-sm">Загрузка адресов...</p>
+                                            </div>
+                                        ) : addresses.length === 0 ? (
                                             <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-4 text-center">
                                                 <p className="text-gray-600 text-sm">Нет сохранённых адресов</p>
                                                 <p className="text-xs text-gray-500 mt-1">Нажмите «Добавить», чтобы сохранить первый адрес доставки</p>
@@ -774,7 +793,7 @@ const CheckoutPage = () => {
                     <div className="max-w-[480px] mx-auto p-3 space-y-2">
                         <button
                             onClick={handlePlaceOrder}
-                            disabled={loading || (!isDineIn && deliveryType === 'delivery' && !selectedAddressId) || zoneStatus === 'outside'}
+                            disabled={isPlaceOrderDisabled}
                             className="btn-primary w-full py-3 text-base disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                         >
                             {loading ? 'Оформление...' : isDineIn
@@ -782,6 +801,9 @@ const CheckoutPage = () => {
                                 : `Оформить на ${finalTotal} ${currency}`
                             }
                         </button>
+                        {isPlaceOrderDisabled && (
+                            <p className="text-xs text-gray-500 text-center">{placeOrderDisabledReason}</p>
+                        )}
                     </div>
                 </div>
             )}
