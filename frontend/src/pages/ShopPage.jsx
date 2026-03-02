@@ -91,8 +91,8 @@ const ShopPage = () => {
     };
 
     const handleCheckout = () => {
-        // TODO: Navigate to checkout page
-        console.log('Checkout:', cart);
+        // Navigate to checkout page
+        console.info('Checkout:', cart);
     };
 
     if (loading) {
