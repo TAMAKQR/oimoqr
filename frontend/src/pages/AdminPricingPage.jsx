@@ -79,7 +79,7 @@ const AdminPricingPage = () => {
       features: tier.features || '',
       maxRestaurants: tier.maxRestaurants || '',
       bonusProgramEnabled: Boolean(tier.bonusProgramEnabled),
-      bonusAccrualRate: tier.bonusAccrualRate?.toString?.() || '0',
+      bonusAccrualRate: (((tier.bonusAccrualRate ?? 0) * 100)).toString(),
       bonusExpiryDays: tier.bonusExpiryDays?.toString?.() || '90',
       bonusBronzeLabel: tier.bonusBronzeLabel || 'Bronze',
       bonusSilverLabel: tier.bonusSilverLabel || 'Silver',
@@ -161,7 +161,7 @@ const AdminPricingPage = () => {
           features: formData.features || null,
           maxRestaurants: formData.maxRestaurants ? parseInt(formData.maxRestaurants) : null,
           bonusProgramEnabled: Boolean(formData.bonusProgramEnabled),
-          bonusAccrualRate: formData.bonusAccrualRate === '' ? 0 : parseFloat(formData.bonusAccrualRate),
+          bonusAccrualRate: formData.bonusAccrualRate === '' ? 0 : parseFloat(formData.bonusAccrualRate) / 100,
           bonusExpiryDays: formData.bonusExpiryDays ? parseInt(formData.bonusExpiryDays) : 90,
           bonusBronzeLabel: formData.bonusBronzeLabel || 'Bronze',
           bonusSilverLabel: formData.bonusSilverLabel || 'Silver',
@@ -180,7 +180,7 @@ const AdminPricingPage = () => {
           features: formData.features || null,
           maxRestaurants: formData.maxRestaurants ? parseInt(formData.maxRestaurants) : null,
           bonusProgramEnabled: Boolean(formData.bonusProgramEnabled),
-          bonusAccrualRate: formData.bonusAccrualRate === '' ? 0 : parseFloat(formData.bonusAccrualRate),
+          bonusAccrualRate: formData.bonusAccrualRate === '' ? 0 : parseFloat(formData.bonusAccrualRate) / 100,
           bonusExpiryDays: formData.bonusExpiryDays ? parseInt(formData.bonusExpiryDays) : 90,
           bonusBronzeLabel: formData.bonusBronzeLabel || 'Bronze',
           bonusSilverLabel: formData.bonusSilverLabel || 'Silver',
@@ -378,7 +378,7 @@ const AdminPricingPage = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Начисление бонусов (доля, 0..1)
+                  Начисление бонусов (%)
                 </label>
                 <input
                   type="number"
@@ -386,9 +386,9 @@ const AdminPricingPage = () => {
                   value={formData.bonusAccrualRate}
                   onChange={handleInputChange}
                   min="0"
-                  max="1"
+                  max="100"
                   step="0.01"
-                  placeholder="0.05"
+                  placeholder="5"
                   className="input w-full"
                   disabled={saving}
                 />

@@ -125,6 +125,11 @@ export default function CustomerBonusesPage() {
 
     const bonusData = useMemo(() => {
         const now = new Date();
+        const bonusSystemActive = orders.some((order) => {
+            const config = getEffectiveBonusConfig(order?.restaurant);
+            return config.enabled && config.rate > 0;
+        });
+
         const transactions = orders
             .filter((order) => isBonusEligibleOrderType(order) && isDeliveredStatus(order?.status))
             .map((order) => {
@@ -175,6 +180,7 @@ export default function CustomerBonusesPage() {
         const tier = getTier(deliveryOrdersCount, tierConfig);
 
         return {
+            bonusSystemActive,
             transactions,
             activePoints,
             lifetimePoints,
@@ -207,74 +213,86 @@ export default function CustomerBonusesPage() {
                     </div>
                 </div>
 
-                <div className="px-3 py-4 space-y-3">
-                    <div className="rounded-xl bg-gradient-to-r from-green-600 to-emerald-500 text-white p-4 shadow-sm">
-                        <p className="text-xs opacity-90 mb-1">Доступно к списанию</p>
-                        <p className="text-3xl font-bold">{bonusData.activePoints}</p>
-                        <p className="text-xs opacity-90 mt-2">1 бонус = 1 единица валюты ресторана</p>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                        <div className="bg-white rounded-xl p-3 border border-gray-100">
-                            <p className="text-xs text-gray-500">Всего начислено</p>
-                            <p className="text-lg font-semibold text-gray-900 mt-1">{bonusData.lifetimePoints}</p>
-                        </div>
-                        <div className="bg-white rounded-xl p-3 border border-gray-100">
-                            <p className="text-xs text-gray-500">Сгорело</p>
-                            <p className="text-lg font-semibold text-gray-900 mt-1">{bonusData.expiredPoints}</p>
-                        </div>
-                    </div>
-
-                    <div className={`rounded-xl p-3 border ${bonusData.tier.bg} border-gray-100`}>
-                        <p className="text-xs text-gray-500">Уровень клиента</p>
-                        <p className={`text-lg font-semibold mt-1 ${bonusData.tier.color}`}>{bonusData.tier.name}</p>
-                        {bonusData.tier.nextAt ? (
-                            <p className="text-xs text-gray-600 mt-1">
-                                До следующего уровня: {Math.max(0, bonusData.tier.nextAt - bonusData.deliveryOrdersCount)} доставок
+                {!bonusData.bonusSystemActive ? (
+                    <div className="px-3 py-8">
+                        <div className="bg-white rounded-xl border border-gray-100 p-5 text-center">
+                            <p className="text-lg font-semibold text-gray-900">Бонусная система пока не активна</p>
+                            <p className="text-sm text-gray-500 mt-2">
+                                Как только ресторан включит бонусную программу, здесь появятся начисления и история бонусов.
                             </p>
-                        ) : (
-                            <p className="text-xs text-gray-600 mt-1">Максимальный уровень достигнут</p>
-                        )}
+                        </div>
                     </div>
+                ) : (
 
-                    <div className="bg-white rounded-xl p-4 border border-gray-100">
-                        <h3 className="text-sm font-semibold text-gray-900 mb-2">Правила бонусной программы</h3>
-                        <ul className="space-y-1.5 text-xs text-gray-600">
-                            <li>• Начисление и срок жизни бонусов управляются тарифом и/или настройками точки.</li>
-                            <li>• Начисление идёт за выполненные заказы доставки и самовывоза.</li>
-                            <li>• Если в точке включено «Использовать настройки тарифа», применяются лимиты тарифа.</li>
-                            <li>• Списывать бонусы можно при оплате заказа (MVP: скоро в следующем шаге).</li>
-                            <li>• Названия и пороги уровней задаются в админке тарифа.</li>
-                        </ul>
-                    </div>
+                    <div className="px-3 py-4 space-y-3">
+                        <div className="rounded-xl bg-gradient-to-r from-green-600 to-emerald-500 text-white p-4 shadow-sm">
+                            <p className="text-xs opacity-90 mb-1">Доступно к списанию</p>
+                            <p className="text-3xl font-bold">{bonusData.activePoints}</p>
+                            <p className="text-xs opacity-90 mt-2">1 бонус = 1 единица валюты ресторана</p>
+                        </div>
 
-                    <div className="bg-white rounded-xl p-4 border border-gray-100">
-                        <h3 className="text-sm font-semibold text-gray-900 mb-2">Последние начисления</h3>
-
-                        {bonusData.transactions.length === 0 ? (
-                            <p className="text-sm text-gray-500">Пока нет выполненных заказов для начисления бонусов</p>
-                        ) : (
-                            <div className="space-y-2">
-                                {bonusData.transactions.slice(0, 10).map((tx) => (
-                                    <div key={tx.id} className="flex items-center justify-between border-b last:border-0 border-gray-100 pb-2 last:pb-0">
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900">Заказ #{String(tx.orderNumber || '').replace(/^#+/, '')}</p>
-                                            <p className="text-xs text-gray-500">
-                                                Сумма {tx.total.toFixed(2)} · {tx.orderDate ? tx.orderDate.toLocaleDateString('ru-RU') : 'дата неизвестна'} · {Math.round(tx.rate * 100)}%
-                                            </p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-sm font-semibold text-green-600">+{tx.earned}</p>
-                                            <p className={`text-[11px] ${tx.isActive ? 'text-gray-500' : 'text-red-500'}`}>
-                                                {tx.isActive ? 'активны' : 'сгорели'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))}
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="bg-white rounded-xl p-3 border border-gray-100">
+                                <p className="text-xs text-gray-500">Всего начислено</p>
+                                <p className="text-lg font-semibold text-gray-900 mt-1">{bonusData.lifetimePoints}</p>
                             </div>
-                        )}
+                            <div className="bg-white rounded-xl p-3 border border-gray-100">
+                                <p className="text-xs text-gray-500">Сгорело</p>
+                                <p className="text-lg font-semibold text-gray-900 mt-1">{bonusData.expiredPoints}</p>
+                            </div>
+                        </div>
+
+                        <div className={`rounded-xl p-3 border ${bonusData.tier.bg} border-gray-100`}>
+                            <p className="text-xs text-gray-500">Уровень клиента</p>
+                            <p className={`text-lg font-semibold mt-1 ${bonusData.tier.color}`}>{bonusData.tier.name}</p>
+                            {bonusData.tier.nextAt ? (
+                                <p className="text-xs text-gray-600 mt-1">
+                                    До следующего уровня: {Math.max(0, bonusData.tier.nextAt - bonusData.deliveryOrdersCount)} доставок
+                                </p>
+                            ) : (
+                                <p className="text-xs text-gray-600 mt-1">Максимальный уровень достигнут</p>
+                            )}
+                        </div>
+
+                        <div className="bg-white rounded-xl p-4 border border-gray-100">
+                            <h3 className="text-sm font-semibold text-gray-900 mb-2">Правила бонусной программы</h3>
+                            <ul className="space-y-1.5 text-xs text-gray-600">
+                                <li>• Начисление и срок жизни бонусов управляются тарифом и/или настройками точки.</li>
+                                <li>• Начисление идёт за выполненные заказы доставки и самовывоза.</li>
+                                <li>• Если в точке включено «Использовать настройки тарифа», применяются лимиты тарифа.</li>
+                                <li>• Списывать бонусы можно при оплате заказа (MVP: скоро в следующем шаге).</li>
+                                <li>• Названия и пороги уровней задаются в админке тарифа.</li>
+                            </ul>
+                        </div>
+
+                        <div className="bg-white rounded-xl p-4 border border-gray-100">
+                            <h3 className="text-sm font-semibold text-gray-900 mb-2">Последние начисления</h3>
+
+                            {bonusData.transactions.length === 0 ? (
+                                <p className="text-sm text-gray-500">Пока нет выполненных заказов для начисления бонусов</p>
+                            ) : (
+                                <div className="space-y-2">
+                                    {bonusData.transactions.slice(0, 10).map((tx) => (
+                                        <div key={tx.id} className="flex items-center justify-between border-b last:border-0 border-gray-100 pb-2 last:pb-0">
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-900">Заказ #{String(tx.orderNumber || '').replace(/^#+/, '')}</p>
+                                                <p className="text-xs text-gray-500">
+                                                    Сумма {tx.total.toFixed(2)} · {tx.orderDate ? tx.orderDate.toLocaleDateString('ru-RU') : 'дата неизвестна'} · {Math.round(tx.rate * 100)}%
+                                                </p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-sm font-semibold text-green-600">+{tx.earned}</p>
+                                                <p className={`text-[11px] ${tx.isActive ? 'text-gray-500' : 'text-red-500'}`}>
+                                                    {tx.isActive ? 'активны' : 'сгорели'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
-                </div>
+                )}
 
                 <FloatingMenuWidget />
                 <CustomerBottomNav />

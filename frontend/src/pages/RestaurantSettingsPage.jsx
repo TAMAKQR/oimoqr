@@ -49,7 +49,7 @@ const RestaurantSettingsPage = () => {
   const [deliveryRadius, setDeliveryRadius] = useState('');
   const [useTierBonusSettings, setUseTierBonusSettings] = useState(true);
   const [bonusProgramEnabled, setBonusProgramEnabled] = useState(false);
-  const [bonusAccrualRate, setBonusAccrualRate] = useState('0.05');
+  const [bonusAccrualRate, setBonusAccrualRate] = useState('5');
   const [bonusExpiryDays, setBonusExpiryDays] = useState('90');
   const [geocoding, setGeocoding] = useState(false);
   const [bannerFile, setBannerFile] = useState(null);
@@ -148,7 +148,7 @@ const RestaurantSettingsPage = () => {
     setDeliveryRadius(r.deliveryRadius || '');
     setUseTierBonusSettings(r.useTierBonusSettings !== undefined ? r.useTierBonusSettings : true);
     setBonusProgramEnabled(Boolean(r.bonusProgramEnabled));
-    setBonusAccrualRate((r.bonusAccrualRate ?? 0.05).toString());
+    setBonusAccrualRate((((r.bonusAccrualRate ?? 0.05) * 100)).toString());
     setBonusExpiryDays((r.bonusExpiryDays ?? 90).toString());
     setTelegramGroupId(r.telegramGroupId || '');
 
@@ -320,7 +320,7 @@ const RestaurantSettingsPage = () => {
         freeDeliveryThreshold: freeDeliveryThreshold ? parseFloat(freeDeliveryThreshold) : null,
         useTierBonusSettings,
         bonusProgramEnabled: useTierBonusSettings ? null : bonusProgramEnabled,
-        bonusAccrualRate: useTierBonusSettings ? null : (bonusAccrualRate !== '' ? parseFloat(bonusAccrualRate) : null),
+        bonusAccrualRate: useTierBonusSettings ? null : (bonusAccrualRate !== '' ? parseFloat(bonusAccrualRate) / 100 : null),
         bonusExpiryDays: useTierBonusSettings ? null : (bonusExpiryDays !== '' ? parseInt(bonusExpiryDays) : null),
         latitude: latitude ? parseFloat(latitude) : null,
         longitude: longitude ? parseFloat(longitude) : null,
@@ -1031,7 +1031,7 @@ const RestaurantSettingsPage = () => {
 
                     <div>
                       <label className="block text-sm font-medium mb-1">
-                        Начисление бонусов (доля, 0..1)
+                        Начисление бонусов (%)
                       </label>
                       <input
                         type="number"
@@ -1039,12 +1039,12 @@ const RestaurantSettingsPage = () => {
                         onChange={(e) => setBonusAccrualRate(e.target.value)}
                         className="input w-full"
                         min="0"
-                        max="1"
+                        max="100"
                         step="0.01"
-                        placeholder="0.05"
+                        placeholder="5"
                       />
                       <p className="text-sm text-gray-500 mt-1">
-                        Пример: 0.05 = 5% бонусов от суммы доставленного заказа
+                        Пример: 5 = 5% бонусов от суммы доставленного заказа
                       </p>
                     </div>
 
