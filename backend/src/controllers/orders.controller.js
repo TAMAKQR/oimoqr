@@ -12,6 +12,47 @@ const ALLOWED_STATUSES = [
   'cancelled'
 ];
 
+const hasRestaurantAccess = (req, restaurantId) => {
+  if (!req?.user || !restaurantId) return false;
+  if (req.user.isAdmin) return true;
+
+  const ownsRestaurant = req.user.restaurants?.some((restaurant) => restaurant.id === restaurantId);
+  if (ownsRestaurant) return true;
+
+  const hasStaffAccess = req.user.restaurantStaff?.some((staff) => staff.restaurantId === restaurantId);
+  return Boolean(hasStaffAccess);
+};
+
+const ensureRestaurantAccess = (req, res, restaurantId) => {
+  if (hasRestaurantAccess(req, restaurantId)) {
+    return true;
+  }
+
+  res.status(403).json({ error: 'Access denied for this restaurant' });
+  return false;
+};
+
+const ensureOrderAccess = (req, res, order) => {
+  if (!order) {
+    res.status(404).json({ error: 'Order not found' });
+    return false;
+  }
+
+  if (req?.user?.isAdmin) return true;
+
+  const canAccessBaseRestaurant = hasRestaurantAccess(req, order.restaurantId);
+  const canAccessAssignedRestaurant = order.assignedRestaurantId
+    ? hasRestaurantAccess(req, order.assignedRestaurantId)
+    : false;
+
+  if (canAccessBaseRestaurant || canAccessAssignedRestaurant) {
+    return true;
+  }
+
+  res.status(403).json({ error: 'Access denied for this order' });
+  return false;
+};
+
 const generateOrderNumber = () => {
   const timestamp = Date.now().toString().slice(-6);
   const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
@@ -234,6 +275,10 @@ export const getOrdersByRestaurant = async (req, res, next) => {
   try {
     const { restaurantId } = req.params;
 
+    if (!ensureRestaurantAccess(req, res, restaurantId)) {
+      return;
+    }
+
     // Фильтр заказов: показывать заказы, которые назначены этому ресторану
     // или были созданы для этого ресторана (если не переназначены)
     const orders = await prisma.order.findMany({
@@ -282,8 +327,8 @@ export const getOrderById = async (req, res, next) => {
       }
     });
 
-    if (!order) {
-      return res.status(404).json({ error: 'Order not found' });
+    if (!ensureOrderAccess(req, res, order)) {
+      return;
     }
 
     res.json(order);
@@ -302,6 +347,19 @@ export const updateOrderStatus = async (req, res, next) => {
         error: 'Invalid status',
         allowed: ALLOWED_STATUSES
       });
+    }
+
+    const currentOrder = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: {
+        id: true,
+        restaurantId: true,
+        assignedRestaurantId: true
+      }
+    });
+
+    if (!ensureOrderAccess(req, res, currentOrder)) {
+      return;
     }
 
     const updatedOrder = await prisma.order.update({
@@ -365,6 +423,24 @@ export const reassignOrder = async (req, res, next) => {
       return res.status(400).json({ error: 'assignedRestaurantId is required' });
     }
 
+    const sourceOrder = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: {
+        id: true,
+        restaurantId: true,
+        assignedRestaurantId: true,
+        restaurant: {
+          select: {
+            ownerId: true
+          }
+        }
+      }
+    });
+
+    if (!ensureOrderAccess(req, res, sourceOrder)) {
+      return;
+    }
+
     // Проверяем существование целевого ресторана
     const targetRestaurant = await prisma.restaurant.findUnique({
       where: { id: assignedRestaurantId },
@@ -373,6 +449,13 @@ export const reassignOrder = async (req, res, next) => {
 
     if (!targetRestaurant) {
       return res.status(404).json({ error: 'Target restaurant not found' });
+    }
+
+    if (!req.user?.isAdmin) {
+      const sourceOwnerId = sourceOrder?.restaurant?.ownerId;
+      if (sourceOwnerId && targetRestaurant.ownerId !== sourceOwnerId) {
+        return res.status(403).json({ error: 'Can only reassign order within the same network owner' });
+      }
     }
 
     // Обновляем заказ
@@ -439,6 +522,7 @@ export const autoReassignOrder = async (req, res, next) => {
   try {
     const { orderId, orderNumber } = req.params;
     let { latitude, longitude, location } = req.body;
+    const isAutomationRequest = req.isOrderAutomationAuthorized === true;
 
     // Если передан номер заказа вместо ID, находим заказ по номеру
     let order;
@@ -469,6 +553,10 @@ export const autoReassignOrder = async (req, res, next) => {
       }
     } else {
       return res.status(400).json({ error: 'orderId or orderNumber is required' });
+    }
+
+    if (!isAutomationRequest && !ensureOrderAccess(req, res, order)) {
+      return;
     }
 
     // Если передана ссылка на Google Maps, извлекаем координаты
