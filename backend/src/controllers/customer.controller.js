@@ -2,6 +2,7 @@ import { prisma } from '../config/prisma.js';
 import bcrypt from 'bcryptjs';
 import telegramService from '../services/telegram.service.js';
 import { getNetworkRankedDeliveryPoints } from './geolocation.controller.js';
+import { buildTrustedOrderItems, calculateDeliveryFee } from '../utils/orderPricing.js';
 
 const getMenuSourceRestaurantId = async (restaurantId) => {
     const restaurant = await prisma.restaurant.findUnique({
@@ -32,6 +33,7 @@ const getNearestServingRestaurant = async ({ restaurantId, latitude, longitude }
 
 const DEFAULT_BONUS_RATE = 0;
 const DEFAULT_BONUS_EXPIRY_DAYS = 90;
+const roundCurrency = (value) => Number((Number(value) || 0).toFixed(2));
 
 const isDeliveredStatus = (status) => {
     const normalized = String(status || '').toLowerCase();
@@ -661,6 +663,8 @@ export const createCustomerOrder = async (req, res, next) => {
             return res.status(400).json({ error: 'Invalid total amount' });
         }
 
+        const normalizedDeliveryType = deliveryType || 'delivery';
+
         const requestedBonusToSpend = bonusToSpend !== undefined && bonusToSpend !== null
             ? parseInt(bonusToSpend, 10)
             : 0;
@@ -681,33 +685,31 @@ export const createCustomerOrder = async (req, res, next) => {
         const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
         const orderNumber = `#${timestamp}${random}`;
 
-        const validItems = items.filter(item => item && item.id);
-        const dishIds = validItems.map(item => item.id);
         const menuSourceRestaurantId = await getMenuSourceRestaurantId(restaurantId);
         if (!menuSourceRestaurantId) {
             return res.status(404).json({ error: 'Restaurant not found' });
         }
 
-        const existingDishes = await prisma.dish.findMany({
-            where: {
-                id: { in: dishIds },
-                restaurantId: menuSourceRestaurantId
-            },
-            select: { id: true }
+        const trustedPricing = await buildTrustedOrderItems({
+            items,
+            menuSourceRestaurantId,
+            deliveryType: normalizedDeliveryType
         });
 
-        if (existingDishes.length !== dishIds.length) {
-            const notFoundIds = dishIds.filter(id => !existingDishes.some(d => d.id === id));
-            return res.status(400).json({ error: `One or more dishes not found: ${notFoundIds.join(', ')}` });
+        if (!trustedPricing.ok) {
+            return res.status(400).json({ error: trustedPricing.error || 'Invalid order payload' });
         }
+
+        const { trustedItems, itemsSubtotal, dishIds } = trustedPricing;
 
         let normalizedDeliveryLatitude = null;
         let normalizedDeliveryLongitude = null;
         let resolvedDeliveryAddress = deliveryAddress || null;
         let assignedRestaurantId = null;
         let servingRestaurantId = restaurantId;
+        let nearestServingPoint = null;
 
-        if (deliveryType === 'delivery') {
+        if (normalizedDeliveryType === 'delivery') {
             if (!customerAddressId) {
                 return res.status(400).json({ error: 'customerAddressId is required for delivery' });
             }
@@ -745,14 +747,34 @@ export const createCustomerOrder = async (req, res, next) => {
             }
 
             servingRestaurantId = nearest.id;
+            nearestServingPoint = nearest;
             if (nearest.id !== restaurantId) {
                 assignedRestaurantId = nearest.id;
             }
+        }
 
-            if (nearest.minOrderAmount && parsedTotal < nearest.minOrderAmount) {
-                return res.status(400).json({ error: `Minimum order amount for delivery: ${nearest.minOrderAmount}` });
+        let servingRestaurantPricing = null;
+        if (normalizedDeliveryType === 'delivery') {
+            servingRestaurantPricing = nearestServingPoint || await prisma.restaurant.findUnique({
+                where: { id: servingRestaurantId },
+                select: {
+                    minOrderAmount: true,
+                    deliveryFee: true,
+                    freeDeliveryThreshold: true
+                }
+            });
+
+            if (servingRestaurantPricing?.minOrderAmount && itemsSubtotal < Number(servingRestaurantPricing.minOrderAmount)) {
+                return res.status(400).json({ error: `Minimum order amount for delivery: ${servingRestaurantPricing.minOrderAmount}` });
             }
         }
+
+        const deliveryFeeAmount = calculateDeliveryFee({
+            deliveryType: normalizedDeliveryType,
+            itemsSubtotal,
+            restaurantPricing: servingRestaurantPricing
+        });
+        const orderTotalBeforeBonus = roundCurrency(itemsSubtotal + deliveryFeeAmount);
 
         const stoppedDishes = await prisma.dishStop.findMany({
             where: {
@@ -788,7 +810,7 @@ export const createCustomerOrder = async (req, res, next) => {
             }
 
             const availableBonusPoints = await getCustomerAvailableBonusPoints(customerId);
-            const maxByOrderTotal = Math.max(0, Math.floor(parsedTotal));
+            const maxByOrderTotal = Math.max(0, Math.floor(orderTotalBeforeBonus));
             appliedBonusSpent = Math.min(requestedBonusToSpend, availableBonusPoints, maxByOrderTotal);
 
             if (appliedBonusSpent <= 0) {
@@ -796,7 +818,7 @@ export const createCustomerOrder = async (req, res, next) => {
             }
         }
 
-        const finalTotal = Math.max(0, parsedTotal - appliedBonusSpent);
+        const finalTotal = roundCurrency(Math.max(0, orderTotalBeforeBonus - appliedBonusSpent));
 
         const order = await prisma.order.create({
             data: {
@@ -813,17 +835,12 @@ export const createCustomerOrder = async (req, res, next) => {
                 deliveryLatitude: normalizedDeliveryLatitude,
                 deliveryLongitude: normalizedDeliveryLongitude,
                 notes: comment || null,
-                deliveryType: deliveryType || 'delivery',
+                deliveryType: normalizedDeliveryType,
                 paymentMethod: paymentMethod || 'cash',
                 tableNumber: tableNumber || null,
                 customerAddressId: customerAddressId || null,
                 items: {
-                    create: validItems.map(item => ({
-                        dishId: item.id,
-                        quantity: parseInt(item.quantity, 10),
-                        price: item.price ?? 0,
-                        selectedModifiers: item.selectedModifiers?.length > 0 ? item.selectedModifiers : undefined
-                    }))
+                    create: trustedItems
                 }
             },
             include: {
