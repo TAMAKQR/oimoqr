@@ -268,6 +268,20 @@ const AdminPricingPage = () => {
     navigate('/login');
   };
 
+  const bonusRatePercent = Number.isFinite(parseFloat(formData.bonusAccrualRate))
+    ? Math.max(0, parseFloat(formData.bonusAccrualRate))
+    : 0;
+  const silverFromOrders = Number.isFinite(parseInt(formData.bonusSilverFromOrders))
+    ? Math.max(1, parseInt(formData.bonusSilverFromOrders))
+    : 8;
+  const goldFromOrders = Number.isFinite(parseInt(formData.bonusGoldFromOrders))
+    ? Math.max(1, parseInt(formData.bonusGoldFromOrders))
+    : 20;
+  const bronzeLabel = (formData.bonusBronzeLabel || 'Bronze').trim() || 'Bronze';
+  const silverLabel = (formData.bonusSilverLabel || 'Silver').trim() || 'Silver';
+  const goldLabel = (formData.bonusGoldLabel || 'Gold').trim() || 'Gold';
+  const isTierThresholdValid = goldFromOrders > silverFromOrders;
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -374,6 +388,26 @@ const AdminPricingPage = () => {
                   />
                   Включить бонусную программу для этого тарифа
                 </label>
+                <p className="text-xs text-gray-500 mt-1">
+                  Если выключено — клиентам бонусы не начисляются, и блок бонусной системы будет скрыт.
+                </p>
+              </div>
+
+              <div className="md:col-span-2 rounded-lg border border-gray-200 bg-white p-3">
+                <p className="text-sm font-semibold text-gray-800 mb-1">Как работают уровни клиента</p>
+                <p className="text-xs text-gray-600">
+                  До {silverFromOrders - 1 >= 0 ? silverFromOrders - 1 : 0} заказов — <strong>{bronzeLabel}</strong>,
+                  от {silverFromOrders} — <strong>{silverLabel}</strong>,
+                  от {goldFromOrders} — <strong>{goldLabel}</strong>.
+                </p>
+                <p className="text-xs text-gray-600 mt-1">
+                  Начисление за выполненный заказ: <strong>{bonusRatePercent}%</strong> от суммы заказа.
+                </p>
+                {!isTierThresholdValid && (
+                  <p className="text-xs text-red-600 mt-1">
+                    Порог Gold должен быть больше порога Silver.
+                  </p>
+                )}
               </div>
 
               <div>
@@ -413,7 +447,7 @@ const AdminPricingPage = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Bronze label
+                  Название начального уровня (Bronze)
                 </label>
                 <input
                   type="text"
@@ -427,7 +461,7 @@ const AdminPricingPage = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Silver label
+                  Название среднего уровня (Silver)
                 </label>
                 <input
                   type="text"
@@ -441,7 +475,7 @@ const AdminPricingPage = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Gold label
+                  Название максимального уровня (Gold)
                 </label>
                 <input
                   type="text"
@@ -455,7 +489,7 @@ const AdminPricingPage = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Silver от заказов
+                  Порог для уровня Silver (заказов)
                 </label>
                 <input
                   type="number"
@@ -471,7 +505,7 @@ const AdminPricingPage = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Gold от заказов
+                  Порог для уровня Gold (заказов)
                 </label>
                 <input
                   type="number"
