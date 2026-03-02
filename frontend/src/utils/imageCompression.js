@@ -20,6 +20,11 @@ export const compressImage = async (file, options = {}) => {
         maxSizeMB = 1,
     } = options;
 
+    const sourceType = (file?.type || '').toLowerCase();
+    const hasAlpha = sourceType.includes('png') || sourceType.includes('webp') || sourceType.includes('gif');
+    const outputType = hasAlpha ? 'image/webp' : 'image/jpeg';
+    const fileExtension = hasAlpha ? 'webp' : 'jpg';
+
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
 
@@ -65,14 +70,15 @@ export const compressImage = async (file, options = {}) => {
                         }
 
                         // Создаем новый File из blob
-                        const compressedFile = new File([blob], file.name, {
-                            type: 'image/jpeg',
+                        const originalBaseName = file.name.replace(/\.[^/.]+$/, '');
+                        const compressedFile = new File([blob], `${originalBaseName}.${fileExtension}`, {
+                            type: outputType,
                             lastModified: Date.now()
                         });
 
                         resolve(compressedFile);
                     },
-                    'image/jpeg',
+                    outputType,
                     quality
                 );
             };
