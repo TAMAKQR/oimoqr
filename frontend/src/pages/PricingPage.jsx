@@ -15,6 +15,20 @@ const PricingPage = () => {
     const { selectedRestaurantId, setSelectedRestaurantId, selectedRestaurant } = useSelectedRestaurant(userData);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('RESTAURANT');
+    const isOwner = selectedRestaurantId
+        ? !!userData?.restaurants?.some((restaurant) => restaurant.id === selectedRestaurantId)
+        : (userData?.restaurants?.length || 0) > 0;
+
+    useEffect(() => {
+        if (userLoading) {
+            return;
+        }
+
+        if (!isOwner && !user?.isAdmin) {
+            toast.error('Раздел тарифов доступен только главному администратору ресторана');
+            navigate('/dashboard');
+        }
+    }, [userLoading, isOwner, user?.isAdmin, navigate]);
 
     useEffect(() => {
         loadPricingTiers();

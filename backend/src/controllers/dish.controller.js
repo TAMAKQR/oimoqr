@@ -24,6 +24,44 @@ const ensureModifierManagementAllowed = async (selectedRestaurantId) => {
   }
 };
 
+const hasOwnerAccessToRestaurant = (req, restaurantId) => {
+  if (!restaurantId) return false;
+  return Boolean(
+    req.user?.isAdmin ||
+    req.user?.restaurants?.some((restaurant) => restaurant.id === restaurantId)
+  );
+};
+
+const ensureOwnerAccessToRestaurant = (req, res, restaurantId) => {
+  if (hasOwnerAccessToRestaurant(req, restaurantId)) {
+    return true;
+  }
+
+  res.status(403).json({
+    error: 'Только главный администратор ресторана может изменять блюда'
+  });
+  return false;
+};
+
+const ensureManagerStopAccessToRestaurant = (req, res, restaurantId) => {
+  if (!restaurantId) {
+    res.status(403).json({ error: 'Доступ запрещен' });
+    return false;
+  }
+
+  const isOwnerOrAdmin = hasOwnerAccessToRestaurant(req, restaurantId);
+  const isStaff = req.user?.restaurantStaff?.some((staff) => staff.restaurantId === restaurantId);
+
+  if (isOwnerOrAdmin || isStaff) {
+    return true;
+  }
+
+  res.status(403).json({
+    error: 'Только менеджер или главный администратор ресторана может ставить блюда на стоп'
+  });
+  return false;
+};
+
 export const getDishes = async (req, res, next) => {
   try {
     const { categoryId } = req.params;
@@ -129,6 +167,10 @@ export const createDish = async (req, res, next) => {
       return res.status(404).json({ error: 'Category not found' });
     }
 
+    if (!ensureOwnerAccessToRestaurant(req, res, category.restaurantId)) {
+      return;
+    }
+
     // ✅ Если order не указан, добавляем блюдо в конец списка
     let dishOrder = order;
     if (!dishOrder && dishOrder !== 0) {
@@ -221,14 +263,8 @@ export const updateDish = async (req, res, next) => {
       return res.status(404).json({ error: 'Dish not found' });
     }
 
-    // 🛡️ ЗАЩИТА: Только владелец может менять цену
-    if (parsedPrice !== undefined) {
-      const restaurantId = dish.category.restaurantId;
-      const isOwner = req.user.restaurants?.some(r => r.id === restaurantId);
-
-      if (!isOwner && !req.user.isAdmin) {
-        return res.status(403).json({ error: 'Изменять цену может только владелец ресторана' });
-      }
+    if (!ensureOwnerAccessToRestaurant(req, res, dish.category.restaurantId)) {
+      return;
     }
 
     const updateData = {};
@@ -321,17 +357,13 @@ export const uploadDishImage = async (req, res, next) => {
       staffRestaurants: req.user.restaurantStaff?.map(s => s.restaurantId)
     });
 
-    // Check if user owns this restaurant or is staff member
-    const isOwner = req.user.restaurants?.some(r => r.id === restaurantId);
-    const isStaff = req.user.restaurantStaff?.some(s => s.restaurantId === restaurantId);
-
-    if (!isOwner && !isStaff) {
-      console.error('❌ [Backend] User does not have access to this restaurant');
+    if (!ensureOwnerAccessToRestaurant(req, res, restaurantId)) {
+      console.error('❌ [Backend] User does not have owner access to this restaurant');
       console.error('❌ [Backend] Required restaurant:', restaurantId);
-      return res.status(403).json({ error: 'Access denied to this restaurant' });
+      return;
     }
 
-    console.log('✅ [Backend] User has access:', isOwner ? 'as owner' : 'as staff');
+    console.log('✅ [Backend] User has access: as owner');
 
     // Get image URL (Cloudinary returns full URL, local storage returns filename)
     const imageUrl = req.file.path && req.file.path.startsWith('http')
@@ -380,6 +412,10 @@ export const deleteDishImage = async (req, res, next) => {
       return res.status(404).json({ error: 'Dish not found' });
     }
 
+    if (!ensureManagerStopAccessToRestaurant(req, res, dish.category.restaurantId)) {
+      return;
+    }
+
     // Update dish to remove image
     const updatedDish = await prisma.dish.update({
       where: { id },
@@ -412,6 +448,10 @@ export const deleteDish = async (req, res, next) => {
 
     if (!dish) {
       return res.status(404).json({ error: 'Dish not found' });
+    }
+
+    if (!ensureOwnerAccessToRestaurant(req, res, dish.category.restaurantId)) {
+      return;
     }
 
     // Check if dish is used in any orders
@@ -450,6 +490,10 @@ export const toggleDishAvailability = async (req, res, next) => {
 
     if (!dish) {
       return res.status(404).json({ error: 'Dish not found' });
+    }
+
+    if (!ensureOwnerAccessToRestaurant(req, res, dish.category.restaurantId)) {
+      return;
     }
 
     // Toggle availability
@@ -503,6 +547,10 @@ export const createModifier = async (req, res, next) => {
 
     if (!dish) {
       return res.status(404).json({ error: 'Dish not found' });
+    }
+
+    if (!ensureOwnerAccessToRestaurant(req, res, dish.category.restaurantId)) {
+      return;
     }
 
     // Создаем модификатор вместе с опцией
@@ -564,6 +612,10 @@ export const updateModifier = async (req, res, next) => {
       return res.status(404).json({ error: 'Modifier not found' });
     }
 
+    if (!ensureOwnerAccessToRestaurant(req, res, modifier.dish.category.restaurantId)) {
+      return;
+    }
+
     const updatedModifier = await prisma.modifier.update({
       where: { id },
       data: {
@@ -601,6 +653,10 @@ export const deleteModifier = async (req, res, next) => {
       return res.status(404).json({ error: 'Modifier not found' });
     }
 
+    if (!ensureOwnerAccessToRestaurant(req, res, modifier.dish.category.restaurantId)) {
+      return;
+    }
+
     // Use a transaction to delete options first, then the modifier
     await prisma.$transaction([
       prisma.modifierOption.deleteMany({
@@ -629,6 +685,10 @@ export const reorderDishes = async (req, res, next) => {
 
     if (!category) {
       return res.status(404).json({ error: 'Category not found' });
+    }
+
+    if (!ensureOwnerAccessToRestaurant(req, res, category.restaurantId)) {
+      return;
     }
 
     if (!Array.isArray(dishIds) || dishIds.length === 0) {
@@ -666,7 +726,6 @@ export const createModifierOption = async (req, res, next) => {
       return res.status(400).json({ error: 'Option price must be a number greater than or equal to 0' });
     }
 
-    // Check if modifier exists and user has access
     const modifier = await prisma.modifier.findUnique({
       where: { id: modifierId },
       include: {
@@ -680,6 +739,10 @@ export const createModifierOption = async (req, res, next) => {
 
     if (!modifier) {
       return res.status(404).json({ error: 'Modifier not found' });
+    }
+
+    if (!ensureOwnerAccessToRestaurant(req, res, modifier.dish.category.restaurantId)) {
+      return;
     }
 
     const option = await prisma.modifierOption.create({
@@ -733,6 +796,10 @@ export const updateModifierOption = async (req, res, next) => {
       return res.status(404).json({ error: 'Option not found' });
     }
 
+    if (!ensureOwnerAccessToRestaurant(req, res, option.modifier.dish.category.restaurantId)) {
+      return;
+    }
+
     const updateData = {};
     if (name !== undefined) updateData.name = name;
     if (parsedPrice !== undefined) updateData.price = parsedPrice;
@@ -772,6 +839,10 @@ export const deleteModifierOption = async (req, res, next) => {
 
     if (!option) {
       return res.status(404).json({ error: 'Option not found' });
+    }
+
+    if (!ensureOwnerAccessToRestaurant(req, res, option.modifier.dish.category.restaurantId)) {
+      return;
     }
 
     await prisma.modifierOption.delete({
@@ -852,17 +923,13 @@ export const uploadModifierOptionImage = async (req, res, next) => {
       staffRestaurants: req.user.restaurantStaff?.map(s => s.restaurantId)
     });
 
-    // Check if user owns this restaurant or is staff member
-    const isOwner = req.user.restaurants?.some(r => r.id === restaurantId);
-    const isStaff = req.user.restaurantStaff?.some(s => s.restaurantId === restaurantId);
-
-    if (!isOwner && !isStaff) {
-      console.error('❌ [Backend] User does not have access to this restaurant');
+    if (!ensureOwnerAccessToRestaurant(req, res, restaurantId)) {
+      console.error('❌ [Backend] User does not have owner access to this restaurant');
       console.error('❌ [Backend] Required restaurant:', restaurantId);
-      return res.status(403).json({ error: 'Access denied to this restaurant' });
+      return;
     }
 
-    console.log('✅ [Backend] User has access:', isOwner ? 'as owner' : 'as staff');
+    console.log('✅ [Backend] User has access: as owner');
 
     // Get image URL
     const imageUrl = req.file.path && req.file.path.startsWith('http')
@@ -900,11 +967,26 @@ export const deleteModifierOptionImage = async (req, res, next) => {
     await ensureModifierManagementAllowed(req.query.restaurantId);
 
     const option = await prisma.modifierOption.findUnique({
-      where: { id: optionId }
+      where: { id: optionId },
+      include: {
+        modifier: {
+          include: {
+            dish: {
+              include: {
+                category: true
+              }
+            }
+          }
+        }
+      }
     });
 
     if (!option) {
       return res.status(404).json({ error: 'Modifier option not found' });
+    }
+
+    if (!ensureOwnerAccessToRestaurant(req, res, option.modifier.dish.category.restaurantId)) {
+      return;
     }
 
     const updatedOption = await prisma.modifierOption.update({

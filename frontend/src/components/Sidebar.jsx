@@ -80,7 +80,7 @@ const getMenuSections = ({ isAdmin, isOwner, isStore, isHotel, selectedRestauran
     ),
     label: 'Тарифы',
     path: '/pricing',
-    show: !isAdmin,
+    show: !isAdmin && isOwner,
   },
   {
     id: 'admin-dashboard',

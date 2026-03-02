@@ -19,6 +19,8 @@ const StaffManagementPage = () => {
   const [formData, setFormData] = useState({ email: '', password: '', name: '' });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const ownedRestaurants = userData?.restaurants || [];
+  const currentRestaurant = ownedRestaurants.find((restaurant) => restaurant.id === restaurantId);
 
   useEffect(() => {
     if (restaurantId) {
@@ -132,6 +134,40 @@ const StaffManagementPage = () => {
           <p className="text-gray-500 text-sm mt-1">Создавайте и управляйте доступом менеджеров</p>
         </div>
 
+        {ownedRestaurants.length > 0 && (
+          <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
+            <h3 className="text-lg font-semibold mb-3">Точки и адреса</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Ниже список ваших точек, чтобы было проще выбрать, на какую точку добавлять менеджера.
+            </p>
+            <div className="space-y-2">
+              {ownedRestaurants.map((restaurant) => {
+                const isCurrentRestaurant = restaurant.id === restaurantId;
+                const address = restaurant.address || [restaurant.city, restaurant.country].filter(Boolean).join(', ') || 'Адрес не указан';
+
+                return (
+                  <div
+                    key={restaurant.id}
+                    className={`rounded-lg border px-3 py-2 ${isCurrentRestaurant ? 'border-primary-300 bg-primary-50' : 'border-gray-200 bg-gray-50'}`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{restaurant.name}</p>
+                        <p className="text-xs text-gray-500 truncate">📍 {address}</p>
+                      </div>
+                      {isCurrentRestaurant && (
+                        <span className="text-xs font-medium px-2 py-1 rounded bg-primary-100 text-primary-700">
+                          Текущая точка
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {error && (
           <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded">
             {error}
@@ -164,8 +200,16 @@ const StaffManagementPage = () => {
           <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
             <h3 className="text-lg font-semibold mb-4">Создать менеджера</h3>
             <p className="text-sm text-gray-600 mb-4">
-              Создайте учетную запись для менеджера. Он сможет управлять меню: добавлять/редактировать блюда, изменять цены, ставить блюда на стоп.
+              Создайте учетную запись для менеджера. Он сможет только ставить блюда на стоп и снимать со стопа.
             </p>
+            {currentRestaurant && (
+              <div className="mb-4 p-3 rounded-lg border border-primary-200 bg-primary-50 text-sm text-primary-800">
+                Менеджер будет добавлен в точку: <span className="font-semibold">{currentRestaurant.name}</span>
+                <div className="text-xs text-primary-700 mt-1">
+                  📍 {currentRestaurant.address || [currentRestaurant.city, currentRestaurant.country].filter(Boolean).join(', ') || 'Адрес не указан'}
+                </div>
+              </div>
+            )}
             <form onSubmit={handleAddStaff} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -260,7 +304,7 @@ const StaffManagementPage = () => {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-500">
-                        Управление меню, блюдами, ценами
+                        Только стоп/со стопа блюд
                       </td>
                       <td className="px-4 py-3">
                         <button

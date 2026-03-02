@@ -1,5 +1,24 @@
 import { prisma } from '../config/prisma.js';
 
+const hasOwnerAccessToRestaurant = (req, restaurantId) => {
+  if (!restaurantId) return false;
+  return Boolean(
+    req.user?.isAdmin ||
+    req.user?.restaurants?.some((restaurant) => restaurant.id === restaurantId)
+  );
+};
+
+const ensureOwnerAccessToRestaurant = (req, res, restaurantId) => {
+  if (hasOwnerAccessToRestaurant(req, restaurantId)) {
+    return true;
+  }
+
+  res.status(403).json({
+    error: 'Только главный администратор ресторана может изменять блюда'
+  });
+  return false;
+};
+
 const getModifierManagementContext = async (restaurantId) => {
   if (!restaurantId) return null;
 
@@ -72,6 +91,10 @@ export const createModifierTemplate = async (req, res, next) => {
       });
     }
 
+    if (!ensureOwnerAccessToRestaurant(req, res, context.managementRestaurantId)) {
+      return;
+    }
+
     console.log('📝 Creating modifier template:', { name, type, isRequired, optionsCount: options?.length });
 
     const template = await prisma.modifierTemplate.create({
@@ -124,6 +147,10 @@ export const updateModifierTemplate = async (req, res, next) => {
         error: 'Shared template locked',
         message: 'Модификаторы филиала наследуются от главного ресторана. Изменяйте шаблоны в главном ресторане.'
       });
+    }
+
+    if (!ensureOwnerAccessToRestaurant(req, res, context.managementRestaurantId)) {
+      return;
     }
 
     console.log('📝 Updating modifier template:', id);
@@ -199,6 +226,10 @@ export const deleteModifierTemplate = async (req, res, next) => {
       });
     }
 
+    if (!ensureOwnerAccessToRestaurant(req, res, context.managementRestaurantId)) {
+      return;
+    }
+
     console.log('🗑️ Deleting modifier template:', id);
 
     // Проверяем, используется ли шаблон
@@ -240,6 +271,10 @@ export const applyTemplateToDish = async (req, res, next) => {
         error: 'Shared template locked',
         message: 'Модификаторы филиала наследуются от главного ресторана. Применяйте шаблоны в главном ресторане.'
       });
+    }
+
+    if (!ensureOwnerAccessToRestaurant(req, res, context.managementRestaurantId)) {
+      return;
     }
 
     console.log('🔧 Applying template to dish:', { templateId, dishId });
@@ -311,6 +346,10 @@ export const syncModifiersWithTemplate = async (req, res, next) => {
         error: 'Shared template locked',
         message: 'Модификаторы филиала наследуются от главного ресторана. Синхронизацию запускайте в главном ресторане.'
       });
+    }
+
+    if (!ensureOwnerAccessToRestaurant(req, res, context.managementRestaurantId)) {
+      return;
     }
 
     console.log('🔄 Syncing modifiers with template:', id);
