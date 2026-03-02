@@ -129,6 +129,9 @@ const MenuPage = () => {
   const dineInParam = searchParams.has('dine_in');
   const orderMode = useCartStore((state) => state.orderMode);
   const setOrderMode = useCartStore((state) => state.setOrderMode);
+  const cartItems = useCartStore((state) => state.items);
+  const cartTotal = useCartStore((state) => state.getTotal());
+  const cartItemCount = useCartStore((state) => state.getItemCount());
   const { setTheme, themes, setCustomColors } = useTheme();
   const [restaurant, setRestaurant] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -284,6 +287,9 @@ const MenuPage = () => {
   }, [restaurant?.id, restaurant?.subdomain, selectedLanguage, tableFromUrl, dineInParam]);
 
   const displayRestaurant = restaurant;
+  const currencySymbol = getCurrencySymbol(displayRestaurant?.currency);
+  const minOrderAmount = displayRestaurant?.minOrderAmount || 0;
+  const isBelowMinimum = orderMode !== 'dine_in' && minOrderAmount > 0 && cartTotal < minOrderAmount;
 
   // Плавное переключение категорий при скролле с помощью Intersection Observer
   useEffect(() => {
@@ -398,6 +404,19 @@ const MenuPage = () => {
     }, 1000);
   };
 
+  const handleDesktopCheckout = () => {
+    if (!cartItemCount || isBelowMinimum) return;
+
+    navigate('/checkout', {
+      state: {
+        restaurant: displayRestaurant,
+        items: cartItems,
+        total: cartTotal,
+        currency: currencySymbol,
+      },
+    });
+  };
+
   if (loading) {
     return <MenuSkeleton />;
   }
@@ -415,8 +434,8 @@ const MenuPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 flex justify-center">
-      {/* Mobile Container - максимум 480px (фиксируем мобильный вид на десктопе) */}
-      <div className="w-full max-w-[480px] min-h-screen bg-gray-50 shadow-2xl relative">
+      {/* Responsive container: mobile-first with desktop expansion */}
+      <div className="w-full max-w-[480px] lg:max-w-[1100px] min-h-screen bg-gray-50 shadow-2xl lg:shadow-xl relative">
         {/* Language Switcher - Top Left */}
         {availableLanguages.length > 0 && (
           <div className={`fixed top-4 left-4 z-40 bg-white rounded-lg shadow-md border border-gray-200 transition-all duration-300 ${showLanguageSwitcher ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'
@@ -641,80 +660,55 @@ const MenuPage = () => {
         </div>
 
         {/* All Categories with Dishes */}
-        <div className={`${displayRestaurant.menuCardStyle === 'gallery' ? 'px-2 sm:px-3' : 'px-4'} py-6 pb-20 sm:pb-6`}>
-          {!isSearching && displayRestaurant.categories.map((category) => (
-            <div
-              key={category.id}
-              ref={(el) => (categoryRefs.current[category.id] = el)}
-              data-category-id={category.id}
-              className="mb-12"
-            >
-              <h2 className="text-xl font-bold mb-4 break-words">{category.name}</h2>
-              {category.description && (
-                <p className="text-sm text-gray-600 mb-4 break-words">{category.description}</p>
-              )}
-
-              {category.dishes.length === 0 ? (
-                <p className="text-center text-gray-500 py-8 text-sm">
-                  В этой категории пока нет блюд
-                </p>
-              ) : (
-                <div className={`${displayRestaurant.menuCardStyle === 'gallery' ? 'grid grid-cols-2 gap-2 sm:gap-3 items-stretch' : 'gap-4'} ${displayRestaurant.menuCardStyle === 'vertical'
-                  ? 'grid grid-cols-1'
-                  : displayRestaurant.menuCardStyle === 'grid'
-                    ? 'grid grid-cols-2'
-                    : displayRestaurant.menuCardStyle === 'gallery'
-                      ? 'grid grid-cols-2'
-                      : 'flex flex-col'
-                  }`}>
-                  {category.dishes.map((dish) => {
-                    // Если режим не "В зале" и есть цена доставки - используем её
-                    const displayDish = { ...dish };
-                    if (orderMode !== 'dine_in' && dish.deliveryPrice) {
-                      displayDish.price = dish.deliveryPrice;
-                    }
-                    return (
-                      <DishCard
-                        key={dish.id}
-                        dish={displayDish}
-                        currency={getCurrencySymbol(displayRestaurant.currency)}
-                        style={displayRestaurant.menuCardStyle || 'horizontal'}
-                        restaurantId={displayRestaurant.id}
-                        restaurantName={displayRestaurant.name}
-                        onFavoriteToggle={(action) => {
-                          if (action === 'login') {
-                            setShowLoginModal(true);
-                          }
-                        }}
-                        onModalStateChange={(isOpen) => setIsDishModalOpen(isOpen)}
-                      />
-                    );
-                  })}
-                </div>
-              )}
+        <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)_300px] lg:gap-6 lg:px-6 lg:py-6">
+          <aside className="hidden lg:block">
+            <div className="sticky top-24 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3 px-2">Категории</p>
+              <div className="space-y-1">
+                {displayRestaurant.categories.map((category) => (
+                  <button
+                    key={`desktop-nav-${category.id}`}
+                    onClick={() => handleCategoryClick(category.id)}
+                    className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${selectedCategory === category.id
+                      ? 'bg-primary-100 text-primary-700 font-semibold'
+                      : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                  >
+                    {category.name}
+                  </button>
+                ))}
+              </div>
             </div>
-          ))}
+          </aside>
 
-          {isSearching && (
-            <div className="space-y-10">
-              {categoriesToRender.length === 0 && (
-                <div className="text-center text-gray-500 py-10">
-                  Ничего не найдено
-                </div>
-              )}
+          <div className={`${displayRestaurant.menuCardStyle === 'gallery' ? 'px-2 sm:px-3 lg:px-0' : 'px-4 lg:px-0'} py-6 pb-20 sm:pb-6 lg:py-0`}>
+            {!isSearching && displayRestaurant.categories.map((category) => (
+              <div
+                key={category.id}
+                ref={(el) => (categoryRefs.current[category.id] = el)}
+                data-category-id={category.id}
+                className="mb-12"
+              >
+                <h2 className="text-xl font-bold mb-4 break-words">{category.name}</h2>
+                {category.description && (
+                  <p className="text-sm text-gray-600 mb-4 break-words">{category.description}</p>
+                )}
 
-              {categoriesToRender.map((category) => (
-                <div key={category.id} className="mb-4">
-                  <h2 className="text-lg font-semibold mb-3 break-words">{category.name}</h2>
-                  <div className={`${displayRestaurant.menuCardStyle === 'gallery' ? 'grid grid-cols-2 gap-2 sm:gap-3 items-stretch' : 'gap-4'} ${displayRestaurant.menuCardStyle === 'vertical'
+                {category.dishes.length === 0 ? (
+                  <p className="text-center text-gray-500 py-8 text-sm">
+                    В этой категории пока нет блюд
+                  </p>
+                ) : (
+                  <div className={`${displayRestaurant.menuCardStyle === 'gallery' ? 'grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 items-stretch' : 'gap-4'} ${displayRestaurant.menuCardStyle === 'vertical'
                     ? 'grid grid-cols-1'
                     : displayRestaurant.menuCardStyle === 'grid'
-                      ? 'grid grid-cols-2'
+                      ? 'grid grid-cols-2 lg:grid-cols-3'
                       : displayRestaurant.menuCardStyle === 'gallery'
-                        ? 'grid grid-cols-2'
+                        ? 'grid grid-cols-2 lg:grid-cols-3'
                         : 'flex flex-col'
                     }`}>
                     {category.dishes.map((dish) => {
+                      // Если режим не "В зале" и есть цена доставки - используем её
                       const displayDish = { ...dish };
                       if (orderMode !== 'dine_in' && dish.deliveryPrice) {
                         displayDish.price = dish.deliveryPrice;
@@ -723,7 +717,7 @@ const MenuPage = () => {
                         <DishCard
                           key={dish.id}
                           dish={displayDish}
-                          currency={getCurrencySymbol(displayRestaurant.currency)}
+                          currency={currencySymbol}
                           style={displayRestaurant.menuCardStyle || 'horizontal'}
                           restaurantId={displayRestaurant.id}
                           restaurantName={displayRestaurant.name}
@@ -737,19 +731,99 @@ const MenuPage = () => {
                       );
                     })}
                   </div>
-                </div>
-              ))}
+                )}
+              </div>
+            ))}
+
+            {isSearching && (
+              <div className="space-y-10">
+                {categoriesToRender.length === 0 && (
+                  <div className="text-center text-gray-500 py-10">
+                    Ничего не найдено
+                  </div>
+                )}
+
+                {categoriesToRender.map((category) => (
+                  <div key={category.id} className="mb-4">
+                    <h2 className="text-lg font-semibold mb-3 break-words">{category.name}</h2>
+                    <div className={`${displayRestaurant.menuCardStyle === 'gallery' ? 'grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 items-stretch' : 'gap-4'} ${displayRestaurant.menuCardStyle === 'vertical'
+                      ? 'grid grid-cols-1'
+                      : displayRestaurant.menuCardStyle === 'grid'
+                        ? 'grid grid-cols-2 lg:grid-cols-3'
+                        : displayRestaurant.menuCardStyle === 'gallery'
+                          ? 'grid grid-cols-2 lg:grid-cols-3'
+                          : 'flex flex-col'
+                      }`}>
+                      {category.dishes.map((dish) => {
+                        const displayDish = { ...dish };
+                        if (orderMode !== 'dine_in' && dish.deliveryPrice) {
+                          displayDish.price = dish.deliveryPrice;
+                        }
+                        return (
+                          <DishCard
+                            key={dish.id}
+                            dish={displayDish}
+                            currency={currencySymbol}
+                            style={displayRestaurant.menuCardStyle || 'horizontal'}
+                            restaurantId={displayRestaurant.id}
+                            restaurantName={displayRestaurant.name}
+                            onFavoriteToggle={(action) => {
+                              if (action === 'login') {
+                                setShowLoginModal(true);
+                              }
+                            }}
+                            onModalStateChange={(isOpen) => setIsDishModalOpen(isOpen)}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <aside className="hidden lg:block">
+            <div className="sticky top-24 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-base font-semibold text-gray-900">Корзина</h3>
+                <span className="text-xs text-gray-500">{cartItemCount} шт.</span>
+              </div>
+
+              <div className="rounded-xl bg-gray-50 px-3 py-2 border border-gray-200 mb-3">
+                <div className="text-xs text-gray-500 mb-1">Сумма заказа</div>
+                <div className="text-lg font-bold text-gray-900">{cartTotal.toFixed(2)} {currencySymbol}</div>
+              </div>
+
+              {orderMode !== 'dine_in' && minOrderAmount > 0 && (
+                <p className={`text-xs mb-3 ${isBelowMinimum ? 'text-amber-600' : 'text-emerald-600'}`}>
+                  {isBelowMinimum
+                    ? `Минимум для доставки: ${minOrderAmount} ${currencySymbol}`
+                    : 'Минимальная сумма выполнена'}
+                </p>
+              )}
+
+              <button
+                onClick={handleDesktopCheckout}
+                disabled={!cartItemCount || isBelowMinimum}
+                className={`w-full rounded-xl py-3 text-sm font-semibold transition-colors ${!cartItemCount || isBelowMinimum
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-primary-600 text-white hover:bg-primary-700'
+                  }`}
+              >
+                Оформить заказ
+              </button>
             </div>
-          )}
+          </aside>
         </div>
 
         {/* Cart */}
-        <Cart restaurant={displayRestaurant} isDishModalOpen={isDishModalOpen} />
+        <Cart restaurant={displayRestaurant} isDishModalOpen={isDishModalOpen} hideOnDesktop />
 
         {/* Fullscreen Search Overlay */}
         {isSearchOpen && (
           <div className="fixed inset-0 z-50 bg-white overflow-y-auto">
-            <div className="w-full max-w-[480px] mx-auto min-h-screen flex flex-col">
+            <div className="w-full max-w-[480px] lg:max-w-[1100px] mx-auto min-h-screen flex flex-col">
               <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 pt-4 pb-3 shadow-sm">
                 <div className="flex items-center gap-3">
                   <button
@@ -812,12 +886,12 @@ const MenuPage = () => {
                 )}
 
                 {isSearching && searchResults.length > 0 && (
-                  <div className={`${displayRestaurant.menuCardStyle === 'gallery' ? 'grid grid-cols-2 gap-2 sm:gap-3 items-stretch' : 'gap-4'} ${displayRestaurant.menuCardStyle === 'vertical'
+                  <div className={`${displayRestaurant.menuCardStyle === 'gallery' ? 'grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 items-stretch' : 'gap-4'} ${displayRestaurant.menuCardStyle === 'vertical'
                     ? 'grid grid-cols-1'
                     : displayRestaurant.menuCardStyle === 'grid'
-                      ? 'grid grid-cols-2'
+                      ? 'grid grid-cols-2 lg:grid-cols-3'
                       : displayRestaurant.menuCardStyle === 'gallery'
-                        ? 'grid grid-cols-2'
+                        ? 'grid grid-cols-2 lg:grid-cols-3'
                         : 'flex flex-col'
                     }`}>
                     {searchResults.map((dish) => {
@@ -829,7 +903,7 @@ const MenuPage = () => {
                         <DishCard
                           key={dish.id}
                           dish={displayDish}
-                          currency={getCurrencySymbol(displayRestaurant.currency)}
+                          currency={currencySymbol}
                           style={displayRestaurant.menuCardStyle || 'horizontal'}
                           restaurantId={displayRestaurant.id}
                           restaurantName={displayRestaurant.name}

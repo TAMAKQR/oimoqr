@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { useCartStore } from '../store/cartStore';
 import { useCustomerAuthStore } from '../store/customerAuthStore';
 
-const Cart = ({ restaurant, isDishModalOpen = false }) => {
+const Cart = ({ restaurant, isDishModalOpen = false, hideOnDesktop = false }) => {
   const { customer } = useCustomerAuthStore();
   const navigate = useNavigate();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
@@ -64,6 +64,8 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
     return null;
   }
 
+  const responsiveHideClass = hideOnDesktop ? 'lg:hidden' : '';
+
   // Если клиент авторизован - поднимаем корзину выше CustomerBottomNav
   const isCustomerLoggedIn = customer && customer.id;
 
@@ -80,11 +82,11 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
       {/* Fill the bottom gap with subtle blur for a softer Safari/Chrome look */}
       {!isCustomerLoggedIn && (
         <div
-          className="fixed inset-x-0 bottom-0 z-[50] bg-white/70 backdrop-blur-md pointer-events-none"
+          className={`fixed inset-x-0 bottom-0 z-[50] bg-white/70 backdrop-blur-md pointer-events-none ${responsiveHideClass}`}
           style={{ height: guestBottomOffset }}
         />
       )}
-      <div className="fixed inset-x-0 z-[60] flex justify-center px-0 pb-0" style={cartStyle}>
+      <div className={`fixed inset-x-0 z-[60] flex justify-center px-0 pb-0 ${responsiveHideClass}`} style={cartStyle}>
         <div className="w-full max-w-[480px] rounded-none sm:rounded-2xl bg-white border-t border-primary-100 px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex flex-col gap-3">
             {orderMode === 'dine_in' && (
