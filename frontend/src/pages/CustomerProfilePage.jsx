@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import customerService from '../services/customerService';
+import { restaurantService } from '../services/restaurantService';
 import CustomerBottomNav from '../components/CustomerBottomNav';
 import DishModal from '../components/DishModal';
 import FloatingMenuWidget from '../components/FloatingMenuWidget';
@@ -71,6 +72,8 @@ export default function CustomerProfilePage() {
     const navigate = useNavigate();
     const location = useLocation();
     const addItem = useCartStore((state) => state.addItem);
+    const cartItems = useCartStore((state) => state.items);
+    const getCartTotal = useCartStore((state) => state.getTotal);
     const cartItemCount = useCartStore((state) => state.getItemCount());
     const [activeTab, setActiveTab] = useState('profile');
     const [customer, setCustomer] = useState(null);
@@ -83,6 +86,7 @@ export default function CustomerProfilePage() {
     const [dishCurrency, setDishCurrency] = useState('₽');
     const [isDishModalOpen, setDishModalOpen] = useState(false);
     const [favoriteToggling, setFavoriteToggling] = useState(false);
+    const [cartRedirecting, setCartRedirecting] = useState(false);
 
     useEffect(() => {
         if (location.pathname.startsWith('/customer/orders')) {
@@ -211,6 +215,41 @@ export default function CustomerProfilePage() {
         }
     };
 
+    const handleGoToCheckout = async () => {
+        if (!cartItems?.length || cartRedirecting) return;
+
+        try {
+            setCartRedirecting(true);
+
+            const raw = localStorage.getItem('customer-last-restaurant');
+            const lastRestaurant = raw ? JSON.parse(raw) : null;
+            const subdomain = lastRestaurant?.subdomain;
+
+            if (!subdomain) {
+                toast.error('Не удалось определить ресторан для корзины');
+                navigate('/');
+                return;
+            }
+
+            const restaurant = await restaurantService.getBySubdomain(subdomain);
+
+            navigate('/checkout', {
+                state: {
+                    restaurant,
+                    items: cartItems,
+                    total: Number(getCartTotal() || 0),
+                    currency: restaurant?.currency || '₽',
+                },
+            });
+        } catch (error) {
+            console.error('Failed to open checkout from profile:', error);
+            toast.error('Не удалось открыть корзину');
+            navigate(getLastRestaurantPath());
+        } finally {
+            setCartRedirecting(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -229,11 +268,12 @@ export default function CustomerProfilePage() {
                 {cartItemCount > 0 && (
                     <button
                         type="button"
-                        onClick={() => navigate(getLastRestaurantPath())}
-                        className="fixed left-1/2 -translate-x-1/2 z-[70] rounded-2xl bg-primary-600 text-white shadow-lg px-4 py-3 font-semibold"
+                        onClick={handleGoToCheckout}
+                        disabled={cartRedirecting}
+                        className="fixed left-1/2 -translate-x-1/2 z-[70] rounded-2xl bg-primary-600 text-white shadow-lg px-4 py-3 font-semibold disabled:opacity-70"
                         style={{ bottom: 'calc(var(--customer-bottom-nav-height, 0px) + 12px)' }}
                     >
-                        Корзина · {cartItemCount}
+                        {cartRedirecting ? 'Открываем корзину…' : `Корзина · ${cartItemCount}`}
                     </button>
                 )}
 
@@ -383,7 +423,37 @@ function ProfileTab({ customer, onUpdate }) {
     const completedCount = completionChecklist.filter((item) => item.done).length;
     const profileCompletion = Math.round((completedCount / completionChecklist.length) * 100);
 
+    const socialValidators = {
+        instagram: /^(?:@?[A-Za-z0-9._]{1,30}|https?:\/\/(?:www\.)?instagram\.com\/[A-Za-z0-9._]{1,30}\/?$)$/i,
+        telegram: /^(?:@?[A-Za-z0-9_]{5,32}|https?:\/\/(?:t\.me|telegram\.me)\/[A-Za-z0-9_]{5,32}\/?$)$/i,
+        facebook: /^(?:@?[A-Za-z0-9.]{3,50}|https?:\/\/(?:www\.)?facebook\.com\/[A-Za-z0-9.]{3,50}\/?$)$/i,
+        tiktok: /^(?:@?[A-Za-z0-9._]{2,24}|https?:\/\/(?:www\.)?tiktok\.com\/@?[A-Za-z0-9._]{2,24}\/?$)$/i,
+    };
+
+    const validateSocials = () => {
+        const checks = [
+            { key: 'instagram', value: instagram, label: 'Instagram' },
+            { key: 'telegram', value: telegram, label: 'Telegram' },
+            { key: 'facebook', value: facebook, label: 'Facebook' },
+            { key: 'tiktok', value: tiktok, label: 'TikTok' },
+        ];
+
+        for (const item of checks) {
+            const trimmed = String(item.value || '').trim();
+            if (!trimmed) continue;
+
+            if (!socialValidators[item.key].test(trimmed)) {
+                toast.error(`Проверьте формат поля ${item.label}`);
+                return false;
+            }
+        }
+
+        return true;
+    };
+
     const handleSave = async () => {
+        if (!validateSocials()) return;
+
         setSaving(true);
         try {
             let avatarValue = avatar || null;
@@ -504,7 +574,7 @@ function ProfileTab({ customer, onUpdate }) {
                                 {avatarPreview ? (
                                     <img src={avatarPreview} alt="preview" className="w-full h-full object-cover" />
                                 ) : (
-                                    <span className="text-xs text-gray-400">Нет фото</span>
+                                    <span className="text-[11px] leading-none text-gray-400 text-center px-1">Нет фото</span>
                                 )}
                             </div>
 
