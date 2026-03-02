@@ -2,6 +2,7 @@ import { prisma } from '../config/prisma.js';
 import telegramService from '../services/telegram.service.js';
 import { getDistance, getNetworkRankedDeliveryPoints } from './geolocation.controller.js';
 import { buildTrustedOrderItems, calculateDeliveryFee } from '../utils/orderPricing.js';
+import { hasRestaurantAccess, ensureRestaurantAccess } from '../utils/restaurantAccess.js';
 
 const ALLOWED_STATUSES = [
   'new',
@@ -12,26 +13,6 @@ const ALLOWED_STATUSES = [
   'completed',
   'cancelled'
 ];
-
-const hasRestaurantAccess = (req, restaurantId) => {
-  if (!req?.user || !restaurantId) return false;
-  if (req.user.isAdmin) return true;
-
-  const ownsRestaurant = req.user.restaurants?.some((restaurant) => restaurant.id === restaurantId);
-  if (ownsRestaurant) return true;
-
-  const hasStaffAccess = req.user.restaurantStaff?.some((staff) => staff.restaurantId === restaurantId);
-  return Boolean(hasStaffAccess);
-};
-
-const ensureRestaurantAccess = (req, res, restaurantId) => {
-  if (hasRestaurantAccess(req, restaurantId)) {
-    return true;
-  }
-
-  res.status(403).json({ error: 'Access denied for this restaurant' });
-  return false;
-};
 
 const ensureOrderAccess = (req, res, order) => {
   if (!order) {
