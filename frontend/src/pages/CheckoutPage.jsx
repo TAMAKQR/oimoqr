@@ -35,49 +35,6 @@ const buildPaletteFromBase = (baseHex = '#374B6A') => {
     return palette;
 };
 
-const DEFAULT_BONUS_RATE = 0;
-const DEFAULT_BONUS_EXPIRY_DAYS = 90;
-
-const isDeliveredStatus = (status) => {
-    const normalized = String(status || '').toLowerCase();
-    return normalized.includes('delivered') ||
-        normalized.includes('completed') ||
-        normalized.includes('finished') ||
-        normalized.includes('done') ||
-        normalized.includes('success');
-};
-
-const isBonusEligibleOrderType = (deliveryType) => {
-    const normalized = String(deliveryType || '').toLowerCase();
-    return normalized === 'delivery' || normalized === 'pickup';
-};
-
-const getActiveTierBonusConfig = (subscriptions = []) => {
-    if (!Array.isArray(subscriptions) || subscriptions.length === 0) return null;
-    const active = subscriptions.find((s) => s?.status === 'ACTIVE') || subscriptions[0];
-    return active?.pricingTier || null;
-};
-
-const getEffectiveBonusConfig = (restaurant) => {
-    const tier = getActiveTierBonusConfig(restaurant?.subscriptions || []);
-    const useTier = restaurant?.useTierBonusSettings !== false;
-    const hasTierBonusConfig = Boolean(tier);
-
-    if (useTier && hasTierBonusConfig) {
-        return {
-            enabled: Boolean(tier?.bonusProgramEnabled),
-            rate: Number.isFinite(Number(tier?.bonusAccrualRate)) ? Number(tier?.bonusAccrualRate) : DEFAULT_BONUS_RATE,
-            expiryDays: Number.isFinite(Number(tier?.bonusExpiryDays)) ? Number(tier?.bonusExpiryDays) : DEFAULT_BONUS_EXPIRY_DAYS
-        };
-    }
-
-    return {
-        enabled: Boolean(restaurant?.bonusProgramEnabled),
-        rate: Number.isFinite(Number(restaurant?.bonusAccrualRate)) ? Number(restaurant?.bonusAccrualRate) : DEFAULT_BONUS_RATE,
-        expiryDays: Number.isFinite(Number(restaurant?.bonusExpiryDays)) ? Number(restaurant?.bonusExpiryDays) : DEFAULT_BONUS_EXPIRY_DAYS
-    };
-};
-
 const CheckoutPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -148,37 +105,8 @@ const CheckoutPage = () => {
         const loadAvailableBonuses = async () => {
             setBonusLoading(true);
             try {
-                const response = await customerService.getOrderHistory(1000, 0);
-                const orders = response?.orders || [];
-                const now = new Date();
-
-                const spentTotal = orders.reduce((sum, order) => {
-                    const spent = Math.floor(Number(order?.bonusSpent || 0));
-                    return sum + (Number.isFinite(spent) && spent > 0 ? spent : 0);
-                }, 0);
-
-                const activeEarned = orders.reduce((sum, order) => {
-                    if (!isBonusEligibleOrderType(order?.deliveryType)) return sum;
-                    if (!isDeliveredStatus(order?.status)) return sum;
-
-                    const config = getEffectiveBonusConfig(order?.restaurant);
-                    if (!config.enabled || config.rate <= 0) return sum;
-
-                    const orderTotal = Number(order?.totalAmount || 0);
-                    if (!Number.isFinite(orderTotal) || orderTotal <= 0) return sum;
-
-                    const orderDate = order?.createdAt ? new Date(order.createdAt) : null;
-                    if (!orderDate || Number.isNaN(orderDate.getTime())) return sum;
-
-                    const expiryDays = Number.isFinite(Number(config.expiryDays)) ? Number(config.expiryDays) : DEFAULT_BONUS_EXPIRY_DAYS;
-                    const expiresAt = new Date(orderDate.getTime() + expiryDays * 24 * 60 * 60 * 1000);
-                    if (expiresAt <= now) return sum;
-
-                    const earned = Math.floor(orderTotal * config.rate);
-                    return earned > 0 ? sum + earned : sum;
-                }, 0);
-
-                const available = Math.max(0, activeEarned - spentTotal);
+                const summary = await customerService.getBonusSummary(1);
+                const available = Math.max(0, Math.floor(Number(summary?.activePoints || 0)));
                 setBonusBalance(available);
                 setBonusRequested(String(available));
             } catch (error) {

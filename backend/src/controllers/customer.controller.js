@@ -49,6 +49,134 @@ const isBonusEligibleOrderType = (deliveryType) => {
     return normalized === 'delivery' || normalized === 'pickup';
 };
 
+const toOrderDate = (order) => {
+    const value = order?.createdAt || order?.updatedAt || order?.date;
+    const parsed = value ? new Date(value) : null;
+    return parsed && !Number.isNaN(parsed.getTime()) ? parsed : null;
+};
+
+const getTier = (activeDeliveryOrders, tierConfig) => {
+    const silverFromOrders = Number.isFinite(Number(tierConfig?.bonusSilverFromOrders))
+        ? Number(tierConfig.bonusSilverFromOrders)
+        : 8;
+    const goldFromOrders = Number.isFinite(Number(tierConfig?.bonusGoldFromOrders))
+        ? Number(tierConfig.bonusGoldFromOrders)
+        : 20;
+    const bronzeLabel = tierConfig?.bonusBronzeLabel || 'Bronze';
+    const silverLabel = tierConfig?.bonusSilverLabel || 'Silver';
+    const goldLabel = tierConfig?.bonusGoldLabel || 'Gold';
+
+    if (activeDeliveryOrders >= goldFromOrders) {
+        return {
+            name: goldLabel,
+            color: 'text-amber-600',
+            bg: 'bg-amber-50',
+            nextAt: null
+        };
+    }
+
+    if (activeDeliveryOrders >= silverFromOrders) {
+        return {
+            name: silverLabel,
+            color: 'text-slate-600',
+            bg: 'bg-slate-50',
+            nextAt: goldFromOrders
+        };
+    }
+
+    return {
+        name: bronzeLabel,
+        color: 'text-orange-600',
+        bg: 'bg-orange-50',
+        nextAt: silverFromOrders
+    };
+};
+
+const buildBonusSummaryFromOrders = (orders = []) => {
+    const now = new Date();
+
+    const bonusSystemActive = orders.some((order) => {
+        const config = getEffectiveBonusConfig(order?.restaurant);
+        return config.enabled && config.rate > 0;
+    });
+
+    const transactions = orders
+        .filter((order) => isBonusEligibleOrderType(order?.deliveryType) && isDeliveredStatus(order?.status))
+        .map((order) => {
+            const config = getEffectiveBonusConfig(order?.restaurant);
+            if (!config.enabled || config.rate <= 0) {
+                return null;
+            }
+
+            const total = Number(order?.totalAmount || 0);
+            if (!Number.isFinite(total) || total <= 0) {
+                return null;
+            }
+
+            const earned = Math.floor(total * config.rate);
+            if (earned <= 0) {
+                return null;
+            }
+
+            const orderDate = toOrderDate(order);
+            const expiresAt = orderDate
+                ? new Date(orderDate.getTime() + config.expiryDays * 24 * 60 * 60 * 1000)
+                : null;
+            const isActive = expiresAt ? expiresAt > now : false;
+
+            return {
+                id: order?.id,
+                orderNumber: order?.orderNumber || order?.id,
+                total,
+                earned,
+                rate: config.rate,
+                expiryDays: config.expiryDays,
+                orderDate,
+                expiresAt,
+                isActive
+            };
+        })
+        .filter(Boolean)
+        .sort((a, b) => {
+            const aTime = a.orderDate ? a.orderDate.getTime() : 0;
+            const bTime = b.orderDate ? b.orderDate.getTime() : 0;
+            return bTime - aTime;
+        });
+
+    const spentTotal = orders.reduce((sum, order) => {
+        const spent = Math.floor(Number(order?.bonusSpent || 0));
+        return sum + (Number.isFinite(spent) && spent > 0 ? spent : 0);
+    }, 0);
+
+    const activeEarned = transactions
+        .filter((tx) => tx.isActive)
+        .reduce((sum, tx) => sum + tx.earned, 0);
+    const lifetimePoints = transactions.reduce((sum, tx) => sum + tx.earned, 0);
+    const availablePoints = Math.max(0, activeEarned - spentTotal);
+    const expiredPoints = Math.max(0, lifetimePoints - activeEarned);
+
+    const deliveryOrdersCount = transactions.length;
+    const tierSourceOrder = orders.find((order) => {
+        const config = getEffectiveBonusConfig(order?.restaurant);
+        return config.enabled;
+    });
+    const activeSubscription = tierSourceOrder?.restaurant?.subscriptions?.find((s) => s?.status === 'ACTIVE')
+        || tierSourceOrder?.restaurant?.subscriptions?.[0];
+    const tierConfig = activeSubscription?.pricingTier || null;
+    const tier = getTier(deliveryOrdersCount, tierConfig);
+
+    return {
+        bonusSystemActive,
+        activePoints: availablePoints,
+        lifetimePoints,
+        expiredPoints,
+        spentPoints: spentTotal,
+        deliveryOrdersCount,
+        tier,
+        transactions
+    };
+};
+
 const getActiveTierBonusConfig = (subscriptions = []) => {
     if (!Array.isArray(subscriptions) || subscriptions.length === 0) return null;
     const active = subscriptions.find((s) => s?.status === 'ACTIVE') || subscriptions[0];
@@ -340,6 +468,64 @@ export const getOrderHistory = async (req, res, next) => {
             total: totalOrders,
             limit: parseInt(limit),
             offset: parseInt(offset)
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getBonusSummary = async (req, res, next) => {
+    try {
+        const customerId = req.customerId;
+        const { transactionsLimit = 10 } = req.query;
+
+        const parsedLimit = Math.min(Math.max(parseInt(transactionsLimit, 10) || 10, 1), 100);
+
+        const orders = await prisma.order.findMany({
+            where: { customerId },
+            select: {
+                id: true,
+                orderNumber: true,
+                totalAmount: true,
+                status: true,
+                deliveryType: true,
+                createdAt: true,
+                updatedAt: true,
+                bonusSpent: true,
+                restaurant: {
+                    select: {
+                        useTierBonusSettings: true,
+                        bonusProgramEnabled: true,
+                        bonusAccrualRate: true,
+                        bonusExpiryDays: true,
+                        subscriptions: {
+                            select: {
+                                status: true,
+                                pricingTier: {
+                                    select: {
+                                        bonusProgramEnabled: true,
+                                        bonusAccrualRate: true,
+                                        bonusExpiryDays: true,
+                                        bonusBronzeLabel: true,
+                                        bonusSilverLabel: true,
+                                        bonusGoldLabel: true,
+                                        bonusSilverFromOrders: true,
+                                        bonusGoldFromOrders: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+
+        const summary = buildBonusSummaryFromOrders(orders);
+
+        res.json({
+            ...summary,
+            transactions: summary.transactions.slice(0, parsedLimit)
         });
     } catch (error) {
         next(error);

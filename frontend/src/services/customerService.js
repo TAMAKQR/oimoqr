@@ -115,6 +115,15 @@ const customerService = {
         return response.data;
     },
 
+    async getBonusSummary(transactionsLimit = 10) {
+        const response = await api.get(`/customers/bonuses/summary?transactionsLimit=${transactionsLimit}`, {
+            headers: {
+                Authorization: `Bearer ${this.getToken()}`
+            }
+        });
+        return response.data;
+    },
+
     // ============================================
     // Рестораны клиента
     // ============================================

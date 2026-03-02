@@ -1,106 +1,29 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import customerService from '../services/customerService';
 import CustomerBottomNav from '../components/CustomerBottomNav';
 import FloatingMenuWidget from '../components/FloatingMenuWidget';
 
-const DEFAULT_BONUS_RATE = 0;
-const DEFAULT_BONUS_EXPIRY_DAYS = 90;
-
-const isDeliveredStatus = (status) => {
-    const normalized = String(status || '').toLowerCase();
-    return normalized.includes('delivered') ||
-        normalized.includes('completed') ||
-        normalized.includes('finished') ||
-        normalized.includes('done') ||
-        normalized.includes('success');
-};
-
-const isBonusEligibleOrderType = (order) => {
-    const deliveryType = String(order?.deliveryType || '').toLowerCase();
-    return deliveryType === 'delivery' || deliveryType === 'pickup';
-};
-
-const toOrderDate = (order) => {
-    const value = order?.createdAt || order?.updatedAt || order?.date;
-    const parsed = value ? new Date(value) : null;
-    return parsed && !Number.isNaN(parsed.getTime()) ? parsed : null;
-};
-
-const toOrderTotal = (order) => {
-    const raw = order?.totalAmount ?? order?.total;
-    const parsed = Number(raw);
-    return Number.isFinite(parsed) ? parsed : 0;
-};
-
-const getActiveTierBonusConfig = (subscriptions = []) => {
-    if (!Array.isArray(subscriptions) || subscriptions.length === 0) return null;
-    const active = subscriptions.find((s) => s?.status === 'ACTIVE') || subscriptions[0];
-    return active?.pricingTier || null;
-};
-
-const getEffectiveBonusConfig = (restaurant) => {
-    const tier = getActiveTierBonusConfig(restaurant?.subscriptions || []);
-    const useTier = restaurant?.useTierBonusSettings !== false;
-    const hasTierBonusConfig = Boolean(tier);
-
-    if (useTier && hasTierBonusConfig) {
-        return {
-            enabled: Boolean(tier?.bonusProgramEnabled),
-            rate: Number.isFinite(Number(tier?.bonusAccrualRate)) ? Number(tier?.bonusAccrualRate) : DEFAULT_BONUS_RATE,
-            expiryDays: Number.isFinite(Number(tier?.bonusExpiryDays)) ? Number(tier?.bonusExpiryDays) : DEFAULT_BONUS_EXPIRY_DAYS
-        };
-    }
-
-    return {
-        enabled: Boolean(restaurant?.bonusProgramEnabled),
-        rate: Number.isFinite(Number(restaurant?.bonusAccrualRate)) ? Number(restaurant?.bonusAccrualRate) : DEFAULT_BONUS_RATE,
-        expiryDays: Number.isFinite(Number(restaurant?.bonusExpiryDays)) ? Number(restaurant?.bonusExpiryDays) : DEFAULT_BONUS_EXPIRY_DAYS
-    };
-};
-
-const getTier = (activeDeliveryOrders, tierConfig) => {
-    const silverFromOrders = Number.isFinite(Number(tierConfig?.bonusSilverFromOrders))
-        ? Number(tierConfig.bonusSilverFromOrders)
-        : 8;
-    const goldFromOrders = Number.isFinite(Number(tierConfig?.bonusGoldFromOrders))
-        ? Number(tierConfig.bonusGoldFromOrders)
-        : 20;
-    const bronzeLabel = tierConfig?.bonusBronzeLabel || 'Bronze';
-    const silverLabel = tierConfig?.bonusSilverLabel || 'Silver';
-    const goldLabel = tierConfig?.bonusGoldLabel || 'Gold';
-
-    if (activeDeliveryOrders >= goldFromOrders) {
-        return {
-            name: goldLabel,
-            color: 'text-amber-600',
-            bg: 'bg-amber-50',
-            nextAt: null
-        };
-    }
-
-    if (activeDeliveryOrders >= silverFromOrders) {
-        return {
-            name: silverLabel,
-            color: 'text-slate-600',
-            bg: 'bg-slate-50',
-            nextAt: goldFromOrders
-        };
-    }
-
-    return {
-        name: bronzeLabel,
+const defaultBonusData = {
+    bonusSystemActive: false,
+    transactions: [],
+    activePoints: 0,
+    lifetimePoints: 0,
+    expiredPoints: 0,
+    deliveryOrdersCount: 0,
+    tier: {
+        name: 'Bronze',
         color: 'text-orange-600',
         bg: 'bg-orange-50',
-        nextAt: silverFromOrders
-    };
+        nextAt: 8
+    }
 };
 
 export default function CustomerBonusesPage() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
-    const [orders, setOrders] = useState([]);
+    const [bonusData, setBonusData] = useState(defaultBonusData);
 
     useEffect(() => {
         if (!customerService.isAuthenticated()) {
@@ -108,10 +31,15 @@ export default function CustomerBonusesPage() {
             return;
         }
 
-        const loadOrders = async () => {
+        const loadSummary = async () => {
             try {
-                const response = await customerService.getOrderHistory(200, 0);
-                setOrders(response?.orders || []);
+                const summary = await customerService.getBonusSummary(10);
+                setBonusData({
+                    ...defaultBonusData,
+                    ...summary,
+                    transactions: Array.isArray(summary?.transactions) ? summary.transactions : [],
+                    tier: summary?.tier || defaultBonusData.tier
+                });
             } catch (error) {
                 console.error('Error loading customer bonuses:', error);
                 toast.error('Не удалось загрузить бонусы');
@@ -120,75 +48,8 @@ export default function CustomerBonusesPage() {
             }
         };
 
-        loadOrders();
+        loadSummary();
     }, [navigate]);
-
-    const bonusData = useMemo(() => {
-        const now = new Date();
-        const bonusSystemActive = orders.some((order) => {
-            const config = getEffectiveBonusConfig(order?.restaurant);
-            return config.enabled && config.rate > 0;
-        });
-
-        const transactions = orders
-            .filter((order) => isBonusEligibleOrderType(order) && isDeliveredStatus(order?.status))
-            .map((order) => {
-                const config = getEffectiveBonusConfig(order?.restaurant);
-                if (!config.enabled || config.rate <= 0) {
-                    return null;
-                }
-
-                const total = toOrderTotal(order);
-                const earned = Math.floor(total * config.rate);
-                const orderDate = toOrderDate(order);
-                const expiresAt = orderDate
-                    ? new Date(orderDate.getTime() + config.expiryDays * 24 * 60 * 60 * 1000)
-                    : null;
-                const isActive = expiresAt ? expiresAt > now : false;
-
-                return {
-                    id: order?.id,
-                    orderNumber: order?.orderNumber || order?.id,
-                    total,
-                    earned,
-                    rate: config.rate,
-                    expiryDays: config.expiryDays,
-                    orderDate,
-                    expiresAt,
-                    isActive
-                };
-            })
-            .filter(Boolean)
-            .filter((tx) => tx.earned > 0)
-            .sort((a, b) => {
-                const aTime = a.orderDate ? a.orderDate.getTime() : 0;
-                const bTime = b.orderDate ? b.orderDate.getTime() : 0;
-                return bTime - aTime;
-            });
-
-        const activePoints = transactions.filter((tx) => tx.isActive).reduce((sum, tx) => sum + tx.earned, 0);
-        const lifetimePoints = transactions.reduce((sum, tx) => sum + tx.earned, 0);
-        const expiredPoints = Math.max(0, lifetimePoints - activePoints);
-        const deliveryOrdersCount = transactions.length;
-        const tierSourceOrder = orders.find((order) => {
-            const config = getEffectiveBonusConfig(order?.restaurant);
-            return config.enabled;
-        });
-        const activeSubscription = tierSourceOrder?.restaurant?.subscriptions?.find((s) => s?.status === 'ACTIVE')
-            || tierSourceOrder?.restaurant?.subscriptions?.[0];
-        const tierConfig = activeSubscription?.pricingTier || null;
-        const tier = getTier(deliveryOrdersCount, tierConfig);
-
-        return {
-            bonusSystemActive,
-            transactions,
-            activePoints,
-            lifetimePoints,
-            expiredPoints,
-            deliveryOrdersCount,
-            tier
-        };
-    }, [orders]);
 
     if (loading) {
         return (

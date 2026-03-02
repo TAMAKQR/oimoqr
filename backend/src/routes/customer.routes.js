@@ -11,6 +11,7 @@ import {
     updateProfile,
     changePassword,
     getOrderHistory,
+    getBonusSummary,
     addToFavorites,
     removeFromFavorites,
     getFavorites,
@@ -53,6 +54,7 @@ router.post('/change-password', authenticateCustomer, changePassword);
 
 // История заказов
 router.get('/orders', authenticateCustomer, getOrderHistory);
+router.get('/bonuses/summary', authenticateCustomer, getBonusSummary);
 
 // Создание заказа
 router.post('/orders', authenticateCustomer, createCustomerOrder);
