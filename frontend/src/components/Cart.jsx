@@ -70,17 +70,17 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
   // Позиционирование: если есть нижнее меню, поднимаем корзину над ним.
   // Высоту нижнего меню выставляет CustomerBottomNav в CSS переменную.
   const bottomNavHeight = 'var(--customer-bottom-nav-height, 0px)';
-  const guestBottomOffset = 'max(env(safe-area-inset-bottom, 0px), var(--visual-bottom-offset, 0px))';
+  const guestBottomOffset = 'max(0px, calc(max(env(safe-area-inset-bottom, 0px), var(--visual-bottom-offset, 0px)) - 6px))';
   const cartStyle = isCustomerLoggedIn
-    ? { bottom: `calc(${bottomNavHeight} + 12px)` }
+    ? { bottom: `calc(${bottomNavHeight} + 8px)` }
     : { bottom: guestBottomOffset };
 
   return (
     <>
-      {/* Fill the bottom gap on mobile browsers (Chrome) with a white background */}
+      {/* Fill the bottom gap with subtle blur for a softer Safari/Chrome look */}
       {!isCustomerLoggedIn && (
         <div
-          className="fixed inset-x-0 bottom-0 z-[50] bg-white pointer-events-none"
+          className="fixed inset-x-0 bottom-0 z-[50] bg-white/70 backdrop-blur-md pointer-events-none"
           style={{ height: guestBottomOffset }}
         />
       )}
