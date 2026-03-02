@@ -522,7 +522,6 @@ export const autoReassignOrder = async (req, res, next) => {
   try {
     const { orderId, orderNumber } = req.params;
     let { latitude, longitude, location } = req.body;
-    const isAutomationRequest = req.isOrderAutomationAuthorized === true;
 
     // Если передан номер заказа вместо ID, находим заказ по номеру
     let order;
@@ -555,7 +554,7 @@ export const autoReassignOrder = async (req, res, next) => {
       return res.status(400).json({ error: 'orderId or orderNumber is required' });
     }
 
-    if (!isAutomationRequest && !ensureOrderAccess(req, res, order)) {
+    if (!ensureOrderAccess(req, res, order)) {
       return;
     }
 
@@ -764,7 +763,7 @@ export const getAssignedRestaurant = async (req, res, next) => {
       };
     });
 
-    // Формируем текстовое сообщение для SendPulse
+    // Формируем текстовое сообщение для клиента
     const itemsText = order.items.map(item => {
       const dishName = item.dish?.name || 'Удалённое блюдо';
       const modifiers = item.selectedModifiers ? JSON.parse(item.selectedModifiers) : [];
