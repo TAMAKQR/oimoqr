@@ -6,6 +6,7 @@ import CustomerBottomNav from '../components/CustomerBottomNav';
 import DishModal from '../components/DishModal';
 import FloatingMenuWidget from '../components/FloatingMenuWidget';
 import { useCartStore } from '../store/cartStore';
+import { optimizeAvatarImage, validateImage } from '../utils/imageCompression';
 
 const currencySymbols = {
     RUB: '₽',
@@ -339,6 +340,7 @@ function ProfileTab({ customer, onUpdate }) {
     const [avatar, setAvatar] = useState(customer?.avatar || '');
     const [avatarFile, setAvatarFile] = useState(null);
     const [avatarPreview, setAvatarPreview] = useState(resolveMediaUrl(customer?.avatar || ''));
+    const [avatarProcessing, setAvatarProcessing] = useState(false);
     const [birthDate, setBirthDate] = useState(customer?.preferences?.profile?.birthDate || '');
     const [instagram, setInstagram] = useState(customer?.preferences?.profile?.social?.instagram || '');
     const [facebook, setFacebook] = useState(customer?.preferences?.profile?.social?.facebook || '');
@@ -363,6 +365,7 @@ function ProfileTab({ customer, onUpdate }) {
         setAvatar(customer?.avatar || '');
         setAvatarFile(null);
         setAvatarPreview(resolveMediaUrl(customer?.avatar || ''));
+        setAvatarProcessing(false);
         setBirthDate(customer?.preferences?.profile?.birthDate || '');
         setInstagram(customer?.preferences?.profile?.social?.instagram || '');
         setFacebook(customer?.preferences?.profile?.social?.facebook || '');
@@ -389,6 +392,8 @@ function ProfileTab({ customer, onUpdate }) {
                 const uploaded = await customerService.uploadAvatar(avatarFile);
                 avatarValue = uploaded?.avatar || uploaded?.customer?.avatar || avatarValue;
                 setAvatar(avatarValue || '');
+                setAvatarPreview(resolveMediaUrl(avatarValue || ''));
+                setAvatarFile(null);
             }
 
             const existingPreferences = (customer?.preferences && typeof customer.preferences === 'object')
@@ -427,22 +432,33 @@ function ProfileTab({ customer, onUpdate }) {
         }
     };
 
-    const handleAvatarSelect = (event) => {
+    const handleAvatarSelect = async (event) => {
         const file = event.target.files?.[0];
         if (!file) return;
 
-        if (!file.type.startsWith('image/')) {
-            toast.error('Выберите изображение');
+        const validation = validateImage(file, { maxSizeMB: 10 });
+        if (!validation.valid) {
+            toast.error(validation.error || 'Выберите изображение');
             return;
         }
 
-        if (file.size > 10 * 1024 * 1024) {
-            toast.error('Максимальный размер файла 10MB');
-            return;
-        }
+        try {
+            setAvatarProcessing(true);
+            const optimized = await optimizeAvatarImage(file, {
+                size: 720,
+                quality: 0.86,
+                maxSizeMB: 0.8,
+            });
 
-        setAvatarFile(file);
-        setAvatarPreview(URL.createObjectURL(file));
+            setAvatarFile(optimized);
+            setAvatarPreview(URL.createObjectURL(optimized));
+            toast.success('Фото оптимизировано и готово к сохранению');
+        } catch (error) {
+            console.error('Avatar optimization failed:', error);
+            toast.error('Не удалось обработать фото');
+        } finally {
+            setAvatarProcessing(false);
+        }
     };
 
     return (
@@ -498,17 +514,17 @@ function ProfileTab({ customer, onUpdate }) {
                                     type="file"
                                     accept="image/*"
                                     onChange={handleAvatarSelect}
-                                    disabled={!editing}
+                                    disabled={!editing || avatarProcessing}
                                     className="hidden"
                                 />
                                 <div className="flex items-center gap-2">
                                     <button
                                         type="button"
-                                        disabled={!editing}
+                                        disabled={!editing || avatarProcessing}
                                         onClick={() => avatarInputRef.current?.click()}
                                         className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 text-gray-700 disabled:opacity-50"
                                     >
-                                        Загрузить фото
+                                        {avatarProcessing ? 'Обработка…' : 'Загрузить фото'}
                                     </button>
                                     {editing && (avatarPreview || avatar) && (
                                         <button
@@ -527,7 +543,7 @@ function ProfileTab({ customer, onUpdate }) {
                                         </button>
                                     )}
                                 </div>
-                                <p className="text-[11px] text-gray-500 mt-1">PNG, JPG, WEBP до 10MB</p>
+                                <p className="text-[11px] text-gray-500 mt-1">PNG/JPG/WEBP до 10MB, авто-кроп и сжатие перед загрузкой</p>
                             </div>
                         </div>
                     </div>

@@ -155,3 +155,93 @@ export const shouldCompress = (file, thresholdMB = 1) => {
     const sizeMB = file.size / 1024 / 1024;
     return sizeMB > thresholdMB;
 };
+
+/**
+ * Центрированный квадратный кроп + сжатие для аватара
+ * @param {File} file
+ * @param {Object} options
+ * @param {number} options.size - Размер итогового квадрата в px
+ * @param {number} options.quality - Качество (0..1)
+ * @param {number} options.maxSizeMB - Ограничение итогового файла в МБ
+ * @returns {Promise<File>}
+ */
+export const optimizeAvatarImage = async (file, options = {}) => {
+    const {
+        size = 720,
+        quality = 0.86,
+        maxSizeMB = 0.8,
+    } = options;
+
+    const sourceType = (file?.type || '').toLowerCase();
+    const hasAlpha = sourceType.includes('png') || sourceType.includes('webp') || sourceType.includes('gif');
+    const outputType = hasAlpha ? 'image/webp' : 'image/jpeg';
+    const fileExtension = hasAlpha ? 'webp' : 'jpg';
+
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = (e) => {
+            const img = new Image();
+
+            img.onload = async () => {
+                const sourceWidth = img.width;
+                const sourceHeight = img.height;
+                const cropSize = Math.min(sourceWidth, sourceHeight);
+                const cropX = Math.floor((sourceWidth - cropSize) / 2);
+                const cropY = Math.floor((sourceHeight - cropSize) / 2);
+
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(
+                    img,
+                    cropX,
+                    cropY,
+                    cropSize,
+                    cropSize,
+                    0,
+                    0,
+                    size,
+                    size
+                );
+
+                canvas.toBlob(async (blob) => {
+                    if (!blob) {
+                        reject(new Error('Ошибка обработки аватара'));
+                        return;
+                    }
+
+                    const currentSizeMB = blob.size / 1024 / 1024;
+                    if (currentSizeMB > maxSizeMB && quality > 0.55) {
+                        try {
+                            const smaller = await optimizeAvatarImage(file, {
+                                ...options,
+                                quality: quality * 0.82,
+                            });
+                            resolve(smaller);
+                        } catch (err) {
+                            reject(err);
+                        }
+                        return;
+                    }
+
+                    const originalBaseName = file.name.replace(/\.[^/.]+$/, '');
+                    const optimizedFile = new File([blob], `${originalBaseName}-avatar.${fileExtension}`, {
+                        type: outputType,
+                        lastModified: Date.now(),
+                    });
+
+                    resolve(optimizedFile);
+                }, outputType, quality);
+            };
+
+            img.onerror = () => reject(new Error('Ошибка загрузки изображения'));
+            img.src = e.target.result;
+        };
+
+        reader.onerror = () => reject(new Error('Ошибка чтения файла'));
+        reader.readAsDataURL(file);
+    });
+};
