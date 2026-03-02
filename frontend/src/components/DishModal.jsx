@@ -386,7 +386,8 @@ const DishModal = ({
 
           {/* Рекомендации */}
           {recommendations.length > 0 && (
-            <div className="border-t pt-2 pb-2">
+            <div className="mt-5 border-t border-gray-200 pt-4 pb-2">
+              <p className="text-sm font-semibold text-gray-800 mb-2">Рекомендуемые блюда</p>
               <div className="grid grid-cols-2 gap-2.5">
                 {recommendations.map((rec) => {
                   return (
