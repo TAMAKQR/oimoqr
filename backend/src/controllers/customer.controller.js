@@ -75,34 +75,9 @@ const getEffectiveBonusConfig = (restaurant) => {
     };
 };
 
-const getRestaurantBonusSettings = async (restaurantId) => {
-    if (!restaurantId) return null;
-    return prisma.restaurant.findUnique({
-        where: { id: restaurantId },
-        select: {
-            useTierBonusSettings: true,
-            bonusProgramEnabled: true,
-            bonusAccrualRate: true,
-            bonusExpiryDays: true,
-            subscriptions: {
-                select: {
-                    status: true,
-                    pricingTier: {
-                        select: {
-                            bonusProgramEnabled: true,
-                            bonusAccrualRate: true,
-                            bonusExpiryDays: true
-                        }
-                    }
-                }
-            }
-        }
-    });
-};
-
-const getCustomerAvailableBonusPoints = async (customerId) => {
+const getCustomerAvailableBonusPoints = async (customerId, dbClient = prisma) => {
     const now = new Date();
-    const orders = await prisma.order.findMany({
+    const orders = await dbClient.order.findMany({
         where: { customerId },
         select: {
             status: true,
@@ -162,6 +137,22 @@ const getCustomerAvailableBonusPoints = async (customerId) => {
     }, 0);
 
     return Math.max(0, activeEarned - spentTotal);
+};
+
+const withSerializableRetry = async (operation, retries = 2) => {
+    for (let attempt = 0; attempt <= retries; attempt += 1) {
+        try {
+            return await operation();
+        } catch (error) {
+            const isSerializationConflict = error?.code === 'P2034';
+            const shouldRetry = isSerializationConflict && attempt < retries;
+            if (!shouldRetry) {
+                throw error;
+            }
+        }
+    }
+
+    throw new Error('Transaction retry failed');
 };
 
 /**
@@ -800,63 +791,99 @@ export const createCustomerOrder = async (req, res, next) => {
             });
         }
 
-        let appliedBonusSpent = 0;
-        if (requestedBonusToSpend > 0) {
-            const servingRestaurantBonusSettings = await getRestaurantBonusSettings(servingRestaurantId);
-            const servingRestaurantBonusConfig = getEffectiveBonusConfig(servingRestaurantBonusSettings);
-
-            if (!servingRestaurantBonusConfig.enabled) {
-                return res.status(400).json({ error: 'Bonus program is disabled for this restaurant' });
+        const createOrderData = {
+            orderNumber,
+            restaurantId,
+            assignedRestaurantId,
+            customerId,
+            customerName: customer.name || 'Customer',
+            customerPhone: customer.phone,
+            customerEmail: customer.email,
+            deliveryAddress: resolvedDeliveryAddress,
+            deliveryLatitude: normalizedDeliveryLatitude,
+            deliveryLongitude: normalizedDeliveryLongitude,
+            notes: comment || null,
+            deliveryType: normalizedDeliveryType,
+            paymentMethod: paymentMethod || 'cash',
+            tableNumber: tableNumber || null,
+            customerAddressId: customerAddressId || null,
+            items: {
+                create: trustedItems
             }
+        };
 
-            const availableBonusPoints = await getCustomerAvailableBonusPoints(customerId);
-            const maxByOrderTotal = Math.max(0, Math.floor(orderTotalBeforeBonus));
-            appliedBonusSpent = Math.min(requestedBonusToSpend, availableBonusPoints, maxByOrderTotal);
-
-            if (appliedBonusSpent <= 0) {
-                return res.status(400).json({ error: 'No available bonuses to spend' });
-            }
-        }
-
-        const finalTotal = roundCurrency(Math.max(0, orderTotalBeforeBonus - appliedBonusSpent));
-
-        const order = await prisma.order.create({
-            data: {
-                orderNumber,
-                restaurantId,
-                assignedRestaurantId,
-                customerId,
-                totalAmount: finalTotal,
-                bonusSpent: appliedBonusSpent,
-                customerName: customer.name || 'Customer',
-                customerPhone: customer.phone,
-                customerEmail: customer.email,
-                deliveryAddress: resolvedDeliveryAddress,
-                deliveryLatitude: normalizedDeliveryLatitude,
-                deliveryLongitude: normalizedDeliveryLongitude,
-                notes: comment || null,
-                deliveryType: normalizedDeliveryType,
-                paymentMethod: paymentMethod || 'cash',
-                tableNumber: tableNumber || null,
-                customerAddressId: customerAddressId || null,
-                items: {
-                    create: trustedItems
+        const includeOrderRelations = {
+            items: {
+                include: {
+                    dish: true
                 }
             },
-            include: {
-                items: {
-                    include: {
-                        dish: true
+            restaurant: {
+                include: {
+                    socialLinks: true
+                }
+            },
+            customerAddress: true
+        };
+
+        const order = requestedBonusToSpend > 0
+            ? await withSerializableRetry(() => prisma.$transaction(async (tx) => {
+                await tx.$queryRaw`SELECT id FROM "Customer" WHERE id = ${customerId} FOR UPDATE`;
+
+                const servingRestaurantBonusSettings = await tx.restaurant.findUnique({
+                    where: { id: servingRestaurantId },
+                    select: {
+                        useTierBonusSettings: true,
+                        bonusProgramEnabled: true,
+                        bonusAccrualRate: true,
+                        bonusExpiryDays: true,
+                        subscriptions: {
+                            select: {
+                                status: true,
+                                pricingTier: {
+                                    select: {
+                                        bonusProgramEnabled: true,
+                                        bonusAccrualRate: true,
+                                        bonusExpiryDays: true
+                                    }
+                                }
+                            }
+                        }
                     }
+                });
+                const servingRestaurantBonusConfig = getEffectiveBonusConfig(servingRestaurantBonusSettings);
+
+                if (!servingRestaurantBonusConfig.enabled) {
+                    throw Object.assign(new Error('Bonus program is disabled for this restaurant'), { statusCode: 400 });
+                }
+
+                const availableBonusPoints = await getCustomerAvailableBonusPoints(customerId, tx);
+                const maxByOrderTotal = Math.max(0, Math.floor(orderTotalBeforeBonus));
+                const appliedBonusSpent = Math.min(requestedBonusToSpend, availableBonusPoints, maxByOrderTotal);
+
+                if (appliedBonusSpent <= 0) {
+                    throw Object.assign(new Error('No available bonuses to spend'), { statusCode: 400 });
+                }
+
+                const finalTotal = roundCurrency(Math.max(0, orderTotalBeforeBonus - appliedBonusSpent));
+
+                return tx.order.create({
+                    data: {
+                        ...createOrderData,
+                        totalAmount: finalTotal,
+                        bonusSpent: appliedBonusSpent
+                    },
+                    include: includeOrderRelations
+                });
+            }, { isolationLevel: 'Serializable' }))
+            : await prisma.order.create({
+                data: {
+                    ...createOrderData,
+                    totalAmount: orderTotalBeforeBonus,
+                    bonusSpent: 0
                 },
-                restaurant: {
-                    include: {
-                        socialLinks: true
-                    }
-                },
-                customerAddress: true
-            }
-        });
+                include: includeOrderRelations
+            });
 
         let notificationRestaurant = order.restaurant;
         if (order.assignedRestaurantId) {
@@ -881,6 +908,10 @@ export const createCustomerOrder = async (req, res, next) => {
             orderNumber: order.orderNumber
         });
     } catch (error) {
+        if (error?.statusCode === 400) {
+            return res.status(400).json({ error: error.message });
+        }
+
         console.error('Order creation error:', error);
         res.status(500).json({
             error: 'Failed to create order',
