@@ -42,19 +42,41 @@ const OrderSuccessPage = () => {
         }
     }, [location.state]);
 
-    // If no order data, redirect back
-    useEffect(() => {
-        if (!order) {
-            const timer = setTimeout(() => navigate('/', { replace: true }), 100);
-            return () => clearTimeout(timer);
-        }
-    }, [order, navigate]);
-
-    if (!order) return null;
+    if (!order) {
+        return (
+            <div className="min-h-screen bg-gradient-to-b from-green-50 via-white to-gray-50">
+                <div className="max-w-[480px] mx-auto px-4 pt-10 pb-8">
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 text-center">
+                        <div className="text-4xl mb-3">🧾</div>
+                        <h1 className="text-xl font-bold text-gray-900">Данные заказа не найдены</h1>
+                        <p className="text-sm text-gray-500 mt-2">
+                            Страница была открыта без данных заказа. Откройте историю заказов или вернитесь в меню.
+                        </p>
+                        <div className="mt-5 space-y-2">
+                            <button
+                                onClick={() => navigate('/customer/orders', { replace: true })}
+                                className="w-full py-3 rounded-xl bg-primary-600 text-white font-semibold text-sm"
+                            >
+                                Перейти к моим заказам
+                            </button>
+                            <button
+                                onClick={() => navigate('/', { replace: true })}
+                                className="w-full py-3 rounded-xl bg-white border border-gray-200 text-gray-700 font-medium text-sm"
+                            >
+                                Вернуться в меню
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <FloatingMenuWidget />
+            </div>
+        );
+    }
 
     const orderNumber = order.orderNumber || order.id;
     const displayOrderNumber = `#${String(orderNumber || '').replace(/^#+/, '')}`;
-    const total = order.totalAmount || order.total;
+    const total = Number(order.totalAmount ?? order.total ?? 0);
+    const formattedTotal = Number.isFinite(total) ? total.toFixed(2) : '0.00';
     const deliveryType = order.deliveryType;
     const items = order.items || [];
     const isDineIn = deliveryType === 'dine_in';
@@ -129,7 +151,7 @@ const OrderSuccessPage = () => {
                             </div>
                             <div className="text-right">
                                 <span className="text-xs font-medium text-gray-400">Сумма</span>
-                                <div className="text-xl font-bold text-gray-900 mt-0.5">{total} {currency}</div>
+                                <div className="text-xl font-bold text-gray-900 mt-0.5">{formattedTotal} {currency}</div>
                             </div>
                         </div>
                         <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between text-sm">
@@ -190,6 +212,8 @@ const OrderSuccessPage = () => {
                                             ? (() => { try { return JSON.parse(item.selectedModifiers); } catch { return []; } })()
                                             : [];
                                     const name = item.dish?.name || item.name || item.dishName || 'Блюдо';
+                                    const itemPrice = Number(item.price) || 0;
+                                    const itemQty = Number(item.quantity) || 0;
                                     return (
                                         <div key={idx} className="py-2.5 flex justify-between items-start">
                                             <div className="flex-1 min-w-0">
@@ -199,7 +223,7 @@ const OrderSuccessPage = () => {
                                                 )}
                                             </div>
                                             <div className="text-sm font-medium text-gray-700 ml-3 whitespace-nowrap">
-                                                {(item.price * item.quantity).toFixed(2)} {currency}
+                                                {(itemPrice * itemQty).toFixed(2)} {currency}
                                             </div>
                                         </div>
                                     );
@@ -263,7 +287,13 @@ const OrderSuccessPage = () => {
                 {/* Action Buttons */}
                 <div className={`space-y-3 pt-2 transition-all duration-500 delay-500 ${showItems ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
                     <button
-                        onClick={() => navigate(`/customer/orders/${order.id}`, { replace: true })}
+                        onClick={() => {
+                            if (order?.id) {
+                                navigate(`/customer/orders/${order.id}`, { replace: true });
+                                return;
+                            }
+                            navigate('/customer/orders', { replace: true });
+                        }}
                         className="w-full py-3.5 rounded-xl bg-primary-600 text-white font-semibold text-base shadow-lg shadow-primary-200 active:scale-[0.98] transition"
                     >
                         📋 Отследить заказ
