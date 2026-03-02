@@ -156,10 +156,26 @@ const HomePage = () => {
     { num: '03', key: 'step3', icon: '📲' },
   ];
 
+  const valueHighlights = [
+    { icon: '🎯', key: 'qrmenu' },
+    { icon: '💬', key: 'whatsapp' },
+    { icon: '⚡', key: 'realtime' },
+    { icon: '📊', key: 'analytics' },
+  ];
+
+  const extraAdvantages = [
+    { icon: '🧩', key: 'banner' },
+    { icon: '🗂️', key: 'categories' },
+    { icon: '🔧', key: 'modifiers' },
+    { icon: '🔗', key: 'subdomain' },
+    { icon: '🚀', key: 'trial' },
+    { icon: '📢', key: 'social' },
+  ];
+
   return (
     <div className="min-h-screen bg-white overflow-x-hidden">
       {/* ═══════ HEADER ═══════ */}
-      <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100' : 'bg-transparent'}`}>
+      <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${isMenuOpen || scrolled ? 'bg-white shadow-sm border-b border-gray-100' : 'bg-transparent'}`}>
         <div className="container mx-auto py-3 flex justify-between items-center">
           <Link to="/" className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center shadow-md shadow-primary-500/20">
@@ -205,7 +221,7 @@ const HomePage = () => {
         </div>
 
         {/* Mobile panel */}
-        {isMenuOpen && <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden" onClick={() => setIsMenuOpen(false)} />}
+        {isMenuOpen && <div className="fixed inset-0 bg-black/80 z-40 lg:hidden" onClick={() => setIsMenuOpen(false)} />}
         <div className={`fixed top-0 right-0 h-full w-80 bg-white shadow-2xl z-50 transform transition-transform duration-300 lg:hidden ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
           <div className="flex justify-between items-center p-5 border-b border-gray-100">
             <div className="flex items-center gap-2">
@@ -299,6 +315,17 @@ const HomePage = () => {
                   <div className="text-sm text-gray-500">
                     <span className="font-semibold text-gray-800">500+</span> {t('home.hero.trust')}
                   </div>
+                </div>
+              </Reveal>
+
+              <Reveal delay={500}>
+                <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-2.5 max-w-2xl mx-auto lg:mx-0">
+                  {valueHighlights.map((item) => (
+                    <div key={item.key} className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 shadow-sm">
+                      <span className="text-base leading-none">{item.icon}</span>
+                      <span className="truncate">{t(`home.features.${item.key}`)}</span>
+                    </div>
+                  ))}
                 </div>
               </Reveal>
             </div>
@@ -399,6 +426,17 @@ const HomePage = () => {
               </Reveal>
             ))}
           </div>
+
+          <Reveal delay={200}>
+            <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-6xl mx-auto">
+              {extraAdvantages.map((item) => (
+                <div key={item.key} className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3">
+                  <div className="w-9 h-9 rounded-xl bg-primary-50 flex items-center justify-center text-lg">{item.icon}</div>
+                  <span className="text-sm font-medium text-gray-700">{t(`home.capabilities.${item.key}`)}</span>
+                </div>
+              ))}
+            </div>
+          </Reveal>
         </div>
       </section>
 
