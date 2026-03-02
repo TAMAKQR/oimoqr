@@ -82,7 +82,7 @@ export default function CustomerRestaurantsPage() {
                                             <img
                                                 src={restaurant.logo}
                                                 alt={restaurant.name}
-                                                className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+                                                className="w-16 h-16 rounded-lg object-contain bg-white border border-gray-200 p-1.5 flex-shrink-0"
                                             />
                                         ) : (
                                             <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center flex-shrink-0">

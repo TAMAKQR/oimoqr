@@ -102,23 +102,26 @@ const Cart = ({ restaurant, isDishModalOpen = false }) => {
             )}
 
             <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-500">{itemCount} поз.</span>
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  className="text-primary-700 hover:text-primary-800 font-medium"
+                >
+                  Очистить корзину
+                </button>
+              </div>
               <button
                 type="button"
                 onClick={handleCheckout}
                 disabled={isCheckingOut || isBelowMinimum}
-                className="w-full py-3 rounded-xl bg-primary-600 text-white font-semibold shadow-lg hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
+                className="w-full py-2.5 rounded-xl bg-primary-600 text-white font-semibold shadow-lg hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
               >
                 {isCheckingOut ? '...' : orderMode === 'dine_in'
                   ? `Заказать на ${total.toFixed(2)} ${currency}`
                   : `Оформить на ${total.toFixed(2)} ${currency}`
                 }
-              </button>
-              <button
-                type="button"
-                onClick={handleClear}
-                className="w-full py-2.5 rounded-xl border border-primary-300 text-sm font-medium text-primary-700 hover:bg-primary-50 hover:border-primary-400 transition"
-              >
-                Очистить корзину
               </button>
             </div>
           </div>

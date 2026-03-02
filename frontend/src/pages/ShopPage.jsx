@@ -127,7 +127,7 @@ const ShopPage = () => {
                             <img
                                 src={restaurant.logo}
                                 alt={restaurant.name}
-                                className="w-16 h-16 rounded-grab object-cover"
+                                className="w-16 h-16 rounded-grab object-contain bg-white border border-gray-200 p-1"
                             />
                         )}
                         <div className="flex-1">
