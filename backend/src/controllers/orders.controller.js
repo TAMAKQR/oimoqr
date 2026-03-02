@@ -118,7 +118,7 @@ export const createOrder = async (req, res, next) => {
 
     const validItems = items.filter(item => item && item.id);
 
-    const dishIds = validItems.map(item => item.id);
+    const requestedDishIds = validItems.map(item => item.id);
     const menuSourceRestaurantId = await getMenuSourceRestaurantId(restaurantId);
     if (!menuSourceRestaurantId) {
       return res.status(404).json({ error: 'Restaurant not found' });
@@ -126,14 +126,14 @@ export const createOrder = async (req, res, next) => {
 
     const existingDishes = await prisma.dish.findMany({
       where: {
-        id: { in: dishIds },
+        id: { in: requestedDishIds },
         restaurantId: menuSourceRestaurantId
       },
       select: { id: true }
     });
 
-    if (existingDishes.length !== dishIds.length) {
-      const notFoundIds = dishIds.filter(id => !existingDishes.some(d => d.id === id));
+    if (existingDishes.length !== requestedDishIds.length) {
+      const notFoundIds = requestedDishIds.filter(id => !existingDishes.some(d => d.id === id));
       return res.status(400).json({ error: `One or more dishes not found: ${notFoundIds.join(', ')}` });
     }
 
