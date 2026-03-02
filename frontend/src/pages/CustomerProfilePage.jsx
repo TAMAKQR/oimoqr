@@ -679,6 +679,9 @@ function OrdersTab({ orders }) {
 
 // Favorites Tab Component
 function FavoritesTab({ favorites, onRemove, onViewDish, onAddToCart }) {
+    const [removingId, setRemovingId] = useState(null);
+    const [addingId, setAddingId] = useState(null);
+
     const getImageUrl = (path) => {
         if (!path) return null;
         if (path.startsWith('http')) return path;
@@ -749,45 +752,65 @@ function FavoritesTab({ favorites, onRemove, onViewDish, onAddToCart }) {
     return (
         <div className="flex flex-col gap-2.5 sm:gap-3">
             {favorites.map((fav) => {
-                const imageUrl = getImageUrl(fav.dish.image || fav.dish.imageUrl);
+                const dish = fav?.dish || {};
+                const imageUrl = getImageUrl(dish.image || dish.imageUrl);
+                const dishId = fav?.dishId || dish?.id;
+                const isRemoving = removingId === dishId;
+                const isAdding = addingId === dishId;
+                const price = Number(dish.price);
+                const safePrice = Number.isFinite(price) ? price.toFixed(2) : '0.00';
                 return (
                     <div
                         key={fav.id}
                         className="bg-white shadow rounded-lg overflow-hidden group relative flex cursor-pointer active:scale-[0.99] transition-transform"
-                        onClick={() => onViewDish?.(fav.dish, imageUrl)}
+                        onClick={() => onViewDish?.(dish, imageUrl)}
                     >
                         <div className="w-28 sm:w-32 flex-shrink-0">
-                            <FavoriteImage imageUrl={imageUrl} alt={fav.dish.name} />
+                            <FavoriteImage imageUrl={imageUrl} alt={dish.name || 'Блюдо'} />
                         </div>
                         <div className="p-3 flex-1 flex flex-col justify-between min-w-0">
                             <div>
-                                <h3 className="font-semibold text-gray-900 line-clamp-2 leading-tight text-sm sm:text-base">{fav.dish.name}</h3>
-                                <p className="text-xs sm:text-sm text-gray-500 mt-1 line-clamp-2">{fav.dish.description}</p>
+                                <h3 className="font-semibold text-gray-900 line-clamp-2 leading-tight text-sm sm:text-base">{dish.name || 'Блюдо'}</h3>
+                                <p className="text-xs sm:text-sm text-gray-500 mt-1 line-clamp-2">{dish.description || 'Описание скоро появится'}</p>
                             </div>
                             <div className="mt-3 flex items-center justify-between gap-2">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-base sm:text-lg font-bold text-gray-900">{fav.dish.price} {getCurrencySymbol(fav.dish.restaurant?.currency || 'RUB')}</span>
-                                    <span className="text-xs text-gray-400">{fav.dish.restaurant?.name}</span>
+                                    <span className="text-base sm:text-lg font-bold text-gray-900">{safePrice} {getCurrencySymbol(dish.restaurant?.currency || 'RUB')}</span>
+                                    <span className="text-xs text-gray-400">{dish.restaurant?.name}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <button
-                                        onClick={(e) => {
+                                        onClick={async (e) => {
                                             e.stopPropagation();
-                                            onAddToCart?.(fav.dish, imageUrl);
+                                            if (!dishId || isAdding) return;
+                                            setAddingId(dishId);
+                                            try {
+                                                await Promise.resolve(onAddToCart?.(dish, imageUrl));
+                                            } finally {
+                                                setAddingId(null);
+                                            }
                                         }}
-                                        className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary-600 text-white flex items-center justify-center text-lg font-bold hover:bg-primary-700 active:scale-95 transition"
+                                        disabled={isAdding}
+                                        className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary-600 text-white flex items-center justify-center text-lg font-bold hover:bg-primary-700 active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed"
                                         aria-label="Добавить в корзину"
                                     >
-                                        +
+                                        {isAdding ? '…' : '+'}
                                     </button>
                                     <button
-                                        onClick={(e) => {
+                                        onClick={async (e) => {
                                             e.stopPropagation();
-                                            onRemove(fav.dishId);
+                                            if (!dishId || isRemoving) return;
+                                            setRemovingId(dishId);
+                                            try {
+                                                await Promise.resolve(onRemove(dishId));
+                                            } finally {
+                                                setRemovingId(null);
+                                            }
                                         }}
-                                        className="text-xs sm:text-sm text-red-600 hover:text-red-700"
+                                        disabled={isRemoving}
+                                        className="text-xs sm:text-sm text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        Удалить
+                                        {isRemoving ? 'Удаляем…' : 'Удалить'}
                                     </button>
                                 </div>
                             </div>
