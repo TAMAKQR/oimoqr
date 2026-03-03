@@ -1,5 +1,5 @@
 import { prisma } from '../config/prisma.js';
-import { ensureRestaurantAccess } from '../utils/restaurantAccess.js';
+import { ensureRestaurantAccess, ensureRestaurantOwnerAccess } from '../utils/restaurantAccess.js';
 
 // Get all product categories for a store
 export const getProductCategories = async (req, res, next) => {
@@ -27,7 +27,7 @@ export const createProductCategory = async (req, res, next) => {
     try {
         const { name, description, order, restaurantId } = req.body;
 
-        if (!ensureRestaurantAccess(req, res, restaurantId)) {
+        if (!ensureRestaurantOwnerAccess(req, res, restaurantId)) {
             return;
         }
 
@@ -61,7 +61,7 @@ export const updateProductCategory = async (req, res, next) => {
             return res.status(404).json({ error: 'Category not found' });
         }
 
-        if (!ensureRestaurantAccess(req, res, existingCategory.restaurantId)) {
+        if (!ensureRestaurantOwnerAccess(req, res, existingCategory.restaurantId)) {
             return;
         }
 
@@ -96,7 +96,7 @@ export const deleteProductCategory = async (req, res, next) => {
             return res.status(404).json({ error: 'Category not found' });
         }
 
-        if (!ensureRestaurantAccess(req, res, existingCategory.restaurantId)) {
+        if (!ensureRestaurantOwnerAccess(req, res, existingCategory.restaurantId)) {
             return;
         }
 
@@ -186,7 +186,7 @@ export const createProduct = async (req, res, next) => {
             return res.status(400).json({ error: 'Price must be a number greater than or equal to 0' });
         }
 
-        if (!ensureRestaurantAccess(req, res, restaurantId)) {
+        if (!ensureRestaurantOwnerAccess(req, res, restaurantId)) {
             return;
         }
 
@@ -242,7 +242,7 @@ export const updateProduct = async (req, res, next) => {
             return res.status(404).json({ error: 'Product not found' });
         }
 
-        if (!ensureRestaurantAccess(req, res, existingProduct.restaurantId)) {
+        if (!ensureRestaurantOwnerAccess(req, res, existingProduct.restaurantId)) {
             return;
         }
 
@@ -294,7 +294,7 @@ export const deleteProduct = async (req, res, next) => {
             return res.status(404).json({ error: 'Product not found' });
         }
 
-        if (!ensureRestaurantAccess(req, res, existingProduct.restaurantId)) {
+        if (!ensureRestaurantOwnerAccess(req, res, existingProduct.restaurantId)) {
             return;
         }
 
@@ -321,7 +321,7 @@ export const uploadProductImage = async (req, res, next) => {
             return res.status(404).json({ error: 'Product not found' });
         }
 
-        if (!ensureRestaurantAccess(req, res, product.restaurantId)) {
+        if (!ensureRestaurantOwnerAccess(req, res, product.restaurantId)) {
             return;
         }
 

@@ -43,25 +43,6 @@ const ensureOwnerAccessToRestaurant = (req, res, restaurantId) => {
   return false;
 };
 
-const ensureManagerStopAccessToRestaurant = (req, res, restaurantId) => {
-  if (!restaurantId) {
-    res.status(403).json({ error: 'Доступ запрещен' });
-    return false;
-  }
-
-  const isOwnerOrAdmin = hasOwnerAccessToRestaurant(req, restaurantId);
-  const isStaff = req.user?.restaurantStaff?.some((staff) => staff.restaurantId === restaurantId);
-
-  if (isOwnerOrAdmin || isStaff) {
-    return true;
-  }
-
-  res.status(403).json({
-    error: 'Только менеджер или главный администратор ресторана может ставить блюда на стоп'
-  });
-  return false;
-};
-
 export const getDishes = async (req, res, next) => {
   try {
     const { categoryId } = req.params;
@@ -412,7 +393,7 @@ export const deleteDishImage = async (req, res, next) => {
       return res.status(404).json({ error: 'Dish not found' });
     }
 
-    if (!ensureManagerStopAccessToRestaurant(req, res, dish.category.restaurantId)) {
+    if (!ensureOwnerAccessToRestaurant(req, res, dish.category.restaurantId)) {
       return;
     }
 

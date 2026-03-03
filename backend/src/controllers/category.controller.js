@@ -1,5 +1,5 @@
 import { prisma } from '../config/prisma.js';
-import { ensureRestaurantAccess } from '../utils/restaurantAccess.js';
+import { ensureRestaurantAccess, ensureRestaurantOwnerAccess } from '../utils/restaurantAccess.js';
 
 export const getCategories = async (req, res, next) => {
   try {
@@ -78,7 +78,7 @@ export const createCategory = async (req, res, next) => {
   try {
     const { name, description, restaurantId, order, categoryGroupId } = req.body;
 
-    if (!ensureRestaurantAccess(req, res, restaurantId)) {
+    if (!ensureRestaurantOwnerAccess(req, res, restaurantId)) {
       return;
     }
 
@@ -141,7 +141,7 @@ export const updateCategory = async (req, res, next) => {
       return res.status(404).json({ error: 'Category not found' });
     }
 
-    if (!ensureRestaurantAccess(req, res, category.restaurantId)) {
+    if (!ensureRestaurantOwnerAccess(req, res, category.restaurantId)) {
       return;
     }
 
@@ -177,7 +177,7 @@ export const deleteCategory = async (req, res, next) => {
       return res.status(404).json({ error: 'Category not found' });
     }
 
-    if (!ensureRestaurantAccess(req, res, category.restaurantId)) {
+    if (!ensureRestaurantOwnerAccess(req, res, category.restaurantId)) {
       return;
     }
 
@@ -202,7 +202,7 @@ export const reorderCategories = async (req, res, next) => {
       return res.status(400).json({ error: 'Invalid categoryIds' });
     }
 
-    if (!ensureRestaurantAccess(req, res, restaurantId)) {
+    if (!ensureRestaurantOwnerAccess(req, res, restaurantId)) {
       return;
     }
 

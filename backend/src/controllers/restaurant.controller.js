@@ -1484,12 +1484,21 @@ export const setDishStop = async (req, res, next) => {
     const userId = req.user.id;
     const { isStopped = true, reason } = req.body;
 
+    const isOwnerOrAdmin = req.user?.isAdmin || req.user?.restaurants?.some((restaurant) => restaurant.id === restaurantId);
+    const hasManagerRole = req.user?.restaurantStaff?.some(
+      (staff) => staff.restaurantId === restaurantId && staff.role === 'manager'
+    );
+
+    if (!isOwnerOrAdmin && !hasManagerRole) {
+      return res.status(403).json({ error: 'Only manager or owner can manage dish stop status' });
+    }
+
     const restaurant = await prisma.restaurant.findFirst({
       where: {
         id: restaurantId,
         OR: [
           { ownerId: userId },
-          { staff: { some: { userId } } }
+          { staff: { some: { userId, role: 'manager' } } }
         ]
       },
       select: {

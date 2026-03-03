@@ -207,8 +207,8 @@ export const getStaffPermissions = async (req, res, next) => {
       return res.status(404).json({ error: 'Staff member not found' });
     }
 
-    // Менеджеры имеют фиксированные права: управление меню
-    const permissions = ['menu', 'dishes', 'categories', 'modifiers'];
+    // Менеджеры имеют фиксированные права: только стоп/анстоп блюд
+    const permissions = ['dish_stop'];
 
     res.json({ permissions });
   } catch (error) {
