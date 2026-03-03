@@ -868,6 +868,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
   const [newModifierName, setNewModifierName] = useState('');
   const [newModifierType, setNewModifierType] = useState('single');
   const [newModifierRequired, setNewModifierRequired] = useState(false);
+  const [optionEditorByModifier, setOptionEditorByModifier] = useState({});
 
   // Состояние для библиотеки модификаторов
   const [showTemplates, setShowTemplates] = useState(false);
@@ -889,6 +890,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
   // Обновляем recommendationIds при изменении dish
   useEffect(() => {
     setRecommendationIds(dish?.recommendationIds || []);
+    setOptionEditorByModifier({});
   }, [dish?.id]);
 
   // Загрузка всех блюд ресторана (для выбора рекомендаций)
@@ -1052,31 +1054,108 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
   };
 
   // Управление опциями модификатора
-  const handleAddOption = async (modifier) => {
-    const optionName = prompt('Название опции (например: Клубника)');
-    if (!optionName?.trim()) return;
+  const openOptionEditor = (modifier, option = null) => {
+    const editorState = option
+      ? {
+        optionId: option.id,
+        name: option.name || '',
+        price: String(option.price ?? 0),
+        deliveryPrice: option.deliveryPrice === null || option.deliveryPrice === undefined
+          ? ''
+          : String(option.deliveryPrice)
+      }
+      : {
+        optionId: null,
+        name: '',
+        price: '0',
+        deliveryPrice: ''
+      };
 
-    const optionPriceStr = prompt('Дополнительная цена (0 если без доплаты)');
-    const optionPrice = parseFloat(optionPriceStr) || 0;
-    const optionDeliveryPriceStr = prompt('Цена для доставки (пусто = как в зале)', '');
-    let optionDeliveryPrice = null;
-    if (optionDeliveryPriceStr !== null && optionDeliveryPriceStr.trim() !== '') {
-      const parsedDelivery = parseFloat(optionDeliveryPriceStr);
-      if (isNaN(parsedDelivery) || parsedDelivery < 0) {
+    setOptionEditorByModifier(prev => ({
+      ...prev,
+      [modifier.id]: editorState
+    }));
+  };
+
+  const closeOptionEditor = (modifierId) => {
+    setOptionEditorByModifier(prev => {
+      const next = { ...prev };
+      delete next[modifierId];
+      return next;
+    });
+  };
+
+  const updateOptionEditorField = (modifierId, field, value) => {
+    setOptionEditorByModifier(prev => ({
+      ...prev,
+      [modifierId]: {
+        ...(prev[modifierId] || { optionId: null, name: '', price: '0', deliveryPrice: '' }),
+        [field]: value
+      }
+    }));
+  };
+
+  const handleSaveOption = async (modifier) => {
+    const editor = optionEditorByModifier[modifier.id];
+    if (!editor) return;
+
+    const optionName = (editor.name || '').trim();
+    if (!optionName) {
+      toast.error('Название опции обязательно');
+      return;
+    }
+
+    const parsedPrice = parseFloat(editor.price);
+    if (isNaN(parsedPrice) || parsedPrice < 0) {
+      toast.error('Цена в зале должна быть числом больше или равным 0');
+      return;
+    }
+
+    let parsedDeliveryPrice = null;
+    if (String(editor.deliveryPrice || '').trim() !== '') {
+      parsedDeliveryPrice = parseFloat(editor.deliveryPrice);
+      if (isNaN(parsedDeliveryPrice) || parsedDeliveryPrice < 0) {
         toast.error('Цена доставки должна быть числом больше или равным 0');
         return;
       }
-      optionDeliveryPrice = parsedDelivery;
     }
 
     const optionData = {
-      name: optionName.trim(),
-      price: optionPrice,
-      deliveryPrice: optionDeliveryPrice
+      name: optionName,
+      price: parsedPrice,
+      deliveryPrice: parsedDeliveryPrice
     };
 
+    if (editor.optionId) {
+      const existingOption = (modifier.options || []).find(o => o.id === editor.optionId);
+
+      if (existingOption && !existingOption.isNew && dish?.id) {
+        try {
+          const updated = await menuService.updateModifierOption(existingOption.id, { ...optionData, restaurantId }, restaurantId);
+          setModifiers(prev => prev.map(m =>
+            m.id === modifier.id
+              ? { ...m, options: (m.options || []).map(o => o.id === existingOption.id ? { ...o, ...updated } : o) }
+              : m
+          ));
+          toast.success('Опция обновлена');
+        } catch (err) {
+          toast.error('Ошибка при обновлении опции');
+          console.error(err);
+          return;
+        }
+      } else {
+        setModifiers(prev => prev.map(m =>
+          m.id === modifier.id
+            ? { ...m, options: (m.options || []).map(o => o.id === editor.optionId ? { ...o, ...optionData } : o) }
+            : m
+        ));
+      }
+
+      closeOptionEditor(modifier.id);
+      return;
+    }
+
     if (!modifier.isNew && dish?.id) {
-      // Создаем опцию сразу в базе
       try {
         const created = await menuService.createModifierOption(modifier.id, { ...optionData, restaurantId });
         setModifiers(prev => prev.map(m =>
@@ -1088,9 +1167,9 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
       } catch (err) {
         toast.error('Ошибка при добавлении опции');
         console.error(err);
+        return;
       }
     } else {
-      // Добавляем временную опцию
       const newOption = {
         ...optionData,
         id: `temp-opt-${Date.now()}`,
@@ -1103,67 +1182,8 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
       ));
       toast('💡 Сохраните блюдо, чтобы добавить фото к опциям', { icon: 'ℹ️' });
     }
-  };
 
-  const handleEditOption = async (modifier, option) => {
-    const optionName = prompt('Название опции', option.name || '');
-    if (optionName === null) return;
-    if (!optionName.trim()) {
-      toast.error('Название опции обязательно');
-      return;
-    }
-
-    const optionPriceStr = prompt('Цена в зале', String(option.price ?? 0));
-    if (optionPriceStr === null) return;
-    const optionPrice = parseFloat(optionPriceStr);
-    if (isNaN(optionPrice) || optionPrice < 0) {
-      toast.error('Цена в зале должна быть числом больше или равным 0');
-      return;
-    }
-
-    const currentDelivery = option.deliveryPrice === null || option.deliveryPrice === undefined
-      ? ''
-      : String(option.deliveryPrice);
-    const optionDeliveryPriceStr = prompt('Цена для доставки (пусто = как в зале)', currentDelivery);
-    if (optionDeliveryPriceStr === null) return;
-
-    let optionDeliveryPrice = null;
-    if (optionDeliveryPriceStr.trim() !== '') {
-      const parsedDelivery = parseFloat(optionDeliveryPriceStr);
-      if (isNaN(parsedDelivery) || parsedDelivery < 0) {
-        toast.error('Цена доставки должна быть числом больше или равным 0');
-        return;
-      }
-      optionDeliveryPrice = parsedDelivery;
-    }
-
-    const nextOptionData = {
-      name: optionName.trim(),
-      price: optionPrice,
-      deliveryPrice: optionDeliveryPrice
-    };
-
-    if (!option.isNew && dish?.id) {
-      try {
-        const updated = await menuService.updateModifierOption(option.id, { ...nextOptionData, restaurantId }, restaurantId);
-        setModifiers(prev => prev.map(m =>
-          m.id === modifier.id
-            ? { ...m, options: (m.options || []).map(o => o.id === option.id ? { ...o, ...updated } : o) }
-            : m
-        ));
-        toast.success('Опция обновлена');
-      } catch (err) {
-        toast.error('Ошибка при обновлении опции');
-        console.error(err);
-      }
-      return;
-    }
-
-    setModifiers(prev => prev.map(m =>
-      m.id === modifier.id
-        ? { ...m, options: (m.options || []).map(o => o.id === option.id ? { ...o, ...nextOptionData } : o) }
-        : m
-    ));
+    closeOptionEditor(modifier.id);
   };
 
   const handleDeleteOption = async (modifier, option) => {
@@ -1652,7 +1672,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
                           <div className="flex gap-1 flex-shrink-0">
                             <button
                               type="button"
-                              onClick={() => handleEditOption(modifier, option)}
+                              onClick={() => openOptionEditor(modifier, option)}
                               className="text-gray-600 hover:text-gray-800 text-sm px-2"
                               title="Редактировать опцию"
                             >
@@ -1686,11 +1706,60 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
                       {/* Кнопка добавления опции */}
                       <button
                         type="button"
-                        onClick={() => handleAddOption(modifier)}
+                        onClick={() => openOptionEditor(modifier)}
                         className="w-full text-left text-sm text-blue-600 hover:text-blue-800 p-2 border border-dashed rounded hover:bg-blue-50"
                       >
                         + Добавить опцию
                       </button>
+
+                      {optionEditorByModifier[modifier.id] && (
+                        <div className="bg-white border rounded p-3 space-y-2">
+                          <input
+                            type="text"
+                            value={optionEditorByModifier[modifier.id].name}
+                            onChange={(e) => updateOptionEditorField(modifier.id, 'name', e.target.value)}
+                            placeholder="Название опции"
+                            className="input w-full text-sm"
+                          />
+                          <div className="grid grid-cols-2 gap-2">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={optionEditorByModifier[modifier.id].price}
+                              onChange={(e) => updateOptionEditorField(modifier.id, 'price', e.target.value)}
+                              placeholder="Цена в зале"
+                              className="input w-full text-sm"
+                            />
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={optionEditorByModifier[modifier.id].deliveryPrice}
+                              onChange={(e) => updateOptionEditorField(modifier.id, 'deliveryPrice', e.target.value)}
+                              placeholder="Цена доставки"
+                              className="input w-full text-sm"
+                            />
+                          </div>
+                          <p className="text-xs text-gray-500">Если цена доставки пустая, используется цена в зале</p>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleSaveOption(modifier)}
+                              className="btn-primary text-sm flex-1"
+                            >
+                              {optionEditorByModifier[modifier.id].optionId ? 'Сохранить опцию' : 'Добавить опцию'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => closeOptionEditor(modifier.id)}
+                              className="btn-secondary text-sm"
+                            >
+                              Отмена
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
