@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { restaurantService } from '../services/restaurantService';
 import { pricingService } from '../services/pricingService';
@@ -168,13 +168,6 @@ const DashboardPage = () => {
   useEffect(() => {
     loadPricingTiers();
   }, []);
-
-  useEffect(() => {
-    // Redirect admin to admin panel
-    if (userData?.isAdmin) {
-      navigate('/admin');
-    }
-  }, [userData, navigate]);
 
   const loadPricingTiers = async () => {
     try {
@@ -439,6 +432,10 @@ const DashboardPage = () => {
 
     return [];
   };
+
+  if (user?.isAdmin) {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
 
   if (loading) {
     return (

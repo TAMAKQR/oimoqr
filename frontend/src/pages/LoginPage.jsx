@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 const LoginPage = () => {
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
-  
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -30,9 +30,9 @@ const LoginPage = () => {
     try {
       const response = await authService.login(formData.email, formData.password);
       setAuth(response.user, response.token);
-      
+
       if (response.user.isAdmin) {
-        navigate('/admin', { replace: true });
+        navigate('/admin/dashboard', { replace: true });
       } else {
         navigate('/dashboard');
       }
