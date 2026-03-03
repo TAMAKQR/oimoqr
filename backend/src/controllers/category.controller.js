@@ -5,7 +5,6 @@ import { getModifierOptionSelect } from '../utils/modifierOptionFields.js';
 export const getCategories = async (req, res, next) => {
   try {
     const { restaurantId } = req.params;
-    const modifierOptionSelect = await getModifierOptionSelect();
     const restaurant = await prisma.restaurant.findUnique({
       where: { id: restaurantId },
       select: { id: true, sharedMenuSourceRestaurantId: true }
@@ -17,26 +16,47 @@ export const getCategories = async (req, res, next) => {
 
     const menuSourceRestaurantId = restaurant.sharedMenuSourceRestaurantId || restaurant.id;
 
-    const categories = await prisma.category.findMany({
-      where: { restaurantId: menuSourceRestaurantId },
-      orderBy: { order: 'asc' },
-      include: {
-        categoryGroup: true, // Включаем информацию о группе категорий
-        dishes: {
-          orderBy: { order: 'asc' },
-          include: {
-            modifiers: {
-              orderBy: { order: 'asc' },
-              include: {
-                options: {
-                  select: modifierOptionSelect
+    let categories;
+    try {
+      const modifierOptionSelect = await getModifierOptionSelect();
+      categories = await prisma.category.findMany({
+        where: { restaurantId: menuSourceRestaurantId },
+        orderBy: { order: 'asc' },
+        include: {
+          categoryGroup: true,
+          dishes: {
+            orderBy: { order: 'asc' },
+            include: {
+              modifiers: {
+                orderBy: { order: 'asc' },
+                include: {
+                  options: {
+                    select: modifierOptionSelect
+                  }
                 }
               }
             }
           }
         }
-      }
-    });
+      });
+    } catch (modifierError) {
+      console.error('⚠️ getCategories fallback mode: failed to load modifier options, returning categories without options', modifierError);
+      categories = await prisma.category.findMany({
+        where: { restaurantId: menuSourceRestaurantId },
+        orderBy: { order: 'asc' },
+        include: {
+          categoryGroup: true,
+          dishes: {
+            orderBy: { order: 'asc' },
+            include: {
+              modifiers: {
+                orderBy: { order: 'asc' }
+              }
+            }
+          }
+        }
+      });
+    }
     const dishStops = await prisma.dishStop.findMany({
       where: { restaurantId, isStopped: true },
       select: { dishId: true, reason: true }
@@ -58,11 +78,14 @@ export const getCategories = async (req, res, next) => {
       return {
         ...categoryRest,
         dishes: dishes.map(dish => {
-          const { modifiers, ...dishRest } = dish;
+          const { modifiers = [], ...dishRest } = dish;
           const isStopped = stopByDish.has(dish.id);
           return {
             ...dishRest,
-            modifiers,
+            modifiers: modifiers.map((modifier) => ({
+              ...modifier,
+              options: Array.isArray(modifier.options) ? modifier.options : []
+            })),
             available: dish.available && !isStopped,
             stoppedAtRestaurant: isStopped,
             stopReason: stopByDish.get(dish.id),

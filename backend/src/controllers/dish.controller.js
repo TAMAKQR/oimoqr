@@ -1,5 +1,5 @@
 import { prisma } from '../config/prisma.js';
-import { getModifierOptionSelect } from '../utils/modifierOptionFields.js';
+import { getModifierOptionSelect, hasModifierOptionDeliveryPriceColumn } from '../utils/modifierOptionFields.js';
 
 const ensureModifierManagementAllowed = async (selectedRestaurantId) => {
   if (!selectedRestaurantId) {
@@ -738,13 +738,18 @@ export const createModifierOption = async (req, res, next) => {
       return;
     }
 
+    const canUseDeliveryPrice = await hasModifierOptionDeliveryPriceColumn();
+    const createData = {
+      modifierId,
+      name,
+      price: parsedPrice
+    };
+    if (canUseDeliveryPrice) {
+      createData.deliveryPrice = parsedDeliveryPrice;
+    }
+
     const option = await prisma.modifierOption.create({
-      data: {
-        modifierId,
-        name,
-        price: parsedPrice,
-        deliveryPrice: parsedDeliveryPrice
-      }
+      data: createData
     });
 
     res.status(201).json(option);
@@ -806,10 +811,14 @@ export const updateModifierOption = async (req, res, next) => {
       return;
     }
 
+    const canUseDeliveryPrice = await hasModifierOptionDeliveryPriceColumn();
+
     const updateData = {};
     if (name !== undefined) updateData.name = name;
     if (parsedPrice !== undefined) updateData.price = parsedPrice;
-    if (parsedDeliveryPrice !== undefined) updateData.deliveryPrice = parsedDeliveryPrice;
+    if (canUseDeliveryPrice && parsedDeliveryPrice !== undefined) {
+      updateData.deliveryPrice = parsedDeliveryPrice;
+    }
 
     const updatedOption = await prisma.modifierOption.update({
       where: { id: optionId },

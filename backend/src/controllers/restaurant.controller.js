@@ -192,50 +192,90 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
     // 3) Загружаем категории/блюда отдельно и фильтруем переводы на уровне БД
     const t3 = Date.now();
     const menuSourceRestaurantId = restaurantBase.sharedMenuSourceRestaurantId || restaurantBase.id;
-    const modifierOptionSelect = await getModifierOptionSelect();
-
-    const categories = await prisma.category.findMany({
-      where: { restaurantId: menuSourceRestaurantId },
-      orderBy: { order: 'asc' },
-      include: {
-        translations: {
-          where: { languageCode: language }
-        },
-        dishes: {
-          where: { available: true },
-          orderBy: { order: 'asc' },
-          select: {
-            id: true,
-            name: true,
-            description: true,
-            price: true,
-            deliveryPrice: true,
-            image: true,
-            available: true,
-            order: true,
-            allergens: true,
-            discount: true,
-            badge: true,
-            categoryId: true,
-            restaurantId: true,
-            createdAt: true,
-            updatedAt: true,
-            translations: {
-              where: { languageCode: language }
-            },
-            modifiers: {
-              orderBy: { order: 'asc' },
-              include: {
-                options: {
-                  orderBy: { createdAt: 'asc' },
-                  select: modifierOptionSelect
+    let categories;
+    try {
+      const modifierOptionSelect = await getModifierOptionSelect();
+      categories = await prisma.category.findMany({
+        where: { restaurantId: menuSourceRestaurantId },
+        orderBy: { order: 'asc' },
+        include: {
+          translations: {
+            where: { languageCode: language }
+          },
+          dishes: {
+            where: { available: true },
+            orderBy: { order: 'asc' },
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              price: true,
+              deliveryPrice: true,
+              image: true,
+              available: true,
+              order: true,
+              allergens: true,
+              discount: true,
+              badge: true,
+              categoryId: true,
+              restaurantId: true,
+              createdAt: true,
+              updatedAt: true,
+              translations: {
+                where: { languageCode: language }
+              },
+              modifiers: {
+                orderBy: { order: 'asc' },
+                include: {
+                  options: {
+                    orderBy: { createdAt: 'asc' },
+                    select: modifierOptionSelect
+                  }
                 }
               }
             }
           }
         }
-      }
-    });
+      });
+    } catch (modifierError) {
+      console.error('⚠️ getRestaurantBySubdomain fallback mode: failed to load modifier options, returning menu without option payload', modifierError);
+      categories = await prisma.category.findMany({
+        where: { restaurantId: menuSourceRestaurantId },
+        orderBy: { order: 'asc' },
+        include: {
+          translations: {
+            where: { languageCode: language }
+          },
+          dishes: {
+            where: { available: true },
+            orderBy: { order: 'asc' },
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              price: true,
+              deliveryPrice: true,
+              image: true,
+              available: true,
+              order: true,
+              allergens: true,
+              discount: true,
+              badge: true,
+              categoryId: true,
+              restaurantId: true,
+              createdAt: true,
+              updatedAt: true,
+              translations: {
+                where: { languageCode: language }
+              },
+              modifiers: {
+                orderBy: { order: 'asc' }
+              }
+            }
+          }
+        }
+      });
+    }
 
     const stopList = await prisma.dishStop.findMany({
       where: {
@@ -272,6 +312,10 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
             const isStopped = stoppedByDishId.has(dish.id);
             return {
               ...dish,
+              modifiers: (dish.modifiers || []).map((modifier) => ({
+                ...modifier,
+                options: Array.isArray(modifier.options) ? modifier.options : []
+              })),
               imageUrl: dish.image,
               available: dish.available && !isStopped,
               stoppedAtRestaurant: isStopped,
