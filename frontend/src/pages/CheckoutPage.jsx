@@ -308,7 +308,7 @@ const CheckoutPage = () => {
                 items: cartItems.map(item => ({
                     id: item.dish?.id,
                     quantity: item.quantity,
-                    price: item.totalPrice,
+                    price: getItemUnitPrice(item),
                     selectedModifiers: item.modifiers?.map(m => ({ id: m.id, name: m.name, price: m.price })) || []
                 })),
                 total: Number(baseTotalWithDelivery.toFixed(2)),
@@ -355,7 +355,25 @@ const CheckoutPage = () => {
         }
     };
 
-    const total = Number(getTotal() || 0);
+    const getItemModifiersTotal = (item) => {
+        if (!Array.isArray(item?.modifiers)) return 0;
+        return item.modifiers.reduce((sum, modifier) => sum + (Number(modifier?.price) || 0), 0);
+    };
+
+    const getItemUnitPrice = (item) => {
+        const dish = item?.dish || {};
+        const isDeliveryMode = deliveryType !== 'dine_in';
+        const basePrice = isDeliveryMode && dish.deliveryPrice !== null && dish.deliveryPrice !== undefined
+            ? Number(dish.deliveryPrice)
+            : Number(dish.price);
+
+        return Number(((Number.isFinite(basePrice) ? basePrice : 0) + getItemModifiersTotal(item)).toFixed(2));
+    };
+
+    const total = cartItems.reduce((sum, item) => {
+        const quantity = Number(item?.quantity) || 0;
+        return sum + (getItemUnitPrice(item) * quantity);
+    }, 0);
     const freeDeliveryThreshold = Number(restaurant?.freeDeliveryThreshold || 0);
     const isFreeDelivery = freeDeliveryThreshold > 0 && total >= freeDeliveryThreshold;
     const deliveryFee = deliveryType === 'delivery' && !isFreeDelivery ? Number(restaurant?.deliveryFee || 0) : 0;
@@ -411,7 +429,7 @@ const CheckoutPage = () => {
                                     +
                                 </button>
                             </div>
-                            <div className="text-sm font-semibold text-gray-900 whitespace-nowrap">{(item.totalPrice * item.quantity).toFixed(2)} {currency}</div>
+                            <div className="text-sm font-semibold text-gray-900 whitespace-nowrap">{(getItemUnitPrice(item) * item.quantity).toFixed(2)} {currency}</div>
                         </div>
                     </div>
                 ))}
