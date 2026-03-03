@@ -124,6 +124,7 @@ const DashboardPage = () => {
   const [isOrderLoading, setIsOrderLoading] = useState(false);
   const lastOrderIdRef = useRef(null);
   const [updatingStatusId, setUpdatingStatusId] = useState(null);
+  const [loadingGuardTriggered, setLoadingGuardTriggered] = useState(false);
 
   const canViewAnalytics = useMemo(() => {
     if (!selectedRestaurantId || !userData) return false;
@@ -168,6 +169,19 @@ const DashboardPage = () => {
   useEffect(() => {
     loadPricingTiers();
   }, []);
+
+  useEffect(() => {
+    if (!loading) {
+      setLoadingGuardTriggered(false);
+      return undefined;
+    }
+
+    const timeoutId = setTimeout(() => {
+      setLoadingGuardTriggered(true);
+    }, 10000);
+
+    return () => clearTimeout(timeoutId);
+  }, [loading]);
 
   const loadPricingTiers = async () => {
     try {
@@ -437,6 +451,36 @@ const DashboardPage = () => {
   }
 
   if (loading) {
+    if (loadingGuardTriggered) {
+      return (
+        <div className="min-h-screen flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-white rounded-xl border border-gray-200 p-6 text-center">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Загрузка занимает слишком много времени</h2>
+            <p className="text-sm text-gray-600 mb-5">Попробуйте обновить страницу или войти заново.</p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                className="btn-secondary flex-1"
+                onClick={() => window.location.reload()}
+              >
+                Обновить
+              </button>
+              <button
+                type="button"
+                className="btn-primary flex-1"
+                onClick={() => {
+                  logout();
+                  navigate('/login', { replace: true });
+                }}
+              >
+                Войти заново
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-xl">Загрузка...</div>
