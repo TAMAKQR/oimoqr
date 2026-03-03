@@ -288,6 +288,7 @@ model ModifierOption {
   id                String    @id @default(cuid())
   name              String
   price             Float     @default(0)
+  deliveryPrice     Float?
   image             String?   // ✅ Фото для конкретного модификатора (например, коктейль с клубникой)
   
   modifierId        String

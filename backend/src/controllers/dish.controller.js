@@ -697,7 +697,7 @@ export const reorderDishes = async (req, res, next) => {
 export const createModifierOption = async (req, res, next) => {
   try {
     const { modifierId } = req.params;
-    const { name, price = 0, restaurantId: selectedRestaurantId } = req.body;
+    const { name, price = 0, deliveryPrice, restaurantId: selectedRestaurantId } = req.body;
 
     await ensureModifierManagementAllowed(selectedRestaurantId || req.query.restaurantId);
 
@@ -705,6 +705,14 @@ export const createModifierOption = async (req, res, next) => {
     const parsedPrice = parseFloat(price);
     if (isNaN(parsedPrice) || parsedPrice < 0) {
       return res.status(400).json({ error: 'Option price must be a number greater than or equal to 0' });
+    }
+
+    let parsedDeliveryPrice = null;
+    if (deliveryPrice !== undefined && deliveryPrice !== null && deliveryPrice !== '') {
+      parsedDeliveryPrice = parseFloat(deliveryPrice);
+      if (isNaN(parsedDeliveryPrice) || parsedDeliveryPrice < 0) {
+        return res.status(400).json({ error: 'Option delivery price must be a number greater than or equal to 0' });
+      }
     }
 
     const modifier = await prisma.modifier.findUnique({
@@ -730,7 +738,8 @@ export const createModifierOption = async (req, res, next) => {
       data: {
         modifierId,
         name,
-        price: parsedPrice
+        price: parsedPrice,
+        deliveryPrice: parsedDeliveryPrice
       }
     });
 
@@ -744,7 +753,7 @@ export const createModifierOption = async (req, res, next) => {
 export const updateModifierOption = async (req, res, next) => {
   try {
     const { optionId } = req.params;
-    const { name, price, restaurantId: selectedRestaurantId } = req.body;
+    const { name, price, deliveryPrice, restaurantId: selectedRestaurantId } = req.body;
 
     await ensureModifierManagementAllowed(selectedRestaurantId || req.query.restaurantId);
 
@@ -754,6 +763,18 @@ export const updateModifierOption = async (req, res, next) => {
       parsedPrice = parseFloat(price);
       if (isNaN(parsedPrice) || parsedPrice < 0) {
         return res.status(400).json({ error: 'Option price must be a number greater than or equal to 0' });
+      }
+    }
+
+    let parsedDeliveryPrice = undefined;
+    if (deliveryPrice !== undefined) {
+      if (deliveryPrice === null || deliveryPrice === '') {
+        parsedDeliveryPrice = null;
+      } else {
+        parsedDeliveryPrice = parseFloat(deliveryPrice);
+        if (isNaN(parsedDeliveryPrice) || parsedDeliveryPrice < 0) {
+          return res.status(400).json({ error: 'Option delivery price must be a number greater than or equal to 0' });
+        }
       }
     }
 
@@ -784,6 +805,7 @@ export const updateModifierOption = async (req, res, next) => {
     const updateData = {};
     if (name !== undefined) updateData.name = name;
     if (parsedPrice !== undefined) updateData.price = parsedPrice;
+    if (parsedDeliveryPrice !== undefined) updateData.deliveryPrice = parsedDeliveryPrice;
 
     const updatedOption = await prisma.modifierOption.update({
       where: { id: optionId },

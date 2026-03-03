@@ -69,6 +69,7 @@ export const buildTrustedOrderItems = async ({ items, menuSourceRestaurantId, de
                 id: true,
                 name: true,
                 price: true,
+                deliveryPrice: true,
                 modifier: {
                     select: {
                         dishId: true
@@ -121,7 +122,9 @@ export const buildTrustedOrderItems = async ({ items, menuSourceRestaurantId, de
                 return { ok: false, error: `Modifier option ${modifierId} does not belong to dish ${dish.id}` };
             }
 
-            const optionPrice = Number(option.price || 0);
+            const optionPrice = isDeliveryLike(deliveryType)
+                ? Number(option.deliveryPrice ?? option.price ?? 0)
+                : Number(option.price || 0);
             modifiersTotal += Number.isFinite(optionPrice) ? optionPrice : 0;
             trustedModifiers.push({
                 id: option.id,

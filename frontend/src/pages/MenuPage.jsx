@@ -291,6 +291,31 @@ const MenuPage = () => {
   const minOrderAmount = displayRestaurant?.minOrderAmount || 0;
   const isBelowMinimum = orderMode !== 'dine_in' && minOrderAmount > 0 && cartTotal < minOrderAmount;
 
+  const getDisplayDishForOrderMode = useCallback((dish) => {
+    const displayDish = { ...dish };
+    const isDeliveryMode = orderMode !== 'dine_in';
+
+    if (isDeliveryMode && dish.deliveryPrice !== null && dish.deliveryPrice !== undefined) {
+      displayDish.price = dish.deliveryPrice;
+    }
+
+    if (Array.isArray(dish.modifiers)) {
+      displayDish.modifiers = dish.modifiers.map((modifier) => ({
+        ...modifier,
+        options: Array.isArray(modifier.options)
+          ? modifier.options.map((option) => ({
+            ...option,
+            price: isDeliveryMode && option.deliveryPrice !== null && option.deliveryPrice !== undefined
+              ? option.deliveryPrice
+              : option.price
+          }))
+          : []
+      }));
+    }
+
+    return displayDish;
+  }, [orderMode]);
+
   // Плавное переключение категорий при скролле с помощью Intersection Observer
   useEffect(() => {
     if (!restaurant || restaurant.categories.length === 0) return;
@@ -708,11 +733,7 @@ const MenuPage = () => {
                         : 'flex flex-col'
                     }`}>
                     {category.dishes.map((dish) => {
-                      // Если режим не "В зале" и есть цена доставки - используем её
-                      const displayDish = { ...dish };
-                      if (orderMode !== 'dine_in' && dish.deliveryPrice) {
-                        displayDish.price = dish.deliveryPrice;
-                      }
+                      const displayDish = getDisplayDishForOrderMode(dish);
                       return (
                         <DishCard
                           key={dish.id}
@@ -755,10 +776,7 @@ const MenuPage = () => {
                           : 'flex flex-col'
                       }`}>
                       {category.dishes.map((dish) => {
-                        const displayDish = { ...dish };
-                        if (orderMode !== 'dine_in' && dish.deliveryPrice) {
-                          displayDish.price = dish.deliveryPrice;
-                        }
+                        const displayDish = getDisplayDishForOrderMode(dish);
                         return (
                           <DishCard
                             key={dish.id}
@@ -895,10 +913,7 @@ const MenuPage = () => {
                         : 'flex flex-col'
                     }`}>
                     {searchResults.map((dish) => {
-                      const displayDish = { ...dish };
-                      if (orderMode !== 'dine_in' && dish.deliveryPrice) {
-                        displayDish.price = dish.deliveryPrice;
-                      }
+                      const displayDish = getDisplayDishForOrderMode(dish);
                       return (
                         <DishCard
                           key={dish.id}

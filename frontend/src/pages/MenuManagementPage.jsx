@@ -1058,10 +1058,21 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
 
     const optionPriceStr = prompt('Дополнительная цена (0 если без доплаты)');
     const optionPrice = parseFloat(optionPriceStr) || 0;
+    const optionDeliveryPriceStr = prompt('Цена для доставки (пусто = как в зале)', '');
+    let optionDeliveryPrice = null;
+    if (optionDeliveryPriceStr !== null && optionDeliveryPriceStr.trim() !== '') {
+      const parsedDelivery = parseFloat(optionDeliveryPriceStr);
+      if (isNaN(parsedDelivery) || parsedDelivery < 0) {
+        toast.error('Цена доставки должна быть числом больше или равным 0');
+        return;
+      }
+      optionDeliveryPrice = parsedDelivery;
+    }
 
     const optionData = {
       name: optionName.trim(),
-      price: optionPrice
+      price: optionPrice,
+      deliveryPrice: optionDeliveryPrice
     };
 
     if (!modifier.isNew && dish?.id) {
@@ -1092,6 +1103,67 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
       ));
       toast('💡 Сохраните блюдо, чтобы добавить фото к опциям', { icon: 'ℹ️' });
     }
+  };
+
+  const handleEditOption = async (modifier, option) => {
+    const optionName = prompt('Название опции', option.name || '');
+    if (optionName === null) return;
+    if (!optionName.trim()) {
+      toast.error('Название опции обязательно');
+      return;
+    }
+
+    const optionPriceStr = prompt('Цена в зале', String(option.price ?? 0));
+    if (optionPriceStr === null) return;
+    const optionPrice = parseFloat(optionPriceStr);
+    if (isNaN(optionPrice) || optionPrice < 0) {
+      toast.error('Цена в зале должна быть числом больше или равным 0');
+      return;
+    }
+
+    const currentDelivery = option.deliveryPrice === null || option.deliveryPrice === undefined
+      ? ''
+      : String(option.deliveryPrice);
+    const optionDeliveryPriceStr = prompt('Цена для доставки (пусто = как в зале)', currentDelivery);
+    if (optionDeliveryPriceStr === null) return;
+
+    let optionDeliveryPrice = null;
+    if (optionDeliveryPriceStr.trim() !== '') {
+      const parsedDelivery = parseFloat(optionDeliveryPriceStr);
+      if (isNaN(parsedDelivery) || parsedDelivery < 0) {
+        toast.error('Цена доставки должна быть числом больше или равным 0');
+        return;
+      }
+      optionDeliveryPrice = parsedDelivery;
+    }
+
+    const nextOptionData = {
+      name: optionName.trim(),
+      price: optionPrice,
+      deliveryPrice: optionDeliveryPrice
+    };
+
+    if (!option.isNew && dish?.id) {
+      try {
+        const updated = await menuService.updateModifierOption(option.id, { ...nextOptionData, restaurantId }, restaurantId);
+        setModifiers(prev => prev.map(m =>
+          m.id === modifier.id
+            ? { ...m, options: (m.options || []).map(o => o.id === option.id ? { ...o, ...updated } : o) }
+            : m
+        ));
+        toast.success('Опция обновлена');
+      } catch (err) {
+        toast.error('Ошибка при обновлении опции');
+        console.error(err);
+      }
+      return;
+    }
+
+    setModifiers(prev => prev.map(m =>
+      m.id === modifier.id
+        ? { ...m, options: (m.options || []).map(o => o.id === option.id ? { ...o, ...nextOptionData } : o) }
+        : m
+    ));
   };
 
   const handleDeleteOption = async (modifier, option) => {
@@ -1297,6 +1369,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
           await menuService.createModifierOption(createdModifier.id, {
             name: option.name,
             price: option.price,
+            deliveryPrice: option.deliveryPrice,
             restaurantId
           });
         }
@@ -1565,7 +1638,10 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
                           <div className="flex-1 min-w-0">
                             <div className="font-medium text-sm">{option.name}</div>
                             {option.price > 0 && (
-                              <div className="text-xs text-gray-600">+{option.price} {currency}</div>
+                              <div className="text-xs text-gray-600">Зал: +{option.price} {currency}</div>
+                            )}
+                            {(option.deliveryPrice !== null && option.deliveryPrice !== undefined) && (
+                              <div className="text-xs text-gray-600">Доставка: +{option.deliveryPrice} {currency}</div>
                             )}
                             {option.isNew && (
                               <div className="text-xs text-orange-600">💡 Сохраните блюдо, чтобы добавить фото</div>
@@ -1574,6 +1650,14 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
 
                           {/* Кнопки действий */}
                           <div className="flex gap-1 flex-shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleEditOption(modifier, option)}
+                              className="text-gray-600 hover:text-gray-800 text-sm px-2"
+                              title="Редактировать опцию"
+                            >
+                              ✏️
+                            </button>
                             {!option.isNew && !option.image && (
                               <label className="cursor-pointer text-blue-600 hover:text-blue-800 text-sm px-2">
                                 📷

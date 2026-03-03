@@ -1,0 +1,2 @@
+ALTER TABLE "ModifierOption"
+ADD COLUMN "deliveryPrice" DOUBLE PRECISION;
