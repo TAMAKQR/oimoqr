@@ -47,6 +47,12 @@ const MenuManagementPage = () => {
     selectedRestaurant?.sharedMenuSourceRestaurantId &&
     selectedRestaurant?.sharedMenuSourceRestaurantId !== selectedRestaurantId
   );
+  const isManagerForSelectedRestaurant = Boolean(
+    selectedRestaurantId &&
+    userData?.restaurantStaff?.some(
+      (staff) => staff.restaurantId === selectedRestaurantId && staff.role === 'manager'
+    )
+  );
 
   const loadCategories = async (restaurantId) => {
     try {
@@ -214,7 +220,7 @@ const MenuManagementPage = () => {
     if (!dish?.id) return;
 
     try {
-      if (isSharedMenuConsumer) {
+      if (isSharedMenuConsumer || isManagerForSelectedRestaurant) {
         const nextStoppedState = !dish.stoppedAtRestaurant;
         let reason = dish.stopReason || null;
 

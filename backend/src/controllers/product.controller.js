@@ -1,5 +1,5 @@
 import { prisma } from '../config/prisma.js';
-import { ensureRestaurantAccess, ensureRestaurantOwnerAccess } from '../utils/restaurantAccess.js';
+import { ensureRestaurantOwnerAccess } from '../utils/restaurantAccess.js';
 
 // Get all product categories for a store
 export const getProductCategories = async (req, res, next) => {
@@ -352,7 +352,7 @@ export const deleteProductImage = async (req, res, next) => {
             return res.status(404).json({ error: 'Product not found' });
         }
 
-        if (!ensureRestaurantAccess(req, res, product.restaurantId)) {
+        if (!ensureRestaurantOwnerAccess(req, res, product.restaurantId)) {
             return;
         }
 
@@ -385,7 +385,7 @@ export const updateStock = async (req, res, next) => {
             return res.status(404).json({ error: 'Product not found' });
         }
 
-        if (!ensureRestaurantAccess(req, res, product.restaurantId)) {
+        if (!ensureRestaurantOwnerAccess(req, res, product.restaurantId)) {
             return;
         }
 

@@ -1,4 +1,5 @@
 import { prisma } from '../config/prisma.js';
+import { ensureRestaurantAccess, ensureRestaurantOwnerAccess } from '../utils/restaurantAccess.js';
 
 /**
  * Получить все группы категорий ресторана
@@ -6,6 +7,10 @@ import { prisma } from '../config/prisma.js';
 export const getCategoryGroups = async (req, res, next) => {
     try {
         const { restaurantId } = req.params;
+
+        if (!ensureRestaurantAccess(req, res, restaurantId)) {
+            return;
+        }
 
         const groups = await prisma.categoryGroup.findMany({
             where: { restaurantId },
@@ -31,6 +36,10 @@ export const createCategoryGroup = async (req, res, next) => {
         const { restaurantId } = req.params;
         const { name, description, image, order } = req.body;
 
+        if (!ensureRestaurantOwnerAccess(req, res, restaurantId)) {
+            return;
+        }
+
         const group = await prisma.categoryGroup.create({
             data: {
                 name,
@@ -55,6 +64,19 @@ export const updateCategoryGroup = async (req, res, next) => {
         const { id } = req.params;
         const { name, description, image, order } = req.body;
 
+        const existingGroup = await prisma.categoryGroup.findUnique({
+            where: { id },
+            select: { id: true, restaurantId: true }
+        });
+
+        if (!existingGroup) {
+            return res.status(404).json({ error: 'Category group not found' });
+        }
+
+        if (!ensureRestaurantOwnerAccess(req, res, existingGroup.restaurantId)) {
+            return;
+        }
+
         const group = await prisma.categoryGroup.update({
             where: { id },
             data: {
@@ -77,6 +99,19 @@ export const updateCategoryGroup = async (req, res, next) => {
 export const deleteCategoryGroup = async (req, res, next) => {
     try {
         const { id } = req.params;
+
+        const existingGroup = await prisma.categoryGroup.findUnique({
+            where: { id },
+            select: { id: true, restaurantId: true }
+        });
+
+        if (!existingGroup) {
+            return res.status(404).json({ error: 'Category group not found' });
+        }
+
+        if (!ensureRestaurantOwnerAccess(req, res, existingGroup.restaurantId)) {
+            return;
+        }
 
         await prisma.categoryGroup.delete({
             where: { id }
@@ -107,11 +142,16 @@ export const uploadGroupImage = async (req, res, next) => {
 
         // Check if group exists
         const group = await prisma.categoryGroup.findUnique({
-            where: { id }
+            where: { id },
+            select: { id: true, restaurantId: true }
         });
 
         if (!group) {
             return res.status(404).json({ error: 'Category group not found' });
+        }
+
+        if (!ensureRestaurantOwnerAccess(req, res, group.restaurantId)) {
+            return;
         }
 
         // Get image URL (Cloudinary returns full URL, local storage returns filename)
