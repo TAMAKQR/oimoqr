@@ -44,6 +44,14 @@ const ensureOwnerAccessToRestaurant = (req, res, restaurantId) => {
   return false;
 };
 
+const isDeliveryPriceSchemaError = (error) => {
+  const message = String(error?.message || '').toLowerCase();
+  return message.includes('deliveryprice')
+    || message.includes('unknown arg')
+    || message.includes('column')
+    || message.includes('does not exist');
+};
+
 export const getDishes = async (req, res, next) => {
   try {
     const { categoryId } = req.params;
@@ -748,9 +756,22 @@ export const createModifierOption = async (req, res, next) => {
       createData.deliveryPrice = parsedDeliveryPrice;
     }
 
-    const option = await prisma.modifierOption.create({
-      data: createData
-    });
+    let option;
+    try {
+      option = await prisma.modifierOption.create({
+        data: createData
+      });
+    } catch (createError) {
+      if (createData.deliveryPrice !== undefined && isDeliveryPriceSchemaError(createError)) {
+        const fallbackCreateData = { ...createData };
+        delete fallbackCreateData.deliveryPrice;
+        option = await prisma.modifierOption.create({
+          data: fallbackCreateData
+        });
+      } else {
+        throw createError;
+      }
+    }
 
     res.status(201).json(option);
   } catch (error) {
@@ -764,7 +785,8 @@ export const updateModifierOption = async (req, res, next) => {
     const { optionId } = req.params;
     const { name, price, deliveryPrice, restaurantId: selectedRestaurantId } = req.body;
 
-    await ensureModifierManagementAllowed(selectedRestaurantId || req.query.restaurantId);
+    const selectedRestaurant = selectedRestaurantId || req.query.restaurantId;
+    await ensureModifierManagementAllowed(selectedRestaurant);
 
     // Validate price if provided
     let parsedPrice = undefined;
@@ -807,7 +829,12 @@ export const updateModifierOption = async (req, res, next) => {
       return res.status(404).json({ error: 'Option not found' });
     }
 
-    if (!ensureOwnerAccessToRestaurant(req, res, option.modifier.dish.category.restaurantId)) {
+    const optionRestaurantId = option?.modifier?.dish?.category?.restaurantId;
+    if (!optionRestaurantId) {
+      return res.status(409).json({ error: 'Option relation is corrupted. Please reload menu data.' });
+    }
+
+    if (!ensureOwnerAccessToRestaurant(req, res, optionRestaurantId)) {
       return;
     }
 
@@ -820,10 +847,24 @@ export const updateModifierOption = async (req, res, next) => {
       updateData.deliveryPrice = parsedDeliveryPrice;
     }
 
-    const updatedOption = await prisma.modifierOption.update({
-      where: { id: optionId },
-      data: updateData
-    });
+    let updatedOption;
+    try {
+      updatedOption = await prisma.modifierOption.update({
+        where: { id: optionId },
+        data: updateData
+      });
+    } catch (updateError) {
+      if (updateData.deliveryPrice !== undefined && isDeliveryPriceSchemaError(updateError)) {
+        const fallbackUpdateData = { ...updateData };
+        delete fallbackUpdateData.deliveryPrice;
+        updatedOption = await prisma.modifierOption.update({
+          where: { id: optionId },
+          data: fallbackUpdateData
+        });
+      } else {
+        throw updateError;
+      }
+    }
 
     res.json(updatedOption);
   } catch (error) {
