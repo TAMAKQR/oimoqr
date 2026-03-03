@@ -1,4 +1,5 @@
 import { prisma } from '../config/prisma.js';
+import { getModifierOptionSelect } from './modifierOptionFields.js';
 
 const roundCurrency = (value) => Number((Number(value) || 0).toFixed(2));
 
@@ -60,16 +61,14 @@ export const buildTrustedOrderItems = async ({ items, menuSourceRestaurantId, de
     }
 
     const modifierOptionIds = allModifierIds.filter(Boolean);
+    const modifierOptionSelect = await getModifierOptionSelect();
     const modifierOptions = modifierOptionIds.length > 0
         ? await prisma.modifierOption.findMany({
             where: {
                 id: { in: modifierOptionIds }
             },
             select: {
-                id: true,
-                name: true,
-                price: true,
-                deliveryPrice: true,
+                ...modifierOptionSelect,
                 modifier: {
                     select: {
                         dishId: true
@@ -123,7 +122,7 @@ export const buildTrustedOrderItems = async ({ items, menuSourceRestaurantId, de
             }
 
             const optionPrice = isDeliveryLike(deliveryType)
-                ? Number(option.deliveryPrice ?? option.price ?? 0)
+                ? Number((Object.prototype.hasOwnProperty.call(option, 'deliveryPrice') ? option.deliveryPrice : null) ?? option.price ?? 0)
                 : Number(option.price || 0);
             modifiersTotal += Number.isFinite(optionPrice) ? optionPrice : 0;
             trustedModifiers.push({

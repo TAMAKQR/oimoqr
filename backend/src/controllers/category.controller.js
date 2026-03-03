@@ -1,9 +1,11 @@
 import { prisma } from '../config/prisma.js';
 import { ensureRestaurantAccess, ensureRestaurantOwnerAccess } from '../utils/restaurantAccess.js';
+import { getModifierOptionSelect } from '../utils/modifierOptionFields.js';
 
 export const getCategories = async (req, res, next) => {
   try {
     const { restaurantId } = req.params;
+    const modifierOptionSelect = await getModifierOptionSelect();
     const restaurant = await prisma.restaurant.findUnique({
       where: { id: restaurantId },
       select: { id: true, sharedMenuSourceRestaurantId: true }
@@ -26,7 +28,9 @@ export const getCategories = async (req, res, next) => {
             modifiers: {
               orderBy: { order: 'asc' },
               include: {
-                options: true
+                options: {
+                  select: modifierOptionSelect
+                }
               }
             }
           }

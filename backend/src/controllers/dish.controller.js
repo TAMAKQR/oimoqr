@@ -1,4 +1,5 @@
 import { prisma } from '../config/prisma.js';
+import { getModifierOptionSelect } from '../utils/modifierOptionFields.js';
 
 const ensureModifierManagementAllowed = async (selectedRestaurantId) => {
   if (!selectedRestaurantId) {
@@ -46,6 +47,7 @@ const ensureOwnerAccessToRestaurant = (req, res, restaurantId) => {
 export const getDishes = async (req, res, next) => {
   try {
     const { categoryId } = req.params;
+    const modifierOptionSelect = await getModifierOptionSelect();
 
     const dishes = await prisma.dish.findMany({
       where: { categoryId },
@@ -53,7 +55,9 @@ export const getDishes = async (req, res, next) => {
       include: {
         modifiers: {
           include: {
-            options: true
+            options: {
+              select: modifierOptionSelect
+            }
           }
         }
       }

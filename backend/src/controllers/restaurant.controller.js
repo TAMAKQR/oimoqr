@@ -1,6 +1,7 @@
 import { prisma } from '../config/prisma.js';
 import { calculateTrialEndDate, calculateSubscriptionPrice, getTrialDaysRemaining } from '../utils/subscription.js';
 import { getNetworkRankedDeliveryPoints } from './geolocation.controller.js';
+import { getModifierOptionSelect } from '../utils/modifierOptionFields.js';
 
 const isRestaurantOpen = (restaurant) => {
   if (restaurant.isTemporarilyClosed) return false;
@@ -191,6 +192,7 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
     // 3) Загружаем категории/блюда отдельно и фильтруем переводы на уровне БД
     const t3 = Date.now();
     const menuSourceRestaurantId = restaurantBase.sharedMenuSourceRestaurantId || restaurantBase.id;
+    const modifierOptionSelect = await getModifierOptionSelect();
 
     const categories = await prisma.category.findMany({
       where: { restaurantId: menuSourceRestaurantId },
@@ -224,7 +226,10 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
             modifiers: {
               orderBy: { order: 'asc' },
               include: {
-                options: { orderBy: { createdAt: 'asc' } }
+                options: {
+                  orderBy: { createdAt: 'asc' },
+                  select: modifierOptionSelect
+                }
               }
             }
           }
