@@ -809,27 +809,39 @@ export const updateModifierOption = async (req, res, next) => {
       }
     }
 
-    // Check if option exists and user has access
     const option = await prisma.modifierOption.findUnique({
       where: { id: optionId },
-      include: {
-        modifier: {
-          include: {
-            dish: {
-              include: {
-                category: true
-              }
-            }
-          }
-        }
-      }
+      select: { id: true, modifierId: true }
     });
 
     if (!option) {
       return res.status(404).json({ error: 'Option not found' });
     }
 
-    const optionRestaurantId = option?.modifier?.dish?.category?.restaurantId;
+    const modifier = await prisma.modifier.findUnique({
+      where: { id: option.modifierId },
+      select: { id: true, dishId: true }
+    });
+
+    if (!modifier) {
+      return res.status(409).json({ error: 'Modifier for this option was not found. Please reload menu data.' });
+    }
+
+    const dish = await prisma.dish.findUnique({
+      where: { id: modifier.dishId },
+      select: { id: true, categoryId: true }
+    });
+
+    if (!dish) {
+      return res.status(409).json({ error: 'Dish for this option was not found. Please reload menu data.' });
+    }
+
+    const category = await prisma.category.findUnique({
+      where: { id: dish.categoryId },
+      select: { id: true, restaurantId: true }
+    });
+
+    const optionRestaurantId = category?.restaurantId;
     if (!optionRestaurantId) {
       return res.status(409).json({ error: 'Option relation is corrupted. Please reload menu data.' });
     }
