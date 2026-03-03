@@ -3,10 +3,21 @@ import bcrypt from 'bcryptjs';
 import { calculateSubscriptionEndDate } from '../utils/subscription.js';
 import { sendSubscriptionActivatedEmail } from '../utils/email.js';
 
+const ADMIN_DASHBOARD_CACHE_TTL_MS = 30 * 1000;
+let adminDashboardStatsCache = {
+  expiresAt: 0,
+  payload: null
+};
+
 // ======================== DASHBOARD STATS ========================
 
 export const getDashboardStats = async (req, res, next) => {
   try {
+    const nowTs = Date.now();
+    if (adminDashboardStatsCache.payload && adminDashboardStatsCache.expiresAt > nowTs) {
+      return res.json(adminDashboardStatsCache.payload);
+    }
+
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -125,7 +136,7 @@ export const getDashboardStats = async (req, res, next) => {
       `,
     ]);
 
-    res.json({
+    const payload = {
       overview: {
         totalUsers,
         totalRestaurants,
@@ -159,7 +170,14 @@ export const getDashboardStats = async (req, res, next) => {
       },
       topRestaurants,
       recentOrders,
-    });
+    };
+
+    adminDashboardStatsCache = {
+      payload,
+      expiresAt: Date.now() + ADMIN_DASHBOARD_CACHE_TTL_MS
+    };
+
+    res.json(payload);
   } catch (error) {
     next(error);
   }

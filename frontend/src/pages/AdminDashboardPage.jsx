@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import api from '../services/api';
 
+const ADMIN_DASHBOARD_CACHE_KEY = 'admin-dashboard-cache-v1';
+const ADMIN_DASHBOARD_CACHE_TTL_MS = 60 * 1000;
+
 const StatCard = ({ label, value, sub, icon, color = 'blue' }) => {
     const colors = {
         blue: 'bg-blue-50 text-blue-600',
@@ -150,14 +153,37 @@ const AdminDashboardPage = () => {
     const [error, setError] = useState(null);
 
     useEffect(() => {
+        let hasFreshCachedData = false;
+
+        try {
+            const cachedRaw = localStorage.getItem(ADMIN_DASHBOARD_CACHE_KEY);
+            if (cachedRaw) {
+                const cached = JSON.parse(cachedRaw);
+                if (cached?.payload && cached?.timestamp && (Date.now() - cached.timestamp) < ADMIN_DASHBOARD_CACHE_TTL_MS) {
+                    setData(cached.payload);
+                    setLoading(false);
+                    hasFreshCachedData = true;
+                }
+            }
+        } catch {
+            // ignore cache parse issues
+        }
+
         const load = async () => {
             try {
                 const res = await api.get('/admin/stats/dashboard');
                 setData(res.data);
+                localStorage.setItem(
+                    ADMIN_DASHBOARD_CACHE_KEY,
+                    JSON.stringify({ payload: res.data, timestamp: Date.now() })
+                );
+                setError(null);
             } catch (err) {
                 setError(err.message || 'Ошибка загрузки');
             } finally {
-                setLoading(false);
+                if (!hasFreshCachedData) {
+                    setLoading(false);
+                }
             }
         };
         load();
