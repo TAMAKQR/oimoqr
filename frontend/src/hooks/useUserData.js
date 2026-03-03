@@ -12,6 +12,18 @@ const useUserDataStore = create((set) => ({
 
 const CACHE_TTL = 60 * 1000; // 1 minute cache
 
+const getAuthStorageUser = () => {
+    try {
+        const raw = localStorage.getItem('auth-storage');
+        if (!raw) return null;
+
+        const parsed = JSON.parse(raw);
+        return parsed?.state?.user || null;
+    } catch {
+        return null;
+    }
+};
+
 /**
  * Hook for loading and caching user data (userData from authService.getMe).
  * Caches globally in Zustand — navigating between pages won't re-fetch.
@@ -38,7 +50,16 @@ export const useUserData = () => {
         } catch (err) {
             console.error('Error loading user data:', err);
             setError(err);
-            return null;
+
+            if (!userData) {
+                const fallbackUser = getAuthStorageUser();
+                if (fallbackUser) {
+                    setCachedData(fallbackUser);
+                    return fallbackUser;
+                }
+            }
+
+            return userData || null;
         } finally {
             setLoading(false);
         }
