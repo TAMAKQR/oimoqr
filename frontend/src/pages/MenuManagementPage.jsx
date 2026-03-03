@@ -547,8 +547,13 @@ const MenuManagementPage = () => {
                           </div>
 
                           {/* Price */}
-                          <div className="flex-shrink-0 text-sm font-semibold text-gray-900 tabular-nums">
-                            {dish.price} {currency}
+                          <div className="flex-shrink-0 text-right tabular-nums">
+                            <div className="text-sm font-semibold text-gray-900">
+                              Зал: {dish.price} {currency}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              Доставка: {dish.deliveryPrice ?? dish.price} {currency}
+                            </div>
                           </div>
 
                           {/* Actions */}
