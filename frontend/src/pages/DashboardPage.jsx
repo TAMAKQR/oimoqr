@@ -189,9 +189,8 @@ const DashboardPage = () => {
         setLoadingStats(false);
         lastOrderIdRef.current = null;
       }
-      refreshUserData();
     }
-  }, [selectedRestaurantId, canViewAnalytics, refreshUserData]);
+  }, [selectedRestaurantId, canViewAnalytics]);
 
   useEffect(() => {
     if (!selectedRestaurantId || !canViewAnalytics) return undefined;
