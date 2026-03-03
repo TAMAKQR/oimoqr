@@ -56,7 +56,12 @@ export const addStaff = async (req, res, next) => {
 
     // Проверяем, существует ли пользователь
     let user = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
+      include: {
+        restaurants: {
+          select: { id: true }
+        }
+      }
     });
 
     // Если пользователь не существует - создаем нового (только для менеджера)
@@ -73,6 +78,13 @@ export const addStaff = async (req, res, next) => {
         }
       });
     } else {
+      const isOwnerOrAdmin = Boolean(user.isAdmin) || (Array.isArray(user.restaurants) && user.restaurants.length > 0);
+      if (isOwnerOrAdmin) {
+        return res.status(400).json({
+          error: 'Этот пользователь является владельцем/админом. Для роли менеджера используйте отдельный аккаунт без прав владельца.'
+        });
+      }
+
       // Если пользователь уже существует - проверяем, не добавлен ли он уже
       const existingStaff = await prisma.restaurantStaff.findUnique({
         where: {
