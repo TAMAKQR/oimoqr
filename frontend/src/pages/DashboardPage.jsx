@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { restaurantService } from '../services/restaurantService';
@@ -125,6 +125,12 @@ const DashboardPage = () => {
   const lastOrderIdRef = useRef(null);
   const [updatingStatusId, setUpdatingStatusId] = useState(null);
 
+  const canViewAnalytics = useMemo(() => {
+    if (!selectedRestaurantId || !userData) return false;
+    if (userData.isAdmin) return true;
+    return (userData.restaurants || []).some((restaurant) => restaurant.id === selectedRestaurantId);
+  }, [selectedRestaurantId, userData]);
+
   const restaurantsCount = userData?.restaurants?.length || 0;
   const isFirstRestaurantCreation = restaurantsCount === 0;
 
@@ -182,23 +188,30 @@ const DashboardPage = () => {
   // Загрузка статистики при выборе ресторана
   useEffect(() => {
     if (selectedRestaurantId) {
-      loadStats();
+      if (canViewAnalytics) {
+        loadStats();
+      } else {
+        setStats(null);
+        setViews(null);
+        setLoadingStats(false);
+        lastOrderIdRef.current = null;
+      }
       refreshUserData();
     }
-  }, [selectedRestaurantId]);
+  }, [selectedRestaurantId, canViewAnalytics, refreshUserData]);
 
   useEffect(() => {
-    if (!selectedRestaurantId) return undefined;
+    if (!selectedRestaurantId || !canViewAnalytics) return undefined;
 
     const intervalId = setInterval(() => {
       checkForNewOrders();
     }, 15000);
 
     return () => clearInterval(intervalId);
-  }, [selectedRestaurantId]);
+  }, [selectedRestaurantId, canViewAnalytics]);
 
   const loadStats = async () => {
-    if (!selectedRestaurantId) return;
+    if (!selectedRestaurantId || !canViewAnalytics) return;
 
     setLoadingStats(true);
     try {
@@ -212,6 +225,12 @@ const DashboardPage = () => {
         lastOrderIdRef.current = statsData.recentOrders[0].id;
       }
     } catch (err) {
+      if (err?.status === 403) {
+        setStats(null);
+        setViews(null);
+        lastOrderIdRef.current = null;
+        return;
+      }
       console.error('Error loading stats:', err);
     } finally {
       setLoadingStats(false);
@@ -219,7 +238,7 @@ const DashboardPage = () => {
   };
 
   const checkForNewOrders = async () => {
-    if (!selectedRestaurantId) return;
+    if (!selectedRestaurantId || !canViewAnalytics) return;
 
     try {
       const statsData = await analyticsService.getRestaurantStats(selectedRestaurantId);
@@ -236,6 +255,7 @@ const DashboardPage = () => {
 
       setStats(statsData);
     } catch (err) {
+      if (err?.status === 403) return;
       console.error('Error polling orders:', err);
     }
   };
@@ -732,7 +752,12 @@ const DashboardPage = () => {
         {/* Analytics Dashboard */}
         {selectedRestaurantId && (
           <>
-            {loadingStats ? (
+            {!canViewAnalytics ? (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-6">
+                <h3 className="text-sm font-semibold text-amber-900 mb-1">Статистика ограничена</h3>
+                <p className="text-sm text-amber-800">Для роли менеджера доступно управление стоп-листом. Аналитика доступна только владельцу ресторана.</p>
+              </div>
+            ) : loadingStats ? (
               <div className="text-center py-8">
                 <div className="text-lg text-gray-600">Загрузка статистики...</div>
               </div>

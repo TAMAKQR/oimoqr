@@ -7,8 +7,15 @@ export const analyticsService = {
       const response = await api.get(`/analytics/restaurant/${restaurantId}`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching restaurant stats:', error);
-      throw error.response?.data || error.message;
+      const status = error?.response?.status;
+      if (status !== 403) {
+        console.error('Error fetching restaurant stats:', error);
+      }
+      const payload = error?.response?.data;
+      if (payload && typeof payload === 'object') {
+        throw { ...payload, status };
+      }
+      throw { message: payload || error.message, status };
     }
   },
 
@@ -18,8 +25,15 @@ export const analyticsService = {
       const response = await api.get(`/analytics/restaurant/${restaurantId}/views`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching restaurant views:', error);
-      throw error.response?.data || error.message;
+      const status = error?.response?.status;
+      if (status !== 403) {
+        console.error('Error fetching restaurant views:', error);
+      }
+      const payload = error?.response?.data;
+      if (payload && typeof payload === 'object') {
+        throw { ...payload, status };
+      }
+      throw { message: payload || error.message, status };
     }
   }
 };
