@@ -54,6 +54,20 @@ const MenuManagementPage = () => {
     )
   );
 
+  const ensureMenuEditAllowed = () => {
+    if (isSharedMenuConsumer) {
+      toast.error('Для общей витрины редактируйте меню в ресторане-источнике');
+      return false;
+    }
+
+    if (isManagerForSelectedRestaurant) {
+      toast.error('Для менеджера доступен только стоп-лист точки');
+      return false;
+    }
+
+    return true;
+  };
+
   const loadCategories = async (restaurantId) => {
     try {
       const cats = await menuService.getCategories(restaurantId);
@@ -110,15 +124,14 @@ const MenuManagementPage = () => {
   };
 
   const handleAddCategory = () => {
-    if (isSharedMenuConsumer) {
-      toast.error('Для общей витрины редактируйте меню в ресторане-источнике');
-      return;
-    }
+    if (!ensureMenuEditAllowed()) return;
     setEditingCategory(null);
     setShowCategoryModal(true);
   };
 
   const handleCopyMenu = async () => {
+    if (!ensureMenuEditAllowed()) return;
+
     if (!sourceRestaurantId) {
       setCopyError('Выберите ресторан-источник');
       return;
@@ -141,19 +154,13 @@ const MenuManagementPage = () => {
   };
 
   const handleEditCategory = (category) => {
-    if (isSharedMenuConsumer) {
-      toast.error('Для общей витрины редактируйте меню в ресторане-источнике');
-      return;
-    }
+    if (!ensureMenuEditAllowed()) return;
     setEditingCategory(category);
     setShowCategoryModal(true);
   };
 
   const handleDeleteCategory = async (categoryId) => {
-    if (isSharedMenuConsumer) {
-      toast.error('Для общей витрины редактируйте меню в ресторане-источнике');
-      return;
-    }
+    if (!ensureMenuEditAllowed()) return;
     const confirmed = await confirmDialog('Удалить категорию и все блюда в ней?', {
       confirmText: 'Удалить',
       cancelText: 'Отмена',
@@ -171,30 +178,21 @@ const MenuManagementPage = () => {
   };
 
   const handleAddDish = (categoryId) => {
-    if (isSharedMenuConsumer) {
-      toast.error('Для общей витрины редактируйте меню в ресторане-источнике');
-      return;
-    }
+    if (!ensureMenuEditAllowed()) return;
     setSelectedCategoryId(categoryId);
     setEditingDish(null);
     setShowDishModal(true);
   };
 
   const handleEditDish = (dish) => {
-    if (isSharedMenuConsumer) {
-      toast.error('Для общей витрины редактируйте меню в ресторане-источнике');
-      return;
-    }
+    if (!ensureMenuEditAllowed()) return;
     setSelectedCategoryId(dish.categoryId);
     setEditingDish(dish);
     setShowDishModal(true);
   };
 
   const handleDeleteDish = async (dishId) => {
-    if (isSharedMenuConsumer) {
-      toast.error('Для общей витрины редактируйте меню в ресторане-источнике');
-      return;
-    }
+    if (!ensureMenuEditAllowed()) return;
     const confirmed = await confirmDialog('Удалить блюдо?', {
       confirmText: 'Удалить',
       cancelText: 'Отмена',
@@ -255,6 +253,11 @@ const MenuManagementPage = () => {
   };
 
   const handleCategoryDragStart = (e, categoryId) => {
+    if (!ensureMenuEditAllowed()) {
+      e.preventDefault();
+      return;
+    }
+
     setDraggedCategoryId(categoryId);
     e.dataTransfer.effectAllowed = 'move';
   };
@@ -272,6 +275,11 @@ const MenuManagementPage = () => {
   const handleCategoryDrop = async (e, dropCategoryId) => {
     e.preventDefault();
     setDragOverCategoryId(null);
+
+    if (!ensureMenuEditAllowed()) {
+      setDraggedCategoryId(null);
+      return;
+    }
 
     if (!draggedCategoryId || draggedCategoryId === dropCategoryId) {
       setDraggedCategoryId(null);
@@ -302,6 +310,11 @@ const MenuManagementPage = () => {
   };
 
   const handleDishDragStart = (e, dishId) => {
+    if (!ensureMenuEditAllowed()) {
+      e.preventDefault();
+      return;
+    }
+
     setDraggedDishId(dishId);
     e.dataTransfer.effectAllowed = 'move';
   };
@@ -319,6 +332,11 @@ const MenuManagementPage = () => {
   const handleDishDrop = async (e, dropDishId, categoryId) => {
     e.preventDefault();
     setDragOverDishId(null);
+
+    if (!ensureMenuEditAllowed()) {
+      setDraggedDishId(null);
+      return;
+    }
 
     if (!draggedDishId || draggedDishId === dropDishId) {
       setDraggedDishId(null);
@@ -386,6 +404,12 @@ const MenuManagementPage = () => {
           </div>
         )}
 
+        {selectedRestaurantId && isManagerForSelectedRestaurant && (
+          <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+            Вы вошли как менеджер. Доступно только управление стоп-листом текущей точки.
+          </div>
+        )}
+
         {/* Add Category Button */}
         <div className="mb-4 flex justify-between items-center gap-2 flex-wrap">
           <h2 className="text-lg font-semibold text-gray-900">Категории и блюда</h2>
@@ -394,14 +418,18 @@ const MenuManagementPage = () => {
               <svg className="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" /></svg>
               Группы категорий
             </button>
-            <button onClick={() => setShowCopyModal(true)} className="inline-flex items-center gap-1.5 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+            <button
+              onClick={() => setShowCopyModal(true)}
+              disabled={isSharedMenuConsumer || isManagerForSelectedRestaurant}
+              className="inline-flex items-center gap-1.5 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.5a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>
               Копировать меню
             </button>
             <button
               onClick={handleAddCategory}
-              disabled={isSharedMenuConsumer}
-              title={isSharedMenuConsumer ? 'Редактирование делается в ресторане-источнике' : 'Добавить категорию'}
+              disabled={isSharedMenuConsumer || isManagerForSelectedRestaurant}
+              title={isSharedMenuConsumer ? 'Редактирование делается в ресторане-источнике' : isManagerForSelectedRestaurant ? 'Менеджер может управлять только стоп-листом' : 'Добавить категорию'}
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
@@ -422,7 +450,7 @@ const MenuManagementPage = () => {
             <p className="text-gray-500 text-sm mb-4">Начните с создания первой категории</p>
             <button
               onClick={handleAddCategory}
-              disabled={isSharedMenuConsumer}
+              disabled={isSharedMenuConsumer || isManagerForSelectedRestaurant}
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Создать категорию
@@ -434,14 +462,14 @@ const MenuManagementPage = () => {
               <div
                 key={category.id}
                 className={`bg-white rounded-xl border transition-all ${draggedCategoryId === category.id ? 'opacity-50' : ''} ${dragOverCategoryId === category.id ? 'border-blue-400 bg-blue-50' : 'border-gray-100'}`}
-                draggable={!isSharedMenuConsumer}
+                draggable={!isSharedMenuConsumer && !isManagerForSelectedRestaurant}
                 onDragStart={(e) => handleCategoryDragStart(e, category.id)}
                 onDragOver={(e) => handleCategoryDragOver(e, category.id)}
                 onDragLeave={handleCategoryDragLeave}
                 onDrop={(e) => handleCategoryDrop(e, category.id)}
               >
                 {/* Category Header */}
-                <div className={`flex items-center justify-between px-5 py-4 ${isSharedMenuConsumer ? '' : 'cursor-move'}`}>
+                <div className={`flex items-center justify-between px-5 py-4 ${(isSharedMenuConsumer || isManagerForSelectedRestaurant) ? '' : 'cursor-move'}`}>
                   <div className="flex items-center gap-3 flex-1 min-w-0" onClick={() => toggleCategory(category.id)}>
                     <svg className={`w-4 h-4 text-gray-400 transition-transform duration-200 flex-shrink-0 ${expandedCategories.has(category.id) ? 'rotate-90' : ''}`} fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
@@ -457,7 +485,7 @@ const MenuManagementPage = () => {
                   <div className="flex items-center gap-1.5 flex-shrink-0">
                     <button
                       onClick={() => handleAddDish(category.id)}
-                      disabled={isSharedMenuConsumer}
+                      disabled={isSharedMenuConsumer || isManagerForSelectedRestaurant}
                       className="inline-flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
@@ -465,7 +493,7 @@ const MenuManagementPage = () => {
                     </button>
                     <button
                       onClick={() => handleEditCategory(category)}
-                      disabled={isSharedMenuConsumer}
+                      disabled={isSharedMenuConsumer || isManagerForSelectedRestaurant}
                       className="p-1.5 border border-gray-200 rounded-lg text-gray-400 hover:text-orange-500 hover:border-orange-200 bg-white hover:bg-orange-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Редактировать"
                     >
@@ -473,7 +501,7 @@ const MenuManagementPage = () => {
                     </button>
                     <button
                       onClick={() => handleDeleteCategory(category.id)}
-                      disabled={isSharedMenuConsumer}
+                      disabled={isSharedMenuConsumer || isManagerForSelectedRestaurant}
                       className="p-1.5 border border-gray-200 rounded-lg text-gray-400 hover:text-red-500 hover:border-red-200 bg-white hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Удалить"
                     >
@@ -491,8 +519,8 @@ const MenuManagementPage = () => {
                       dishes[category.id]?.map((dish, idx) => (
                         <div
                           key={dish.id}
-                          className={`flex items-center gap-4 px-5 py-3 transition-colors ${isSharedMenuConsumer ? '' : 'cursor-move'} ${draggedDishId === dish.id ? 'opacity-50' : ''} ${dragOverDishId === dish.id ? 'bg-blue-50' : 'hover:bg-gray-50'} ${idx > 0 ? 'border-t border-gray-50' : ''}`}
-                          draggable={!isSharedMenuConsumer}
+                          className={`flex items-center gap-4 px-5 py-3 transition-colors ${(isSharedMenuConsumer || isManagerForSelectedRestaurant) ? '' : 'cursor-move'} ${draggedDishId === dish.id ? 'opacity-50' : ''} ${dragOverDishId === dish.id ? 'bg-blue-50' : 'hover:bg-gray-50'} ${idx > 0 ? 'border-t border-gray-50' : ''}`}
+                          draggable={!isSharedMenuConsumer && !isManagerForSelectedRestaurant}
                           onDragStart={(e) => handleDishDragStart(e, dish.id)}
                           onDragOver={(e) => handleDishDragOver(e, dish.id)}
                           onDragLeave={handleDishDragLeave}
@@ -563,12 +591,14 @@ const MenuManagementPage = () => {
                           <div className="flex items-center gap-1 flex-shrink-0">
                             <button
                               onClick={() => handleToggleAvailability(dish)}
-                              className={`p-1.5 rounded-lg transition-colors ${(isSharedMenuConsumer ? dish.stoppedAtRestaurant : !dish.available) ? 'text-red-500 hover:bg-red-50' : 'text-green-500 hover:bg-green-50'}`}
+                              className={`p-1.5 rounded-lg transition-colors ${((isSharedMenuConsumer || isManagerForSelectedRestaurant) ? dish.stoppedAtRestaurant : !dish.available) ? 'text-red-500 hover:bg-red-50' : 'text-green-500 hover:bg-green-50'}`}
                               title={isSharedMenuConsumer
                                 ? (dish.stoppedAtRestaurant ? 'Снять со стоп-листа для этой точки' : 'Поставить в стоп-лист для этой точки')
-                                : (dish.available ? 'Поставить на стоп' : 'Вернуть в меню')}
+                                : isManagerForSelectedRestaurant
+                                  ? (dish.stoppedAtRestaurant ? 'Снять со стоп-листа для этой точки' : 'Поставить в стоп-лист для этой точки')
+                                  : (dish.available ? 'Поставить на стоп' : 'Вернуть в меню')}
                             >
-                              {(isSharedMenuConsumer ? dish.stoppedAtRestaurant : !dish.available) ? (
+                              {((isSharedMenuConsumer || isManagerForSelectedRestaurant) ? dish.stoppedAtRestaurant : !dish.available) ? (
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" /></svg>
                               ) : (
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
@@ -576,7 +606,7 @@ const MenuManagementPage = () => {
                             </button>
                             <button
                               onClick={() => handleEditDish(dish)}
-                              disabled={isSharedMenuConsumer}
+                              disabled={isSharedMenuConsumer || isManagerForSelectedRestaurant}
                               className="p-1.5 rounded-lg text-gray-400 hover:text-orange-500 hover:bg-orange-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                               title="Редактировать"
                             >
@@ -584,7 +614,7 @@ const MenuManagementPage = () => {
                             </button>
                             <button
                               onClick={() => handleDeleteDish(dish.id)}
-                              disabled={isSharedMenuConsumer}
+                              disabled={isSharedMenuConsumer || isManagerForSelectedRestaurant}
                               className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                               title="Удалить"
                             >
