@@ -1,4 +1,5 @@
 import { prisma } from '../config/prisma.js';
+import { ensureRestaurantAccess, ensureRestaurantOwnerAccess } from '../utils/restaurantAccess.js';
 
 const AVAILABLE_LANGUAGES = [
   { code: 'ru', name: 'Русский' },
@@ -41,6 +42,10 @@ export const getRestaurantLanguages = async (req, res, next) => {
   try {
     const { restaurantId } = req.params;
 
+    if (!ensureRestaurantAccess(req, res, restaurantId)) {
+      return;
+    }
+
     const context = await getLanguageManagementContext(restaurantId);
 
     if (!context) {
@@ -72,6 +77,10 @@ export const updateRestaurantLanguages = async (req, res, next) => {
   try {
     const { restaurantId } = req.params;
     const { languages, defaultLanguage } = req.body;
+
+    if (!ensureRestaurantOwnerAccess(req, res, restaurantId)) {
+      return;
+    }
 
     const context = await getLanguageManagementContext(restaurantId);
 
@@ -125,6 +134,10 @@ export const getDishTranslations = async (req, res, next) => {
   try {
     const { restaurantId, dishId } = req.params;
 
+    if (!ensureRestaurantAccess(req, res, restaurantId)) {
+      return;
+    }
+
     const context = await getLanguageManagementContext(restaurantId);
 
     if (!context) {
@@ -148,6 +161,10 @@ export const getAllDishTranslations = async (req, res, next) => {
   try {
     const { restaurantId } = req.params;
 
+    if (!ensureRestaurantAccess(req, res, restaurantId)) {
+      return;
+    }
+
     const context = await getLanguageManagementContext(restaurantId);
 
     if (!context) {
@@ -169,6 +186,10 @@ export const createDishTranslation = async (req, res, next) => {
   try {
     const { restaurantId, dishId } = req.params;
     const { languageCode, name, description } = req.body;
+
+    if (!ensureRestaurantOwnerAccess(req, res, restaurantId)) {
+      return;
+    }
 
     const context = await getLanguageManagementContext(restaurantId);
 
@@ -238,6 +259,10 @@ export const updateDishTranslation = async (req, res, next) => {
       return res.status(404).json({ error: 'Translation not found' });
     }
 
+    if (!ensureRestaurantOwnerAccess(req, res, translation.restaurantId)) {
+      return;
+    }
+
     const updatedTranslation = await prisma.dishTranslation.update({
       where: { id: translationId },
       data: {
@@ -264,6 +289,10 @@ export const deleteDishTranslation = async (req, res, next) => {
       return res.status(404).json({ error: 'Translation not found' });
     }
 
+    if (!ensureRestaurantOwnerAccess(req, res, translation.restaurantId)) {
+      return;
+    }
+
     await prisma.dishTranslation.delete({
       where: { id: translationId }
     });
@@ -278,6 +307,10 @@ export const deleteDishTranslation = async (req, res, next) => {
 export const getCategoryTranslations = async (req, res, next) => {
   try {
     const { restaurantId, categoryId } = req.params;
+
+    if (!ensureRestaurantAccess(req, res, restaurantId)) {
+      return;
+    }
 
     const context = await getLanguageManagementContext(restaurantId);
 
@@ -302,6 +335,10 @@ export const createCategoryTranslation = async (req, res, next) => {
   try {
     const { restaurantId, categoryId } = req.params;
     const { languageCode, name, description } = req.body;
+
+    if (!ensureRestaurantOwnerAccess(req, res, restaurantId)) {
+      return;
+    }
 
     const context = await getLanguageManagementContext(restaurantId);
 
@@ -371,6 +408,10 @@ export const updateCategoryTranslation = async (req, res, next) => {
       return res.status(404).json({ error: 'Translation not found' });
     }
 
+    if (!ensureRestaurantOwnerAccess(req, res, translation.restaurantId)) {
+      return;
+    }
+
     const updatedTranslation = await prisma.categoryTranslation.update({
       where: { id: translationId },
       data: {
@@ -395,6 +436,10 @@ export const deleteCategoryTranslation = async (req, res, next) => {
 
     if (!translation) {
       return res.status(404).json({ error: 'Translation not found' });
+    }
+
+    if (!ensureRestaurantOwnerAccess(req, res, translation.restaurantId)) {
+      return;
     }
 
     await prisma.categoryTranslation.delete({

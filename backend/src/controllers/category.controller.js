@@ -5,6 +5,11 @@ import { getModifierOptionSelect } from '../utils/modifierOptionFields.js';
 export const getCategories = async (req, res, next) => {
   try {
     const { restaurantId } = req.params;
+
+    if (!ensureRestaurantAccess(req, res, restaurantId)) {
+      return;
+    }
+
     const restaurant = await prisma.restaurant.findUnique({
       where: { id: restaurantId },
       select: { id: true, sharedMenuSourceRestaurantId: true }

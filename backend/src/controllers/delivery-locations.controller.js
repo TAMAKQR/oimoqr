@@ -1,8 +1,13 @@
 import { prisma } from '../config/prisma.js';
+import { ensureRestaurantAccess, ensureRestaurantOwnerAccess } from '../utils/restaurantAccess.js';
 
 export const getDeliveryLocations = async (req, res, next) => {
   try {
     const { restaurantId } = req.params;
+
+    if (!ensureRestaurantAccess(req, res, restaurantId)) {
+      return;
+    }
 
     const locations = await prisma.deliveryLocation.findMany({
       where: { restaurantId },
@@ -19,6 +24,10 @@ export const createDeliveryLocation = async (req, res, next) => {
   try {
     const { restaurantId } = req.params;
     const { name, address, latitude, longitude, whatsapp } = req.body;
+
+    if (!ensureRestaurantOwnerAccess(req, res, restaurantId)) {
+      return;
+    }
 
     if (!name || !address || latitude === undefined || longitude === undefined || !whatsapp) {
       return res.status(400).json({
@@ -48,8 +57,12 @@ export const updateDeliveryLocation = async (req, res, next) => {
     const { restaurantId, locationId } = req.params;
     const { name, address, latitude, longitude, whatsapp } = req.body;
 
+    if (!ensureRestaurantOwnerAccess(req, res, restaurantId)) {
+      return;
+    }
+
     const location = await prisma.deliveryLocation.updateMany({
-      where: { 
+      where: {
         id: locationId,
         restaurantId
       },
@@ -80,8 +93,12 @@ export const deleteDeliveryLocation = async (req, res, next) => {
   try {
     const { restaurantId, locationId } = req.params;
 
+    if (!ensureRestaurantOwnerAccess(req, res, restaurantId)) {
+      return;
+    }
+
     const location = await prisma.deliveryLocation.deleteMany({
-      where: { 
+      where: {
         id: locationId,
         restaurantId
       }

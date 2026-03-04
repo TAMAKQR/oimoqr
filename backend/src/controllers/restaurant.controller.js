@@ -2,6 +2,7 @@ import { prisma } from '../config/prisma.js';
 import { calculateTrialEndDate, calculateSubscriptionPrice, getTrialDaysRemaining } from '../utils/subscription.js';
 import { getNetworkRankedDeliveryPoints } from './geolocation.controller.js';
 import { getModifierOptionSelect } from '../utils/modifierOptionFields.js';
+import { ensureRestaurantAccess } from '../utils/restaurantAccess.js';
 
 const isRestaurantOpen = (restaurant) => {
   if (restaurant.isTemporarilyClosed) return false;
@@ -1639,6 +1640,10 @@ export const setDishStop = async (req, res, next) => {
 export const getRestaurantCategories = async (req, res, next) => {
   try {
     const { restaurantId } = req.params;
+
+    if (!ensureRestaurantAccess(req, res, restaurantId)) {
+      return;
+    }
 
     const categories = await prisma.category.findMany({
       where: { restaurantId },

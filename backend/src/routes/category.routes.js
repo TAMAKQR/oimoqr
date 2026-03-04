@@ -11,8 +11,8 @@ import { authenticate, requireRestaurant } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Public route
-router.get('/restaurant/:restaurantId', getCategories);
+// Protected route
+router.get('/restaurant/:restaurantId', authenticate, getCategories);
 
 // Get dishes for a category
 router.get('/:categoryId/dishes', authenticate, getDishes);
