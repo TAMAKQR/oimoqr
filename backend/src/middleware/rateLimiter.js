@@ -15,6 +15,11 @@ export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: isProduction ? 5 : 100,
   message: 'Too many login attempts, please try again later.',
+  keyGenerator: (req) => {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+    return email ? `${ip}:${email}` : String(ip);
+  },
   skipSuccessfulRequests: true,
   skip: () => !isProduction,
 });
