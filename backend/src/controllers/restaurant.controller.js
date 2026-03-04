@@ -277,14 +277,37 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
       });
     }
 
+    const effectiveStopRestaurantIds = restaurantBase.sharedMenuSourceRestaurantId
+      ? [restaurantBase.sharedMenuSourceRestaurantId, restaurantBase.id]
+      : [restaurantBase.id];
+
     const stopList = await prisma.dishStop.findMany({
       where: {
-        restaurantId: restaurantBase.id,
+        restaurantId: { in: effectiveStopRestaurantIds },
         isStopped: true
       },
-      select: { dishId: true, reason: true }
+      select: { dishId: true, reason: true, restaurantId: true }
     });
-    const stoppedByDishId = new Map(stopList.map((x) => [x.dishId, x.reason || null]));
+
+    const localStoppedDishIds = new Set(
+      stopList.filter((stop) => stop.restaurantId === restaurantBase.id).map((stop) => stop.dishId)
+    );
+    const sourceStoppedDishIds = new Set(
+      stopList.filter((stop) => stop.restaurantId === menuSourceRestaurantId).map((stop) => stop.dishId)
+    );
+
+    const stoppedByDishId = new Map();
+    stopList.forEach((stop) => {
+      const existing = stoppedByDishId.get(stop.dishId);
+      const isLocalStop = stop.restaurantId === restaurantBase.id;
+
+      if (!existing || isLocalStop) {
+        stoppedByDishId.set(stop.dishId, {
+          reason: stop.reason || null,
+          restaurantId: stop.restaurantId
+        });
+      }
+    });
 
     // Parse workingHours if it's a JSON string (SQLite compatibility)
     let workingHours = restaurantBase.workingHours;
@@ -309,7 +332,10 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
           translations: undefined,
           dishes: category.dishes.map(dish => {
             const translation = dish.translations?.[0];
-            const isStopped = stoppedByDishId.has(dish.id);
+            const stopMeta = stoppedByDishId.get(dish.id);
+            const isStoppedLocally = localStoppedDishIds.has(dish.id);
+            const isStoppedAtMenuSource = sourceStoppedDishIds.has(dish.id);
+            const isStopped = isStoppedLocally || isStoppedAtMenuSource;
             return {
               ...dish,
               modifiers: (dish.modifiers || []).map((modifier) => ({
@@ -319,7 +345,9 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
               imageUrl: dish.image,
               available: dish.available && !isStopped,
               stoppedAtRestaurant: isStopped,
-              stopReason: stoppedByDishId.get(dish.id),
+              stoppedAtLocalRestaurant: isStoppedLocally,
+              stoppedAtMenuSource: isStoppedAtMenuSource,
+              stopReason: stopMeta?.reason || null,
               name: translation?.name || dish.name,
               description: translation?.description || dish.description,
               translations: undefined

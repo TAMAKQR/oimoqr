@@ -209,20 +209,42 @@ export const createOrder = async (req, res, next) => {
     });
     const trustedTotal = roundCurrency(itemsSubtotal + deliveryFee);
 
-    const stoppedDishes = await prisma.dishStop.findMany({
+    const servingRestaurant = await prisma.restaurant.findUnique({
+      where: { id: servingRestaurantId },
+      select: { id: true, sharedMenuSourceRestaurantId: true }
+    });
+
+    const effectiveStopRestaurantIds = servingRestaurant?.sharedMenuSourceRestaurantId
+      ? [servingRestaurant.sharedMenuSourceRestaurantId, servingRestaurantId]
+      : [servingRestaurantId];
+
+    const stoppedDishesRaw = await prisma.dishStop.findMany({
       where: {
-        restaurantId: servingRestaurantId,
+        restaurantId: { in: effectiveStopRestaurantIds },
         isStopped: true,
         dishId: { in: dishIds }
       },
       select: {
         dishId: true,
         reason: true,
+        restaurantId: true,
         dish: {
           select: { name: true }
         }
       }
     });
+
+    const stoppedDishesMap = new Map();
+    stoppedDishesRaw.forEach((stop) => {
+      const existing = stoppedDishesMap.get(stop.dishId);
+      const isLocalStop = stop.restaurantId === servingRestaurantId;
+
+      if (!existing || isLocalStop) {
+        stoppedDishesMap.set(stop.dishId, stop);
+      }
+    });
+
+    const stoppedDishes = Array.from(stoppedDishesMap.values());
 
     if (stoppedDishes.length > 0) {
       return res.status(400).json({

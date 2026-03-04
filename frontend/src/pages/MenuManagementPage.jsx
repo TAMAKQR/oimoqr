@@ -219,7 +219,12 @@ const MenuManagementPage = () => {
 
     try {
       if (isSharedMenuConsumer || isManagerForSelectedRestaurant) {
-        const nextStoppedState = !dish.stoppedAtRestaurant;
+        const sourceRestaurantId = selectedRestaurant?.sharedMenuSourceRestaurantId || selectedRestaurantId;
+        const targetRestaurantId = isManagerForSelectedRestaurant ? selectedRestaurantId : sourceRestaurantId;
+        const isStoppedForTarget = isManagerForSelectedRestaurant
+          ? Boolean(dish.stoppedAtLocalRestaurant)
+          : Boolean(dish.stoppedAtMenuSource);
+        const nextStoppedState = !isStoppedForTarget;
         let reason = dish.stopReason || null;
 
         if (nextStoppedState) {
@@ -230,8 +235,12 @@ const MenuManagementPage = () => {
           reason = promptValue.trim() || null;
         }
 
-        await restaurantService.setDishStop(selectedRestaurantId, dish.id, nextStoppedState, reason);
-        toast.success(nextStoppedState ? 'Блюдо добавлено в стоп-лист точки' : 'Блюдо снято со стоп-листа точки');
+        await restaurantService.setDishStop(targetRestaurantId, dish.id, nextStoppedState, reason);
+        toast.success(
+          nextStoppedState
+            ? (isManagerForSelectedRestaurant ? 'Блюдо добавлено в локальный стоп-лист точки' : 'Блюдо добавлено в глобальный стоп-лист')
+            : (isManagerForSelectedRestaurant ? 'Блюдо снято с локального стоп-листа точки' : 'Блюдо снято с глобального стоп-листа')
+        );
         await loadCategories(selectedRestaurantId);
         return;
       }
@@ -591,14 +600,22 @@ const MenuManagementPage = () => {
                           <div className="flex items-center gap-1 flex-shrink-0">
                             <button
                               onClick={() => handleToggleAvailability(dish)}
-                              className={`p-1.5 rounded-lg transition-colors ${((isSharedMenuConsumer || isManagerForSelectedRestaurant) ? dish.stoppedAtRestaurant : !dish.available) ? 'text-red-500 hover:bg-red-50' : 'text-green-500 hover:bg-green-50'}`}
+                              className={`p-1.5 rounded-lg transition-colors ${isManagerForSelectedRestaurant
+                                ? (dish.stoppedAtLocalRestaurant ? 'text-red-500 hover:bg-red-50' : 'text-green-500 hover:bg-green-50')
+                                : isSharedMenuConsumer
+                                  ? (dish.stoppedAtMenuSource ? 'text-red-500 hover:bg-red-50' : 'text-green-500 hover:bg-green-50')
+                                  : (!dish.available ? 'text-red-500 hover:bg-red-50' : 'text-green-500 hover:bg-green-50')}`}
                               title={isSharedMenuConsumer
-                                ? (dish.stoppedAtRestaurant ? 'Снять со стоп-листа для этой точки' : 'Поставить в стоп-лист для этой точки')
+                                ? (dish.stoppedAtMenuSource ? 'Снять с глобального стоп-листа' : 'Поставить в глобальный стоп-лист')
                                 : isManagerForSelectedRestaurant
-                                  ? (dish.stoppedAtRestaurant ? 'Снять со стоп-листа для этой точки' : 'Поставить в стоп-лист для этой точки')
+                                  ? (dish.stoppedAtLocalRestaurant ? 'Снять с локального стоп-листа точки' : 'Поставить в локальный стоп-лист точки')
                                   : (dish.available ? 'Поставить на стоп' : 'Вернуть в меню')}
                             >
-                              {((isSharedMenuConsumer || isManagerForSelectedRestaurant) ? dish.stoppedAtRestaurant : !dish.available) ? (
+                              {(isManagerForSelectedRestaurant
+                                ? dish.stoppedAtLocalRestaurant
+                                : isSharedMenuConsumer
+                                  ? dish.stoppedAtMenuSource
+                                  : !dish.available) ? (
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" /></svg>
                               ) : (
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>

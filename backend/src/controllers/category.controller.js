@@ -57,11 +57,37 @@ export const getCategories = async (req, res, next) => {
         }
       });
     }
+    const effectiveStopRestaurantIds = restaurant.sharedMenuSourceRestaurantId
+      ? [restaurant.sharedMenuSourceRestaurantId, restaurantId]
+      : [restaurantId];
+
     const dishStops = await prisma.dishStop.findMany({
-      where: { restaurantId, isStopped: true },
-      select: { dishId: true, reason: true }
+      where: {
+        restaurantId: { in: effectiveStopRestaurantIds },
+        isStopped: true
+      },
+      select: { dishId: true, reason: true, restaurantId: true }
     });
-    const stopByDish = new Map(dishStops.map((x) => [x.dishId, x.reason || null]));
+
+    const localStoppedDishIds = new Set(
+      dishStops.filter((stop) => stop.restaurantId === restaurantId).map((stop) => stop.dishId)
+    );
+    const sourceStoppedDishIds = new Set(
+      dishStops.filter((stop) => stop.restaurantId === menuSourceRestaurantId).map((stop) => stop.dishId)
+    );
+
+    const stopByDish = new Map();
+    dishStops.forEach((stop) => {
+      const existing = stopByDish.get(stop.dishId);
+      const isLocalStop = stop.restaurantId === restaurantId;
+
+      if (!existing || isLocalStop) {
+        stopByDish.set(stop.dishId, {
+          reason: stop.reason || null,
+          restaurantId: stop.restaurantId
+        });
+      }
+    });
 
     // Debug: log modifiers data
     categories.forEach(cat => {
@@ -79,7 +105,10 @@ export const getCategories = async (req, res, next) => {
         ...categoryRest,
         dishes: dishes.map(dish => {
           const { modifiers = [], ...dishRest } = dish;
-          const isStopped = stopByDish.has(dish.id);
+          const stopMeta = stopByDish.get(dish.id);
+          const isStoppedLocally = localStoppedDishIds.has(dish.id);
+          const isStoppedAtMenuSource = sourceStoppedDishIds.has(dish.id);
+          const isStopped = isStoppedLocally || isStoppedAtMenuSource;
           return {
             ...dishRest,
             modifiers: modifiers.map((modifier) => ({
@@ -88,7 +117,9 @@ export const getCategories = async (req, res, next) => {
             })),
             available: dish.available && !isStopped,
             stoppedAtRestaurant: isStopped,
-            stopReason: stopByDish.get(dish.id),
+            stoppedAtLocalRestaurant: isStoppedLocally,
+            stoppedAtMenuSource: isStoppedAtMenuSource,
+            stopReason: stopMeta?.reason || null,
             imageUrl: dish.image || null  // Explicitly set imageUrl from image field
           };
         })
