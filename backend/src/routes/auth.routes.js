@@ -2,7 +2,7 @@ import express from 'express';
 import { body } from 'express-validator';
 import { register, login, getMe } from '../controllers/auth.controller.js';
 import { authenticate } from '../middleware/auth.js';
-import { authLimiter } from '../middleware/rateLimiter.js';
+import { authLimiter, registerLimiter } from '../middleware/rateLimiter.js';
 import { validate } from '../middleware/validate.js';
 
 const router = express.Router();
@@ -26,7 +26,7 @@ const loginValidation = [
   validate
 ];
 
-router.post('/register', authLimiter, registerValidation, register);
+router.post('/register', registerLimiter, registerValidation, register);
 router.post('/login', authLimiter, loginValidation, login);
 router.get('/me', authenticate, getMe);
 

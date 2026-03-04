@@ -21,14 +21,21 @@ export const rateLimiter = rateLimit({
 });
 
 export const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: isProduction ? 5 : 100,
+  windowMs: 5 * 60 * 1000,
+  max: isProduction ? 20 : 100,
   message: 'Too many login attempts, please try again later.',
   keyGenerator: (req) => {
     const email = String(req.body?.email || '').trim().toLowerCase();
     const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
-    return email ? `${ip}:${email}` : String(ip);
+    return email ? `${email}:${ip}` : String(ip);
   },
   skipSuccessfulRequests: true,
+  skip: () => !isProduction,
+});
+
+export const registerLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: isProduction ? 10 : 100,
+  message: 'Too many registration attempts, please try again later.',
   skip: () => !isProduction,
 });
