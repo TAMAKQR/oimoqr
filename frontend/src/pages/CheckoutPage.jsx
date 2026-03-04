@@ -503,6 +503,11 @@ const CheckoutPage = () => {
                         )}
                     </div>
 
+                    <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1">
+                        🏪 Точка обслуживания: {restaurant?.name}
+                        {restaurant?.subdomain ? ` (${restaurant.subdomain})` : ''}
+                    </div>
+
                     {checkoutStep === 1 ? (
                         orderSection
                     ) : (
