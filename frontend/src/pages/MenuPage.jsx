@@ -157,13 +157,24 @@ const MenuPage = () => {
 
   const isSearching = Boolean(searchTerm.trim());
 
+  const visibleCategories = useMemo(() => {
+    if (!restaurant) return [];
+
+    return (restaurant.categories || [])
+      .map((category) => ({
+        ...category,
+        dishes: (category.dishes || []).filter((dish) => !dish.stoppedAtRestaurant)
+      }))
+      .filter((category) => category.dishes.length > 0);
+  }, [restaurant]);
+
   const filteredCategories = useMemo(() => {
     if (!restaurant) return [];
-    if (!isSearching) return restaurant.categories;
+    if (!isSearching) return visibleCategories;
 
     const query = searchTerm.trim().toLowerCase();
 
-    return restaurant.categories
+    return visibleCategories
       .map((category) => {
         const dishes = category.dishes.filter((dish) => {
           const name = dish.name?.toLowerCase() || '';
@@ -173,9 +184,9 @@ const MenuPage = () => {
         return { ...category, dishes };
       })
       .filter((category) => category.dishes.length > 0);
-  }, [restaurant, searchTerm, isSearching]);
+  }, [restaurant, visibleCategories, searchTerm, isSearching]);
 
-  const categoriesToRender = isSearching ? filteredCategories : restaurant?.categories || [];
+  const categoriesToRender = isSearching ? filteredCategories : visibleCategories;
 
   const searchResults = useMemo(() => {
     if (!isSearching) return [];
@@ -283,7 +294,10 @@ const MenuPage = () => {
         setAvailableLanguages(data.languages);
       }
       if (data.categories && data.categories.length > 0) {
-        setSelectedCategory(data.categories[0].id);
+        const firstVisibleCategory = data.categories.find(
+          (category) => (category.dishes || []).some((dish) => !dish.stoppedAtRestaurant)
+        );
+        setSelectedCategory(firstVisibleCategory?.id || data.categories[0].id);
       }
     } catch (err) {
       setError(err.response?.data?.error || 'Ресторан не найден');
@@ -685,7 +699,7 @@ const MenuPage = () => {
             <div className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-2">
               {displayRestaurant.categoryGroups.map((group) => {
                 const dishCount = group.categories?.reduce((sum, cat) =>
-                  sum + (cat.dishes?.length || 0), 0
+                  sum + ((cat.dishes || []).filter((dish) => !dish.stoppedAtRestaurant).length || 0), 0
                 ) || 0;
 
                 return (
@@ -747,7 +761,7 @@ const MenuPage = () => {
               ref={categoryMenuRef}
               className="flex gap-2 overflow-x-auto py-3 pl-[4px] scrollbar-hide scroll-smooth"
             >
-              {displayRestaurant.categories.map((category) => (
+              {visibleCategories.map((category) => (
                 <button
                   key={category.id}
                   ref={(el) => (categoryButtonRefs.current[category.id] = el)}
@@ -770,7 +784,7 @@ const MenuPage = () => {
             <div className="sticky top-24 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3 px-2">Категории</p>
               <div className="space-y-1">
-                {displayRestaurant.categories.map((category) => (
+                {visibleCategories.map((category) => (
                   <button
                     key={`desktop-nav-${category.id}`}
                     onClick={() => handleCategoryClick(category.id)}
@@ -787,7 +801,7 @@ const MenuPage = () => {
           </aside>
 
           <div className={`${displayRestaurant.menuCardStyle === 'gallery' ? 'px-2 sm:px-3 lg:px-0' : 'px-4 lg:px-0'} py-6 pb-20 sm:pb-6 lg:py-0`}>
-            {!isSearching && displayRestaurant.categories.map((category) => (
+            {!isSearching && visibleCategories.map((category) => (
               <div
                 key={category.id}
                 ref={(el) => (categoryRefs.current[category.id] = el)}
