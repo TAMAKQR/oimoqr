@@ -180,7 +180,12 @@ const DishModal = ({
   const loadRecommendations = async () => {
     setLoadingRecommendations(true);
     try {
-      const response = await fetch(`/api/dishes/${dish.id}/recommendations?limit=4`);
+      const params = new URLSearchParams({ limit: '4' });
+      if (restaurantId) {
+        params.set('restaurantId', restaurantId);
+      }
+
+      const response = await fetch(`/api/dishes/${dish.id}/recommendations?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
         setRecommendations(data.recommendations || []);

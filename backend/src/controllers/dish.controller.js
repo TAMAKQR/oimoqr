@@ -1086,7 +1086,8 @@ export const deleteModifierOptionImage = async (req, res, next) => {
 export const getDishRecommendations = async (req, res, next) => {
   try {
     const { dishId } = req.params;
-    const limit = parseInt(req.query.limit) || 4;
+    const limit = parseInt(req.query.limit, 10) || 4;
+    const requestedRestaurantId = req.query.restaurantId ? String(req.query.restaurantId) : null;
 
     console.log(`🔍 [Recommendations] Getting recommendations for dish: ${dishId}`);
 
@@ -1108,6 +1109,40 @@ export const getDishRecommendations = async (req, res, next) => {
     if (!dish) {
       return res.status(404).json({ error: 'Dish not found' });
     }
+
+    let servingRestaurant = null;
+    if (requestedRestaurantId) {
+      servingRestaurant = await prisma.restaurant.findUnique({
+        where: { id: requestedRestaurantId },
+        select: { id: true, sharedMenuSourceRestaurantId: true }
+      });
+    }
+
+    const menuSourceRestaurantId = servingRestaurant?.sharedMenuSourceRestaurantId || dish.category.restaurantId;
+    const effectiveStopRestaurantIds = servingRestaurant?.sharedMenuSourceRestaurantId
+      ? [servingRestaurant.sharedMenuSourceRestaurantId, servingRestaurant.id]
+      : servingRestaurant?.id
+        ? [servingRestaurant.id]
+        : [dish.category.restaurantId];
+
+    const stoppedDishRows = await prisma.dishStop.findMany({
+      where: {
+        restaurantId: { in: effectiveStopRestaurantIds },
+        isStopped: true
+      },
+      select: {
+        dishId: true,
+        restaurantId: true
+      }
+    });
+
+    const stoppedDishIds = new Set();
+    stoppedDishRows.forEach((row) => {
+      const isLocalStop = servingRestaurant?.id && row.restaurantId === servingRestaurant.id;
+      if (isLocalStop || !stoppedDishIds.has(row.dishId)) {
+        stoppedDishIds.add(row.dishId);
+      }
+    });
 
     // Try to get manual recommendations if field exists
     let manualRecommendationIds = [];
@@ -1258,6 +1293,44 @@ export const getDishRecommendations = async (req, res, next) => {
           ...d,
           imageUrl: d.image,
           recommendationType: 'popular'
+        }))
+      ];
+    }
+
+    recommendations = recommendations.filter((rec) => !stoppedDishIds.has(rec.id));
+
+    if (recommendations.length < limit) {
+      const fallbackTopUp = await prisma.dish.findMany({
+        where: {
+          category: {
+            restaurantId: menuSourceRestaurantId
+          },
+          available: true,
+          id: {
+            notIn: [dishId, ...recommendations.map((r) => r.id), ...Array.from(stoppedDishIds)]
+          }
+        },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          price: true,
+          image: true,
+          categoryId: true
+        },
+        take: limit - recommendations.length,
+        orderBy: [
+          { order: 'asc' },
+          { createdAt: 'desc' }
+        ]
+      });
+
+      recommendations = [
+        ...recommendations,
+        ...fallbackTopUp.map((d) => ({
+          ...d,
+          imageUrl: d.image,
+          recommendationType: 'fallback'
         }))
       ];
     }
