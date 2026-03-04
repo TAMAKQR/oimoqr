@@ -5,7 +5,7 @@ import { cacheBustImage } from '../utils/imageCache';
 import ImageWithLoader from './ImageWithLoader';
 
 // Отдельный компонент для карточки рекомендации, чтобы реагировать на изменения корзины
-const RecommendationCard = ({ dish, currency, addItem, removeItem, onOpenDish }) => {
+const RecommendationCard = ({ dish, currency, addItem, removeItem, onOpenDish, canAddToCart = true, onAddToCartBlocked }) => {
   const items = useCartStore((state) => state.items);
   const updateQuantity = useCartStore((state) => state.updateQuantity);
   const itemInCart = items.find(item => item.dish.id === dish.id);
@@ -38,6 +38,10 @@ const RecommendationCard = ({ dish, currency, addItem, removeItem, onOpenDish })
             <button
               onClick={(e) => {
                 e.stopPropagation();
+                if (!canAddToCart) {
+                  onAddToCartBlocked?.();
+                  return;
+                }
                 if (requireSelection) {
                   onOpenDish?.(dish);
                   return;
@@ -68,6 +72,10 @@ const RecommendationCard = ({ dish, currency, addItem, removeItem, onOpenDish })
               <button
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (!canAddToCart) {
+                    onAddToCartBlocked?.();
+                    return;
+                  }
                   if (requireSelection) {
                     onOpenDish?.(dish);
                     return;
@@ -99,7 +107,9 @@ const DishModal = ({
   onToggleFavorite,
   favoriteLoading = false,
   restaurantId,
-  restaurantName
+  restaurantName,
+  canAddToCart = true,
+  onAddToCartBlocked
 }) => {
   const [dish, setDish] = useState(initialDish);
   // Используем объект для хранения выбранных опций для каждого модификатора
@@ -216,6 +226,11 @@ const DishModal = ({
 
   const handleAddToCart = () => {
     if (!isAvailable) return;
+
+    if (!canAddToCart) {
+      onAddToCartBlocked?.();
+      return;
+    }
 
     // Проверяем, не из другого ли ресторана
     if (restaurantId && isOtherRestaurant(restaurantId)) {
@@ -398,6 +413,8 @@ const DishModal = ({
                       addItem={addItem}
                       removeItem={removeItem}
                       onOpenDish={openDishFromRecommendation}
+                      canAddToCart={canAddToCart}
+                      onAddToCartBlocked={onAddToCartBlocked}
                     />
                   );
                 })}

@@ -28,7 +28,7 @@ const allergenNames = {
   sesame: 'Кунжут'
 };
 
-const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteToggle, onModalStateChange, restaurantId, restaurantName }) => {
+const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteToggle, onModalStateChange, restaurantId, restaurantName, canAddToCart = true, onAddToCartBlocked }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [isFavorite, setIsFavorite] = useState(Boolean(dish?.isFavorite));
@@ -83,6 +83,11 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
 
     if (!isAvailable || isAdding) return;
 
+    if (!canAddToCart) {
+      onAddToCartBlocked?.();
+      return;
+    }
+
     const dishPrice = parseFloat(dish.price) || 0;
 
     // Проверяем, не из другого ли ресторана
@@ -111,6 +116,11 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
 
   // Обработчик клика на карточку
   const handleCardClick = () => {
+    if (!canAddToCart) {
+      onAddToCartBlocked?.();
+      return;
+    }
+
     if (isAvailable) {
       setIsModalOpen(true);
     }
@@ -299,6 +309,8 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
           favoriteLoading={favoriteLoading}
           restaurantId={restaurantId}
           restaurantName={restaurantName}
+          canAddToCart={canAddToCart}
+          onAddToCartBlocked={onAddToCartBlocked}
         />
       </>
     );

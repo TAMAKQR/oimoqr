@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { restaurantService } from '../services/restaurantService';
 import customerService from '../services/customerService';
 import { useCartStore } from '../store/cartStore';
@@ -141,6 +142,7 @@ const MenuPage = () => {
   const [availableLanguages, setAvailableLanguages] = useState([]);
   const [showLanguageSwitcher, setShowLanguageSwitcher] = useState(true);
   const [isCustomerLoggedIn, setIsCustomerLoggedIn] = useState(false);
+  const [hasDeliveryAddress, setHasDeliveryAddress] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isDishModalOpen, setIsDishModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -189,6 +191,38 @@ const MenuPage = () => {
   useEffect(() => {
     setIsCustomerLoggedIn(customerService.isAuthenticated());
   }, []);
+
+  // Для доставки адрес обязателен заранее
+  useEffect(() => {
+    if (!isCustomerLoggedIn) {
+      setHasDeliveryAddress(false);
+      return;
+    }
+
+    let isCancelled = false;
+
+    const loadAddressAvailability = async () => {
+      try {
+        const profile = await customerService.getProfile();
+        const savedAddresses = Array.isArray(profile?.savedAddresses) ? profile.savedAddresses : [];
+        const hasAnyAddress = savedAddresses.some((address) => String(address?.address || '').trim().length > 0);
+
+        if (!isCancelled) {
+          setHasDeliveryAddress(hasAnyAddress);
+        }
+      } catch {
+        if (!isCancelled) {
+          setHasDeliveryAddress(false);
+        }
+      }
+    };
+
+    loadAddressAvailability();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isCustomerLoggedIn]);
 
   // Определяем режим: заказ в зале (?table=X или ?dine_in) или доставка
   useEffect(() => {
@@ -305,6 +339,22 @@ const MenuPage = () => {
   }, [restaurant?.id, restaurant?.subdomain, selectedLanguage, tableFromUrl, dineInParam]);
 
   const displayRestaurant = restaurant;
+  const isDeliveryMode = orderMode !== 'dine_in';
+  const canAddToCart = !isDeliveryMode || (isCustomerLoggedIn && hasDeliveryAddress);
+
+  const handleAddToCartBlocked = () => {
+    if (!isDeliveryMode) return;
+
+    if (!isCustomerLoggedIn) {
+      toast.error('Для доставки сначала войдите в аккаунт');
+      setShowLoginModal(true);
+      return;
+    }
+
+    toast.error('Сначала добавьте адрес доставки в профиле');
+    navigate('/customer/profile');
+  };
+
   const currencySymbol = getCurrencySymbol(displayRestaurant?.currency);
   const minOrderAmount = displayRestaurant?.minOrderAmount || 0;
   const isBelowMinimum = orderMode !== 'dine_in' && minOrderAmount > 0 && cartTotal < minOrderAmount;
@@ -772,6 +822,8 @@ const MenuPage = () => {
                           style={displayRestaurant.menuCardStyle || 'horizontal'}
                           restaurantId={displayRestaurant.id}
                           restaurantName={displayRestaurant.name}
+                          canAddToCart={canAddToCart}
+                          onAddToCartBlocked={handleAddToCartBlocked}
                           onFavoriteToggle={(action) => {
                             if (action === 'login') {
                               setShowLoginModal(true);
@@ -815,6 +867,8 @@ const MenuPage = () => {
                             style={displayRestaurant.menuCardStyle || 'horizontal'}
                             restaurantId={displayRestaurant.id}
                             restaurantName={displayRestaurant.name}
+                            canAddToCart={canAddToCart}
+                            onAddToCartBlocked={handleAddToCartBlocked}
                             onFavoriteToggle={(action) => {
                               if (action === 'login') {
                                 setShowLoginModal(true);
@@ -952,6 +1006,8 @@ const MenuPage = () => {
                           style={displayRestaurant.menuCardStyle || 'horizontal'}
                           restaurantId={displayRestaurant.id}
                           restaurantName={displayRestaurant.name}
+                          canAddToCart={canAddToCart}
+                          onAddToCartBlocked={handleAddToCartBlocked}
                           onFavoriteToggle={(action) => {
                             if (action === 'login') {
                               setShowLoginModal(true);
