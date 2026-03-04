@@ -548,13 +548,14 @@ const MenuManagementPage = () => {
 
                           {/* Price */}
                           <div className="flex-shrink-0 text-right tabular-nums">
-                            <div className="text-sm font-semibold text-gray-900">
-                              <span className="sm:hidden">{dish.price} {currency}</span>
-                              <span className="hidden sm:inline">Зал: {dish.price} {currency}</span>
+                            <div className="sm:hidden text-xs font-semibold text-gray-900">
+                              {dish.price}/{dish.deliveryPrice ?? dish.price} {currency}
                             </div>
-                            <div className="text-xs text-gray-500">
-                              <span className="sm:hidden">{dish.deliveryPrice ?? dish.price} {currency}</span>
-                              <span className="hidden sm:inline">Доставка: {dish.deliveryPrice ?? dish.price} {currency}</span>
+                            <div className="hidden sm:block text-sm font-semibold text-gray-900">
+                              Зал: {dish.price} {currency}
+                            </div>
+                            <div className="hidden sm:block text-xs text-gray-500">
+                              Доставка: {dish.deliveryPrice ?? dish.price} {currency}
                             </div>
                           </div>
 
