@@ -127,6 +127,7 @@ const MenuPage = () => {
   const [searchParams] = useSearchParams();
   const tableFromUrl = searchParams.get('table');
   const dineInParam = searchParams.has('dine_in');
+  const allowAutoBranchSwitch = searchParams.get('nearest') === '1';
   const orderMode = useCartStore((state) => state.orderMode);
   const setOrderMode = useCartStore((state) => state.setOrderMode);
   const cartItems = useCartStore((state) => state.items);
@@ -265,6 +266,7 @@ const MenuPage = () => {
 
   // Определение ближайшего филиала для доставки (перезагружаем данные с гео)
   useEffect(() => {
+    if (!allowAutoBranchSwitch) return;
     if (!restaurant || !restaurant.subdomain || tableFromUrl || dineInParam) return;
     if (!('geolocation' in navigator)) return;
 
@@ -284,7 +286,7 @@ const MenuPage = () => {
         // Игнорируем ошибки геолокации
       }
     }, null, { timeout: 10000 });
-  }, [restaurant?.id, restaurant?.subdomain, selectedLanguage, tableFromUrl, dineInParam]);
+  }, [allowAutoBranchSwitch, restaurant?.id, restaurant?.subdomain, selectedLanguage, tableFromUrl, dineInParam]);
 
   const displayRestaurant = restaurant;
   const currencySymbol = getCurrencySymbol(displayRestaurant?.currency);
