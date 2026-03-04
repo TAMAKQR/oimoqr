@@ -71,17 +71,21 @@ app.use((req, res, next) => {
   // НЕ кэшируем запросы с авторизацией (админка)
   const isAuthenticated = req.headers.authorization;
 
-  if (req.method === 'GET' && !isAuthenticated && (
-    req.url.startsWith('/api/restaurants/') ||
-    req.url.startsWith('/api/categories') ||
-    req.url.startsWith('/api/dishes')
-  )) {
-    // Кэшируем на 5 минут (300 секунд) только для публичных запросов
-    res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
-  } else if (req.method === 'GET' && isAuthenticated) {
-    // Для авторизованных запросов (админка) - НЕ кэшируем
+  // Для публичного меню ресторана всегда отдаем свежие данные (стоп-лист/доступность должны обновляться мгновенно)
+  if (req.method === 'GET' && !isAuthenticated && req.url.startsWith('/api/restaurants/')) {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
-  }
+  } else
+
+    if (req.method === 'GET' && !isAuthenticated && (
+      req.url.startsWith('/api/categories') ||
+      req.url.startsWith('/api/dishes')
+    )) {
+      // Кэшируем на 5 минут (300 секунд) только для публичных запросов
+      res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+    } else if (req.method === 'GET' && isAuthenticated) {
+      // Для авторизованных запросов (админка) - НЕ кэшируем
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    }
 
   // ✅ ИСПРАВЛЕНИЕ: Кэшируем uploads на 1 час (не 1 день) для возможности обновления
   // Добавляем must-revalidate для проверки актуальности при обновлении
