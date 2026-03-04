@@ -36,7 +36,8 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
   const addItem = useCartStore((state) => state.addItem);
   const isOtherRestaurant = useCartStore((state) => state.isOtherRestaurant);
   const switchRestaurant = useCartStore((state) => state.switchRestaurant);
-  const isAvailable = dish.isAvailable !== false; // По умолчанию true если поле отсутствует
+  const availabilityFlag = dish.available ?? dish.isAvailable;
+  const isAvailable = availabilityFlag !== false; // По умолчанию true если поле отсутствует
   const hasModifiers = dish.modifiers && dish.modifiers.length > 0;
 
   // Парсим аллергены из JSON строки
