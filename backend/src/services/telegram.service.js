@@ -20,6 +20,14 @@ const formatOrderTime = (value) => {
     });
 };
 
+const formatServingPoint = (restaurant) => {
+    if (!restaurant?.name) return 'Не указано';
+    if (restaurant?.subdomain) {
+        return `${restaurant.name} (${restaurant.subdomain})`;
+    }
+    return restaurant.name;
+};
+
 class TelegramService {
     constructor() {
         this.bot = null;
@@ -170,7 +178,7 @@ class TelegramService {
 
             const message = `
 🆕 **НОВЫЙ ЗАКАЗ ${order.orderNumber}**
-🏪 **Ресторан:** ${restaurant.name || 'Не указано'}
+🏪 **Точка обслуживания:** ${formatServingPoint(restaurant)}
 
 👤 **Клиент:** ${order.customerName || 'Не указано'}
 📞 **Телефон:** ${order.customerPhone || 'Не указано'}

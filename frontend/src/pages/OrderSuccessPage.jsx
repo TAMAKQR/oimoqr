@@ -162,7 +162,10 @@ const OrderSuccessPage = () => {
                             </span>
                         </div>
                         {restaurant?.name && (
-                            <div className="mt-2 text-xs text-gray-400">{restaurant.name}</div>
+                            <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1">
+                                🏪 Точка обслуживания: {restaurant.name}
+                                {restaurant?.subdomain ? ` (${restaurant.subdomain})` : ''}
+                            </div>
                         )}
                     </div>
                 </div>
