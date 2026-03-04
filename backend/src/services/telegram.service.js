@@ -1,5 +1,25 @@
 import TelegramBot from 'node-telegram-bot-api';
 
+const ORDER_TIMEZONE = process.env.ORDER_TIMEZONE || 'Asia/Bishkek';
+
+const formatOrderTime = (value) => {
+    const date = value ? new Date(value) : new Date();
+
+    if (Number.isNaN(date.getTime())) {
+        return new Date().toLocaleString('ru-RU', { timeZone: ORDER_TIMEZONE });
+    }
+
+    return date.toLocaleString('ru-RU', {
+        timeZone: ORDER_TIMEZONE,
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+};
+
 class TelegramService {
     constructor() {
         this.bot = null;
@@ -166,7 +186,7 @@ ${order.deliveryType !== 'dine_in' ? `💳 **Оплата:** ${paymentMethod}` :
 
 ${order.notes ? `📝 **Комментарий:** ${order.notes}` : ''}
 
-⏰ Время: ${new Date().toLocaleString('ru-RU')}
+⏰ Время: ${formatOrderTime(order.createdAt)}
       `.trim();
 
             await this.bot.sendMessage(restaurant.telegramGroupId, message, {
