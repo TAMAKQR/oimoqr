@@ -8,7 +8,16 @@ export const rateLimiter = rateLimit({
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
-  skip: () => !isProduction, // disable the limiter outside production
+  skip: (req) => {
+    if (!isProduction) return true;
+
+    const path = req.originalUrl || req.path || '';
+    if (path.includes('/api/auth/login') || path === '/auth/login') {
+      return true;
+    }
+
+    return false;
+  },
 });
 
 export const authLimiter = rateLimit({
