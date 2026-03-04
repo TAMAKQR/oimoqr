@@ -263,27 +263,45 @@ const MenuPage = () => {
     loadRestaurant(selectedLanguage);
   }, [subdomain, selectedLanguage, loadRestaurant]);
 
-  // Определение ближайшего филиала для доставки (перезагружаем данные с гео)
+  // Определение ближайшего филиала по адресу авторизованного клиента
   useEffect(() => {
     if (!restaurant || !restaurant.subdomain || tableFromUrl || dineInParam) return;
-    if (!('geolocation' in navigator)) return;
+    if (!customerService.isAuthenticated()) return;
 
-    navigator.geolocation.getCurrentPosition(async (position) => {
+    let isCancelled = false;
+
+    const resolveNearestBySavedAddress = async () => {
       try {
-        const { latitude, longitude } = position.coords;
+        const profile = await customerService.getProfile();
+        const savedAddresses = Array.isArray(profile?.savedAddresses) ? profile.savedAddresses : [];
+        const selectedAddress = savedAddresses.find((address) => address?.isDefault) || savedAddresses[0];
+
+        const latitude = Number(selectedAddress?.latitude);
+        const longitude = Number(selectedAddress?.longitude);
+
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+          return;
+        }
+
         const nearestData = await restaurantService.getBySubdomain(
           restaurant.subdomain,
           selectedLanguage,
           { latitude, longitude, forceRefresh: true }
         );
 
-        if (nearestData?.id && restaurant.id && nearestData.id !== restaurant.id) {
+        if (!isCancelled && nearestData?.id && restaurant.id && nearestData.id !== restaurant.id) {
           setRestaurant(nearestData);
         }
       } catch (e) {
-        // Игнорируем ошибки геолокации
+        // Игнорируем ошибки профиля/адреса чтобы меню продолжало открываться
       }
-    }, null, { timeout: 10000 });
+    };
+
+    resolveNearestBySavedAddress();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [restaurant?.id, restaurant?.subdomain, selectedLanguage, tableFromUrl, dineInParam]);
 
   const displayRestaurant = restaurant;
