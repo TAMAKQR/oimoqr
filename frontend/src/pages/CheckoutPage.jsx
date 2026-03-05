@@ -466,6 +466,20 @@ const CheckoutPage = () => {
         ? Math.min(safeRequestedBonus, bonusBalance, maxBonusApplicable)
         : 0;
     const finalTotal = (baseTotalWithDelivery - appliedBonus).toFixed(2);
+    const totalDishCount = cartItems.reduce((sum, item) => sum + (Number(item?.quantity) || 0), 0);
+    const selectedAddressForSummary = addresses.find((addr) => addr.id === selectedAddressId) || null;
+    const deliveryMethodLabel = isDineIn
+        ? (tableNumber ? `В зале · стол ${tableNumber}` : 'В зале')
+        : deliveryType === 'delivery'
+            ? 'Доставка'
+            : 'Самовывоз';
+    const compactDeliveryAddress = useMemo(() => {
+        const raw = selectedAddressForSummary?.address || '';
+        if (!raw) return '';
+        const parts = raw.split(',').map((part) => part.trim()).filter(Boolean);
+        const withNumber = parts.filter((part) => /\d/.test(part));
+        return withNumber[withNumber.length - 1] || parts.slice(-2).join(', ') || raw;
+    }, [selectedAddressForSummary?.address]);
 
     const placeOrderDisabledReason = useMemo(() => {
         if (loading) return 'Оформляем заказ...';
@@ -552,8 +566,8 @@ const CheckoutPage = () => {
     );
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-32">
-            <div className="max-w-[480px] mx-auto px-4 pt-4 pb-24 space-y-4">
+        <div className="min-h-screen bg-gray-50" style={{ paddingBottom: 'calc(136px + env(safe-area-inset-bottom, 0px))' }}>
+            <div className="max-w-[480px] mx-auto px-4 pt-4 pb-8 space-y-4">
                 <div className="flex items-center gap-3">
                     <button
                         onClick={() => navigate(-1)}
@@ -585,9 +599,28 @@ const CheckoutPage = () => {
                         )}
                     </div>
 
-                    <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1">
-                        🏪 Точка обслуживания: {restaurant?.name}
-                        {restaurant?.subdomain ? ` (${restaurant.subdomain})` : ''}
+                    <div className="mb-4 grid grid-cols-2 gap-2">
+                        <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+                            <div className="text-[11px] uppercase tracking-wide text-gray-500">Блюд</div>
+                            <div className="text-sm font-semibold text-gray-900">{totalDishCount}</div>
+                        </div>
+                        <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+                            <div className="text-[11px] uppercase tracking-wide text-gray-500">Метод</div>
+                            <div className="text-sm font-semibold text-gray-900">{deliveryMethodLabel}</div>
+                        </div>
+                        {!isDineIn && deliveryType === 'delivery' && (
+                            <div className="col-span-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+                                <div className="text-[11px] uppercase tracking-wide text-gray-500">Адрес</div>
+                                <div className="text-sm font-semibold text-gray-900 truncate">
+                                    {customer?.id
+                                        ? (compactDeliveryAddress || 'Выберите адрес доставки')
+                                        : 'Войдите, чтобы выбрать адрес'}
+                                </div>
+                            </div>
+                        )}
+                        <div className="col-span-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-800">
+                            🏪 {restaurant?.name}{restaurant?.subdomain ? ` (${restaurant.subdomain})` : ''}
+                        </div>
                     </div>
 
                     {checkoutStep === 1 ? (
@@ -902,16 +935,16 @@ const CheckoutPage = () => {
             </div>
 
             {checkoutStep === 1 ? (
-                <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
-                    <div className="max-w-[480px] mx-auto p-3 space-y-2">
+                <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-lg z-50">
+                    <div className="max-w-[480px] mx-auto p-3 space-y-2" style={{ paddingBottom: 'calc(8px + env(safe-area-inset-bottom, 0px))' }}>
                         <button onClick={() => setCheckoutStep(2)} className="btn-primary w-full py-3 text-base shadow-lg">
                             Далее
                         </button>
                     </div>
                 </div>
             ) : (
-                <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
-                    <div className="max-w-[480px] mx-auto p-3 space-y-2">
+                <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-lg z-50">
+                    <div className="max-w-[480px] mx-auto p-3 space-y-2" style={{ paddingBottom: 'calc(8px + env(safe-area-inset-bottom, 0px))' }}>
                         <button
                             onClick={handlePlaceOrder}
                             disabled={isPlaceOrderDisabled}
