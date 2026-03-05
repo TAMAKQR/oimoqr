@@ -39,6 +39,9 @@ const MenuManagementPage = () => {
   const [showCategoryGroupsModal, setShowCategoryGroupsModal] = useState(false);
   const [categoryGroups, setCategoryGroups] = useState([]);
   const [dataTimestamp, setDataTimestamp] = useState(Date.now());
+  const [showOptionStopModal, setShowOptionStopModal] = useState(false);
+  const [selectedDishForOptionStops, setSelectedDishForOptionStops] = useState(null);
+  const [optionStopLoadingId, setOptionStopLoadingId] = useState(null);
 
   // Автоматически выбираем ресторан при загрузке (handled by useSelectedRestaurant)
 
@@ -68,6 +71,30 @@ const MenuManagementPage = () => {
     return true;
   };
 
+  const dishHasModifierOptions = (dish) => (
+    Array.isArray(dish?.modifiers) && dish.modifiers.some(
+      (modifier) => Array.isArray(modifier?.options) && modifier.options.length > 0
+    )
+  );
+
+  const getStopTargetRestaurantId = () => {
+    if (isManagerForSelectedRestaurant) {
+      return selectedRestaurantId;
+    }
+    if (isSharedMenuConsumer) {
+      return selectedRestaurant?.sharedMenuSourceRestaurantId || selectedRestaurantId;
+    }
+    return selectedRestaurantId;
+  };
+
+  const findDishInCategories = (categoriesList, dishId) => {
+    for (const category of categoriesList || []) {
+      const found = (category?.dishes || []).find((dish) => dish.id === dishId);
+      if (found) return found;
+    }
+    return null;
+  };
+
   const loadCategories = async (restaurantId) => {
     try {
       const cats = await menuService.getCategories(restaurantId);
@@ -81,8 +108,10 @@ const MenuManagementPage = () => {
       }
       setDishes(dishesData);
       setDataTimestamp(Date.now()); // Обновляем timestamp для cache-busting
+      return cats;
     } catch (err) {
       console.error('Error loading categories:', err);
+      return [];
     }
   };
 
@@ -258,6 +287,75 @@ const MenuManagementPage = () => {
       toast.error('Ошибка при изменении статуса блюда');
       await loadCategories(selectedRestaurantId);
       console.error(err);
+    }
+  };
+
+  const getOptionStoppedStateForScope = (option) => {
+    if (isManagerForSelectedRestaurant) {
+      return Boolean(option?.stoppedAtLocalRestaurant);
+    }
+    if (isSharedMenuConsumer) {
+      return Boolean(option?.stoppedAtMenuSource);
+    }
+    return Boolean(option?.stoppedAtRestaurant);
+  };
+
+  const handleOpenOptionStopModal = (dish) => {
+    if (!dishHasModifierOptions(dish)) {
+      toast.error('У этого блюда нет опций модификаторов');
+      return;
+    }
+    setSelectedDishForOptionStops(dish);
+    setShowOptionStopModal(true);
+  };
+
+  const handleCloseOptionStopModal = () => {
+    setShowOptionStopModal(false);
+    setSelectedDishForOptionStops(null);
+    setOptionStopLoadingId(null);
+  };
+
+  const handleToggleModifierOptionStop = async (option) => {
+    if (!selectedDishForOptionStops?.id || !option?.id) return;
+
+    if (isManagerForSelectedRestaurant && option.stoppedAtMenuSource) {
+      toast.error('Опция в глобальном стоп-листе. Снимите его в главном ресторане.');
+      return;
+    }
+
+    const targetRestaurantId = getStopTargetRestaurantId();
+    if (!targetRestaurantId) {
+      toast.error('Не удалось определить точку для стоп-листа');
+      return;
+    }
+
+    const isStoppedForScope = getOptionStoppedStateForScope(option);
+    const nextStoppedState = !isStoppedForScope;
+    let reason = option.stopReason || null;
+
+    if (nextStoppedState) {
+      const promptValue = window.prompt('Причина стоп-листа для опции (необязательно):', option.stopReason || '');
+      if (promptValue === null) return;
+      reason = promptValue.trim() || null;
+    }
+
+    try {
+      setOptionStopLoadingId(option.id);
+      await restaurantService.setModifierOptionStop(targetRestaurantId, option.id, nextStoppedState, reason);
+      toast.success(nextStoppedState ? 'Опция добавлена в стоп-лист' : 'Опция снята со стоп-листа');
+
+      const refreshedCategories = await loadCategories(selectedRestaurantId);
+      const refreshedDish = findDishInCategories(refreshedCategories, selectedDishForOptionStops.id);
+      if (!refreshedDish) {
+        handleCloseOptionStopModal();
+        return;
+      }
+      setSelectedDishForOptionStops(refreshedDish);
+    } catch (err) {
+      toast.error('Ошибка при изменении статуса опции');
+      console.error(err);
+    } finally {
+      setOptionStopLoadingId(null);
     }
   };
 
@@ -598,6 +696,20 @@ const MenuManagementPage = () => {
 
                           {/* Actions */}
                           <div className="flex items-center gap-1 flex-shrink-0">
+                            {dishHasModifierOptions(dish) && (
+                              <button
+                                onClick={() => handleOpenOptionStopModal(dish)}
+                                className="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 transition-colors"
+                                title="Стоп по опциям"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 6.75h15m-15 5.25h15m-15 5.25h15" />
+                                  <circle cx="8" cy="6.75" r="1.25" fill="currentColor" />
+                                  <circle cx="15.5" cy="12" r="1.25" fill="currentColor" />
+                                  <circle cx="11" cy="17.25" r="1.25" fill="currentColor" />
+                                </svg>
+                              </button>
+                            )}
                             <button
                               onClick={() => handleToggleAvailability(dish)}
                               className={`p-1.5 rounded-lg transition-colors ${isManagerForSelectedRestaurant
@@ -648,6 +760,19 @@ const MenuManagementPage = () => {
           </div>
         )}
       </div>
+
+      {/* Modifier Option Stop Modal */}
+      {showOptionStopModal && selectedDishForOptionStops && (
+        <ModifierOptionStopModal
+          dish={selectedDishForOptionStops}
+          currency={currency}
+          isManagerForSelectedRestaurant={isManagerForSelectedRestaurant}
+          isSharedMenuConsumer={isSharedMenuConsumer}
+          loadingOptionId={optionStopLoadingId}
+          onToggleOptionStop={handleToggleModifierOptionStop}
+          onClose={handleCloseOptionStopModal}
+        />
+      )}
 
       {/* Category Modal */}
       {showCategoryModal && selectedRestaurantId && (
@@ -2018,6 +2143,111 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
         </form >
       </div >
     </div >
+  );
+};
+
+const ModifierOptionStopModal = ({
+  dish,
+  currency = '₽',
+  isManagerForSelectedRestaurant = false,
+  isSharedMenuConsumer = false,
+  loadingOptionId = null,
+  onToggleOptionStop,
+  onClose
+}) => {
+  const modifiersWithOptions = (dish?.modifiers || []).filter(
+    (modifier) => Array.isArray(modifier?.options) && modifier.options.length > 0
+  );
+
+  const getStoppedStateForScope = (option) => {
+    if (isManagerForSelectedRestaurant) return Boolean(option?.stoppedAtLocalRestaurant);
+    if (isSharedMenuConsumer) return Boolean(option?.stoppedAtMenuSource);
+    return Boolean(option?.stoppedAtRestaurant);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+      <div className="bg-white rounded-t-2xl sm:rounded-lg w-full max-w-xl max-h-[90vh] overflow-y-auto p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div>
+            <h3 className="text-lg font-bold">Стоп по опциям</h3>
+            <p className="text-sm text-gray-600 break-words">{dish?.name}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+            aria-label="Закрыть"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {modifiersWithOptions.length === 0 ? (
+          <p className="text-sm text-gray-500">У блюда нет опций модификаторов.</p>
+        ) : (
+          <div className="space-y-4">
+            {modifiersWithOptions.map((modifier) => (
+              <div key={modifier.id} className="border border-gray-200 rounded-lg p-3">
+                <div className="font-medium text-sm mb-2">
+                  {modifier.name}
+                  {modifier.isRequired && <span className="text-red-500 ml-1">*</span>}
+                </div>
+                <div className="space-y-2">
+                  {(modifier.options || []).map((option) => {
+                    const isStoppedForScope = getStoppedStateForScope(option);
+                    const isGlobalStop = Boolean(option?.stoppedAtMenuSource);
+                    const isToggleLocked = isManagerForSelectedRestaurant && isGlobalStop;
+                    const isLoading = loadingOptionId === option.id;
+
+                    return (
+                      <div key={option.id} className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium break-words">{option.name}</div>
+                          <div className="text-xs text-gray-500">
+                            {option.price > 0 ? `+${option.price} ${currency}` : 'Без доплаты'}
+                          </div>
+                          {option.stopReason && (option.stoppedAtRestaurant || option.stoppedAtMenuSource || option.stoppedAtLocalRestaurant) && (
+                            <div className="text-xs text-gray-500 mt-1 break-words">Причина: {option.stopReason}</div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {isStoppedForScope && (
+                            <span className="px-2 py-1 rounded-full bg-red-100 text-red-700 text-[11px] font-semibold">
+                              СТОП
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            disabled={isLoading || isToggleLocked}
+                            onClick={() => onToggleOptionStop(option)}
+                            className={`px-2.5 py-1.5 text-xs rounded-lg border transition-colors ${isStoppedForScope
+                              ? 'border-red-200 text-red-600 hover:bg-red-50'
+                              : 'border-green-200 text-green-700 hover:bg-green-50'} disabled:opacity-50 disabled:cursor-not-allowed`}
+                            title={isToggleLocked ? 'Опция остановлена глобально' : undefined}
+                          >
+                            {isLoading
+                              ? '...'
+                              : isToggleLocked
+                                ? 'Глобальный стоп'
+                                : isStoppedForScope
+                                  ? 'Снять стоп'
+                                  : 'Поставить стоп'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 

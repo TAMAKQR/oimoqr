@@ -2,6 +2,7 @@ import { prisma } from '../config/prisma.js';
 import { calculateTrialEndDate, calculateSubscriptionPrice, getTrialDaysRemaining } from '../utils/subscription.js';
 import { getNetworkRankedDeliveryPoints } from './geolocation.controller.js';
 import { getModifierOptionSelect } from '../utils/modifierOptionFields.js';
+import { loadModifierOptionStops } from '../utils/modifierOptionStops.js';
 import { ensureRestaurantAccess } from '../utils/restaurantAccess.js';
 
 const isRestaurantOpen = (restaurant) => {
@@ -311,6 +312,15 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
       }
     });
 
+    const {
+      localStoppedOptionIds,
+      sourceStoppedOptionIds,
+      stopByOption
+    } = await loadModifierOptionStops({
+      restaurantId: restaurantBase.id,
+      menuSourceRestaurantId
+    });
+
     // Parse workingHours if it's a JSON string (SQLite compatibility)
     let workingHours = restaurantBase.workingHours;
     if (workingHours && typeof workingHours === 'string') {
@@ -338,14 +348,45 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
             const isStoppedLocally = localStoppedDishIds.has(dish.id);
             const isStoppedAtMenuSource = sourceStoppedDishIds.has(dish.id);
             const isStopped = isStoppedLocally || isStoppedAtMenuSource;
+
+            const mappedModifiers = (dish.modifiers || []).map((modifier) => {
+              const rawOptions = Array.isArray(modifier.options) ? modifier.options : [];
+              const mappedOptions = rawOptions.map((option) => {
+                const isOptionStoppedLocally = localStoppedOptionIds.has(option.id);
+                const isOptionStoppedAtMenuSource = sourceStoppedOptionIds.has(option.id);
+                const isOptionStopped = isOptionStoppedLocally || isOptionStoppedAtMenuSource;
+                const optionStopMeta = stopByOption.get(option.id);
+
+                return {
+                  ...option,
+                  available: !isOptionStopped,
+                  stoppedAtRestaurant: isOptionStopped,
+                  stoppedAtLocalRestaurant: isOptionStoppedLocally,
+                  stoppedAtMenuSource: isOptionStoppedAtMenuSource,
+                  stopReason: optionStopMeta?.reason || null
+                };
+              }).filter((option) => option.available !== false);
+
+              return {
+                ...modifier,
+                options: mappedOptions,
+                hasAvailableOptions: mappedOptions.length > 0
+              };
+            });
+
+            const hasUnavailableRequiredModifier = mappedModifiers.some(
+              (modifier) => modifier.isRequired && !modifier.hasAvailableOptions
+            );
+            const hasAnyAvailableOption = mappedModifiers.some((modifier) => modifier.hasAvailableOptions);
+            const basePrice = Number(dish.price ?? 0);
+            const hasPositiveBasePrice = Number.isFinite(basePrice) && basePrice > 0;
+            const isOrderableByOptions = !hasUnavailableRequiredModifier && (hasPositiveBasePrice || hasAnyAvailableOption);
+
             return {
               ...dish,
-              modifiers: (dish.modifiers || []).map((modifier) => ({
-                ...modifier,
-                options: Array.isArray(modifier.options) ? modifier.options : []
-              })),
+              modifiers: mappedModifiers.map(({ hasAvailableOptions, ...modifierRest }) => modifierRest),
               imageUrl: dish.image,
-              available: dish.available && !isStopped,
+              available: dish.available && !isStopped && isOrderableByOptions,
               stoppedAtRestaurant: isStopped,
               stoppedAtLocalRestaurant: isStoppedLocally,
               stoppedAtMenuSource: isStoppedAtMenuSource,
@@ -1631,6 +1672,104 @@ export const setDishStop = async (req, res, next) => {
       message: 'Dish is available for this restaurant',
       restaurantId,
       dishId,
+      isStopped: false
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const setModifierOptionStop = async (req, res, next) => {
+  try {
+    const { restaurantId, optionId } = req.params;
+    const userId = req.user.id;
+    const { isStopped = true, reason } = req.body;
+
+    const isOwnerOrAdmin = req.user?.isAdmin || req.user?.restaurants?.some((restaurant) => restaurant.id === restaurantId);
+    const hasManagerRole = req.user?.restaurantStaff?.some(
+      (staff) => staff.restaurantId === restaurantId && staff.role === 'manager'
+    );
+
+    if (!isOwnerOrAdmin && !hasManagerRole) {
+      return res.status(403).json({ error: 'Only manager or owner can manage modifier option stop status' });
+    }
+
+    const restaurant = await prisma.restaurant.findFirst({
+      where: {
+        id: restaurantId,
+        OR: [
+          { ownerId: userId },
+          { staff: { some: { userId, role: 'manager' } } }
+        ]
+      },
+      select: {
+        id: true,
+        sharedMenuSourceRestaurantId: true
+      }
+    });
+
+    if (!restaurant) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const menuSourceRestaurantId = restaurant.sharedMenuSourceRestaurantId || restaurant.id;
+    const option = await prisma.modifierOption.findUnique({
+      where: { id: optionId },
+      select: {
+        id: true,
+        name: true,
+        modifier: {
+          select: {
+            dish: {
+              select: {
+                id: true,
+                restaurantId: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    const optionDishRestaurantId = option?.modifier?.dish?.restaurantId;
+    if (!option || optionDishRestaurantId !== menuSourceRestaurantId) {
+      return res.status(400).json({ error: 'Modifier option is not part of this restaurant shared menu' });
+    }
+
+    const normalizedReason = String(reason || '').trim() || null;
+    const shouldStop = Boolean(isStopped);
+
+    if (shouldStop) {
+      const stop = await prisma.modifierOptionStop.upsert({
+        where: {
+          restaurantId_modifierOptionId: { restaurantId, modifierOptionId: optionId }
+        },
+        create: {
+          restaurantId,
+          modifierOptionId: optionId,
+          isStopped: true,
+          reason: normalizedReason
+        },
+        update: {
+          isStopped: true,
+          reason: normalizedReason
+        }
+      });
+
+      return res.json({
+        message: 'Modifier option stopped for this restaurant',
+        stop
+      });
+    }
+
+    await prisma.modifierOptionStop.deleteMany({
+      where: { restaurantId, modifierOptionId: optionId }
+    });
+
+    res.json({
+      message: 'Modifier option is available for this restaurant',
+      restaurantId,
+      optionId,
       isStopped: false
     });
   } catch (error) {

@@ -13,6 +13,7 @@ import {
   setSharedMenuSource,
   getDishStops,
   setDishStop,
+  setModifierOptionStop,
   getRestaurantCategories,
   getRestaurantCustomers
 } from '../controllers/restaurant.controller.js';
@@ -39,6 +40,7 @@ router.get('/:restaurantId/categories', authenticate, getCategories);
 router.get('/:restaurantId/dishes', authenticate, getRestaurantDishes);
 router.get('/:restaurantId/dish-stops', authenticate, getDishStops);
 router.put('/:restaurantId/dishes/:dishId/stop', authenticate, setDishStop);
+router.put('/:restaurantId/modifier-options/:optionId/stop', authenticate, setModifierOptionStop);
 
 // Protected routes
 router.put('/:id', authenticate, updateRestaurant);

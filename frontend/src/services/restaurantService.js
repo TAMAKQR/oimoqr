@@ -129,6 +129,14 @@ export const restaurantService = {
     return response.data;
   },
 
+  setModifierOptionStop: async (restaurantId, optionId, isStopped = true, reason = null) => {
+    const response = await api.put(`/restaurants/${restaurantId}/modifier-options/${optionId}/stop`, {
+      isStopped,
+      reason: reason || null
+    });
+    return response.data;
+  },
+
   deleteRestaurant: async (restaurantId) => {
     const response = await api.delete(`/restaurants/${restaurantId}`);
     return response.data;

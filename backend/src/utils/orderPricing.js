@@ -147,6 +147,7 @@ export const buildTrustedOrderItems = async ({ items, menuSourceRestaurantId, de
         ok: true,
         trustedItems,
         itemsSubtotal: roundCurrency(itemsSubtotal),
-        dishIds
+        dishIds,
+        modifierOptionIds
     };
 };

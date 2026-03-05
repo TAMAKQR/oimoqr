@@ -66,7 +66,7 @@ export const useCartStore = create(persist((set, get) => ({
           }
           const options = Array.isArray(modifier?.options) ? modifier.options : [];
           options.forEach((option) => {
-            if (option?.id) optionById.set(option.id, option);
+            if (option?.id && option.available !== false) optionById.set(option.id, option);
           });
         });
 

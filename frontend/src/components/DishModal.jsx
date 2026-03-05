@@ -262,6 +262,14 @@ const DishModal = ({
     // ✅ ПРОВЕРКА ОБЯЗАТЕЛЬНЫХ МОДИФИКАТОРОВ
     const requiredModifiers = dish.modifiers?.filter(m => m.isRequired) || [];
     for (const modifier of requiredModifiers) {
+      const availableOptions = (modifier.options || []).filter((option) => option?.available !== false);
+      if (availableOptions.length === 0) {
+        toast.error(`Опция "${modifier.name}" временно недоступна`, {
+          duration: 3000,
+          icon: '⚠️'
+        });
+        return;
+      }
       const selected = selectedModifiers[modifier.id];
       if (!selected || selected.length === 0) {
         toast.error(`Пожалуйста, выберите "${modifier.name}" (обязательно)`, {
@@ -379,37 +387,53 @@ const DishModal = ({
           {dish.modifiers && dish.modifiers.length > 0 && (
             <div className="mb-4">
               {dish.modifiers.map((modifier) => (
-                modifier.options && modifier.options.length > 0 && (
-                  <div key={modifier.id} className="mb-4">
-                    {modifier.isRequired && (
-                      <p className="text-xs text-red-500 mb-2">* Обязательный выбор</p>
-                    )}
-                    <div className="space-y-2">
-                      {modifier.options.map((option) => (
-                        <label
-                          key={option.id}
-                          className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors gap-2"
-                        >
-                          <div className="flex items-center min-w-0 flex-1">
-                            <input
-                              type={modifier.type === 'single' ? 'radio' : 'checkbox'}
-                              name={modifier.id}
-                              checked={selectedModifiers[modifier.id]?.some(o => o.id === option.id) || false}
-                              onChange={() => handleModifierChange(modifier, option)}
-                              className="mr-2 sm:mr-3 flex-shrink-0 w-4 h-4 sm:w-5 sm:h-5"
-                            />
-                            <span className="text-sm sm:text-base break-words">{option.name}</span>
-                          </div>
-                          {option.price > 0 && (
-                            <span className="text-gray-600 text-sm sm:text-base whitespace-nowrap ml-2">
-                              +{parseFloat(option.price).toFixed(2)} {currency}
-                            </span>
-                          )}
-                        </label>
-                      ))}
+                (() => {
+                  const availableOptions = (modifier.options || []).filter((option) => option?.available !== false);
+                  if (availableOptions.length === 0) {
+                    return (
+                      <div key={modifier.id} className="mb-4">
+                        {modifier.isRequired && (
+                          <p className="text-xs text-red-500 mb-2">* Обязательный выбор</p>
+                        )}
+                        <div className="p-3 border border-red-100 bg-red-50 rounded-lg text-xs text-red-600">
+                          Сейчас нет доступных вариантов для "{modifier.name}"
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={modifier.id} className="mb-4">
+                      {modifier.isRequired && (
+                        <p className="text-xs text-red-500 mb-2">* Обязательный выбор</p>
+                      )}
+                      <div className="space-y-2">
+                        {availableOptions.map((option) => (
+                          <label
+                            key={option.id}
+                            className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors gap-2"
+                          >
+                            <div className="flex items-center min-w-0 flex-1">
+                              <input
+                                type={modifier.type === 'single' ? 'radio' : 'checkbox'}
+                                name={modifier.id}
+                                checked={selectedModifiers[modifier.id]?.some(o => o.id === option.id) || false}
+                                onChange={() => handleModifierChange(modifier, option)}
+                                className="mr-2 sm:mr-3 flex-shrink-0 w-4 h-4 sm:w-5 sm:h-5"
+                              />
+                              <span className="text-sm sm:text-base break-words">{option.name}</span>
+                            </div>
+                            {option.price > 0 && (
+                              <span className="text-gray-600 text-sm sm:text-base whitespace-nowrap ml-2">
+                                +{parseFloat(option.price).toFixed(2)} {currency}
+                              </span>
+                            )}
+                          </label>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )
+                  );
+                })()
               ))}
             </div>
           )}

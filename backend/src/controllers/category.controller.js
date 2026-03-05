@@ -1,6 +1,7 @@
 import { prisma } from '../config/prisma.js';
 import { ensureRestaurantAccess, ensureRestaurantOwnerAccess } from '../utils/restaurantAccess.js';
 import { getModifierOptionSelect } from '../utils/modifierOptionFields.js';
+import { loadModifierOptionStops } from '../utils/modifierOptionStops.js';
 
 export const getCategories = async (req, res, next) => {
   try {
@@ -94,6 +95,15 @@ export const getCategories = async (req, res, next) => {
       }
     });
 
+    const {
+      localStoppedOptionIds,
+      sourceStoppedOptionIds,
+      stopByOption
+    } = await loadModifierOptionStops({
+      restaurantId,
+      menuSourceRestaurantId
+    });
+
     // Debug: log modifiers data
     categories.forEach(cat => {
       cat.dishes.forEach(dish => {
@@ -114,12 +124,35 @@ export const getCategories = async (req, res, next) => {
           const isStoppedLocally = localStoppedDishIds.has(dish.id);
           const isStoppedAtMenuSource = sourceStoppedDishIds.has(dish.id);
           const isStopped = isStoppedLocally || isStoppedAtMenuSource;
+
+          const mappedModifiers = modifiers.map((modifier) => {
+            const rawOptions = Array.isArray(modifier.options) ? modifier.options : [];
+            const mappedOptions = rawOptions.map((option) => {
+              const isOptionStoppedLocally = localStoppedOptionIds.has(option.id);
+              const isOptionStoppedAtMenuSource = sourceStoppedOptionIds.has(option.id);
+              const isOptionStopped = isOptionStoppedLocally || isOptionStoppedAtMenuSource;
+              const optionStopMeta = stopByOption.get(option.id);
+
+              return {
+                ...option,
+                available: !isOptionStopped,
+                stoppedAtRestaurant: isOptionStopped,
+                stoppedAtLocalRestaurant: isOptionStoppedLocally,
+                stoppedAtMenuSource: isOptionStoppedAtMenuSource,
+                stopReason: optionStopMeta?.reason || null
+              };
+            });
+
+            return {
+              ...modifier,
+              options: mappedOptions,
+              hasAvailableOptions: mappedOptions.some((option) => option.available !== false)
+            };
+          });
+
           return {
             ...dishRest,
-            modifiers: modifiers.map((modifier) => ({
-              ...modifier,
-              options: Array.isArray(modifier.options) ? modifier.options : []
-            })),
+            modifiers: mappedModifiers.map(({ hasAvailableOptions, ...modifierRest }) => modifierRest),
             available: dish.available && !isStopped,
             stoppedAtRestaurant: isStopped,
             stoppedAtLocalRestaurant: isStoppedLocally,

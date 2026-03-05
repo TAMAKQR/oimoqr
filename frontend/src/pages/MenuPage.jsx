@@ -700,12 +700,14 @@ const MenuPage = () => {
       displayDish.modifiers = dish.modifiers.map((modifier) => ({
         ...modifier,
         options: Array.isArray(modifier.options)
-          ? modifier.options.map((option) => ({
-            ...option,
-            price: isDeliveryMode && option.deliveryPrice !== null && option.deliveryPrice !== undefined
-              ? option.deliveryPrice
-              : option.price
-          }))
+          ? modifier.options
+            .filter((option) => option?.available !== false)
+            .map((option) => ({
+              ...option,
+              price: isDeliveryMode && option.deliveryPrice !== null && option.deliveryPrice !== undefined
+                ? option.deliveryPrice
+                : option.price
+            }))
           : []
       }));
     }

@@ -2,6 +2,7 @@ import { prisma } from '../config/prisma.js';
 import telegramService from '../services/telegram.service.js';
 import { getDistance, getNetworkRankedDeliveryPoints } from './geolocation.controller.js';
 import { buildTrustedOrderItems, calculateDeliveryFee } from '../utils/orderPricing.js';
+import { loadModifierOptionStops } from '../utils/modifierOptionStops.js';
 import { hasRestaurantAccess, ensureRestaurantAccess } from '../utils/restaurantAccess.js';
 
 const ALLOWED_STATUSES = [
@@ -207,7 +208,7 @@ export const createOrder = async (req, res, next) => {
       return res.status(400).json({ error: trustedPricing.error || 'Invalid order payload' });
     }
 
-    const { trustedItems, itemsSubtotal, dishIds } = trustedPricing;
+    const { trustedItems, itemsSubtotal, dishIds, modifierOptionIds } = trustedPricing;
 
     let servingRestaurantPricing = null;
     if (normalizedDeliveryType === 'delivery') {
@@ -278,6 +279,31 @@ export const createOrder = async (req, res, next) => {
           reason: x.reason || null
         }))
       });
+    }
+
+    if (Array.isArray(modifierOptionIds) && modifierOptionIds.length > 0) {
+      const {
+        stopByOption: stoppedModifierOptionsMap
+      } = await loadModifierOptionStops({
+        restaurantId: servingRestaurantId,
+        menuSourceRestaurantId: servingRestaurant?.sharedMenuSourceRestaurantId || servingRestaurantId,
+        modifierOptionIds
+      });
+
+      const stoppedModifierOptions = modifierOptionIds
+        .filter((optionId) => stoppedModifierOptionsMap.has(optionId))
+        .map((optionId) => ({
+          optionId,
+          name: stoppedModifierOptionsMap.get(optionId)?.name || null,
+          reason: stoppedModifierOptionsMap.get(optionId)?.reason || null
+        }));
+
+      if (stoppedModifierOptions.length > 0) {
+        return res.status(400).json({
+          error: 'Some modifier options are temporarily unavailable at this restaurant',
+          stoppedModifierOptions
+        });
+      }
     }
 
     const orderNumber = generateOrderNumber();
