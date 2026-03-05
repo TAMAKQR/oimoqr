@@ -131,7 +131,23 @@ const formatCompactAddress = (address = '') => {
   const normalized = String(address || '').trim();
   if (!normalized) return 'Уточните адрес на карте';
   const parts = normalized.split(',').map((part) => part.trim()).filter(Boolean);
-  return parts.slice(0, 2).join(', ') || normalized;
+  const partsWithoutCountry = parts.filter((part) => !/^(казахстан|kазақстан|kyrgyzstan|киргизия|россия)$/i.test(part));
+  const source = partsWithoutCountry.length ? partsWithoutCountry : parts;
+  const withHouseNumber = source.filter((part) => /\d/.test(part));
+
+  if (withHouseNumber.length > 0) {
+    const lastDetailed = withHouseNumber[withHouseNumber.length - 1];
+    const detailedIndex = source.lastIndexOf(lastDetailed);
+    const prev = detailedIndex > 0 ? source[detailedIndex - 1] : '';
+
+    if (prev && !/\d/.test(prev) && !/(район|область|город|г\.)/i.test(prev)) {
+      return `${prev}, ${lastDetailed}`;
+    }
+
+    return lastDetailed;
+  }
+
+  return source.slice(-2).join(', ') || normalized;
 };
 
 const MenuPage = () => {
@@ -281,10 +297,10 @@ const MenuPage = () => {
 
         (async () => {
           const formattedAddress = await reverseGeocodeByCoords(latitude, longitude);
-          saveGuestDeliveryLocation(latitude, longitude, formattedAddress, true);
+          saveGuestDeliveryLocation(latitude, longitude, formattedAddress, false);
           setGuestAddressInput(formattedAddress || '');
           setGuestAddressCoords({ latitude, longitude });
-          toast.success('Адрес определён');
+          toast.success('Проверьте адрес и подтвердите');
         })();
       },
       () => {
@@ -539,6 +555,7 @@ const MenuPage = () => {
     Number.isFinite(Number(guestDeliveryLocation?.latitude))
     && Number.isFinite(Number(guestDeliveryLocation?.longitude))
   );
+  const isGuestAddressConfirmed = Boolean(guestDeliveryLocation?.confirmed);
   const hasConfirmedGuestDeliveryLocation = hasGuestDeliveryLocation && Boolean(guestDeliveryLocation?.confirmed);
   const canAddToCart = !isDeliveryMode || (isCustomerLoggedIn ? hasDeliveryAddress : hasConfirmedGuestDeliveryLocation);
 
@@ -851,29 +868,56 @@ const MenuPage = () => {
 
               {hasGuestDeliveryLocation && (
                 <div className="space-y-3">
-                  <p className="text-sm text-gray-500 text-center">Заказ на этот адрес?</p>
-                  <button
-                    onClick={() => setShowGuestMapModal(true)}
-                    className="w-full rounded-2xl bg-gray-50 border border-gray-200 px-3 py-2.5 text-center text-lg font-semibold text-gray-900 truncate"
-                    title={guestDeliveryLocation?.address || ''}
-                  >
-                    {formatCompactAddress(guestDeliveryLocation?.address)}
-                  </button>
+                  {!isGuestAddressConfirmed && (
+                    <>
+                      <p className="text-sm text-gray-500 text-center">Подтвердить адрес доставки?</p>
+                      <button
+                        onClick={() => setShowGuestMapModal(true)}
+                        className="w-full rounded-xl bg-gray-50 border border-gray-200 px-3 py-2.5 text-center text-base font-semibold text-gray-900 truncate"
+                        title={guestDeliveryLocation?.address || ''}
+                      >
+                        {formatCompactAddress(guestDeliveryLocation?.address)}
+                      </button>
 
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setShowGuestMapModal(true)}
-                      className="flex-1 rounded-xl py-2.5 bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200 transition-colors"
-                    >
-                      Нет
-                    </button>
-                    <button
-                      onClick={confirmGuestAddress}
-                      className="flex-1 rounded-xl py-2.5 bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors"
-                    >
-                      Да
-                    </button>
-                  </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setShowGuestMapModal(true)}
+                          className="flex-1 rounded-xl py-2.5 bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200 transition-colors"
+                        >
+                          Нет
+                        </button>
+                        <button
+                          onClick={confirmGuestAddress}
+                          className="flex-1 rounded-xl py-2.5 bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors"
+                        >
+                          Да
+                        </button>
+                      </div>
+                    </>
+                  )}
+
+                  {isGuestAddressConfirmed && (
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 px-3 py-2.5">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">Адрес подтвержден</p>
+                          <button
+                            onClick={() => setShowGuestMapModal(true)}
+                            className="text-left text-sm font-semibold text-gray-900 truncate max-w-full"
+                            title={guestDeliveryLocation?.address || ''}
+                          >
+                            {formatCompactAddress(guestDeliveryLocation?.address)}
+                          </button>
+                        </div>
+                        <button
+                          onClick={() => setShowGuestMapModal(true)}
+                          className="shrink-0 rounded-lg px-3 py-1.5 border border-gray-300 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                          Изменить
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
