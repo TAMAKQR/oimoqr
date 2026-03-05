@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { restaurantService } from '../services/restaurantService';
@@ -108,20 +108,20 @@ const buildPaletteFromBase = (baseHex = '#374B6A') => {
 
 const getCurrencySymbol = (currencyCode) => {
   const currencySymbols = {
-    RUB: 'â‚½',
-    KZT: 'â‚¸',
+    RUB: '₽',
+    KZT: '₸',
     USD: '$',
-    EUR: 'â‚¬',
-    GBP: 'Â£',
-    UAH: 'â‚´',
-    TRY: 'â‚º',
-    AMD: 'Ö',
-    GEL: 'â‚¾',
+    EUR: '€',
+    GBP: '£',
+    UAH: '₴',
+    TRY: '₺',
+    AMD: '֏',
+    GEL: '₾',
     UZS: "so'm",
-    KGS: 'Ñ',
-    VND: 'â‚«',
+    KGS: 'с',
+    VND: '₫',
   };
-  return currencySymbols[currencyCode] || 'â‚½';
+  return currencySymbols[currencyCode] || '₽';
 };
 
 const GUEST_DELIVERY_LOCATION_KEY = 'guest-delivery-location';
@@ -259,7 +259,7 @@ const MenuPage = () => {
 
   const requestGuestLocation = useCallback(() => {
     if (!navigator?.geolocation) {
-      toast.error('Ð“ÐµÐ¾Ð»Ð¾ÐºÐ°Ñ†Ð¸Ñ Ð½Ðµ Ð¿Ð¾Ð´Ð´ÐµÑ€Ð¶Ð¸Ð²Ð°ÐµÑ‚ÑÑ Ð½Ð° ÑÑ‚Ð¾Ð¼ ÑƒÑÑ‚Ñ€Ð¾Ð¹ÑÑ‚Ð²Ðµ');
+      toast.error('Геолокация не поддерживается на этом устройстве');
       return;
     }
 
@@ -268,7 +268,7 @@ const MenuPage = () => {
         const latitude = Number(position.coords?.latitude);
         const longitude = Number(position.coords?.longitude);
         if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-          toast.error('ÐÐµ ÑƒÐ´Ð°Ð»Ð¾ÑÑŒ Ð¾Ð¿Ñ€ÐµÐ´ÐµÐ»Ð¸Ñ‚ÑŒ ÐºÐ¾Ð¾Ñ€Ð´Ð¸Ð½Ð°Ñ‚Ñ‹');
+          toast.error('Не удалось определить координаты');
           return;
         }
 
@@ -278,11 +278,11 @@ const MenuPage = () => {
           setGuestAddressInput(formattedAddress || '');
           setGuestAddressCoords({ latitude, longitude });
           setShowGuestAddressEditor(false);
-          toast.success('ÐÐ´Ñ€ÐµÑ Ð¾Ð¿Ñ€ÐµÐ´ÐµÐ»Ñ‘Ð½');
+          toast.success('Адрес определён');
         })();
       },
       () => {
-        toast.error('ÐÐµ ÑƒÐ´Ð°Ð»Ð¾ÑÑŒ Ð¿Ð¾Ð»ÑƒÑ‡Ð¸Ñ‚ÑŒ Ð³ÐµÐ¾Ð»Ð¾ÐºÐ°Ñ†Ð¸ÑŽ. Ð’Ñ‹ Ð¼Ð¾Ð¶ÐµÑ‚Ðµ Ñ€Ð°Ð·Ñ€ÐµÑˆÐ¸Ñ‚ÑŒ Ð´Ð¾ÑÑ‚ÑƒÐ¿ Ð² Ð½Ð°ÑÑ‚Ñ€Ð¾Ð¹ÐºÐ°Ñ… Ð±Ñ€Ð°ÑƒÐ·ÐµÑ€Ð°.');
+        toast.error('Не удалось получить геолокацию. Вы можете разрешить доступ в настройках браузера.');
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
     );
@@ -293,7 +293,7 @@ const MenuPage = () => {
     const longitude = Number(guestAddressCoords?.longitude ?? guestDeliveryLocation?.longitude);
 
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-      toast.error('Ð¡Ð½Ð°Ñ‡Ð°Ð»Ð° Ð¾Ð¿Ñ€ÐµÐ´ÐµÐ»Ð¸Ñ‚Ðµ Ð°Ð´Ñ€ÐµÑ Ð´Ð¾ÑÑ‚Ð°Ð²ÐºÐ¸');
+      toast.error('Сначала определите адрес доставки');
       return;
     }
 
@@ -306,7 +306,7 @@ const MenuPage = () => {
           saveGuestDeliveryLocation(geo.data.latitude, geo.data.longitude, geo.data.formattedAddress || finalAddress, true);
           setGuestAddressCoords({ latitude: geo.data.latitude, longitude: geo.data.longitude });
           setShowGuestAddressEditor(false);
-          toast.success('ÐÐ´Ñ€ÐµÑ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´ÐµÐ½');
+          toast.success('Адрес подтвержден');
           return;
         }
       } catch {
@@ -316,7 +316,7 @@ const MenuPage = () => {
 
     saveGuestDeliveryLocation(latitude, longitude, finalAddress, true);
     setShowGuestAddressEditor(false);
-    toast.success('ÐÐ´Ñ€ÐµÑ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´ÐµÐ½');
+    toast.success('Адрес подтвержден');
   }, [guestAddressCoords, guestDeliveryLocation, guestAddressInput, saveGuestDeliveryLocation]);
 
   // Check customer login status
@@ -333,7 +333,7 @@ const MenuPage = () => {
     }
   }, [loadGuestDeliveryLocation]);
 
-  // Ð”Ð»Ñ Ð´Ð¾ÑÑ‚Ð°Ð²ÐºÐ¸ Ð°Ð´Ñ€ÐµÑ Ð¾Ð±ÑÐ·Ð°Ñ‚ÐµÐ»ÐµÐ½ Ð·Ð°Ñ€Ð°Ð½ÐµÐµ
+  // Для доставки адрес обязателен заранее
   useEffect(() => {
     if (!isCustomerLoggedIn) {
       setHasDeliveryAddress(false);
@@ -365,14 +365,14 @@ const MenuPage = () => {
     };
   }, [isCustomerLoggedIn]);
 
-  // ÐžÐ¿Ñ€ÐµÐ´ÐµÐ»ÑÐµÐ¼ Ñ€ÐµÐ¶Ð¸Ð¼: Ð·Ð°ÐºÐ°Ð· Ð² Ð·Ð°Ð»Ðµ (?table=X Ð¸Ð»Ð¸ ?dine_in) Ð¸Ð»Ð¸ Ð´Ð¾ÑÑ‚Ð°Ð²ÐºÐ°
+  // Определяем режим: заказ в зале (?table=X или ?dine_in) или доставка
   useEffect(() => {
     if (tableFromUrl) {
       setOrderMode('dine_in', tableFromUrl);
     } else if (dineInParam) {
       setOrderMode('dine_in', null);
     } else {
-      // Ð¡Ð±Ñ€Ð°ÑÑ‹Ð²Ð°ÐµÐ¼ Ñ€ÐµÐ¶Ð¸Ð¼ dine_in ÐµÑÐ»Ð¸ Ð½ÐµÑ‚ Ð¿Ð°Ñ€Ð°Ð¼ÐµÑ‚Ñ€Ð¾Ð² Ð² URL
+      // Сбрасываем режим dine_in если нет параметров в URL
       setOrderMode(null, null);
     }
   }, [tableFromUrl, dineInParam, setOrderMode]);
@@ -385,7 +385,6 @@ const MenuPage = () => {
     if (guestDeliveryLocation) return;
 
     localStorage.setItem(GUEST_DELIVERY_LOCATION_PROMPT_KEY, '1');
-
     requestGuestLocation();
   }, [orderMode, guestDeliveryLocation, requestGuestLocation]);
 
@@ -407,7 +406,7 @@ const MenuPage = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // âœ… ÐžÐŸÐ¢Ð˜ÐœÐ˜Ð—ÐÐ¦Ð˜Ð¯: useCallback Ð¿Ñ€ÐµÐ´Ð¾Ñ‚Ð²Ñ€Ð°Ñ‰Ð°ÐµÑ‚ Ð»Ð¸ÑˆÐ½Ð¸Ðµ Ð¿ÐµÑ€ÐµÑ€ÐµÐ½Ð´ÐµÑ€Ñ‹
+  // ✅ ОПТИМИЗАЦИЯ: useCallback предотвращает лишние перерендеры
   const loadRestaurant = useCallback(async (language) => {
     try {
       setLoading(true);
@@ -434,7 +433,7 @@ const MenuPage = () => {
         setTheme('default');
         setCustomColors(themes.custom.colors);
       }
-      // Ð¡Ð¾Ñ…Ñ€Ð°Ð½ÑÐµÐ¼ Ð¿Ð¾ÑÐ»ÐµÐ´Ð½Ð¸Ð¹ Ð¿Ð¾ÑÐµÑ‰ÐµÐ½Ð½Ñ‹Ð¹ Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½ Ð´Ð»Ñ ÐºÐ»Ð¸ÐµÐ½Ñ‚ÑÐºÐ¾Ð¹ Ð°Ð²Ñ‚Ð¾Ñ€Ð¸Ð·Ð°Ñ†Ð¸Ð¸
+      // Сохраняем последний посещенный ресторан для клиентской авторизации
       if (data?.id) {
         const payload = {
           id: data.id,
@@ -455,18 +454,18 @@ const MenuPage = () => {
         setSelectedCategory(firstVisibleCategory?.id || data.categories[0].id);
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'Ð ÐµÑÑ‚Ð¾Ñ€Ð°Ð½ Ð½Ðµ Ð½Ð°Ð¹Ð´ÐµÐ½');
+      setError(err.response?.data?.error || 'Ресторан не найден');
     } finally {
       setLoading(false);
     }
   }, [subdomain, orderMode, guestDeliveryLocation, setCustomColors, setTheme, themes]);
 
-  // âœ… ÐžÐŸÐ¢Ð˜ÐœÐ˜Ð—ÐÐ¦Ð˜Ð¯: ÐžÐ´Ð¸Ð½ useEffect Ð´Ð»Ñ Ð·Ð°Ð³Ñ€ÑƒÐ·ÐºÐ¸ - Ð¸Ð·Ð±ÐµÐ³Ð°ÐµÐ¼ Ð´ÑƒÐ±Ð»Ð¸Ñ€Ð¾Ð²Ð°Ð½Ð¸Ñ
+  // ✅ ОПТИМИЗАЦИЯ: Один useEffect для загрузки - избегаем дублирования
   useEffect(() => {
     loadRestaurant(selectedLanguage);
   }, [subdomain, selectedLanguage, loadRestaurant]);
 
-  // ÐžÐ¿Ñ€ÐµÐ´ÐµÐ»ÐµÐ½Ð¸Ðµ Ð±Ð»Ð¸Ð¶Ð°Ð¹ÑˆÐµÐ³Ð¾ Ñ„Ð¸Ð»Ð¸Ð°Ð»Ð° Ð¿Ð¾ Ð°Ð´Ñ€ÐµÑÑƒ Ð°Ð²Ñ‚Ð¾Ñ€Ð¸Ð·Ð¾Ð²Ð°Ð½Ð½Ð¾Ð³Ð¾ ÐºÐ»Ð¸ÐµÐ½Ñ‚Ð°
+  // Определение ближайшего филиала по адресу авторизованного клиента
   useEffect(() => {
     if (!restaurant || !restaurant.subdomain || tableFromUrl || dineInParam) return;
     if (!customerService.isAuthenticated()) return;
@@ -496,7 +495,7 @@ const MenuPage = () => {
           setRestaurant(nearestData);
         }
       } catch (e) {
-        // Ð˜Ð³Ð½Ð¾Ñ€Ð¸Ñ€ÑƒÐµÐ¼ Ð¾ÑˆÐ¸Ð±ÐºÐ¸ Ð¿Ñ€Ð¾Ñ„Ð¸Ð»Ñ/Ð°Ð´Ñ€ÐµÑÐ° Ñ‡Ñ‚Ð¾Ð±Ñ‹ Ð¼ÐµÐ½ÑŽ Ð¿Ñ€Ð¾Ð´Ð¾Ð»Ð¶Ð°Ð»Ð¾ Ð¾Ñ‚ÐºÑ€Ñ‹Ð²Ð°Ñ‚ÑŒÑÑ
+        // Игнорируем ошибки профиля/адреса чтобы меню продолжало открываться
       }
     };
 
@@ -524,7 +523,7 @@ const MenuPage = () => {
 
     if (!isCustomerLoggedIn) {
       if (!hasGuestDeliveryLocation) {
-        toast.error('Ð”Ð»Ñ Ð´Ð¾ÑÑ‚Ð°Ð²ÐºÐ¸ ÑÐ½Ð°Ñ‡Ð°Ð»Ð° Ñ€Ð°Ð·Ñ€ÐµÑˆÐ¸Ñ‚Ðµ Ð³ÐµÐ¾Ð»Ð¾ÐºÐ°Ñ†Ð¸ÑŽ');
+        toast.error('Для доставки сначала разрешите геолокацию');
         requestGuestLocation();
         return;
       }
@@ -532,7 +531,7 @@ const MenuPage = () => {
       return;
     }
 
-    toast.error('Ð¡Ð½Ð°Ñ‡Ð°Ð»Ð° Ð´Ð¾Ð±Ð°Ð²ÑŒÑ‚Ðµ Ð°Ð´Ñ€ÐµÑ Ð´Ð¾ÑÑ‚Ð°Ð²ÐºÐ¸ Ð² Ð¿Ñ€Ð¾Ñ„Ð¸Ð»Ðµ');
+    toast.error('Сначала добавьте адрес доставки в профиле');
     navigate('/customer/profile');
   };
 
@@ -557,8 +556,8 @@ const MenuPage = () => {
       cartRestaurantId === previousRestaurantId
     ) {
       switchRestaurant(displayRestaurant.id, displayRestaurant.name);
-      toast('Ð¢Ð¾Ñ‡ÐºÐ° Ð´Ð¾ÑÑ‚Ð°Ð²ÐºÐ¸ Ð¾Ð±Ð½Ð¾Ð²Ð»ÐµÐ½Ð° Ð¿Ð¾ Ð°Ð´Ñ€ÐµÑÑƒ. ÐšÐ¾Ñ€Ð·Ð¸Ð½Ð° Ð¾Ñ‡Ð¸Ñ‰ÐµÐ½Ð° Ð´Ð»Ñ Ð°ÐºÑ‚ÑƒÐ°Ð»ÑŒÐ½Ð¾Ð³Ð¾ Ñ„Ð¸Ð»Ð¸Ð°Ð»Ð°.', {
-        icon: 'ðŸ“',
+      toast('Точка доставки обновлена по адресу. Корзина очищена для актуального филиала.', {
+        icon: '📍',
       });
     }
 
@@ -591,7 +590,7 @@ const MenuPage = () => {
     return displayDish;
   }, [orderMode]);
 
-  // ÐŸÐ»Ð°Ð²Ð½Ð¾Ðµ Ð¿ÐµÑ€ÐµÐºÐ»ÑŽÑ‡ÐµÐ½Ð¸Ðµ ÐºÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ð¹ Ð¿Ñ€Ð¸ ÑÐºÑ€Ð¾Ð»Ð»Ðµ Ñ Ð¿Ð¾Ð¼Ð¾Ñ‰ÑŒÑŽ Intersection Observer
+  // Плавное переключение категорий при скролле с помощью Intersection Observer
   useEffect(() => {
     if (!restaurant || restaurant.categories.length === 0) return;
 
@@ -602,24 +601,24 @@ const MenuPage = () => {
     };
 
     const observerCallback = (entries) => {
-      // Ð˜Ð³Ð½Ð¾Ñ€Ð¸Ñ€ÑƒÐµÐ¼ Ð¸Ð·Ð¼ÐµÐ½ÐµÐ½Ð¸Ñ ÐµÑÐ»Ð¸ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÑŒ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ñ‡Ñ‚Ð¾ ÐºÐ»Ð¸ÐºÐ½ÑƒÐ» Ð½Ð° ÐºÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸ÑŽ
+      // Игнорируем изменения если пользователь только что кликнул на категорию
       if (isUserClick.current) return;
 
-      // Ð˜ÑÐ¿Ð¾Ð»ÑŒÐ·ÑƒÐµÐ¼ requestAnimationFrame Ð´Ð»Ñ Ð¾Ð¿Ñ‚Ð¸Ð¼Ð¸Ð·Ð°Ñ†Ð¸Ð¸
+      // Используем requestAnimationFrame для оптимизации
       if (!ticking.current) {
         requestAnimationFrame(() => {
-          // ÐÐ°Ñ…Ð¾Ð´Ð¸Ð¼ ÑÐ°Ð¼ÑƒÑŽ Ð²ÐµÑ€Ñ…Ð½ÑŽÑŽ Ð²Ð¸Ð´Ð¸Ð¼ÑƒÑŽ ÐºÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸ÑŽ
+          // Находим самую верхнюю видимую категорию
           const visibleEntries = entries.filter(entry => entry.isIntersecting);
           if (visibleEntries.length > 0) {
-            // Ð¡Ð¾Ñ€Ñ‚Ð¸Ñ€ÑƒÐµÐ¼ Ð¿Ð¾ Ð¿Ð¾Ð·Ð¸Ñ†Ð¸Ð¸ Ð½Ð° ÑÐºÑ€Ð°Ð½Ðµ (ÑÐ°Ð¼Ð°Ñ Ð²ÐµÑ€Ñ…Ð½ÑÑ Ð¿ÐµÑ€Ð²Ð°Ñ)
+            // Сортируем по позиции на экране (самая верхняя первая)
             visibleEntries.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
             const topEntry = visibleEntries[0];
             const categoryId = topEntry.target.dataset.categoryId;
 
-            // ÐžÐ±Ð½Ð¾Ð²Ð»ÑÐµÐ¼ state Ñ‚Ð¾Ð»ÑŒÐºÐ¾ ÐµÑÐ»Ð¸ ÐºÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ñ Ð´ÐµÐ¹ÑÑ‚Ð²Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ð¾ Ð¸Ð·Ð¼ÐµÐ½Ð¸Ð»Ð°ÑÑŒ
+            // Обновляем state только если категория действительно изменилась
             setSelectedCategory(prev => prev === categoryId ? prev : categoryId);
 
-            // ÐÐ²Ñ‚Ð¾Ð¼Ð°Ñ‚Ð¸Ñ‡ÐµÑÐºÐ¸ ÑÐºÑ€Ð¾Ð»Ð»Ð¸Ð¼ Ð³Ð¾Ñ€Ð¸Ð·Ð¾Ð½Ñ‚Ð°Ð»ÑŒÐ½Ð¾Ðµ Ð¼ÐµÐ½ÑŽ Ðº Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾Ð¹ ÐºÐ½Ð¾Ð¿ÐºÐµ
+            // Автоматически скроллим горизонтальное меню к активной кнопке
             const categoryButton = categoryButtonRefs.current[categoryId];
             const categoryMenu = categoryMenuRef.current;
 
@@ -629,7 +628,7 @@ const MenuPage = () => {
               const buttonRelativeLeft = buttonRect.left - menuRect.left + categoryMenu.scrollLeft;
               const targetScrollLeft = buttonRelativeLeft - (menuRect.width / 2) + (buttonRect.width / 2);
 
-              // Ð˜ÑÐ¿Ð¾Ð»ÑŒÐ·ÑƒÐµÐ¼ instant Ð²Ð¼ÐµÑÑ‚Ð¾ smooth Ð´Ð»Ñ Ð»ÑƒÑ‡ÑˆÐµÐ¹ Ð¿Ñ€Ð¾Ð¸Ð·Ð²Ð¾Ð´Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ð¾ÑÑ‚Ð¸
+              // Используем instant вместо smooth для лучшей производительности
               categoryMenu.scrollTo({
                 left: targetScrollLeft,
                 behavior: 'instant'
@@ -644,7 +643,7 @@ const MenuPage = () => {
 
     const observer = new IntersectionObserver(observerCallback, observerOptions);
 
-    // ÐÐ°Ð±Ð»ÑŽÐ´Ð°ÐµÐ¼ Ð·Ð° Ð²ÑÐµÐ¼Ð¸ ÑÐµÐºÑ†Ð¸ÑÐ¼Ð¸ ÐºÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ð¹
+    // Наблюдаем за всеми секциями категорий
     Object.values(categoryRefs.current).forEach((ref) => {
       if (ref) observer.observe(ref);
     });
@@ -652,12 +651,12 @@ const MenuPage = () => {
     return () => observer.disconnect();
   }, [restaurant]);
 
-  // Ð¡ÐºÑ€Ñ‹Ñ‚Ð¸Ðµ Ð¿ÐµÑ€ÐµÐºÐ»ÑŽÑ‡Ð°Ñ‚ÐµÐ»Ñ ÑÐ·Ñ‹ÐºÐ° Ð¿Ñ€Ð¸ ÑÐºÑ€Ð¾Ð»Ð»Ðµ Ð²Ð½Ð¸Ð· (Ñ Ð¾Ð¿Ñ‚Ð¸Ð¼Ð¸Ð·Ð°Ñ†Ð¸ÐµÐ¹)
+  // Скрытие переключателя языка при скролле вниз (с оптимизацией)
   useEffect(() => {
     let rafId = null;
 
     const handleScroll = () => {
-      if (rafId) return; // ÐŸÑ€Ð¾Ð¿ÑƒÑÐºÐ°ÐµÐ¼ ÐµÑÐ»Ð¸ ÑƒÐ¶Ðµ Ð·Ð°Ð¿Ð»Ð°Ð½Ð¸Ñ€Ð¾Ð²Ð°Ð½ update
+      if (rafId) return; // Пропускаем если уже запланирован update
 
       rafId = requestAnimationFrame(() => {
         const currentScrollY = window.scrollY;
@@ -671,7 +670,7 @@ const MenuPage = () => {
           newValue = true;
         }
 
-        // ÐžÐ±Ð½Ð¾Ð²Ð»ÑÐµÐ¼ state Ñ‚Ð¾Ð»ÑŒÐºÐ¾ ÐµÑÐ»Ð¸ Ð·Ð½Ð°Ñ‡ÐµÐ½Ð¸Ðµ Ð´ÐµÐ¹ÑÑ‚Ð²Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ð¾ Ð¸Ð·Ð¼ÐµÐ½Ð¸Ð»Ð¾ÑÑŒ
+        // Обновляем state только если значение действительно изменилось
         setShowLanguageSwitcher(prev => prev === newValue ? prev : newValue);
         lastScrollY.current = currentScrollY;
         rafId = null;
@@ -685,20 +684,20 @@ const MenuPage = () => {
     };
   }, []);
 
-  // ÐžÐ±Ñ€Ð°Ð±Ð¾Ñ‚ÐºÐ° ÐºÐ»Ð¸ÐºÐ° Ð½Ð° ÐºÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸ÑŽ
+  // Обработка клика на категорию
   const handleCategoryClick = (categoryId) => {
     isUserClick.current = true;
     setSelectedCategory(categoryId);
 
-    // ÐŸÐ»Ð°Ð²Ð½Ñ‹Ð¹ ÑÐºÑ€Ð¾Ð»Ð» Ðº ÐºÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ð¸
+    // Плавный скролл к категории
     const categoryElement = categoryRefs.current[categoryId];
     if (categoryElement) {
-      const yOffset = -80; // ÐžÑ‚ÑÑ‚ÑƒÐ¿ Ð´Ð»Ñ sticky header
+      const yOffset = -80; // Отступ для sticky header
       const y = categoryElement.getBoundingClientRect().top + window.pageYOffset + yOffset;
       window.scrollTo({ top: y, behavior: 'smooth' });
     }
 
-    // Ð¡Ð±Ñ€Ð°ÑÑ‹Ð²Ð°ÐµÐ¼ Ñ„Ð»Ð°Ð³ Ñ‡ÐµÑ€ÐµÐ· 1 ÑÐµÐºÑƒÐ½Ð´Ñƒ
+    // Сбрасываем флаг через 1 секунду
     setTimeout(() => {
       isUserClick.current = false;
     }, 1000);
@@ -706,7 +705,7 @@ const MenuPage = () => {
 
   const handleDesktopCheckout = () => {
     if (!isCartForCurrentRestaurant) {
-      toast.error('ÐšÐ¾Ñ€Ð·Ð¸Ð½Ð° Ð¾Ñ‚Ð½Ð¾ÑÐ¸Ñ‚ÑÑ Ðº Ð´Ñ€ÑƒÐ³Ð¾Ð¹ Ñ‚Ð¾Ñ‡ÐºÐµ. Ð”Ð¾Ð±Ð°Ð²ÑŒÑ‚Ðµ Ð±Ð»ÑŽÐ´Ð° Ð¸Ð· Ñ‚ÐµÐºÑƒÑ‰ÐµÐ³Ð¾ Ð¼ÐµÐ½ÑŽ.');
+      toast.error('Корзина относится к другой точке. Добавьте блюда из текущего меню.');
       return;
     }
     if (!effectiveCartItemCount || isBelowMinimum) return;
@@ -729,7 +728,7 @@ const MenuPage = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="card max-w-md text-center">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">ÐžÑˆÐ¸Ð±ÐºÐ°</h2>
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Ошибка</h2>
           <p className="text-gray-600">{error}</p>
         </div>
       </div>
@@ -765,7 +764,7 @@ const MenuPage = () => {
               <button
                 onClick={() => navigate('/customer/profile')}
                 className="bg-white rounded-full p-3 shadow-md border border-gray-200 hover:bg-gray-50 transition-colors"
-                title="Ð›Ð¸Ñ‡Ð½Ñ‹Ð¹ ÐºÐ°Ð±Ð¸Ð½ÐµÑ‚"
+                title="Личный кабинет"
               >
                 <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -775,7 +774,7 @@ const MenuPage = () => {
               <button
                 onClick={() => setShowLoginModal(true)}
                 className="bg-white rounded-full p-3 shadow-md border border-gray-200 hover:bg-gray-50 transition-colors"
-                title="Ð’Ð¾Ð¹Ñ‚Ð¸"
+                title="Войти"
               >
                 <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -785,7 +784,7 @@ const MenuPage = () => {
             <button
               onClick={() => setIsSearchOpen(true)}
               className="bg-white rounded-full p-3 shadow-md border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
-              aria-label="ÐžÑ‚ÐºÑ€Ñ‹Ñ‚ÑŒ Ð¿Ð¾Ð¸ÑÐº"
+              aria-label="Открыть поиск"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
@@ -811,16 +810,16 @@ const MenuPage = () => {
         {!isCustomerLoggedIn && isDeliveryMode && (
           <div className="px-4 pt-4">
             <div className="rounded-2xl border border-primary-200 bg-white shadow-sm p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-primary-700 mb-2">ÐÐ´Ñ€ÐµÑ Ð´Ð¾ÑÑ‚Ð°Ð²ÐºÐ¸</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary-700 mb-2">Адрес доставки</p>
 
               {!hasGuestDeliveryLocation && (
                 <div className="space-y-3">
-                  <p className="text-sm text-gray-700">Ð Ð°Ð·Ñ€ÐµÑˆÐ¸Ñ‚Ðµ Ð³ÐµÐ¾Ð»Ð¾ÐºÐ°Ñ†Ð¸ÑŽ, Ñ‡Ñ‚Ð¾Ð±Ñ‹ Ð¿Ð¾Ð´Ð¾Ð±Ñ€Ð°Ñ‚ÑŒ Ð±Ð»Ð¸Ð¶Ð°Ð¹ÑˆÑƒÑŽ Ñ‚Ð¾Ñ‡ÐºÑƒ Ð´Ð¾ÑÑ‚Ð°Ð²ÐºÐ¸.</p>
+                  <p className="text-sm text-gray-700">Разрешите геолокацию, чтобы подобрать ближайшую точку доставки.</p>
                   <button
                     onClick={requestGuestLocation}
                     className="w-full rounded-xl py-2.5 bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors"
                   >
-                    ÐžÐ¿Ñ€ÐµÐ´ÐµÐ»Ð¸Ñ‚ÑŒ Ð°Ð´Ñ€ÐµÑ
+                    Определить адрес
                   </button>
                 </div>
               )}
@@ -828,9 +827,9 @@ const MenuPage = () => {
               {hasGuestDeliveryLocation && (
                 <div className="space-y-3">
                   <p className="text-sm text-gray-800">
-                    Ð’Ð°Ñˆ Ð°Ð´Ñ€ÐµÑ:{' '}
+                    Ваш адрес:{' '}
                     <span className="font-semibold">
-                      {guestDeliveryLocation?.address || 'ÐšÐ¾Ð¾Ñ€Ð´Ð¸Ð½Ð°Ñ‚Ñ‹ Ð¾Ð¿Ñ€ÐµÐ´ÐµÐ»ÐµÐ½Ñ‹, ÑƒÑ‚Ð¾Ñ‡Ð½Ð¸Ñ‚Ðµ Ð°Ð´Ñ€ÐµÑ'}
+                      {guestDeliveryLocation?.address || 'Координаты определены, уточните адрес'}
                     </span>
                   </p>
 
@@ -848,7 +847,7 @@ const MenuPage = () => {
                           longitude: suggestion.longitude
                         });
                       }}
-                      placeholder="Ð£Ñ‚Ð¾Ñ‡Ð½Ð¸Ñ‚Ðµ Ð°Ð´Ñ€ÐµÑ"
+                      placeholder="Уточните адрес"
                       className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm"
                       restaurant={displayRestaurant}
                     />
@@ -895,20 +894,20 @@ const MenuPage = () => {
                   <WorkingHoursSection restaurant={displayRestaurant} />
                 </div>
                 {displayRestaurant.address && (
-                  <p className="text-sm text-gray-600 mb-2 break-words">ðŸ“ {displayRestaurant.address}</p>
+                  <p className="text-sm text-gray-600 mb-2 break-words">📍 {displayRestaurant.address}</p>
                 )}
                 {displayRestaurant.phone && (
-                  <p className="text-sm text-gray-600 mb-2">ðŸ“ž {displayRestaurant.phone}</p>
+                  <p className="text-sm text-gray-600 mb-2">📞 {displayRestaurant.phone}</p>
                 )}
 
                 <div className="mt-2 flex flex-col gap-1">
                   {displayRestaurant.subdomain !== subdomain && (
                     <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold px-3 py-1 w-fit">
-                      ðŸ“ ÐÐ²Ñ‚Ð¾Ð¿ÐµÑ€ÐµÐºÐ»ÑŽÑ‡ÐµÐ½Ð¾ Ð½Ð° Ð±Ð»Ð¸Ð¶Ð°Ð¹ÑˆÑƒÑŽ Ñ‚Ð¾Ñ‡ÐºÑƒ
+                      📍 Автопереключено на ближайшую точку
                     </div>
                   )}
                   <div className="inline-flex items-center gap-2 rounded-full bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 w-fit">
-                    ðŸª Ð¢Ð¾Ñ‡ÐºÐ° Ð¾Ð±ÑÐ»ÑƒÐ¶Ð¸Ð²Ð°Ð½Ð¸Ñ: {displayRestaurant.name}
+                    🏪 Точка обслуживания: {displayRestaurant.name}
                     {displayRestaurant.subdomain ? ` (${displayRestaurant.subdomain})` : ''}
                   </div>
                 </div>
@@ -960,7 +959,7 @@ const MenuPage = () => {
           </div>
         </div>
 
-        {/* Category Groups - Stories ÑÑ‚Ð¸Ð»ÑŒ Ñ Ð³Ñ€Ð°Ð´Ð¸ÐµÐ½Ñ‚Ð¾Ð¼ */}
+        {/* Category Groups - Stories стиль с градиентом */}
         {displayRestaurant.categoryGroups && displayRestaurant.categoryGroups.length > 0 && (
           <div className="px-4 py-5 bg-gradient-to-b from-gray-50 to-white">
             <div className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-2">
@@ -973,7 +972,7 @@ const MenuPage = () => {
                   <button
                     key={group.id}
                     onClick={() => {
-                      // ÐŸÑ€Ð¾ÐºÑ€ÑƒÑ‚ÐºÐ° Ðº Ð¿ÐµÑ€Ð²Ð¾Ð¹ ÐºÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ð¸ Ð² Ð³Ñ€ÑƒÐ¿Ð¿Ðµ
+                      // Прокрутка к первой категории в группе
                       if (group.categories && group.categories.length > 0) {
                         handleCategoryClick(group.categories[0].id);
                       }
@@ -982,7 +981,7 @@ const MenuPage = () => {
                   >
                     {group.image ? (
                       <div className="relative mb-2">
-                        {/* Ð“Ñ€Ð°Ð´Ð¸ÐµÐ½Ñ‚Ð½Ð¾Ðµ ÐºÐ¾Ð»ÑŒÑ†Ð¾ */}
+                        {/* Градиентное кольцо */}
                         <div className="w-[72px] h-[72px] rounded-full bg-gradient-to-tr from-primary-500 via-primary-400 to-primary-300 p-[2.5px] group-active:scale-95 transition-transform">
                           <div className="w-full h-full rounded-full bg-white p-[2px]">
                             <div className="w-full h-full rounded-full overflow-hidden">
@@ -996,7 +995,7 @@ const MenuPage = () => {
                           </div>
                         </div>
 
-                        {/* Ð‘ÐµÐ¹Ð´Ð¶ Ñ ÐºÐ¾Ð»Ð¸Ñ‡ÐµÑÑ‚Ð²Ð¾Ð¼ Ð±Ð»ÑŽÐ´ */}
+                        {/* Бейдж с количеством блюд */}
                         {dishCount > 0 && (
                           <div className="absolute -bottom-1 -right-1 bg-primary-600 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-lg border-2 border-white">
                             {dishCount}
@@ -1005,7 +1004,7 @@ const MenuPage = () => {
                       </div>
                     ) : (
                       <div className="w-[72px] h-[72px] rounded-full bg-gradient-to-tr from-gray-200 to-gray-300 flex items-center justify-center mb-2 group-active:scale-95 transition-transform">
-                        <span className="text-2xl">ðŸ“‚</span>
+                        <span className="text-2xl">📂</span>
                       </div>
                     )}
 
@@ -1049,7 +1048,7 @@ const MenuPage = () => {
         <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)_300px] lg:gap-6 lg:px-6 lg:py-6">
           <aside className="hidden lg:block">
             <div className="sticky top-24 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3 px-2">ÐšÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ð¸</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3 px-2">Категории</p>
               <div className="space-y-1">
                 {visibleCategories.map((category) => (
                   <button
@@ -1082,7 +1081,7 @@ const MenuPage = () => {
 
                 {category.dishes.length === 0 ? (
                   <p className="text-center text-gray-500 py-8 text-sm">
-                    Ð’ ÑÑ‚Ð¾Ð¹ ÐºÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ð¸ Ð¿Ð¾ÐºÐ° Ð½ÐµÑ‚ Ð±Ð»ÑŽÐ´
+                    В этой категории пока нет блюд
                   </p>
                 ) : (
                   <div className={`${displayRestaurant.menuCardStyle === 'gallery' ? 'grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 items-stretch' : 'gap-4'} ${displayRestaurant.menuCardStyle === 'vertical'
@@ -1123,7 +1122,7 @@ const MenuPage = () => {
               <div className="space-y-10">
                 {categoriesToRender.length === 0 && (
                   <div className="text-center text-gray-500 py-10">
-                    ÐÐ¸Ñ‡ÐµÐ³Ð¾ Ð½Ðµ Ð½Ð°Ð¹Ð´ÐµÐ½Ð¾
+                    Ничего не найдено
                   </div>
                 )}
 
@@ -1169,26 +1168,26 @@ const MenuPage = () => {
           <aside className="hidden lg:block">
             <div className="sticky top-24 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-base font-semibold text-gray-900">ÐšÐ¾Ñ€Ð·Ð¸Ð½Ð°</h3>
-                <span className="text-xs text-gray-500">{effectiveCartItemCount} ÑˆÑ‚.</span>
+                <h3 className="text-base font-semibold text-gray-900">Корзина</h3>
+                <span className="text-xs text-gray-500">{effectiveCartItemCount} шт.</span>
               </div>
 
               <div className="rounded-xl bg-gray-50 px-3 py-2 border border-gray-200 mb-3">
-                <div className="text-xs text-gray-500 mb-1">Ð¡ÑƒÐ¼Ð¼Ð° Ð·Ð°ÐºÐ°Ð·Ð°</div>
+                <div className="text-xs text-gray-500 mb-1">Сумма заказа</div>
                 <div className="text-lg font-bold text-gray-900">{effectiveCartTotal.toFixed(2)} {currencySymbol}</div>
               </div>
 
               {!isCartForCurrentRestaurant && cartItemCount > 0 && (
                 <p className="text-xs text-amber-600 mb-3">
-                  Ð’ ÐºÐ¾Ñ€Ð·Ð¸Ð½Ðµ ÐµÑÑ‚ÑŒ Ð±Ð»ÑŽÐ´Ð° Ð¸Ð· Ð´Ñ€ÑƒÐ³Ð¾Ð¹ Ñ‚Ð¾Ñ‡ÐºÐ¸. Ð”Ð¾Ð±Ð°Ð²ÑŒÑ‚Ðµ Ð¿Ð¾Ð·Ð¸Ñ†Ð¸Ð¸ Ð¸Ð· Ñ‚ÐµÐºÑƒÑ‰ÐµÐ³Ð¾ Ñ„Ð¸Ð»Ð¸Ð°Ð»Ð°.
+                  В корзине есть блюда из другой точки. Добавьте позиции из текущего филиала.
                 </p>
               )}
 
               {orderMode !== 'dine_in' && minOrderAmount > 0 && (
                 <p className={`text-xs mb-3 ${isBelowMinimum ? 'text-amber-600' : 'text-emerald-600'}`}>
                   {isBelowMinimum
-                    ? `ÐœÐ¸Ð½Ð¸Ð¼ÑƒÐ¼ Ð´Ð»Ñ Ð´Ð¾ÑÑ‚Ð°Ð²ÐºÐ¸: ${minOrderAmount} ${currencySymbol}`
-                    : 'ÐœÐ¸Ð½Ð¸Ð¼Ð°Ð»ÑŒÐ½Ð°Ñ ÑÑƒÐ¼Ð¼Ð° Ð²Ñ‹Ð¿Ð¾Ð»Ð½ÐµÐ½Ð°'}
+                    ? `Минимум для доставки: ${minOrderAmount} ${currencySymbol}`
+                    : 'Минимальная сумма выполнена'}
                 </p>
               )}
 
@@ -1200,7 +1199,7 @@ const MenuPage = () => {
                   : 'bg-primary-600 text-white hover:bg-primary-700'
                   }`}
               >
-                ÐžÑ„Ð¾Ñ€Ð¼Ð¸Ñ‚ÑŒ Ð·Ð°ÐºÐ°Ð·
+                Оформить заказ
               </button>
             </div>
           </aside>
@@ -1221,7 +1220,7 @@ const MenuPage = () => {
                       setSearchTerm('');
                     }}
                     className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition"
-                    aria-label="Ð—Ð°ÐºÑ€Ñ‹Ñ‚ÑŒ Ð¿Ð¾Ð¸ÑÐº"
+                    aria-label="Закрыть поиск"
                   >
                     <svg className="w-6 h-6 text-gray-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="18" y1="6" x2="6" y2="18" />
@@ -1239,7 +1238,7 @@ const MenuPage = () => {
                       type="text"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="ÐÐ°Ð¹Ñ‚Ð¸ Ð±Ð»ÑŽÐ´Ð¾ Ð¸Ð»Ð¸ Ð¾Ð¿Ð¸ÑÐ°Ð½Ð¸Ðµ"
+                      placeholder="Найти блюдо или описание"
                       className="flex-1 bg-transparent text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none"
                       autoFocus
                     />
@@ -1247,16 +1246,16 @@ const MenuPage = () => {
                       <button
                         onClick={() => setSearchTerm('')}
                         className="text-gray-400 hover:text-gray-600 transition"
-                        aria-label="ÐžÑ‡Ð¸ÑÑ‚Ð¸Ñ‚ÑŒ Ð¿Ð¾Ð¸ÑÐº"
+                        aria-label="Очистить поиск"
                       >
-                        âœ•
+                        ✕
                       </button>
                     )}
                   </div>
                 </div>
                 {isSearching && (
                   <div className="mt-3 text-xs text-gray-500">
-                    ÐÐ°Ð¹Ð´ÐµÐ½Ð¾ Ð±Ð»ÑŽÐ´: {searchResults.length}
+                    Найдено блюд: {searchResults.length}
                   </div>
                 )}
               </div>
@@ -1264,13 +1263,13 @@ const MenuPage = () => {
               <div className="flex-1 px-4 pb-6">
                 {!isSearching && (
                   <div className="text-center text-gray-500 mt-12 text-sm">
-                    ÐÐ°Ñ‡Ð½Ð¸Ñ‚Ðµ Ð²Ð²Ð¾Ð´, Ñ‡Ñ‚Ð¾Ð±Ñ‹ Ð½Ð°Ð¹Ñ‚Ð¸ Ð±Ð»ÑŽÐ´Ð¾
+                    Начните ввод, чтобы найти блюдо
                   </div>
                 )}
 
                 {isSearching && searchResults.length === 0 && (
                   <div className="text-center text-gray-500 mt-12 text-sm">
-                    ÐÐ¸Ñ‡ÐµÐ³Ð¾ Ð½Ðµ Ð½Ð°Ð¹Ð´ÐµÐ½Ð¾
+                    Ничего не найдено
                   </div>
                 )}
 
@@ -1311,10 +1310,9 @@ const MenuPage = () => {
           </div>
         )}
       </div>
-      {/* Ð—Ð°ÐºÑ€Ñ‹Ñ‚Ð¸Ðµ mobile wrapper */}
+      {/* Закрытие mobile wrapper */}
     </div>
   );
 };
 
 export default MenuPage;
-
