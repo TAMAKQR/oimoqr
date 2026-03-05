@@ -39,6 +39,7 @@ const buildPaletteFromBase = (baseHex = '#374B6A') => {
     Object.entries(steps).forEach(([tone, delta]) => { palette[tone] = hslToHex({ h: hsl.h, s: hsl.s, l: clamp(hsl.l + delta, 0.05, 0.95) }); });
     return palette;
 };
+const hasHouseNumber = (address = '') => /\d/.test(String(address || '').trim());
 
 const CheckoutPage = () => {
     const navigate = useNavigate();
@@ -368,13 +369,24 @@ const CheckoutPage = () => {
         setZoneStatus('checking');
         try {
             // Добавляем город ресторана для точности
-            const city = restaurant.city || '';
+            const city = String(restaurant?.city || '').trim();
             const query = city ? `${city}, ${addressText}` : addressText;
-            const geoResp = await api.get('/geolocation/geocode', { params: { address: query } });
+            const geoResp = await api.get('/geolocation/geocode', {
+                params: {
+                    address: query,
+                    city: city || undefined,
+                    strictCity: Boolean(city)
+                }
+            });
             const geo = geoResp.data;
             if (!geo.found) {
-                setZoneStatus('error');
-                setZoneMessage('Не удалось определить координаты адреса');
+                if (geo.cityMismatch) {
+                    setZoneStatus('outside');
+                    setZoneMessage(geo.message || (city ? `Адрес должен быть в городе ${city}` : 'Адрес вне доступного города'));
+                } else {
+                    setZoneStatus('error');
+                    setZoneMessage('Не удалось определить координаты адреса');
+                }
                 return;
             }
             // Сохраняем координаты для адреса (обновляем в фоне)
@@ -399,16 +411,25 @@ const CheckoutPage = () => {
         let latitude = Number(guestAddressCoords?.latitude);
         let longitude = Number(guestAddressCoords?.longitude);
         let finalAddress = draft || guestDeliveryLocation?.address || '';
+        let geocodeErrorMessage = '';
 
         if ((!Number.isFinite(latitude) || !Number.isFinite(longitude)) && finalAddress) {
             try {
-                const city = restaurant?.city || '';
+                const city = String(restaurant?.city || '').trim();
                 const query = city ? `${city}, ${finalAddress}` : finalAddress;
-                const geoResp = await api.get('/geolocation/geocode', { params: { address: query } });
+                const geoResp = await api.get('/geolocation/geocode', {
+                    params: {
+                        address: query,
+                        city: city || undefined,
+                        strictCity: Boolean(city)
+                    }
+                });
                 if (geoResp.data?.found) {
                     latitude = Number(geoResp.data.latitude);
                     longitude = Number(geoResp.data.longitude);
                     finalAddress = geoResp.data.formattedAddress || finalAddress;
+                } else if (geoResp.data?.cityMismatch) {
+                    geocodeErrorMessage = geoResp.data?.message || (city ? `Адрес должен быть в городе ${city}` : '');
                 }
             } catch {
                 // keep fallback error below
@@ -416,7 +437,11 @@ const CheckoutPage = () => {
         }
 
         if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-            toast.error('Не удалось определить координаты адреса');
+            toast.error(geocodeErrorMessage || 'Не удалось определить координаты адреса');
+            return;
+        }
+        if (!hasHouseNumber(finalAddress)) {
+            toast.error('Укажите улицу и номер дома');
             return;
         }
 
@@ -465,29 +490,47 @@ const CheckoutPage = () => {
             toast.error('Укажите адрес');
             return;
         }
+        if (!hasHouseNumber(newAddress.address)) {
+            toast.error('Укажите улицу и номер дома');
+            return;
+        }
 
         try {
             // Используем координаты из автокомплита, или геокодируем
-            let lat = newAddress.latitude || null;
-            let lng = newAddress.longitude || null;
-            if (!lat || !lng) {
+            let lat = Number(newAddress.latitude);
+            let lng = Number(newAddress.longitude);
+            const city = String(restaurant?.city || '').trim();
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
                 try {
-                    const city = restaurant?.city || '';
                     const query = city ? `${city}, ${newAddress.address}` : newAddress.address;
-                    const geoResp = await api.get('/geolocation/geocode', { params: { address: query } });
+                    const geoResp = await api.get('/geolocation/geocode', {
+                        params: {
+                            address: query,
+                            city: city || undefined,
+                            strictCity: Boolean(city)
+                        }
+                    });
                     if (geoResp.data?.found) {
-                        lat = geoResp.data.latitude;
-                        lng = geoResp.data.longitude;
+                        lat = Number(geoResp.data.latitude);
+                        lng = Number(geoResp.data.longitude);
+                    } else if (geoResp.data?.cityMismatch) {
+                        toast.error(geoResp.data?.message || (city ? `Адрес должен быть в городе ${city}` : 'Адрес не подходит'));
+                        return;
                     }
                 } catch (geoErr) {
                     console.warn('Geocoding failed for new address, saving without coords:', geoErr);
                 }
             }
 
+            if ((!Number.isFinite(lat) || !Number.isFinite(lng)) && city) {
+                toast.error(`Адрес должен быть в городе ${city}`);
+                return;
+            }
+
             const { latitude, longitude, ...addrData } = newAddress;
             await api.post('/customers/addresses', {
                 ...addrData,
-                ...(lat && lng ? { latitude: lat, longitude: lng } : {})
+                ...(Number.isFinite(lat) && Number.isFinite(lng) ? { latitude: lat, longitude: lng } : {})
             });
             toast.success('Адрес сохранен');
             setShowNewAddressForm(false);
@@ -532,11 +575,23 @@ const CheckoutPage = () => {
                 return;
             }
 
+            if (customer?.id) {
+                const selectedAddress = addresses.find((addr) => addr.id === selectedAddressId);
+                if (!hasHouseNumber(selectedAddress?.address || '')) {
+                    toast.error('Укажите улицу и номер дома в адресе доставки');
+                    return;
+                }
+            }
+
             if (!customer?.id) {
                 const lat = Number(guestDeliveryLocation?.latitude);
                 const lng = Number(guestDeliveryLocation?.longitude);
                 if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
                     toast.error('Сначала определите адрес в меню');
+                    return;
+                }
+                if (!hasHouseNumber(guestDeliveryLocation?.address || '')) {
+                    toast.error('Укажите улицу и номер дома');
                     return;
                 }
             }
@@ -656,6 +711,7 @@ const CheckoutPage = () => {
     const selectedAddressForSummary = customer?.id
         ? (addresses.find((addr) => addr.id === selectedAddressId) || null)
         : guestDeliveryLocation;
+    const hasExactDeliveryAddress = useMemo(() => hasHouseNumber(selectedAddressForSummary?.address || ''), [selectedAddressForSummary?.address]);
     const deliveryMethodLabel = isDineIn
         ? (tableNumber ? `В зале · стол ${tableNumber}` : 'В зале')
         : deliveryType === 'delivery'
@@ -684,11 +740,13 @@ const CheckoutPage = () => {
             const lat = Number(guestDeliveryLocation?.latitude);
             const lng = Number(guestDeliveryLocation?.longitude);
             if (!Number.isFinite(lat) || !Number.isFinite(lng)) return 'Сначала определите адрес в меню';
+            if (!hasExactDeliveryAddress) return 'Укажите улицу и номер дома';
         }
+        if (!isDineIn && deliveryType === 'delivery' && customer?.id && !hasExactDeliveryAddress) return 'Укажите улицу и номер дома';
         if (!isDineIn && deliveryType === 'delivery' && zoneStatus === 'checking') return 'Проверяем зону доставки...';
         if (!isDineIn && deliveryType === 'delivery' && zoneStatus === 'outside') return 'Адрес вне зоны доставки';
         return '';
-    }, [loading, isDineIn, deliveryType, isReconcilingCart, addressesLoading, selectedAddressId, zoneStatus, customer?.id, guestDeliveryLocation?.latitude, guestDeliveryLocation?.longitude, isGuestContactValid]);
+    }, [loading, isDineIn, deliveryType, isReconcilingCart, addressesLoading, selectedAddressId, zoneStatus, customer?.id, guestDeliveryLocation?.latitude, guestDeliveryLocation?.longitude, isGuestContactValid, hasExactDeliveryAddress]);
 
     const isPlaceOrderDisabled = Boolean(placeOrderDisabledReason);
 
@@ -943,9 +1001,14 @@ const CheckoutPage = () => {
                                             onClick={() => setShowGuestAddressForm((prev) => !prev)}
                                             className="shrink-0 rounded-lg px-3 py-1.5 border border-gray-300 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
                                         >
-                                            {showGuestAddressForm ? 'Скрыть' : 'Изменить'}
+                                            {showGuestAddressForm ? 'Скрыть' : (guestAddressDetailParts.length > 0 ? 'Изменить' : 'Детали')}
                                         </button>
                                     </div>
+                                    <p className={`mt-2 text-xs ${guestAddressDetailParts.length > 0 ? 'text-gray-500' : 'text-amber-700'}`}>
+                                        {guestAddressDetailParts.length > 0
+                                            ? guestAddressDetailParts.join(' · ')
+                                            : 'Подъезд, этаж и кв/офис добавляются в кнопке «Детали»'}
+                                    </p>
 
                                     {showGuestAddressForm && (
                                         <div className="mt-3 space-y-3">
@@ -962,7 +1025,7 @@ const CheckoutPage = () => {
                                                         longitude: suggestion.longitude
                                                     });
                                                 }}
-                                                placeholder="Город, улица, дом"
+                                                placeholder="Улица, дом"
                                                 className="w-full px-3.5 py-3 border border-gray-300 rounded-xl text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition"
                                                 restaurant={restaurant}
                                             />
@@ -1057,7 +1120,7 @@ const CheckoutPage = () => {
                                                             longitude: suggestion.longitude || null
                                                         }));
                                                     }}
-                                                    placeholder="Город, улица, дом"
+                                                    placeholder="Улица, дом"
                                                     className="w-full px-3.5 py-3 border border-gray-300 rounded-xl text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition"
                                                     restaurant={restaurant}
                                                 />
@@ -1242,9 +1305,14 @@ const CheckoutPage = () => {
                             )}
 
                             <div className="bg-white rounded-lg shadow-sm p-4">
-                                <h2 className="font-semibold text-base mb-3">Комментарий к заказу</h2>
+                                <h2 className="font-semibold text-base mb-1.5">Комментарий (необязательно)</h2>
+                                {!isDineIn && deliveryType === 'delivery' && !customer?.id && (
+                                    <p className="text-xs text-gray-500 mb-3">
+                                        Для подъезда, этажа и квартиры используйте блок «Адрес доставки».
+                                    </p>
+                                )}
                                 <textarea
-                                    placeholder="Особые пожелания, уточнения..."
+                                    placeholder="Пожелания по заказу (например, не звонить в дверь)"
                                     value={comment}
                                     onChange={(e) => setComment(e.target.value)}
                                     className="input-field w-full text-sm"

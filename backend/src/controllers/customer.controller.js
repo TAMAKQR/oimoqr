@@ -17,7 +17,7 @@ const getMenuSourceRestaurantId = async (restaurantId) => {
 const getNearestServingRestaurant = async ({ restaurantId, latitude, longitude }) => {
     const baseRestaurant = await prisma.restaurant.findUnique({
         where: { id: restaurantId },
-        select: { ownerId: true }
+        select: { ownerId: true, city: true }
     });
 
     if (!baseRestaurant) return null;
@@ -25,7 +25,8 @@ const getNearestServingRestaurant = async ({ restaurantId, latitude, longitude }
     const ranked = await getNetworkRankedDeliveryPoints({
         ownerId: baseRestaurant.ownerId,
         latitude,
-        longitude
+        longitude,
+        city: baseRestaurant.city || null
     });
 
     return ranked.find((r) => r.inDeliveryZone) || null;
@@ -34,6 +35,8 @@ const getNearestServingRestaurant = async ({ restaurantId, latitude, longitude }
 const DEFAULT_BONUS_RATE = 0;
 const DEFAULT_BONUS_EXPIRY_DAYS = 90;
 const roundCurrency = (value) => Number((Number(value) || 0).toFixed(2));
+const hasHouseNumber = (address = '') => /\d/.test(String(address || '').trim());
+const normalizePhoneDigits = (phone = '') => String(phone || '').replace(/\D/g, '');
 
 const isDeliveredStatus = (status) => {
     const normalized = String(status || '').toLowerCase();
@@ -317,6 +320,13 @@ export const getProfile = async (req, res, next) => {
 
         if (!customer) {
             return res.status(404).json({ error: 'Customer not found' });
+        }
+
+        const normalizedCustomerName = String(customer.name || '').trim();
+        const normalizedCustomerPhone = String(customer.phone || '').trim();
+        const phoneDigits = normalizePhoneDigits(normalizedCustomerPhone);
+        if (normalizedDeliveryType !== 'dine_in' && (normalizedCustomerName.length < 2 || phoneDigits.length < 8)) {
+            return res.status(400).json({ error: 'Профиль должен содержать имя и корректный телефон' });
         }
 
         // Parse preferences if it's a JSON string
@@ -715,6 +725,9 @@ export const addAddress = async (req, res, next) => {
         if (!address) {
             return res.status(400).json({ error: 'Address is required' });
         }
+        if (!hasHouseNumber(address)) {
+            return res.status(400).json({ error: 'Укажите улицу и номер дома' });
+        }
 
         // Если новый адрес устанавливается как default, убираем default у остальных
         if (isDefault) {
@@ -774,6 +787,10 @@ export const updateAddress = async (req, res, next) => {
                 where: { customerId, id: { not: addressId } },
                 data: { isDefault: false }
             });
+        }
+
+        if (address !== undefined && address !== null && String(address).trim() && !hasHouseNumber(address)) {
+            return res.status(400).json({ error: 'Укажите улицу и номер дома' });
         }
 
         const updatedAddress = await prisma.customerAddress.update({
@@ -941,6 +958,10 @@ export const createCustomerOrder = async (req, res, next) => {
             normalizedDeliveryLongitude = selectedAddress.longitude ?? null;
             resolvedDeliveryAddress = selectedAddress.address || resolvedDeliveryAddress;
 
+            if (!String(resolvedDeliveryAddress || '').trim() || !hasHouseNumber(resolvedDeliveryAddress)) {
+                return res.status(400).json({ error: 'Укажите улицу и номер дома' });
+            }
+
             if (!Number.isFinite(normalizedDeliveryLatitude) || !Number.isFinite(normalizedDeliveryLongitude)) {
                 return res.status(400).json({ error: 'Delivery coordinates are required' });
             }
@@ -1036,8 +1057,8 @@ export const createCustomerOrder = async (req, res, next) => {
             restaurantId,
             assignedRestaurantId,
             customerId,
-            customerName: customer.name || 'Customer',
-            customerPhone: customer.phone,
+            customerName: normalizedCustomerName || 'Customer',
+            customerPhone: normalizedCustomerPhone,
             customerEmail: customer.email,
             deliveryAddress: resolvedDeliveryAddress,
             deliveryLatitude: normalizedDeliveryLatitude,

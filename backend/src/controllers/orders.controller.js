@@ -42,6 +42,8 @@ const generateOrderNumber = () => {
 };
 
 const roundCurrency = (value) => Number((Number(value) || 0).toFixed(2));
+const hasHouseNumber = (address = '') => /\d/.test(String(address || '').trim());
+const normalizePhoneDigits = (phone = '') => String(phone || '').replace(/\D/g, '');
 
 const getMenuSourceRestaurantId = async (restaurantId) => {
   const restaurant = await prisma.restaurant.findUnique({
@@ -56,7 +58,7 @@ const getMenuSourceRestaurantId = async (restaurantId) => {
 const getNearestServingRestaurant = async ({ restaurantId, latitude, longitude }) => {
   const baseRestaurant = await prisma.restaurant.findUnique({
     where: { id: restaurantId },
-    select: { ownerId: true }
+    select: { ownerId: true, city: true }
   });
 
   if (!baseRestaurant) return null;
@@ -64,7 +66,8 @@ const getNearestServingRestaurant = async ({ restaurantId, latitude, longitude }
   const ranked = await getNetworkRankedDeliveryPoints({
     ownerId: baseRestaurant.ownerId,
     latitude,
-    longitude
+    longitude,
+    city: baseRestaurant.city || null
   });
 
   return ranked.find((r) => r.inDeliveryZone) || null;
@@ -116,6 +119,25 @@ export const createOrder = async (req, res, next) => {
     }
 
     const normalizedDeliveryType = deliveryType || 'delivery';
+    const normalizedCustomerName = String(customerName || '').trim();
+    const normalizedCustomerPhone = String(customerPhone || '').trim();
+    const normalizedDeliveryAddress = String(deliveryAddress || '').trim();
+    const phoneDigits = normalizePhoneDigits(normalizedCustomerPhone);
+
+    if (normalizedDeliveryType !== 'dine_in') {
+      if (normalizedCustomerName.length < 2 || phoneDigits.length < 8) {
+        return res.status(400).json({ error: 'Укажите имя и корректный телефон' });
+      }
+    }
+
+    if (normalizedDeliveryType === 'delivery') {
+      if (!normalizedDeliveryAddress) {
+        return res.status(400).json({ error: 'Укажите адрес доставки' });
+      }
+      if (!hasHouseNumber(normalizedDeliveryAddress)) {
+        return res.status(400).json({ error: 'Укажите улицу и номер дома' });
+      }
+    }
 
     const validItems = items.filter(item => item && item.id);
 
@@ -152,7 +174,7 @@ export const createOrder = async (req, res, next) => {
     let servingRestaurantId = restaurantId;
     let nearestServingPoint = null;
 
-    if (deliveryType === 'delivery') {
+    if (normalizedDeliveryType === 'delivery') {
       if (!Number.isFinite(normalizedDeliveryLatitude) || !Number.isFinite(normalizedDeliveryLongitude)) {
         return res.status(400).json({ error: 'Delivery coordinates are required' });
       }
@@ -266,10 +288,10 @@ export const createOrder = async (req, res, next) => {
         restaurantId,
         assignedRestaurantId,
         totalAmount: trustedTotal,
-        customerName: customerName || 'Customer',
-        customerPhone: customerPhone || 'Not specified',
+        customerName: normalizedCustomerName || 'Customer',
+        customerPhone: normalizedCustomerPhone || 'Not specified',
         customerEmail: customerEmail || null,
-        deliveryAddress: deliveryAddress || null,
+        deliveryAddress: normalizedDeliveryAddress || null,
         deliveryLatitude: normalizedDeliveryLatitude,
         deliveryLongitude: normalizedDeliveryLongitude,
         deliveryType: normalizedDeliveryType,

@@ -1,6 +1,42 @@
 import { prisma } from '../config/prisma.js';
 
 const YANDEX_GEOCODER_KEY = process.env.YANDEX_GEOCODER_KEY || '';
+const TRUE_VALUES = new Set(['1', 'true', 'yes', 'on']);
+
+const parseBoolean = (value) => TRUE_VALUES.has(String(value || '').toLowerCase());
+
+const normalizeLocationText = (value) => String(value || '')
+  .toLowerCase()
+  .replace(/ё/g, 'е')
+  .replace(/[^a-zа-я0-9\s-]/gi, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+const detectCityFromComponents = (components = []) => {
+  const kindsPriority = ['locality', 'province', 'area', 'district'];
+  for (const kind of kindsPriority) {
+    const candidate = components.find((component) => component?.kind === kind && component?.name);
+    if (candidate?.name) return candidate.name;
+  }
+  return '';
+};
+
+const isCityMatched = ({ expectedCity, detectedCity, fullAddress }) => {
+  const normalizedExpected = normalizeLocationText(expectedCity);
+  if (!normalizedExpected) return true;
+
+  const normalizedDetected = normalizeLocationText(detectedCity);
+  if (normalizedDetected && (
+    normalizedDetected === normalizedExpected
+    || normalizedDetected.includes(normalizedExpected)
+    || normalizedExpected.includes(normalizedDetected)
+  )) {
+    return true;
+  }
+
+  const normalizedAddress = normalizeLocationText(fullAddress);
+  return normalizedAddress.includes(normalizedExpected);
+};
 
 // Функция для расчета расстояния по формуле гаверсинусов
 export function getDistance(lat1, lon1, lat2, lon2) {
@@ -16,7 +52,8 @@ export function getDistance(lat1, lon1, lat2, lon2) {
   return distance;
 }
 
-export const getNetworkRankedDeliveryPoints = async ({ ownerId, latitude, longitude }) => {
+export const getNetworkRankedDeliveryPoints = async ({ ownerId, latitude, longitude, city = null }) => {
+  const cityFilter = String(city || '').trim();
   const networkRestaurants = await prisma.restaurant.findMany({
     where: {
       ownerId,
@@ -29,6 +66,7 @@ export const getNetworkRankedDeliveryPoints = async ({ ownerId, latitude, longit
       name: true,
       subdomain: true,
       address: true,
+      city: true,
       latitude: true,
       longitude: true,
       deliveryRadius: true,
@@ -41,11 +79,19 @@ export const getNetworkRankedDeliveryPoints = async ({ ownerId, latitude, longit
     }
   });
 
-  if (networkRestaurants.length === 0) {
+  const scopedRestaurants = cityFilter
+    ? networkRestaurants.filter((restaurant) => isCityMatched({
+      expectedCity: cityFilter,
+      detectedCity: restaurant.city,
+      fullAddress: restaurant.address
+    }))
+    : networkRestaurants;
+
+  if (scopedRestaurants.length === 0) {
     return [];
   }
 
-  return networkRestaurants
+  return scopedRestaurants
     .map((restaurant) => {
       const distance = getDistance(latitude, longitude, restaurant.latitude, restaurant.longitude);
       const inDeliveryZone = restaurant.deliveryRadius ? distance <= restaurant.deliveryRadius : true;
@@ -77,28 +123,32 @@ export const checkDelivery = async (req, res, next) => {
     const baseRestaurant = subdomain
       ? await prisma.restaurant.findUnique({
         where: { subdomain },
-        select: { id: true, ownerId: true }
+        select: { id: true, ownerId: true, city: true }
       })
       : await prisma.restaurant.findUnique({
         where: { id: restaurantId },
-        select: { id: true, ownerId: true }
+        select: { id: true, ownerId: true, city: true }
       });
 
     if (!baseRestaurant) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
+    const enforcedCity = String(baseRestaurant.city || '').trim();
     const ranked = await getNetworkRankedDeliveryPoints({
       ownerId: baseRestaurant.ownerId,
       latitude: userLat,
-      longitude: userLon
+      longitude: userLon,
+      city: enforcedCity || null
     });
 
     if (ranked.length === 0) {
       return res.json({
         deliveryAvailable: false,
         inDeliveryZone: false,
-        message: 'Активные точки доставки сети не найдены',
+        message: enforcedCity
+          ? `Доставка доступна только в городе ${enforcedCity}`
+          : 'Активные точки доставки сети не найдены',
         servingRestaurant: null,
         alternatives: []
       });
@@ -110,7 +160,9 @@ export const checkDelivery = async (req, res, next) => {
       return res.json({
         deliveryAvailable: false,
         inDeliveryZone: false,
-        message: 'Адрес вне зоны доставки сети',
+        message: enforcedCity
+          ? `Адрес вне зоны доставки в городе ${enforcedCity}`
+          : 'Адрес вне зоны доставки сети',
         servingRestaurant: null,
         alternatives: ranked.slice(0, 5).map((r) => ({
           id: r.id,
@@ -203,7 +255,7 @@ export const getNearestRestaurantBySubdomain = async (req, res, next) => {
   try {
     const baseRestaurant = await prisma.restaurant.findUnique({
       where: { subdomain },
-      select: { id: true, ownerId: true }
+      select: { id: true, ownerId: true, city: true }
     });
 
     if (!baseRestaurant) {
@@ -217,10 +269,12 @@ export const getNearestRestaurantBySubdomain = async (req, res, next) => {
       return res.status(400).json({ error: 'Invalid latitude or longitude' });
     }
 
+    const enforcedCity = String(baseRestaurant.city || '').trim();
     const ranked = await getNetworkRankedDeliveryPoints({
       ownerId: baseRestaurant.ownerId,
       latitude: userLat,
-      longitude: userLon
+      longitude: userLon,
+      city: enforcedCity || null
     });
 
     if (ranked.length === 0) {
@@ -250,6 +304,9 @@ export const getNearestRestaurantBySubdomain = async (req, res, next) => {
 // Address suggestions via Yandex Geocoder API
 export const suggestAddress = async (req, res, next) => {
   const { text, city, country } = req.query;
+  const expectedCity = String(city || '').trim();
+  const strictCity = parseBoolean(req.query.strictCity);
+  const shouldFilterByCity = Boolean(expectedCity) && strictCity;
 
   if (!text || text.length < 3) {
     return res.json({ suggestions: [] });
@@ -277,6 +334,12 @@ export const suggestAddress = async (req, res, next) => {
       const geo = item.GeoObject;
       const meta = geo.metaDataProperty?.GeocoderMetaData;
       const addressDetails = meta?.Address?.Components || [];
+      const detectedCity = detectCityFromComponents(addressDetails);
+      const cityMatched = isCityMatched({
+        expectedCity,
+        detectedCity,
+        fullAddress: meta?.text || ''
+      });
       const street = addressDetails.filter(c => c.kind === 'street').map(c => c.name).join(', ');
       const house = addressDetails.filter(c => c.kind === 'house').map(c => c.name).join(', ');
       const locality = addressDetails.filter(c => c.kind === 'locality').map(c => c.name).join(', ');
@@ -286,10 +349,12 @@ export const suggestAddress = async (req, res, next) => {
         title: street ? `${street}${house ? ', ' + house : ''}` : geo.name || '',
         subtitle: locality || meta?.text || '',
         fullAddress: meta?.text || '',
+        city: detectedCity || '',
+        cityMatched,
         latitude: lat,
         longitude: lon
       };
-    }).filter(s => s.title);
+    }).filter(s => s.title && (!shouldFilterByCity || s.cityMatched));
 
     res.json({ suggestions });
   } catch (error) {
@@ -300,7 +365,8 @@ export const suggestAddress = async (req, res, next) => {
 
 // Геокодинг адреса через Yandex Geocoder API
 export const geocodeAddress = async (req, res, next) => {
-  const { address } = req.query;
+  const { address, city } = req.query;
+  const strictCity = parseBoolean(req.query.strictCity);
 
   if (!address) {
     return res.status(400).json({ error: 'Укажите адрес' });
@@ -321,14 +387,31 @@ export const geocodeAddress = async (req, res, next) => {
     }
 
     const geoObject = featureMember[0].GeoObject;
+    const components = geoObject?.metaDataProperty?.GeocoderMetaData?.Address?.Components || [];
+    const detectedCity = detectCityFromComponents(components);
     const [lon, lat] = geoObject.Point.pos.split(' ').map(Number);
     const formattedAddress = geoObject.metaDataProperty?.GeocoderMetaData?.text || address;
+    const cityMatched = isCityMatched({
+      expectedCity: city,
+      detectedCity,
+      fullAddress: formattedAddress
+    });
+
+    if (strictCity && city && !cityMatched) {
+      return res.json({
+        found: false,
+        cityMismatch: true,
+        message: `Адрес должен быть в городе ${city}`
+      });
+    }
 
     res.json({
       found: true,
       latitude: lat,
       longitude: lon,
-      formattedAddress
+      formattedAddress,
+      detectedCity: detectedCity || '',
+      cityMatched
     });
   } catch (error) {
     console.error('Yandex Geocoder error:', error);

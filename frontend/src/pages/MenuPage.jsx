@@ -127,6 +127,7 @@ const getCurrencySymbol = (currencyCode) => {
 
 const GUEST_DELIVERY_LOCATION_KEY = 'guest-delivery-location';
 const GUEST_DELIVERY_LOCATION_PROMPT_KEY = 'guest-delivery-location-prompted';
+const hasHouseNumber = (address = '') => /\d/.test(String(address || '').trim());
 const formatCompactAddress = (address = '') => {
   const normalized = String(address || '').trim();
   if (!normalized) return 'Уточните адрес на карте';
@@ -267,18 +268,41 @@ const MenuPage = () => {
   }, []);
 
   const reverseGeocodeByCoords = useCallback(async (latitude, longitude) => {
+    const city = String(restaurant?.city || '').trim();
     try {
       const response = await api.get('/geolocation/geocode', {
-        params: { address: `${longitude},${latitude}` }
+        params: {
+          address: `${longitude},${latitude}`,
+          city: city || undefined,
+          strictCity: Boolean(city)
+        }
       });
       if (response.data?.found) {
-        return response.data.formattedAddress || '';
+        return {
+          ok: true,
+          address: response.data.formattedAddress || '',
+          cityMismatch: false,
+          message: ''
+        };
+      }
+      if (response.data?.cityMismatch) {
+        return {
+          ok: false,
+          address: '',
+          cityMismatch: true,
+          message: response.data?.message || (city ? `Адрес должен быть в городе ${city}` : 'Адрес вне доступного города')
+        };
       }
     } catch {
       // ignore geocoder errors for guest helper
     }
-    return '';
-  }, []);
+    return {
+      ok: false,
+      address: '',
+      cityMismatch: false,
+      message: ''
+    };
+  }, [restaurant?.city]);
 
   const requestGuestLocation = useCallback(() => {
     if (!navigator?.geolocation) {
@@ -296,7 +320,12 @@ const MenuPage = () => {
         }
 
         (async () => {
-          const formattedAddress = await reverseGeocodeByCoords(latitude, longitude);
+          const reverse = await reverseGeocodeByCoords(latitude, longitude);
+          if (reverse.cityMismatch) {
+            toast.error(reverse.message || 'Адрес вне доступного города');
+            return;
+          }
+          const formattedAddress = reverse.address || '';
           saveGuestDeliveryLocation(latitude, longitude, formattedAddress, false);
           setGuestAddressInput(formattedAddress || '');
           setGuestAddressCoords({ latitude, longitude });
@@ -320,14 +349,26 @@ const MenuPage = () => {
     }
 
     let finalAddress = guestAddressInput?.trim() || guestDeliveryLocation?.address || '';
+    const city = String(restaurant?.city || '').trim();
 
     if (!guestAddressCoords && finalAddress) {
       try {
-        const geo = await api.get('/geolocation/geocode', { params: { address: finalAddress } });
+        const query = city ? `${city}, ${finalAddress}` : finalAddress;
+        const geo = await api.get('/geolocation/geocode', {
+          params: {
+            address: query,
+            city: city || undefined,
+            strictCity: Boolean(city)
+          }
+        });
         if (geo.data?.found) {
           saveGuestDeliveryLocation(geo.data.latitude, geo.data.longitude, geo.data.formattedAddress || finalAddress, true);
           setGuestAddressCoords({ latitude: geo.data.latitude, longitude: geo.data.longitude });
           toast.success('Адрес подтвержден');
+          return;
+        }
+        if (geo.data?.cityMismatch) {
+          toast.error(geo.data?.message || (city ? `Адрес должен быть в городе ${city}` : 'Адрес вне доступного города'));
           return;
         }
       } catch {
@@ -335,9 +376,22 @@ const MenuPage = () => {
       }
     }
 
+    const reverse = await reverseGeocodeByCoords(latitude, longitude);
+    if (reverse.cityMismatch) {
+      toast.error(reverse.message || (city ? `Адрес должен быть в городе ${city}` : 'Адрес вне доступного города'));
+      return;
+    }
+    if (!finalAddress && reverse.address) {
+      finalAddress = reverse.address;
+    }
+    if (!hasHouseNumber(finalAddress)) {
+      toast.error('Укажите улицу и номер дома');
+      return;
+    }
+
     saveGuestDeliveryLocation(latitude, longitude, finalAddress, true);
     toast.success('Адрес подтвержден');
-  }, [guestAddressCoords, guestDeliveryLocation, guestAddressInput, saveGuestDeliveryLocation]);
+  }, [guestAddressCoords, guestDeliveryLocation, guestAddressInput, saveGuestDeliveryLocation, reverseGeocodeByCoords, restaurant?.city]);
 
   const applyGuestMapLocation = useCallback(async () => {
     const latitude = Number(guestAddressCoords?.latitude ?? guestDeliveryLocation?.latitude);
@@ -348,15 +402,25 @@ const MenuPage = () => {
       return;
     }
 
-    const mapAddress = await reverseGeocodeByCoords(latitude, longitude);
+    const city = String(restaurant?.city || '').trim();
+    const reverse = await reverseGeocodeByCoords(latitude, longitude);
+    if (reverse.cityMismatch) {
+      toast.error(reverse.message || (city ? `Адрес должен быть в городе ${city}` : 'Адрес вне доступного города'));
+      return;
+    }
+    const mapAddress = reverse.address || '';
     const finalAddress = mapAddress || guestAddressInput?.trim() || guestDeliveryLocation?.address || '';
+    if (!hasHouseNumber(finalAddress)) {
+      toast.error('Укажите улицу и номер дома');
+      return;
+    }
 
     saveGuestDeliveryLocation(latitude, longitude, finalAddress, true);
     setGuestAddressInput(finalAddress);
     setGuestAddressCoords({ latitude, longitude });
     setShowGuestMapModal(false);
     toast.success('Адрес подтвержден');
-  }, [guestAddressCoords, guestDeliveryLocation, guestAddressInput, reverseGeocodeByCoords, saveGuestDeliveryLocation]);
+  }, [guestAddressCoords, guestDeliveryLocation, guestAddressInput, reverseGeocodeByCoords, saveGuestDeliveryLocation, restaurant?.city]);
 
   // Check customer login status
   useEffect(() => {
@@ -1264,7 +1328,7 @@ const MenuPage = () => {
                       longitude: suggestion.longitude
                     });
                   }}
-                  placeholder="Поиск адреса"
+                  placeholder="Улица, дом"
                   className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm"
                   restaurant={displayRestaurant}
                 />

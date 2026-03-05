@@ -39,7 +39,10 @@ const AddressAutocomplete = ({ value, onChange, onSelect, placeholder, className
         try {
             const params = { text };
             // Передаём город/страну ресторана для точности
-            if (restaurant?.city) params.city = restaurant.city;
+            if (restaurant?.city) {
+                params.city = restaurant.city;
+                params.strictCity = true;
+            }
             if (restaurant?.country) params.country = restaurant.country;
             const resp = await api.get('/geolocation/suggest', { params });
             const items = resp.data?.suggestions || [];

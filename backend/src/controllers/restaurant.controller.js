@@ -120,7 +120,8 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
           const ranked = await getNetworkRankedDeliveryPoints({
             ownerId: restaurantBase.ownerId,
             latitude: lat,
-            longitude: lon
+            longitude: lon,
+            city: restaurantBase.city || null
           });
 
           // 1) Ближайший открытый в зоне доставки
