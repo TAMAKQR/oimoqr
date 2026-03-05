@@ -12,6 +12,7 @@ import { restaurantService } from '../services/restaurantService';
 
 const GUEST_DELIVERY_LOCATION_KEY = 'guest-delivery-location';
 const GUEST_CHECKOUT_CONTACT_KEY = 'guest-checkout-contact';
+const GUEST_CHECKOUT_ADDRESS_DETAILS_KEY = 'guest-checkout-address-details';
 
 /* ---- palette builder (same as MenuPage) ---- */
 const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
@@ -93,6 +94,7 @@ const CheckoutPage = () => {
     const [showGuestAddressForm, setShowGuestAddressForm] = useState(false);
     const [guestAddressDraft, setGuestAddressDraft] = useState('');
     const [guestAddressCoords, setGuestAddressCoords] = useState(null);
+    const [guestAddressDetails, setGuestAddressDetails] = useState({ entrance: '', floor: '', apartment: '' });
     const [guestContactName, setGuestContactName] = useState('');
     const [guestContactPhone, setGuestContactPhone] = useState('');
     const [checkoutStep, setCheckoutStep] = useState(1);
@@ -211,6 +213,35 @@ const CheckoutPage = () => {
             phone: guestContactPhone
         }));
     }, [customer?.id, guestContactName, guestContactPhone]);
+
+    useEffect(() => {
+        if (customer?.id) {
+            setGuestAddressDetails({ entrance: '', floor: '', apartment: '' });
+            return;
+        }
+
+        try {
+            const raw = localStorage.getItem(GUEST_CHECKOUT_ADDRESS_DETAILS_KEY);
+            if (!raw) return;
+            const parsed = JSON.parse(raw);
+            setGuestAddressDetails({
+                entrance: String(parsed?.entrance || ''),
+                floor: String(parsed?.floor || ''),
+                apartment: String(parsed?.apartment || '')
+            });
+        } catch {
+            // ignore storage errors
+        }
+    }, [customer?.id]);
+
+    useEffect(() => {
+        if (customer?.id) return;
+        localStorage.setItem(GUEST_CHECKOUT_ADDRESS_DETAILS_KEY, JSON.stringify({
+            entrance: guestAddressDetails.entrance,
+            floor: guestAddressDetails.floor,
+            apartment: guestAddressDetails.apartment
+        }));
+    }, [customer?.id, guestAddressDetails]);
 
     // Сбрасываем зону при смене типа
     useEffect(() => {
@@ -516,6 +547,11 @@ const CheckoutPage = () => {
             setIsCompletingOrder(true);
             const guestLat = Number(guestDeliveryLocation?.latitude);
             const guestLng = Number(guestDeliveryLocation?.longitude);
+            const normalizedComment = String(comment || '').trim();
+            const guestAddressMeta = !customer?.id && deliveryType === 'delivery' && guestAddressDetailParts.length > 0
+                ? `Детали адреса: ${guestAddressDetailParts.join(', ')}`
+                : '';
+            const orderComment = [normalizedComment, guestAddressMeta].filter(Boolean).join('\n');
             const guestAddressPayload = !customer?.id && deliveryType === 'delivery'
                 ? {
                     deliveryAddress: guestDeliveryLocation?.address || null,
@@ -538,7 +574,7 @@ const CheckoutPage = () => {
                 tableNumber: isDineIn ? tableNumber : null,
                 customerAddressId: customer?.id && deliveryType === 'delivery' ? selectedAddressId : null,
                 paymentMethod,
-                comment,
+                comment: orderComment || null,
                 ...(!customer?.id ? {
                     customerName: String(guestContactName || '').trim() || 'Гость',
                     customerPhone: String(guestContactPhone || '').trim()
@@ -632,6 +668,11 @@ const CheckoutPage = () => {
         const withNumber = parts.filter((part) => /\d/.test(part));
         return withNumber[withNumber.length - 1] || parts.slice(-2).join(', ') || raw;
     }, [selectedAddressForSummary?.address]);
+    const guestAddressDetailParts = useMemo(() => ([
+        guestAddressDetails.entrance && `подъезд ${guestAddressDetails.entrance}`,
+        guestAddressDetails.floor && `этаж ${guestAddressDetails.floor}`,
+        guestAddressDetails.apartment && `кв. ${guestAddressDetails.apartment}`
+    ].filter(Boolean)), [guestAddressDetails]);
 
     const placeOrderDisabledReason = useMemo(() => {
         if (loading) return 'Оформляем заказ...';
@@ -925,6 +966,38 @@ const CheckoutPage = () => {
                                                 className="w-full px-3.5 py-3 border border-gray-300 rounded-xl text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition"
                                                 restaurant={restaurant}
                                             />
+                                            <div className="grid grid-cols-3 gap-2.5">
+                                                <div>
+                                                    <label className="block text-xs font-medium text-gray-600 mb-1">Подъезд</label>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="—"
+                                                        value={guestAddressDetails.entrance}
+                                                        onChange={(e) => setGuestAddressDetails((prev) => ({ ...prev, entrance: e.target.value }))}
+                                                        className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm text-center focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-medium text-gray-600 mb-1">Этаж</label>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="—"
+                                                        value={guestAddressDetails.floor}
+                                                        onChange={(e) => setGuestAddressDetails((prev) => ({ ...prev, floor: e.target.value }))}
+                                                        className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm text-center focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-medium text-gray-600 mb-1">Кв/офис</label>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="—"
+                                                        value={guestAddressDetails.apartment}
+                                                        onChange={(e) => setGuestAddressDetails((prev) => ({ ...prev, apartment: e.target.value }))}
+                                                        className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm text-center focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition"
+                                                    />
+                                                </div>
+                                            </div>
                                             <div className="grid grid-cols-2 gap-2">
                                                 <button
                                                     onClick={() => {

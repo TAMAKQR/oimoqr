@@ -100,7 +100,8 @@ export const createOrder = async (req, res, next) => {
       deliveryLongitude,
       deliveryType,
       tableNumber,
-      paymentMethod
+      paymentMethod,
+      comment
     } = req.body;
 
     if (!restaurantId || !items || total === undefined) {
@@ -274,6 +275,7 @@ export const createOrder = async (req, res, next) => {
         deliveryType: normalizedDeliveryType,
         tableNumber: tableNumber || null,
         paymentMethod: paymentMethod || 'cash',
+        notes: comment || null,
         items: {
           create: trustedItems
         }
