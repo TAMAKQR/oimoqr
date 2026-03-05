@@ -1020,13 +1020,6 @@ const MenuPage = () => {
                   <p className="text-sm text-gray-600 mb-2">📞 {displayRestaurant.phone}</p>
                 )}
 
-                <div className="mt-2 flex flex-col gap-1">
-                  {displayRestaurant.subdomain !== subdomain && (
-                    <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold px-3 py-1 w-fit">
-                      📍 Автопереключено на ближайшую точку
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
             {/* Social Links */}
