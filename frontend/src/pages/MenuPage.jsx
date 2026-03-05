@@ -888,27 +888,39 @@ const MenuPage = () => {
                   </button>
 
                   {!isGuestAddressConfirmed ? (
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="flex items-center gap-2">
                       <button
                         onClick={() => setShowGuestMapModal(true)}
-                        className="rounded-xl py-2.5 bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200 transition-colors"
+                        className="h-10 w-10 shrink-0 rounded-full border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center"
+                        aria-label="Изменить адрес"
+                        title="Изменить адрес"
                       >
-                        Изменить
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 20h9" />
+                          <path d="m16.5 3.5 4 4L7 21H3v-4z" />
+                        </svg>
                       </button>
                       <button
                         onClick={confirmGuestAddress}
-                        className="rounded-xl py-2.5 bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors"
+                        className="flex-1 rounded-xl py-2.5 bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors"
                       >
                         Подтвердить
                       </button>
                     </div>
                   ) : (
-                    <button
-                      onClick={() => setShowGuestMapModal(true)}
-                      className="w-full rounded-xl py-2.5 border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:bg-gray-50 transition-colors"
-                    >
-                      Изменить
-                    </button>
+                    <div className="flex justify-end">
+                      <button
+                        onClick={() => setShowGuestMapModal(true)}
+                        className="h-10 w-10 rounded-full border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center"
+                        aria-label="Изменить адрес"
+                        title="Изменить адрес"
+                      >
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 20h9" />
+                          <path d="m16.5 3.5 4 4L7 21H3v-4z" />
+                        </svg>
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
