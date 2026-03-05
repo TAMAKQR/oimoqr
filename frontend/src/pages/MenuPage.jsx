@@ -11,6 +11,8 @@ import WorkingHoursSection from '../components/WorkingHoursSection';
 import MenuSkeleton from '../components/MenuSkeleton';
 import CustomerLoginModal from '../components/CustomerLoginModal';
 import ImageWithLoader from '../components/ImageWithLoader';
+import AddressAutocomplete from '../components/AddressAutocomplete';
+import api from '../services/api';
 import { useTheme } from '../theme/ThemeProvider';
 
 const clamp = (value, min = 0, max = 1) => Math.min(Math.max(value, min), max);
@@ -153,6 +155,9 @@ const MenuPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [guestDeliveryLocation, setGuestDeliveryLocation] = useState(null);
+  const [showGuestAddressEditor, setShowGuestAddressEditor] = useState(false);
+  const [guestAddressInput, setGuestAddressInput] = useState('');
+  const [guestAddressCoords, setGuestAddressCoords] = useState(null);
   const categoryRefs = useRef({});
   const categoryButtonRefs = useRef({});
   const categoryMenuRef = useRef(null);
@@ -214,20 +219,42 @@ const MenuPage = () => {
       const latitude = Number(parsed?.latitude);
       const longitude = Number(parsed?.longitude);
       if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
-      return { latitude, longitude, updatedAt: parsed?.updatedAt || null };
+      return {
+        latitude,
+        longitude,
+        address: parsed?.address || '',
+        confirmed: Boolean(parsed?.confirmed),
+        updatedAt: parsed?.updatedAt || null
+      };
     } catch {
       return null;
     }
   }, []);
 
-  const saveGuestDeliveryLocation = useCallback((latitude, longitude) => {
+  const saveGuestDeliveryLocation = useCallback((latitude, longitude, address = '', confirmed = false) => {
     const payload = {
       latitude,
       longitude,
+      address,
+      confirmed,
       updatedAt: new Date().toISOString()
     };
     localStorage.setItem(GUEST_DELIVERY_LOCATION_KEY, JSON.stringify(payload));
     setGuestDeliveryLocation(payload);
+  }, []);
+
+  const reverseGeocodeByCoords = useCallback(async (latitude, longitude) => {
+    try {
+      const response = await api.get('/geolocation/geocode', {
+        params: { address: `${longitude},${latitude}` }
+      });
+      if (response.data?.found) {
+        return response.data.formattedAddress || '';
+      }
+    } catch {
+      // ignore geocoder errors for guest helper
+    }
+    return '';
   }, []);
 
   const requestGuestLocation = useCallback(() => {
@@ -245,15 +272,52 @@ const MenuPage = () => {
           return;
         }
 
-        saveGuestDeliveryLocation(latitude, longitude);
-        toast.success('Адрес доставки определён. Можно добавлять блюда в корзину.');
+        (async () => {
+          const formattedAddress = await reverseGeocodeByCoords(latitude, longitude);
+          saveGuestDeliveryLocation(latitude, longitude, formattedAddress, false);
+          setGuestAddressInput(formattedAddress || '');
+          setGuestAddressCoords({ latitude, longitude });
+          setShowGuestAddressEditor(false);
+          toast.success('Проверьте адрес доставки и подтвердите.');
+        })();
       },
       () => {
         toast.error('Не удалось получить геолокацию. Вы можете разрешить доступ в настройках браузера.');
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
     );
-  }, [saveGuestDeliveryLocation]);
+  }, [saveGuestDeliveryLocation, reverseGeocodeByCoords]);
+
+  const confirmGuestAddress = useCallback(async () => {
+    const latitude = Number(guestAddressCoords?.latitude ?? guestDeliveryLocation?.latitude);
+    const longitude = Number(guestAddressCoords?.longitude ?? guestDeliveryLocation?.longitude);
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      toast.error('Сначала определите адрес доставки');
+      return;
+    }
+
+    let finalAddress = guestAddressInput?.trim() || guestDeliveryLocation?.address || '';
+
+    if (!guestAddressCoords && finalAddress) {
+      try {
+        const geo = await api.get('/geolocation/geocode', { params: { address: finalAddress } });
+        if (geo.data?.found) {
+          saveGuestDeliveryLocation(geo.data.latitude, geo.data.longitude, geo.data.formattedAddress || finalAddress, true);
+          setGuestAddressCoords({ latitude: geo.data.latitude, longitude: geo.data.longitude });
+          setShowGuestAddressEditor(false);
+          toast.success('Адрес подтвержден');
+          return;
+        }
+      } catch {
+        // fallback to existing coords
+      }
+    }
+
+    saveGuestDeliveryLocation(latitude, longitude, finalAddress, true);
+    setShowGuestAddressEditor(false);
+    toast.success('Адрес подтвержден');
+  }, [guestAddressCoords, guestDeliveryLocation, guestAddressInput, saveGuestDeliveryLocation]);
 
   // Check customer login status
   useEffect(() => {
@@ -264,6 +328,8 @@ const MenuPage = () => {
     const location = loadGuestDeliveryLocation();
     if (location) {
       setGuestDeliveryLocation(location);
+      setGuestAddressInput(location.address || '');
+      setGuestAddressCoords({ latitude: location.latitude, longitude: location.longitude });
     }
   }, [loadGuestDeliveryLocation]);
 
@@ -453,14 +519,20 @@ const MenuPage = () => {
     Number.isFinite(Number(guestDeliveryLocation?.latitude))
     && Number.isFinite(Number(guestDeliveryLocation?.longitude))
   );
-  const canAddToCart = !isDeliveryMode || (isCustomerLoggedIn ? hasDeliveryAddress : hasGuestDeliveryLocation);
+  const hasConfirmedGuestDeliveryLocation = hasGuestDeliveryLocation && Boolean(guestDeliveryLocation?.confirmed);
+  const canAddToCart = !isDeliveryMode || (isCustomerLoggedIn ? hasDeliveryAddress : hasConfirmedGuestDeliveryLocation);
 
   const handleAddToCartBlocked = () => {
     if (!isDeliveryMode) return;
 
     if (!isCustomerLoggedIn) {
-      toast.error('Для доставки сначала разрешите геолокацию');
-      requestGuestLocation();
+      if (!hasGuestDeliveryLocation) {
+        toast.error('Для доставки сначала разрешите геолокацию');
+        requestGuestLocation();
+        return;
+      }
+
+      toast.error('Подтвердите адрес доставки');
       return;
     }
 
@@ -739,6 +811,80 @@ const MenuPage = () => {
 
         {/* Banner Slider */}
         <BannerSlider banners={displayRestaurant.banners} />
+
+        {!isCustomerLoggedIn && isDeliveryMode && (
+          <div className="px-4 pt-4">
+            <div className="rounded-2xl border border-primary-200 bg-white shadow-sm p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary-700 mb-2">Адрес доставки</p>
+
+              {!hasGuestDeliveryLocation && (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-700">Разрешите геолокацию, чтобы подобрать ближайшую точку доставки.</p>
+                  <button
+                    onClick={requestGuestLocation}
+                    className="w-full rounded-xl py-2.5 bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors"
+                  >
+                    Определить адрес
+                  </button>
+                </div>
+              )}
+
+              {hasGuestDeliveryLocation && (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-800">
+                    Ваш адрес:{' '}
+                    <span className="font-semibold">
+                      {guestDeliveryLocation?.address || 'Координаты определены, уточните адрес'}
+                    </span>
+                  </p>
+
+                  {showGuestAddressEditor && (
+                    <AddressAutocomplete
+                      value={guestAddressInput}
+                      onChange={(value) => {
+                        setGuestAddressInput(value);
+                        setGuestAddressCoords(null);
+                      }}
+                      onSelect={(suggestion) => {
+                        setGuestAddressInput(suggestion.fullAddress || suggestion.title || '');
+                        setGuestAddressCoords({
+                          latitude: suggestion.latitude,
+                          longitude: suggestion.longitude
+                        });
+                      }}
+                      placeholder="Уточните адрес"
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm"
+                      restaurant={displayRestaurant}
+                    />
+                  )}
+
+                  <div className="flex items-center gap-2">
+                    {!guestDeliveryLocation?.confirmed && (
+                      <button
+                        onClick={confirmGuestAddress}
+                        className="flex-1 rounded-xl py-2.5 bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors"
+                      >
+                        Подтвердить
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setShowGuestAddressEditor((prev) => !prev)}
+                      className="flex-1 rounded-xl py-2.5 border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors"
+                    >
+                      {showGuestAddressEditor ? 'Готово' : 'Изменить'}
+                    </button>
+                  </div>
+
+                  {guestDeliveryLocation?.confirmed && (
+                    <div className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2 py-1.5">
+                      Адрес подтверждён. Можно добавлять блюда в корзину.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Restaurant Info */}
         <div className="bg-white shadow-sm">
