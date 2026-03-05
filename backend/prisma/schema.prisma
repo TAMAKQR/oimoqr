@@ -227,6 +227,7 @@ model Dish {
   
   // Recommendations (manual cross-selling)
   recommendationIds String[]  @default([])
+  autoRecommendationsEnabled Boolean @default(false)
   
   categoryId        String
   category          Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)

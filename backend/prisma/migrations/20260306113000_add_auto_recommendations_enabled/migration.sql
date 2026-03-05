@@ -1,0 +1,2 @@
+ALTER TABLE "Dish"
+ADD COLUMN IF NOT EXISTS "autoRecommendationsEnabled" BOOLEAN NOT NULL DEFAULT false;

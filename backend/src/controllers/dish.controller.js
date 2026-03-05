@@ -124,7 +124,7 @@ export const getRestaurantDishes = async (req, res, next) => {
 
 export const createDish = async (req, res, next) => {
   try {
-    const { name, description, price, deliveryPrice, categoryId, order, allergens, discount, badge } = req.body;
+    const { name, description, price, deliveryPrice, categoryId, order, allergens, discount, badge, autoRecommendationsEnabled } = req.body;
     console.log('Creating dish:', { name, categoryId, price });
 
     // Validate price
@@ -184,7 +184,8 @@ export const createDish = async (req, res, next) => {
       order: dishOrder,
       allergens: allergens || null,
       discount: parsedDiscount,
-      badge: badge || null
+      badge: badge || null,
+      autoRecommendationsEnabled: Boolean(autoRecommendationsEnabled)
     };
 
     console.log('Saving dish to database:', dishData);
@@ -205,7 +206,7 @@ export const createDish = async (req, res, next) => {
 export const updateDish = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, description, price, deliveryPrice, order, isActive, allergens, discount, badge } = req.body;
+    const { name, description, price, deliveryPrice, order, isActive, allergens, discount, badge, autoRecommendationsEnabled } = req.body;
 
     console.log('📝 Updating dish:', { id, name, price, allergens, discount, badge });
 
@@ -270,6 +271,7 @@ export const updateDish = async (req, res, next) => {
     if (allergens !== undefined) updateData.allergens = allergens;
     if (parsedDiscount !== undefined) updateData.discount = parsedDiscount;
     if (badge !== undefined) updateData.badge = badge;
+    if (autoRecommendationsEnabled !== undefined) updateData.autoRecommendationsEnabled = Boolean(autoRecommendationsEnabled);
     if (req.body.recommendationIds !== undefined) updateData.recommendationIds = req.body.recommendationIds;
 
     console.log('📝 Update data:', updateData);
@@ -1144,23 +1146,47 @@ export const getDishRecommendations = async (req, res, next) => {
       }
     });
 
-    // Try to get manual recommendations if field exists
+    // Try to get recommendation config if fields exist
     let manualRecommendationIds = [];
+    let autoRecommendationsEnabled = false;
     try {
       const dishWithRecommendations = await prisma.dish.findUnique({
         where: { id: dishId },
-        select: { recommendationIds: true }
+        select: {
+          recommendationIds: true,
+          autoRecommendationsEnabled: true
+        }
       });
       manualRecommendationIds = dishWithRecommendations?.recommendationIds || [];
+      autoRecommendationsEnabled = Boolean(dishWithRecommendations?.autoRecommendationsEnabled);
     } catch (err) {
-      console.log('⚠️ [Recommendations] recommendationIds field not available yet');
+      console.log('⚠️ [Recommendations] recommendation config fields not available yet');
+      try {
+        const dishWithRecommendations = await prisma.dish.findUnique({
+          where: { id: dishId },
+          select: { recommendationIds: true }
+        });
+        manualRecommendationIds = dishWithRecommendations?.recommendationIds || [];
+      } catch {
+        console.log('⚠️ [Recommendations] recommendationIds field not available yet');
+      }
     }
 
     let recommendations = [];
+    const hasManualRecommendations = manualRecommendationIds.length > 0;
+    const allowAutomaticRecommendations = autoRecommendationsEnabled;
+
+    if (!hasManualRecommendations && !allowAutomaticRecommendations) {
+      return res.json({
+        dishId,
+        recommendations: []
+      });
+    }
 
     // PRIORITY 1: Statistics-based recommendations (dishes often ordered together)
-    try {
-      const coOrderedDishes = await prisma.$queryRaw`
+    if (allowAutomaticRecommendations) {
+      try {
+        const coOrderedDishes = await prisma.$queryRaw`
         SELECT 
           d.id,
           d.name,
@@ -1181,15 +1207,16 @@ export const getDishRecommendations = async (req, res, next) => {
         LIMIT ${limit}
       `;
 
-      if (coOrderedDishes && coOrderedDishes.length > 0) {
-        recommendations = coOrderedDishes.map(d => ({
-          ...d,
-          imageUrl: d.image,
-          recommendationType: 'statistics'
-        }));
+        if (coOrderedDishes && coOrderedDishes.length > 0) {
+          recommendations = coOrderedDishes.map(d => ({
+            ...d,
+            imageUrl: d.image,
+            recommendationType: 'statistics'
+          }));
+        }
+      } catch (error) {
+        console.log('Statistics-based recommendations failed:', error.message);
       }
-    } catch (error) {
-      console.log('Statistics-based recommendations failed:', error.message);
     }
 
     // PRIORITY 2: Manual recommendations (if not enough from statistics)
@@ -1226,7 +1253,7 @@ export const getDishRecommendations = async (req, res, next) => {
     }
 
     // PRIORITY 3: Category-based fallback (similar dishes from same category)
-    if (recommendations.length < limit) {
+    if (allowAutomaticRecommendations && recommendations.length < limit) {
       const categoryDishes = await prisma.dish.findMany({
         where: {
           categoryId: dish.categoryId,
@@ -1261,7 +1288,7 @@ export const getDishRecommendations = async (req, res, next) => {
     }
 
     // PRIORITY 4: Popular dishes from restaurant (if still not enough)
-    if (recommendations.length < limit) {
+    if (allowAutomaticRecommendations && recommendations.length < limit) {
       const popularDishes = await prisma.dish.findMany({
         where: {
           category: {
@@ -1299,7 +1326,7 @@ export const getDishRecommendations = async (req, res, next) => {
 
     recommendations = recommendations.filter((rec) => !stoppedDishIds.has(rec.id));
 
-    if (recommendations.length < limit) {
+    if (allowAutomaticRecommendations && recommendations.length < limit) {
       const fallbackTopUp = await prisma.dish.findMany({
         where: {
           category: {

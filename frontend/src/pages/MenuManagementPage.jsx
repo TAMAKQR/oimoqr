@@ -1057,6 +1057,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
 
   // Состояние для рекомендаций
   const [recommendationIds, setRecommendationIds] = useState(dish?.recommendationIds || []);
+  const [autoRecommendationsEnabled, setAutoRecommendationsEnabled] = useState(Boolean(dish?.autoRecommendationsEnabled));
   const [allDishes, setAllDishes] = useState([]);
   const [loadingDishes, setLoadingDishes] = useState(false);
 
@@ -1070,6 +1071,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
   // Обновляем recommendationIds при изменении dish
   useEffect(() => {
     setRecommendationIds(dish?.recommendationIds || []);
+    setAutoRecommendationsEnabled(Boolean(dish?.autoRecommendationsEnabled));
     setOptionEditorByModifier({});
   }, [dish?.id]);
 
@@ -1507,6 +1509,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
         discount: parsedDiscount,
         badge: badge || null,
         recommendationIds,
+        autoRecommendationsEnabled,
       };
 
       let savedDish;
@@ -2060,6 +2063,18 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
               Выберите блюда, которые будут показаны как рекомендации при просмотре этого блюда.
               Это увеличит средний чек! 🚀
             </p>
+
+            <label className="mb-3 flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800">
+              <input
+                type="checkbox"
+                checked={autoRecommendationsEnabled}
+                onChange={(e) => setAutoRecommendationsEnabled(e.target.checked)}
+                className="mt-0.5 h-4 w-4 flex-shrink-0 accent-blue-600"
+              />
+              <span>
+                Включить автоподбор рекомендаций. Если выключено и вручную ничего не выбрано — рекомендации клиенту не показываются.
+              </span>
+            </label>
 
             {loadingDishes ? (
               <div className="text-center py-4 text-gray-500 text-sm">Загрузка блюд...</div>
