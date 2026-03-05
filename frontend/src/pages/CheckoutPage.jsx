@@ -89,6 +89,9 @@ const CheckoutPage = () => {
     const [comment, setComment] = useState('');
     const [showNewAddressForm, setShowNewAddressForm] = useState(false);
     const [newAddress, setNewAddress] = useState({ address: '', entrance: '', floor: '', apartment: '', comment: '' });
+    const [showGuestAddressForm, setShowGuestAddressForm] = useState(false);
+    const [guestAddressDraft, setGuestAddressDraft] = useState('');
+    const [guestAddressCoords, setGuestAddressCoords] = useState(null);
     const [checkoutStep, setCheckoutStep] = useState(1);
 
     // Delivery zone check via Yandex Geocoder
@@ -173,6 +176,8 @@ const CheckoutPage = () => {
                 address: parsed?.address || '',
                 confirmed: Boolean(parsed?.confirmed)
             });
+            setGuestAddressDraft(parsed?.address || '');
+            setGuestAddressCoords({ latitude, longitude });
         } catch {
             setGuestDeliveryLocation(null);
         }
@@ -327,6 +332,48 @@ const CheckoutPage = () => {
             setZoneStatus('error');
             setZoneMessage('Не удалось определить координаты адреса');
         }
+    };
+
+    const handleSaveGuestAddress = async () => {
+        const draft = String(guestAddressDraft || '').trim();
+        let latitude = Number(guestAddressCoords?.latitude);
+        let longitude = Number(guestAddressCoords?.longitude);
+        let finalAddress = draft || guestDeliveryLocation?.address || '';
+
+        if ((!Number.isFinite(latitude) || !Number.isFinite(longitude)) && finalAddress) {
+            try {
+                const city = restaurant?.city || '';
+                const query = city ? `${city}, ${finalAddress}` : finalAddress;
+                const geoResp = await api.get('/geolocation/geocode', { params: { address: query } });
+                if (geoResp.data?.found) {
+                    latitude = Number(geoResp.data.latitude);
+                    longitude = Number(geoResp.data.longitude);
+                    finalAddress = geoResp.data.formattedAddress || finalAddress;
+                }
+            } catch {
+                // keep fallback error below
+            }
+        }
+
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+            toast.error('Не удалось определить координаты адреса');
+            return;
+        }
+
+        const payload = {
+            latitude,
+            longitude,
+            address: finalAddress,
+            confirmed: true,
+            updatedAt: new Date().toISOString()
+        };
+        localStorage.setItem(GUEST_DELIVERY_LOCATION_KEY, JSON.stringify(payload));
+        setGuestDeliveryLocation(payload);
+        setGuestAddressDraft(finalAddress);
+        setGuestAddressCoords({ latitude, longitude });
+        setShowGuestAddressForm(false);
+        await checkZoneByCoords(latitude, longitude);
+        toast.success('Адрес обновлен');
     };
 
     const loadAddresses = async () => {
@@ -781,12 +828,58 @@ const CheckoutPage = () => {
                                             </p>
                                         </div>
                                         <button
-                                            onClick={() => navigate(-1)}
+                                            onClick={() => setShowGuestAddressForm((prev) => !prev)}
                                             className="shrink-0 rounded-lg px-3 py-1.5 border border-gray-300 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
                                         >
-                                            Изменить
+                                            {showGuestAddressForm ? 'Скрыть' : 'Изменить'}
                                         </button>
                                     </div>
+
+                                    {showGuestAddressForm && (
+                                        <div className="mt-3 space-y-3">
+                                            <AddressAutocomplete
+                                                value={guestAddressDraft}
+                                                onChange={(value) => {
+                                                    setGuestAddressDraft(value);
+                                                    setGuestAddressCoords(null);
+                                                }}
+                                                onSelect={(suggestion) => {
+                                                    setGuestAddressDraft(suggestion.fullAddress || suggestion.title || '');
+                                                    setGuestAddressCoords({
+                                                        latitude: suggestion.latitude,
+                                                        longitude: suggestion.longitude
+                                                    });
+                                                }}
+                                                placeholder="Город, улица, дом"
+                                                className="w-full px-3.5 py-3 border border-gray-300 rounded-xl text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition"
+                                                restaurant={restaurant}
+                                            />
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <button
+                                                    onClick={() => {
+                                                        setShowGuestAddressForm(false);
+                                                        setGuestAddressDraft(guestDeliveryLocation?.address || '');
+                                                        const lat = Number(guestDeliveryLocation?.latitude);
+                                                        const lng = Number(guestDeliveryLocation?.longitude);
+                                                        if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                                                            setGuestAddressCoords({ latitude: lat, longitude: lng });
+                                                        } else {
+                                                            setGuestAddressCoords(null);
+                                                        }
+                                                    }}
+                                                    className="rounded-xl py-2.5 border border-gray-300 text-gray-700 text-sm font-semibold hover:bg-gray-50 transition-colors"
+                                                >
+                                                    Отмена
+                                                </button>
+                                                <button
+                                                    onClick={handleSaveGuestAddress}
+                                                    className="rounded-xl py-2.5 bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors"
+                                                >
+                                                    Сохранить
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
