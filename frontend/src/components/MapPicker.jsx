@@ -50,7 +50,7 @@ const MapPicker = ({ latitude, longitude, radius, onChange, height = '300px' }) 
     };
 
     return (
-        <div className="rounded-lg overflow-hidden border border-gray-200" style={{ height }}>
+        <div className="relative z-0 rounded-lg overflow-hidden border border-gray-200" style={{ height }}>
             <MapContainer
                 center={center}
                 zoom={zoom}

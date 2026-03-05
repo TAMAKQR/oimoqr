@@ -85,7 +85,7 @@ const AddressAutocomplete = ({ value, onChange, onSelect, placeholder, className
     };
 
     return (
-        <div ref={wrapperRef} className="relative">
+        <div ref={wrapperRef} className="relative z-[1200]">
             <input
                 type="text"
                 value={value}
@@ -104,7 +104,7 @@ const AddressAutocomplete = ({ value, onChange, onSelect, placeholder, className
                 </div>
             )}
             {showDropdown && suggestions.length > 0 && (
-                <ul className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                <ul className="absolute z-[1300] left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                     {suggestions.map((s, i) => (
                         <li
                             key={i}
