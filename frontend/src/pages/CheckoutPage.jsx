@@ -11,6 +11,7 @@ import customerService from '../services/customerService';
 import { restaurantService } from '../services/restaurantService';
 
 const GUEST_DELIVERY_LOCATION_KEY = 'guest-delivery-location';
+const GUEST_CHECKOUT_CONTACT_KEY = 'guest-checkout-contact';
 
 /* ---- palette builder (same as MenuPage) ---- */
 const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
@@ -92,6 +93,8 @@ const CheckoutPage = () => {
     const [showGuestAddressForm, setShowGuestAddressForm] = useState(false);
     const [guestAddressDraft, setGuestAddressDraft] = useState('');
     const [guestAddressCoords, setGuestAddressCoords] = useState(null);
+    const [guestContactName, setGuestContactName] = useState('');
+    const [guestContactPhone, setGuestContactPhone] = useState('');
     const [checkoutStep, setCheckoutStep] = useState(1);
 
     // Delivery zone check via Yandex Geocoder
@@ -182,6 +185,32 @@ const CheckoutPage = () => {
             setGuestDeliveryLocation(null);
         }
     }, [customer?.id, deliveryType]);
+
+    useEffect(() => {
+        if (customer?.id) {
+            setGuestContactName('');
+            setGuestContactPhone('');
+            return;
+        }
+
+        try {
+            const raw = localStorage.getItem(GUEST_CHECKOUT_CONTACT_KEY);
+            if (!raw) return;
+            const parsed = JSON.parse(raw);
+            setGuestContactName(String(parsed?.name || ''));
+            setGuestContactPhone(String(parsed?.phone || ''));
+        } catch {
+            // ignore storage errors
+        }
+    }, [customer?.id]);
+
+    useEffect(() => {
+        if (customer?.id) return;
+        localStorage.setItem(GUEST_CHECKOUT_CONTACT_KEY, JSON.stringify({
+            name: guestContactName,
+            phone: guestContactPhone
+        }));
+    }, [customer?.id, guestContactName, guestContactPhone]);
 
     // Сбрасываем зону при смене типа
     useEffect(() => {
@@ -459,6 +488,13 @@ const CheckoutPage = () => {
             return;
         }
 
+        if (!customer?.id && !isDineIn) {
+            if (!String(guestContactName || '').trim() || guestPhoneDigits.length < 8) {
+                toast.error('Укажите имя и телефон для связи');
+                return;
+            }
+        }
+
         if (deliveryType === 'delivery') {
             if (customer?.id && !selectedAddressId) {
                 toast.error('Выберите адрес доставки');
@@ -503,7 +539,10 @@ const CheckoutPage = () => {
                 customerAddressId: customer?.id && deliveryType === 'delivery' ? selectedAddressId : null,
                 paymentMethod,
                 comment,
-                ...(!customer?.id ? { customerName: 'Гость' } : {}),
+                ...(!customer?.id ? {
+                    customerName: String(guestContactName || '').trim() || 'Гость',
+                    customerPhone: String(guestContactPhone || '').trim()
+                } : {}),
                 ...guestAddressPayload
             };
 
@@ -574,6 +613,10 @@ const CheckoutPage = () => {
         : 0;
     const finalTotal = (baseTotalWithDelivery - appliedBonus).toFixed(2);
     const totalDishCount = cartItems.reduce((sum, item) => sum + (Number(item?.quantity) || 0), 0);
+    const isGuestContactRequired = !customer?.id && !isDineIn;
+    const guestPhoneDigits = String(guestContactPhone || '').replace(/\D/g, '');
+    const isGuestContactValid = !isGuestContactRequired
+        || (String(guestContactName || '').trim().length >= 2 && guestPhoneDigits.length >= 8);
     const selectedAddressForSummary = customer?.id
         ? (addresses.find((addr) => addr.id === selectedAddressId) || null)
         : guestDeliveryLocation;
@@ -592,6 +635,7 @@ const CheckoutPage = () => {
 
     const placeOrderDisabledReason = useMemo(() => {
         if (loading) return 'Оформляем заказ...';
+        if (!customer?.id && !isDineIn && !isGuestContactValid) return 'Укажите имя и телефон для связи';
         if (!isDineIn && deliveryType === 'delivery' && isReconcilingCart) return 'Обновляем корзину по ближайшей точке...';
         if (!isDineIn && deliveryType === 'delivery' && addressesLoading) return 'Загружаем адреса...';
         if (!isDineIn && deliveryType === 'delivery' && customer?.id && !selectedAddressId) return 'Выберите адрес доставки';
@@ -603,7 +647,7 @@ const CheckoutPage = () => {
         if (!isDineIn && deliveryType === 'delivery' && zoneStatus === 'checking') return 'Проверяем зону доставки...';
         if (!isDineIn && deliveryType === 'delivery' && zoneStatus === 'outside') return 'Адрес вне зоны доставки';
         return '';
-    }, [loading, isDineIn, deliveryType, isReconcilingCart, addressesLoading, selectedAddressId, zoneStatus, customer?.id, guestDeliveryLocation?.latitude, guestDeliveryLocation?.longitude]);
+    }, [loading, isDineIn, deliveryType, isReconcilingCart, addressesLoading, selectedAddressId, zoneStatus, customer?.id, guestDeliveryLocation?.latitude, guestDeliveryLocation?.longitude, isGuestContactValid]);
 
     const isPlaceOrderDisabled = Boolean(placeOrderDisabledReason);
 
@@ -779,6 +823,33 @@ const CheckoutPage = () => {
                                             <div className="font-semibold text-sm">Самовывоз</div>
                                             <div className="text-xs text-gray-500">Бесплатно</div>
                                         </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {!customer?.id && !isDineIn && (
+                                <div className="bg-white rounded-lg shadow-sm p-4">
+                                    <h2 className="font-semibold text-base mb-3">Контакты для связи</h2>
+                                    <div className="space-y-2.5">
+                                        <input
+                                            type="text"
+                                            placeholder="Ваше имя"
+                                            value={guestContactName}
+                                            onChange={(e) => setGuestContactName(e.target.value)}
+                                            className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition"
+                                        />
+                                        <input
+                                            type="tel"
+                                            inputMode="tel"
+                                            autoComplete="tel"
+                                            placeholder="+996..."
+                                            value={guestContactPhone}
+                                            onChange={(e) => setGuestContactPhone(e.target.value)}
+                                            className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition"
+                                        />
+                                        <p className="text-xs text-gray-500">
+                                            Нужны только для связи по заказу.
+                                        </p>
                                     </div>
                                 </div>
                             )}
