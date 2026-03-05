@@ -12,6 +12,7 @@ import MenuSkeleton from '../components/MenuSkeleton';
 import CustomerLoginModal from '../components/CustomerLoginModal';
 import ImageWithLoader from '../components/ImageWithLoader';
 import AddressAutocomplete from '../components/AddressAutocomplete';
+import MapPicker from '../components/MapPicker';
 import api from '../services/api';
 import { useTheme } from '../theme/ThemeProvider';
 
@@ -126,6 +127,12 @@ const getCurrencySymbol = (currencyCode) => {
 
 const GUEST_DELIVERY_LOCATION_KEY = 'guest-delivery-location';
 const GUEST_DELIVERY_LOCATION_PROMPT_KEY = 'guest-delivery-location-prompted';
+const formatCompactAddress = (address = '') => {
+  const normalized = String(address || '').trim();
+  if (!normalized) return 'Уточните адрес на карте';
+  const parts = normalized.split(',').map((part) => part.trim()).filter(Boolean);
+  return parts.slice(0, 2).join(', ') || normalized;
+};
 
 const MenuPage = () => {
   const { subdomain } = useParams();
@@ -155,9 +162,9 @@ const MenuPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [guestDeliveryLocation, setGuestDeliveryLocation] = useState(null);
-  const [showGuestAddressEditor, setShowGuestAddressEditor] = useState(false);
   const [guestAddressInput, setGuestAddressInput] = useState('');
   const [guestAddressCoords, setGuestAddressCoords] = useState(null);
+  const [showGuestMapModal, setShowGuestMapModal] = useState(false);
   const categoryRefs = useRef({});
   const categoryButtonRefs = useRef({});
   const categoryMenuRef = useRef(null);
@@ -277,7 +284,6 @@ const MenuPage = () => {
           saveGuestDeliveryLocation(latitude, longitude, formattedAddress, true);
           setGuestAddressInput(formattedAddress || '');
           setGuestAddressCoords({ latitude, longitude });
-          setShowGuestAddressEditor(false);
           toast.success('Адрес определён');
         })();
       },
@@ -305,7 +311,6 @@ const MenuPage = () => {
         if (geo.data?.found) {
           saveGuestDeliveryLocation(geo.data.latitude, geo.data.longitude, geo.data.formattedAddress || finalAddress, true);
           setGuestAddressCoords({ latitude: geo.data.latitude, longitude: geo.data.longitude });
-          setShowGuestAddressEditor(false);
           toast.success('Адрес подтвержден');
           return;
         }
@@ -315,9 +320,27 @@ const MenuPage = () => {
     }
 
     saveGuestDeliveryLocation(latitude, longitude, finalAddress, true);
-    setShowGuestAddressEditor(false);
     toast.success('Адрес подтвержден');
   }, [guestAddressCoords, guestDeliveryLocation, guestAddressInput, saveGuestDeliveryLocation]);
+
+  const applyGuestMapLocation = useCallback(async () => {
+    const latitude = Number(guestAddressCoords?.latitude ?? guestDeliveryLocation?.latitude);
+    const longitude = Number(guestAddressCoords?.longitude ?? guestDeliveryLocation?.longitude);
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      toast.error('Выберите точку на карте');
+      return;
+    }
+
+    const mapAddress = await reverseGeocodeByCoords(latitude, longitude);
+    const finalAddress = mapAddress || guestAddressInput?.trim() || guestDeliveryLocation?.address || '';
+
+    saveGuestDeliveryLocation(latitude, longitude, finalAddress, true);
+    setGuestAddressInput(finalAddress);
+    setGuestAddressCoords({ latitude, longitude });
+    setShowGuestMapModal(false);
+    toast.success('Адрес подтвержден');
+  }, [guestAddressCoords, guestDeliveryLocation, guestAddressInput, reverseGeocodeByCoords, saveGuestDeliveryLocation]);
 
   // Check customer login status
   useEffect(() => {
@@ -516,7 +539,8 @@ const MenuPage = () => {
     Number.isFinite(Number(guestDeliveryLocation?.latitude))
     && Number.isFinite(Number(guestDeliveryLocation?.longitude))
   );
-  const canAddToCart = !isDeliveryMode || (isCustomerLoggedIn ? hasDeliveryAddress : hasGuestDeliveryLocation);
+  const hasConfirmedGuestDeliveryLocation = hasGuestDeliveryLocation && Boolean(guestDeliveryLocation?.confirmed);
+  const canAddToCart = !isDeliveryMode || (isCustomerLoggedIn ? hasDeliveryAddress : hasConfirmedGuestDeliveryLocation);
 
   const handleAddToCartBlocked = () => {
     if (!isDeliveryMode) return;
@@ -528,6 +552,7 @@ const MenuPage = () => {
         return;
       }
 
+      toast.error('Подтвердите адрес: Да или Нет');
       return;
     }
 
@@ -826,49 +851,27 @@ const MenuPage = () => {
 
               {hasGuestDeliveryLocation && (
                 <div className="space-y-3">
-                  <p className="text-sm text-gray-800">
-                    Ваш адрес:{' '}
-                    <span className="font-semibold">
-                      {guestDeliveryLocation?.address || 'Координаты определены, уточните адрес'}
-                    </span>
-                  </p>
-
-                  {showGuestAddressEditor && (
-                    <AddressAutocomplete
-                      value={guestAddressInput}
-                      onChange={(value) => {
-                        setGuestAddressInput(value);
-                        setGuestAddressCoords(null);
-                      }}
-                      onSelect={(suggestion) => {
-                        setGuestAddressInput(suggestion.fullAddress || suggestion.title || '');
-                        setGuestAddressCoords({
-                          latitude: suggestion.latitude,
-                          longitude: suggestion.longitude
-                        });
-                      }}
-                      placeholder="Уточните адрес"
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm"
-                      restaurant={displayRestaurant}
-                    />
-                  )}
+                  <p className="text-sm text-gray-500 text-center">Заказ на этот адрес?</p>
+                  <button
+                    onClick={() => setShowGuestMapModal(true)}
+                    className="w-full rounded-2xl bg-gray-50 border border-gray-200 px-3 py-2.5 text-center text-lg font-semibold text-gray-900 truncate"
+                    title={guestDeliveryLocation?.address || ''}
+                  >
+                    {formatCompactAddress(guestDeliveryLocation?.address)}
+                  </button>
 
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => {
-                        if (showGuestAddressEditor) {
-                          confirmGuestAddress();
-                          return;
-                        }
-                        setShowGuestAddressEditor(true);
-                      }}
-                      className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors ${
-                        showGuestAddressEditor
-                          ? 'bg-primary-600 text-white hover:bg-primary-700'
-                          : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
-                      }`}
+                      onClick={() => setShowGuestMapModal(true)}
+                      className="flex-1 rounded-xl py-2.5 bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200 transition-colors"
                     >
-                      {showGuestAddressEditor ? 'Сохранить' : 'Изменить'}
+                      Нет
+                    </button>
+                    <button
+                      onClick={confirmGuestAddress}
+                      className="flex-1 rounded-xl py-2.5 bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors"
+                    >
+                      Да
                     </button>
                   </div>
                 </div>
@@ -1207,6 +1210,60 @@ const MenuPage = () => {
 
         {/* Cart */}
         <Cart restaurant={displayRestaurant} isDishModalOpen={isDishModalOpen} hideOnDesktop />
+
+        {showGuestMapModal && !isCustomerLoggedIn && isDeliveryMode && (
+          <div className="fixed inset-0 z-[70] bg-black/40 px-3 py-4">
+            <div className="w-full max-w-[520px] h-full max-h-[90vh] mx-auto bg-white rounded-2xl shadow-2xl flex flex-col">
+              <div className="px-4 pt-4 pb-3 border-b border-gray-100 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">Уточните адрес</h3>
+                <button
+                  onClick={() => setShowGuestMapModal(false)}
+                  className="w-9 h-9 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50"
+                  aria-label="Закрыть карту"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="px-4 py-3 space-y-3 overflow-y-auto">
+                <AddressAutocomplete
+                  value={guestAddressInput}
+                  onChange={(value) => {
+                    setGuestAddressInput(value);
+                  }}
+                  onSelect={(suggestion) => {
+                    setGuestAddressInput(suggestion.fullAddress || suggestion.title || '');
+                    setGuestAddressCoords({
+                      latitude: suggestion.latitude,
+                      longitude: suggestion.longitude
+                    });
+                  }}
+                  placeholder="Поиск адреса"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm"
+                  restaurant={displayRestaurant}
+                />
+
+                <MapPicker
+                  latitude={guestAddressCoords?.latitude ?? guestDeliveryLocation?.latitude}
+                  longitude={guestAddressCoords?.longitude ?? guestDeliveryLocation?.longitude}
+                  radius={0}
+                  onChange={(latitude, longitude) => {
+                    setGuestAddressCoords({ latitude, longitude });
+                  }}
+                />
+              </div>
+
+              <div className="p-4 border-t border-gray-100">
+                <button
+                  onClick={applyGuestMapLocation}
+                  className="w-full rounded-xl py-3 bg-primary-600 text-white text-base font-semibold hover:bg-primary-700 transition-colors"
+                >
+                  Я здесь
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Fullscreen Search Overlay */}
         {isSearchOpen && (
