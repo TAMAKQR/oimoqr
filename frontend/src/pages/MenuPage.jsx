@@ -122,6 +122,9 @@ const getCurrencySymbol = (currencyCode) => {
   return currencySymbols[currencyCode] || '₽';
 };
 
+const GUEST_DELIVERY_LOCATION_KEY = 'guest-delivery-location';
+const GUEST_DELIVERY_LOCATION_PROMPT_KEY = 'guest-delivery-location-prompted';
+
 const MenuPage = () => {
   const { subdomain } = useParams();
   const navigate = useNavigate();
@@ -149,6 +152,7 @@ const MenuPage = () => {
   const [isDishModalOpen, setIsDishModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [guestDeliveryLocation, setGuestDeliveryLocation] = useState(null);
   const categoryRefs = useRef({});
   const categoryButtonRefs = useRef({});
   const categoryMenuRef = useRef(null);
@@ -202,10 +206,66 @@ const MenuPage = () => {
     );
   }, [filteredCategories, isSearching]);
 
+  const loadGuestDeliveryLocation = useCallback(() => {
+    try {
+      const raw = localStorage.getItem(GUEST_DELIVERY_LOCATION_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      const latitude = Number(parsed?.latitude);
+      const longitude = Number(parsed?.longitude);
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+      return { latitude, longitude, updatedAt: parsed?.updatedAt || null };
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const saveGuestDeliveryLocation = useCallback((latitude, longitude) => {
+    const payload = {
+      latitude,
+      longitude,
+      updatedAt: new Date().toISOString()
+    };
+    localStorage.setItem(GUEST_DELIVERY_LOCATION_KEY, JSON.stringify(payload));
+    setGuestDeliveryLocation(payload);
+  }, []);
+
+  const requestGuestLocation = useCallback(() => {
+    if (!navigator?.geolocation) {
+      toast.error('Геолокация не поддерживается на этом устройстве');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const latitude = Number(position.coords?.latitude);
+        const longitude = Number(position.coords?.longitude);
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+          toast.error('Не удалось определить координаты');
+          return;
+        }
+
+        saveGuestDeliveryLocation(latitude, longitude);
+        toast.success('Адрес доставки определён. Можно добавлять блюда в корзину.');
+      },
+      () => {
+        toast.error('Не удалось получить геолокацию. Вы можете разрешить доступ в настройках браузера.');
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+    );
+  }, [saveGuestDeliveryLocation]);
+
   // Check customer login status
   useEffect(() => {
     setIsCustomerLoggedIn(customerService.isAuthenticated());
   }, []);
+
+  useEffect(() => {
+    const location = loadGuestDeliveryLocation();
+    if (location) {
+      setGuestDeliveryLocation(location);
+    }
+  }, [loadGuestDeliveryLocation]);
 
   // Для доставки адрес обязателен заранее
   useEffect(() => {
@@ -252,6 +312,20 @@ const MenuPage = () => {
   }, [tableFromUrl, dineInParam, setOrderMode]);
 
   useEffect(() => {
+    if (orderMode === 'dine_in') return;
+
+    const alreadyPrompted = localStorage.getItem(GUEST_DELIVERY_LOCATION_PROMPT_KEY) === '1';
+    if (alreadyPrompted) return;
+    if (guestDeliveryLocation) return;
+
+    localStorage.setItem(GUEST_DELIVERY_LOCATION_PROMPT_KEY, '1');
+    const agreed = window.confirm('Разрешить геолокацию, чтобы сразу показать ближайшую точку доставки?');
+    if (!agreed) return;
+
+    requestGuestLocation();
+  }, [orderMode, guestDeliveryLocation, requestGuestLocation]);
+
+  useEffect(() => {
     if (isSearchOpen && searchInputRef.current) {
       searchInputRef.current.focus();
     }
@@ -273,7 +347,20 @@ const MenuPage = () => {
   const loadRestaurant = useCallback(async (language) => {
     try {
       setLoading(true);
-      const data = await restaurantService.getBySubdomain(subdomain, language);
+      const guestLat = Number(guestDeliveryLocation?.latitude);
+      const guestLon = Number(guestDeliveryLocation?.longitude);
+      const useGuestCoords = !customerService.isAuthenticated()
+        && orderMode !== 'dine_in'
+        && Number.isFinite(guestLat)
+        && Number.isFinite(guestLon);
+
+      const data = await restaurantService.getBySubdomain(
+        subdomain,
+        language,
+        useGuestCoords
+          ? { latitude: guestLat, longitude: guestLon, forceRefresh: true }
+          : {}
+      );
       setRestaurant(data);
       if (data.primaryColor) {
         const palette = buildPaletteFromBase(data.primaryColor);
@@ -308,7 +395,7 @@ const MenuPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [subdomain, setCustomColors, setTheme, themes]);
+  }, [subdomain, orderMode, guestDeliveryLocation, setCustomColors, setTheme, themes]);
 
   // ✅ ОПТИМИЗАЦИЯ: Один useEffect для загрузки - избегаем дублирования
   useEffect(() => {
@@ -362,14 +449,18 @@ const MenuPage = () => {
   const effectiveCartItemCount = isCartForCurrentRestaurant ? cartItemCount : 0;
   const effectiveCartTotal = isCartForCurrentRestaurant ? cartTotal : 0;
   const isDeliveryMode = orderMode !== 'dine_in';
-  const canAddToCart = !isDeliveryMode || (isCustomerLoggedIn && hasDeliveryAddress);
+  const hasGuestDeliveryLocation = Boolean(
+    Number.isFinite(Number(guestDeliveryLocation?.latitude))
+    && Number.isFinite(Number(guestDeliveryLocation?.longitude))
+  );
+  const canAddToCart = !isDeliveryMode || (isCustomerLoggedIn ? hasDeliveryAddress : hasGuestDeliveryLocation);
 
   const handleAddToCartBlocked = () => {
     if (!isDeliveryMode) return;
 
     if (!isCustomerLoggedIn) {
-      toast.error('Для доставки сначала войдите в аккаунт');
-      setShowLoginModal(true);
+      toast.error('Для доставки сначала разрешите геолокацию');
+      requestGuestLocation();
       return;
     }
 
