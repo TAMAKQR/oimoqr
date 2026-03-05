@@ -569,7 +569,7 @@ const MenuPage = () => {
         return;
       }
 
-      toast.error('Подтвердите адрес: Да или Нет');
+      toast.error('Подтвердите адрес доставки');
       return;
     }
 
@@ -865,56 +865,50 @@ const MenuPage = () => {
               )}
 
               {hasGuestDeliveryLocation && (
-                <div className="space-y-3">
-                  {!isGuestAddressConfirmed && (
-                    <>
-                      <p className="text-sm text-gray-500 text-center">Подтвердить адрес доставки?</p>
+                <div className="space-y-2.5">
+                  <button
+                    onClick={() => setShowGuestMapModal(true)}
+                    className={`w-full rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                      isGuestAddressConfirmed
+                        ? 'border-emerald-200 bg-emerald-50/60'
+                        : 'border-gray-200 bg-gray-50'
+                    }`}
+                    title={guestDeliveryLocation?.address || ''}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span
+                        className={`inline-flex h-2.5 w-2.5 rounded-full shrink-0 ${
+                          isGuestAddressConfirmed ? 'bg-emerald-500' : 'bg-amber-500'
+                        }`}
+                      />
+                      <span className="truncate text-sm font-semibold text-gray-900">
+                        {formatCompactAddress(guestDeliveryLocation?.address)}
+                      </span>
+                    </div>
+                  </button>
+
+                  {!isGuestAddressConfirmed ? (
+                    <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => setShowGuestMapModal(true)}
-                        className="w-full rounded-xl bg-gray-50 border border-gray-200 px-3 py-2.5 text-center text-base font-semibold text-gray-900 truncate"
-                        title={guestDeliveryLocation?.address || ''}
+                        className="rounded-xl py-2.5 bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200 transition-colors"
                       >
-                        {formatCompactAddress(guestDeliveryLocation?.address)}
+                        Изменить
                       </button>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setShowGuestMapModal(true)}
-                          className="flex-1 rounded-xl py-2.5 bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200 transition-colors"
-                        >
-                          Нет
-                        </button>
-                        <button
-                          onClick={confirmGuestAddress}
-                          className="flex-1 rounded-xl py-2.5 bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors"
-                        >
-                          Да
-                        </button>
-                      </div>
-                    </>
-                  )}
-
-                  {isGuestAddressConfirmed && (
-                    <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 px-3 py-2.5">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">Адрес подтвержден</p>
-                          <button
-                            onClick={() => setShowGuestMapModal(true)}
-                            className="text-left text-sm font-semibold text-gray-900 truncate max-w-full"
-                            title={guestDeliveryLocation?.address || ''}
-                          >
-                            {formatCompactAddress(guestDeliveryLocation?.address)}
-                          </button>
-                        </div>
-                        <button
-                          onClick={() => setShowGuestMapModal(true)}
-                          className="shrink-0 rounded-lg px-3 py-1.5 border border-gray-300 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
-                        >
-                          Изменить
-                        </button>
-                      </div>
+                      <button
+                        onClick={confirmGuestAddress}
+                        className="rounded-xl py-2.5 bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors"
+                      >
+                        Подтвердить
+                      </button>
                     </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowGuestMapModal(true)}
+                      className="w-full rounded-xl py-2.5 border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:bg-gray-50 transition-colors"
+                    >
+                      Изменить
+                    </button>
                   )}
                 </div>
               )}
@@ -1251,16 +1245,19 @@ const MenuPage = () => {
 
         {showGuestMapModal && !isCustomerLoggedIn && isDeliveryMode && (
           <div className="fixed inset-0 z-[70] bg-black/40">
-            <div className="absolute inset-x-0 bottom-0 h-[100dvh] w-full bg-white rounded-t-3xl shadow-2xl flex flex-col md:inset-0 md:m-auto md:h-[90vh] md:max-w-[560px] md:rounded-2xl">
-              <div className="px-4 pt-4 pb-3 border-b border-gray-100 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Уточните адрес</h3>
-                <button
-                  onClick={() => setShowGuestMapModal(false)}
-                  className="w-9 h-9 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50"
-                  aria-label="Закрыть карту"
-                >
-                  ×
-                </button>
+            <div className="absolute inset-x-0 bottom-0 h-[92dvh] w-full bg-white rounded-t-3xl shadow-2xl flex flex-col md:inset-0 md:m-auto md:h-[90vh] md:max-w-[560px] md:rounded-2xl">
+              <div className="px-4 pt-2 pb-3 border-b border-gray-100">
+                <div className="mx-auto mb-2 h-1.5 w-12 rounded-full bg-gray-200" />
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-semibold text-gray-900">Адрес</h3>
+                  <button
+                    onClick={() => setShowGuestMapModal(false)}
+                    className="w-9 h-9 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50"
+                    aria-label="Закрыть карту"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
 
               <div className="px-4 py-3 space-y-3 overflow-y-auto flex-1">
@@ -1285,7 +1282,7 @@ const MenuPage = () => {
                   latitude={guestAddressCoords?.latitude ?? guestDeliveryLocation?.latitude}
                   longitude={guestAddressCoords?.longitude ?? guestDeliveryLocation?.longitude}
                   radius={0}
-                  height="56vh"
+                  height="58dvh"
                   onChange={(latitude, longitude) => {
                     setGuestAddressCoords({ latitude, longitude });
                   }}
