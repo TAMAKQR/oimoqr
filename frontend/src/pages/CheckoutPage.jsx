@@ -721,8 +721,21 @@ const CheckoutPage = () => {
         const raw = selectedAddressForSummary?.address || '';
         if (!raw) return '';
         const parts = raw.split(',').map((part) => part.trim()).filter(Boolean);
-        const withNumber = parts.filter((part) => /\d/.test(part));
-        return withNumber[withNumber.length - 1] || parts.slice(-2).join(', ') || raw;
+        const partsWithoutCountry = parts.filter((part) => !/^(казахстан|кыргызстан|киргизия|россия|kazakhstan|kyrgyzstan|russia)$/i.test(part));
+        const source = partsWithoutCountry.length ? partsWithoutCountry : parts;
+        const withNumber = source.filter((part) => /\d/.test(part));
+        if (withNumber.length > 0) {
+            const lastDetailed = withNumber[withNumber.length - 1];
+            const detailedIndex = source.lastIndexOf(lastDetailed);
+            const prev = detailedIndex > 0 ? source[detailedIndex - 1] : '';
+            const lastLooksOnlyHouseNumber = /^\d+[a-zа-я]?(?:[\/-]\d+[a-zа-я]?)?$/i.test(lastDetailed);
+            const prevIsStreetLike = prev && !/(район|область|город|г\.)/i.test(prev);
+            if (lastLooksOnlyHouseNumber && prevIsStreetLike) {
+                return `${prev}, ${lastDetailed}`;
+            }
+            return lastDetailed;
+        }
+        return source.slice(-2).join(', ') || raw;
     }, [selectedAddressForSummary?.address]);
     const guestAddressDetailParts = useMemo(() => ([
         guestAddressDetails.entrance && `подъезд ${guestAddressDetails.entrance}`,
@@ -805,7 +818,7 @@ const CheckoutPage = () => {
                 )}
                 {deliveryType === 'delivery' && !isFreeDelivery && freeDeliveryThreshold > 0 && (
                     <div className="text-xs text-green-600 bg-green-50 rounded-lg px-3 py-1.5">
-                        🎁 Бесплатная доставка от {freeDeliveryThreshold.toFixed(0)} {currency} — добавьте ещё {(freeDeliveryThreshold - total).toFixed(0)} {currency}
+                        Бесплатная доставка от {freeDeliveryThreshold.toFixed(0)} {currency} — добавьте ещё {(freeDeliveryThreshold - total).toFixed(0)} {currency}
                     </div>
                 )}
                 {customer?.id && appliedBonus > 0 && (
@@ -827,9 +840,15 @@ const CheckoutPage = () => {
             <div className="max-w-[480px] mx-auto px-4 pt-4 pb-8 space-y-4">
                 <div className="flex items-center gap-3">
                     <button
-                        onClick={() => navigate(-1)}
-                        aria-label="Назад"
-                        title="Назад"
+                        onClick={() => {
+                            if (checkoutStep === 2) {
+                                setCheckoutStep(1);
+                                return;
+                            }
+                            navigate(-1);
+                        }}
+                        aria-label={checkoutStep === 2 ? 'К корзине' : 'Назад'}
+                        title={checkoutStep === 2 ? 'К корзине' : 'Назад'}
                         className="w-8 h-8 rounded-full border border-primary-200 text-primary-600 flex items-center justify-center"
                     >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -842,18 +861,6 @@ const CheckoutPage = () => {
                 <div className="bg-white rounded-lg shadow-sm p-4">
                     <div className="flex items-center justify-between text-sm text-gray-600 mb-3">
                         <span>Шаг {checkoutStep} из 2</span>
-                        {checkoutStep === 2 && (
-                            <button
-                                onClick={() => setCheckoutStep(1)}
-                                aria-label="Назад к блюдам"
-                                title="Назад к блюдам"
-                                className="w-8 h-8 rounded-full border border-primary-200 text-primary-600 flex items-center justify-center"
-                            >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                </svg>
-                            </button>
-                        )}
                     </div>
 
                     <div className="mb-4 grid grid-cols-2 gap-2">
@@ -873,8 +880,10 @@ const CheckoutPage = () => {
                                 </div>
                             </div>
                         )}
-                        <div className="col-span-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-800">
-                            🏪 {restaurant?.name}{restaurant?.subdomain ? ` (${restaurant.subdomain})` : ''}
+                        <div className="col-span-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                            {servingRestaurant?.name
+                                ? `Обслуживает: ${servingRestaurant.name}`
+                                : `Ресторан: ${restaurant?.name || '—'}`}
                         </div>
                     </div>
 
@@ -928,20 +937,22 @@ const CheckoutPage = () => {
 
                             {!customer?.id && !isDineIn && (
                                 <div className="bg-white rounded-lg shadow-sm p-4">
-                                    <h2 className="font-semibold text-base mb-3">Контакты для связи</h2>
+                                    <h2 className="font-semibold text-base mb-3">Контактные данные</h2>
                                     <div className="space-y-2.5">
+                                        <label className="block text-xs font-medium text-gray-600 mb-1">Имя</label>
                                         <input
                                             type="text"
-                                            placeholder="Ваше имя"
+                                            placeholder="Например, Азамат"
                                             value={guestContactName}
                                             onChange={(e) => setGuestContactName(e.target.value)}
                                             className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition"
                                         />
+                                        <label className="block text-xs font-medium text-gray-600 mb-1">Телефон</label>
                                         <input
                                             type="tel"
                                             inputMode="tel"
                                             autoComplete="tel"
-                                            placeholder="+996..."
+                                            placeholder="+996 700 000 000"
                                             value={guestContactPhone}
                                             onChange={(e) => setGuestContactPhone(e.target.value)}
                                             className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition"
@@ -1007,7 +1018,7 @@ const CheckoutPage = () => {
                                     <p className={`mt-2 text-xs ${guestAddressDetailParts.length > 0 ? 'text-gray-500' : 'text-amber-700'}`}>
                                         {guestAddressDetailParts.length > 0
                                             ? guestAddressDetailParts.join(' · ')
-                                            : 'Подъезд, этаж и кв/офис добавляются в кнопке «Детали»'}
+                                            : 'Добавьте подъезд, этаж и квартиру в «Детали»'}
                                     </p>
 
                                     {showGuestAddressForm && (
