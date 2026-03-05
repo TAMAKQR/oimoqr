@@ -10,6 +10,8 @@ import api from '../services/api';
 import customerService from '../services/customerService';
 import { restaurantService } from '../services/restaurantService';
 
+const GUEST_DELIVERY_LOCATION_KEY = 'guest-delivery-location';
+
 /* ---- palette builder (same as MenuPage) ---- */
 const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
 const hexToHsl = (hex) => {
@@ -71,6 +73,7 @@ const CheckoutPage = () => {
     const [addresses, setAddresses] = useState([]);
     const [addressesLoading, setAddressesLoading] = useState(false);
     const [selectedAddressId, setSelectedAddressId] = useState(null);
+    const [guestDeliveryLocation, setGuestDeliveryLocation] = useState(null);
     const [deliveryType, setDeliveryType] = useState(isDineIn ? 'dine_in' : 'delivery');
 
     // Гарантируем правильный режим при переключении (QR vs Доставка)
@@ -145,6 +148,36 @@ const CheckoutPage = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [customer?.id, deliveryType]);
 
+    useEffect(() => {
+        if (customer?.id) {
+            setGuestDeliveryLocation(null);
+            return;
+        }
+
+        try {
+            const raw = localStorage.getItem(GUEST_DELIVERY_LOCATION_KEY);
+            if (!raw) {
+                setGuestDeliveryLocation(null);
+                return;
+            }
+            const parsed = JSON.parse(raw);
+            const latitude = Number(parsed?.latitude);
+            const longitude = Number(parsed?.longitude);
+            if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+                setGuestDeliveryLocation(null);
+                return;
+            }
+            setGuestDeliveryLocation({
+                latitude,
+                longitude,
+                address: parsed?.address || '',
+                confirmed: Boolean(parsed?.confirmed)
+            });
+        } catch {
+            setGuestDeliveryLocation(null);
+        }
+    }, [customer?.id, deliveryType]);
+
     // Сбрасываем зону при смене типа
     useEffect(() => {
         if (deliveryType !== 'delivery') {
@@ -169,6 +202,16 @@ const CheckoutPage = () => {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedAddressId, addresses]);
+
+    useEffect(() => {
+        if (deliveryType !== 'delivery' || customer?.id || !restaurant?.id) return;
+        const latitude = Number(guestDeliveryLocation?.latitude);
+        const longitude = Number(guestDeliveryLocation?.longitude);
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+
+        checkZoneByCoords(latitude, longitude);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [deliveryType, customer?.id, restaurant?.id, guestDeliveryLocation?.latitude, guestDeliveryLocation?.longitude]);
 
     useEffect(() => {
         if (deliveryType !== 'delivery') return;
@@ -369,20 +412,35 @@ const CheckoutPage = () => {
             return;
         }
 
-        // Для dine_in авторизация не обязательна
-        if (!isDineIn && !customer?.id) {
-            setShowLoginModal(true);
-            return;
-        }
+        if (deliveryType === 'delivery') {
+            if (customer?.id && !selectedAddressId) {
+                toast.error('Выберите адрес доставки');
+                return;
+            }
 
-        if (deliveryType === 'delivery' && !selectedAddressId) {
-            toast.error('Выберите адрес доставки');
-            return;
+            if (!customer?.id) {
+                const lat = Number(guestDeliveryLocation?.latitude);
+                const lng = Number(guestDeliveryLocation?.longitude);
+                if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                    toast.error('Сначала определите адрес в меню');
+                    return;
+                }
+            }
         }
 
         setLoading(true);
         try {
             setIsCompletingOrder(true);
+            const guestLat = Number(guestDeliveryLocation?.latitude);
+            const guestLng = Number(guestDeliveryLocation?.longitude);
+            const guestAddressPayload = !customer?.id && deliveryType === 'delivery'
+                ? {
+                    deliveryAddress: guestDeliveryLocation?.address || null,
+                    deliveryLatitude: Number.isFinite(guestLat) ? guestLat : null,
+                    deliveryLongitude: Number.isFinite(guestLng) ? guestLng : null
+                }
+                : {};
+
             const payload = {
                 restaurantId: servingRestaurant?.id || cartRestaurantId || restaurant?.id,
                 items: cartItems.map(item => ({
@@ -395,9 +453,11 @@ const CheckoutPage = () => {
                 bonusToSpend: customer?.id ? appliedBonus : 0,
                 deliveryType: isDineIn ? 'dine_in' : deliveryType,
                 tableNumber: isDineIn ? tableNumber : null,
-                customerAddressId: deliveryType === 'delivery' ? selectedAddressId : null,
+                customerAddressId: customer?.id && deliveryType === 'delivery' ? selectedAddressId : null,
                 paymentMethod,
-                comment
+                comment,
+                ...(!customer?.id ? { customerName: 'Гость' } : {}),
+                ...guestAddressPayload
             };
 
             // Для dine_in без авторизации — отправляем на общий endpoint
@@ -467,7 +527,9 @@ const CheckoutPage = () => {
         : 0;
     const finalTotal = (baseTotalWithDelivery - appliedBonus).toFixed(2);
     const totalDishCount = cartItems.reduce((sum, item) => sum + (Number(item?.quantity) || 0), 0);
-    const selectedAddressForSummary = addresses.find((addr) => addr.id === selectedAddressId) || null;
+    const selectedAddressForSummary = customer?.id
+        ? (addresses.find((addr) => addr.id === selectedAddressId) || null)
+        : guestDeliveryLocation;
     const deliveryMethodLabel = isDineIn
         ? (tableNumber ? `В зале · стол ${tableNumber}` : 'В зале')
         : deliveryType === 'delivery'
@@ -485,11 +547,16 @@ const CheckoutPage = () => {
         if (loading) return 'Оформляем заказ...';
         if (!isDineIn && deliveryType === 'delivery' && isReconcilingCart) return 'Обновляем корзину по ближайшей точке...';
         if (!isDineIn && deliveryType === 'delivery' && addressesLoading) return 'Загружаем адреса...';
-        if (!isDineIn && deliveryType === 'delivery' && !selectedAddressId) return 'Выберите адрес доставки';
+        if (!isDineIn && deliveryType === 'delivery' && customer?.id && !selectedAddressId) return 'Выберите адрес доставки';
+        if (!isDineIn && deliveryType === 'delivery' && !customer?.id) {
+            const lat = Number(guestDeliveryLocation?.latitude);
+            const lng = Number(guestDeliveryLocation?.longitude);
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return 'Сначала определите адрес в меню';
+        }
         if (!isDineIn && deliveryType === 'delivery' && zoneStatus === 'checking') return 'Проверяем зону доставки...';
         if (!isDineIn && deliveryType === 'delivery' && zoneStatus === 'outside') return 'Адрес вне зоны доставки';
         return '';
-    }, [loading, isDineIn, deliveryType, isReconcilingCart, addressesLoading, selectedAddressId, zoneStatus]);
+    }, [loading, isDineIn, deliveryType, isReconcilingCart, addressesLoading, selectedAddressId, zoneStatus, customer?.id, guestDeliveryLocation?.latitude, guestDeliveryLocation?.longitude]);
 
     const isPlaceOrderDisabled = Boolean(placeOrderDisabledReason);
 
@@ -612,9 +679,7 @@ const CheckoutPage = () => {
                             <div className="col-span-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
                                 <div className="text-[11px] uppercase tracking-wide text-gray-500">Адрес</div>
                                 <div className="text-sm font-semibold text-gray-900 truncate">
-                                    {customer?.id
-                                        ? (compactDeliveryAddress || 'Выберите адрес доставки')
-                                        : 'Войдите, чтобы выбрать адрес'}
+                                    {compactDeliveryAddress || (customer?.id ? 'Выберите адрес доставки' : 'Сначала определите адрес в меню')}
                                 </div>
                             </div>
                         )}
@@ -642,12 +707,14 @@ const CheckoutPage = () => {
                             ) : (
                                 <div className="bg-white rounded-lg shadow-sm p-4">
                                     <h2 className="font-semibold text-base mb-3">Способ получения</h2>
-                                    <div className="grid grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-2 gap-2 rounded-xl bg-gray-100 p-1.5">
                                         <button
                                             onClick={() => setDeliveryType('delivery')}
-                                            className={`p-3 rounded-lg border-2 transition-all ${deliveryType === 'delivery' ? 'border-primary-600 bg-primary-50' : 'border-primary-200 active:border-primary-300'}`}
+                                            className={`rounded-lg px-3 py-2.5 text-left transition-all ${deliveryType === 'delivery'
+                                                ? 'bg-white border border-primary-500 shadow-sm'
+                                                : 'border border-transparent text-gray-700'
+                                                }`}
                                         >
-                                            <div className="text-2xl mb-1">🚗</div>
                                             <div className="font-semibold text-sm">Доставка</div>
                                             {isFreeDelivery ? (
                                                 <div className="text-xs text-green-600 font-medium">Бесплатно ✓</div>
@@ -657,9 +724,11 @@ const CheckoutPage = () => {
                                         </button>
                                         <button
                                             onClick={() => setDeliveryType('pickup')}
-                                            className={`p-3 rounded-lg border-2 transition-all ${deliveryType === 'pickup' ? 'border-primary-600 bg-primary-50' : 'border-primary-200 active:border-primary-300'}`}
+                                            className={`rounded-lg px-3 py-2.5 text-left transition-all ${deliveryType === 'pickup'
+                                                ? 'bg-white border border-primary-500 shadow-sm'
+                                                : 'border border-transparent text-gray-700'
+                                                }`}
                                         >
-                                            <div className="text-2xl mb-1">🏃</div>
                                             <div className="font-semibold text-sm">Самовывоз</div>
                                             <div className="text-xs text-gray-500">Бесплатно</div>
                                         </button>
@@ -686,8 +755,16 @@ const CheckoutPage = () => {
                                     {zoneStatus === 'error' && (
                                         <><span>📍</span> {zoneMessage}
                                             <button onClick={() => {
-                                                const addr = addresses.find(a => a.id === selectedAddressId);
-                                                if (addr) geocodeAndCheck(addr.address);
+                                                if (customer?.id) {
+                                                    const addr = addresses.find(a => a.id === selectedAddressId);
+                                                    if (addr) geocodeAndCheck(addr.address);
+                                                    return;
+                                                }
+                                                const lat = Number(guestDeliveryLocation?.latitude);
+                                                const lng = Number(guestDeliveryLocation?.longitude);
+                                                if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                                                    checkZoneByCoords(lat, lng);
+                                                }
                                             }} className="ml-auto text-xs underline font-medium">Повторить</button>
                                         </>
                                     )}
@@ -695,11 +772,21 @@ const CheckoutPage = () => {
                             )}
 
                             {!isDineIn && deliveryType === 'delivery' && !customer?.id && (
-                                <div className="bg-white rounded-lg shadow-sm p-4 text-center">
-                                    <p className="text-gray-600 text-sm mb-3">Для оформления доставки необходимо войти в аккаунт</p>
-                                    <button onClick={() => setShowLoginModal(true)} className="btn-primary text-sm py-2 px-6">
-                                        Войти
-                                    </button>
+                                <div className="bg-white rounded-lg shadow-sm p-4">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="min-w-0">
+                                            <h2 className="font-semibold text-base">Адрес доставки</h2>
+                                            <p className="text-sm text-gray-700 truncate mt-0.5">
+                                                {compactDeliveryAddress || 'Сначала определите адрес в меню'}
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => navigate(-1)}
+                                            className="shrink-0 rounded-lg px-3 py-1.5 border border-gray-300 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                                        >
+                                            Изменить
+                                        </button>
+                                    </div>
                                 </div>
                             )}
 
