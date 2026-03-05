@@ -39,7 +39,7 @@ const FlyToPosition = ({ lat, lng }) => {
  * @param {number} radius - радиус доставки в км (для отрисовки круга)
  * @param {function} onChange - (lat, lng) => void
  */
-const MapPicker = ({ latitude, longitude, radius, onChange }) => {
+const MapPicker = ({ latitude, longitude, radius, onChange, height = '300px' }) => {
     const lat = latitude ? Number(latitude) : null;
     const lng = longitude ? Number(longitude) : null;
     const center = lat && lng ? [lat, lng] : [42.87, 74.59]; // Default: Бишкек
@@ -50,7 +50,7 @@ const MapPicker = ({ latitude, longitude, radius, onChange }) => {
     };
 
     return (
-        <div className="rounded-lg overflow-hidden border border-gray-200" style={{ height: '300px' }}>
+        <div className="rounded-lg overflow-hidden border border-gray-200" style={{ height }}>
             <MapContainer
                 center={center}
                 zoom={zoom}

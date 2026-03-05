@@ -953,10 +953,6 @@ const MenuPage = () => {
                       📍 Автопереключено на ближайшую точку
                     </div>
                   )}
-                  <div className="inline-flex items-center gap-2 rounded-full bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 w-fit">
-                    🏪 Точка обслуживания: {displayRestaurant.name}
-                    {displayRestaurant.subdomain ? ` (${displayRestaurant.subdomain})` : ''}
-                  </div>
                 </div>
               </div>
             </div>
@@ -1256,8 +1252,8 @@ const MenuPage = () => {
         <Cart restaurant={displayRestaurant} isDishModalOpen={isDishModalOpen} hideOnDesktop />
 
         {showGuestMapModal && !isCustomerLoggedIn && isDeliveryMode && (
-          <div className="fixed inset-0 z-[70] bg-black/40 px-3 py-4">
-            <div className="w-full max-w-[520px] h-full max-h-[90vh] mx-auto bg-white rounded-2xl shadow-2xl flex flex-col">
+          <div className="fixed inset-0 z-[70] bg-black/40">
+            <div className="absolute inset-x-0 bottom-0 h-[100dvh] w-full bg-white rounded-t-3xl shadow-2xl flex flex-col md:inset-0 md:m-auto md:h-[90vh] md:max-w-[560px] md:rounded-2xl">
               <div className="px-4 pt-4 pb-3 border-b border-gray-100 flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">Уточните адрес</h3>
                 <button
@@ -1269,7 +1265,7 @@ const MenuPage = () => {
                 </button>
               </div>
 
-              <div className="px-4 py-3 space-y-3 overflow-y-auto">
+              <div className="px-4 py-3 space-y-3 overflow-y-auto flex-1">
                 <AddressAutocomplete
                   value={guestAddressInput}
                   onChange={(value) => {
@@ -1291,6 +1287,7 @@ const MenuPage = () => {
                   latitude={guestAddressCoords?.latitude ?? guestDeliveryLocation?.latitude}
                   longitude={guestAddressCoords?.longitude ?? guestDeliveryLocation?.longitude}
                   radius={0}
+                  height="56vh"
                   onChange={(latitude, longitude) => {
                     setGuestAddressCoords({ latitude, longitude });
                   }}
