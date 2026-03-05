@@ -850,81 +850,60 @@ const MenuPage = () => {
         <BannerSlider banners={displayRestaurant.banners} />
 
         {!isCustomerLoggedIn && isDeliveryMode && (
-          <div className="px-4 pt-4">
-            <div className="rounded-2xl border border-primary-200 bg-white shadow-sm p-4">
-              {!hasGuestDeliveryLocation && (
-                <div className="space-y-3">
-                  <p className="text-sm text-gray-700">Разрешите геолокацию, чтобы подобрать ближайшую точку доставки.</p>
-                  <button
-                    onClick={requestGuestLocation}
-                    className="w-full rounded-xl py-2.5 bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors"
-                  >
-                    Определить адрес
-                  </button>
-                </div>
-              )}
+          <div className="px-4 pt-3">
+            {!hasGuestDeliveryLocation && (
+              <button
+                onClick={requestGuestLocation}
+                className="w-full rounded-xl py-2.5 bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors"
+              >
+                Определить адрес
+              </button>
+            )}
 
-              {hasGuestDeliveryLocation && (
-                <div className="space-y-2.5">
+            {hasGuestDeliveryLocation && (
+              <div
+                className={`rounded-xl border px-3 py-2.5 transition-colors ${
+                  isGuestAddressConfirmed
+                    ? 'border-emerald-200 bg-emerald-50/60'
+                    : 'border-gray-200 bg-white'
+                }`}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className={`inline-flex h-2.5 w-2.5 rounded-full shrink-0 ${
+                      isGuestAddressConfirmed ? 'bg-emerald-500' : 'bg-amber-500'
+                    }`}
+                  />
                   <button
                     onClick={() => setShowGuestMapModal(true)}
-                    className={`w-full rounded-xl border px-3 py-2.5 text-left transition-colors ${
-                      isGuestAddressConfirmed
-                        ? 'border-emerald-200 bg-emerald-50/60'
-                        : 'border-gray-200 bg-gray-50'
-                    }`}
+                    className="flex-1 min-w-0 truncate text-left text-sm font-semibold text-gray-900"
                     title={guestDeliveryLocation?.address || ''}
                   >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span
-                        className={`inline-flex h-2.5 w-2.5 rounded-full shrink-0 ${
-                          isGuestAddressConfirmed ? 'bg-emerald-500' : 'bg-amber-500'
-                        }`}
-                      />
-                      <span className="truncate text-sm font-semibold text-gray-900">
-                        {formatCompactAddress(guestDeliveryLocation?.address)}
-                      </span>
-                    </div>
+                    {formatCompactAddress(guestDeliveryLocation?.address)}
                   </button>
-
-                  {!isGuestAddressConfirmed ? (
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setShowGuestMapModal(true)}
-                        className="h-10 w-10 shrink-0 rounded-full border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center"
-                        aria-label="Изменить адрес"
-                        title="Изменить адрес"
-                      >
-                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M12 20h9" />
-                          <path d="m16.5 3.5 4 4L7 21H3v-4z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={confirmGuestAddress}
-                        className="flex-1 rounded-xl py-2.5 bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors"
-                      >
-                        Подтвердить
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex justify-end">
-                      <button
-                        onClick={() => setShowGuestMapModal(true)}
-                        className="h-10 w-10 rounded-full border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center"
-                        aria-label="Изменить адрес"
-                        title="Изменить адрес"
-                      >
-                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M12 20h9" />
-                          <path d="m16.5 3.5 4 4L7 21H3v-4z" />
-                        </svg>
-                      </button>
-                    </div>
-                  )}
+                  <button
+                    onClick={() => setShowGuestMapModal(true)}
+                    className="h-9 w-9 shrink-0 rounded-full border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center"
+                    aria-label="Изменить адрес"
+                    title="Изменить адрес"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 20h9" />
+                      <path d="m16.5 3.5 4 4L7 21H3v-4z" />
+                    </svg>
+                  </button>
                 </div>
-              )}
-            </div>
+
+                {!isGuestAddressConfirmed && (
+                  <button
+                    onClick={confirmGuestAddress}
+                    className="mt-2 w-full rounded-lg py-2.5 bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors"
+                  >
+                    Подтвердить
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
 
