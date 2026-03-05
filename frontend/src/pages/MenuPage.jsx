@@ -852,8 +852,6 @@ const MenuPage = () => {
         {!isCustomerLoggedIn && isDeliveryMode && (
           <div className="px-4 pt-4">
             <div className="rounded-2xl border border-primary-200 bg-white shadow-sm p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-primary-700 mb-2">Адрес доставки</p>
-
               {!hasGuestDeliveryLocation && (
                 <div className="space-y-3">
                   <p className="text-sm text-gray-700">Разрешите геолокацию, чтобы подобрать ближайшую точку доставки.</p>
