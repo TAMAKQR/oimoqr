@@ -51,6 +51,19 @@ export const clearCache = (key) => {
 };
 
 /**
+ * Очистить кэш по префиксу ключа
+ * @param {string} prefix - префикс ключей
+ */
+export const clearCacheByPrefix = (prefix) => {
+    console.log(`💾 Cache CLEAR PREFIX for ${prefix}`);
+    for (const key of cache.keys()) {
+        if (key.startsWith(prefix)) {
+            cache.delete(key);
+        }
+    }
+};
+
+/**
  * Очистить весь кэш
  */
 export const clearAllCache = () => {

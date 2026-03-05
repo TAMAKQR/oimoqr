@@ -1,5 +1,5 @@
 import api from './api';
-import { getFromCache, setToCache, clearCache } from '../utils/cache';
+import { getFromCache, setToCache, clearCacheByPrefix } from '../utils/cache';
 
 export const restaurantService = {
   createRestaurant: async (data) => {
@@ -50,7 +50,7 @@ export const restaurantService = {
 
     // Очищаем кэш при обновлении
     // Не знаем subdomain, поэтому очищаем весь кэш ресторанов
-    clearCache(`restaurant_*`);
+    clearCacheByPrefix('restaurant_');
 
     return response.data;
   },
@@ -112,7 +112,7 @@ export const restaurantService = {
     const response = await api.put(`/restaurants/${restaurantId}/shared-menu-source`, {
       sourceRestaurantId: sourceRestaurantId || null
     });
-    clearCache(`restaurant_*`);
+    clearCacheByPrefix('restaurant_');
     return response.data;
   },
 

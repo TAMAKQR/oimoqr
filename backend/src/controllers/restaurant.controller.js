@@ -1387,7 +1387,7 @@ export const copyMenu = async (req, res, next) => {
                     return {
                       name: modifier.name,
                       type: modifier.type,
-                      required: modifier.required,
+                      isRequired: modifier.isRequired,
                       order: modifier.order,
                       options: {
                         create: modifier.options.map(option => ({
@@ -1402,7 +1402,7 @@ export const copyMenu = async (req, res, next) => {
                     return {
                       name: modifier.name,
                       type: modifier.type,
-                      required: modifier.required,
+                      isRequired: modifier.isRequired,
                       order: modifier.order,
                       options: {
                         create: [{

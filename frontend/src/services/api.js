@@ -27,9 +27,14 @@ api.interceptors.request.use(
     } else {
       const authStorage = localStorage.getItem('auth-storage');
       if (authStorage) {
-        const { state } = JSON.parse(authStorage);
-        if (state.token) {
-          config.headers.Authorization = `Bearer ${state.token}`;
+        try {
+          const { state } = JSON.parse(authStorage);
+          if (state?.token) {
+            config.headers.Authorization = `Bearer ${state.token}`;
+          }
+        } catch (e) {
+          // Corrupted auth payload should not break all requests
+          localStorage.removeItem('auth-storage');
         }
       }
 

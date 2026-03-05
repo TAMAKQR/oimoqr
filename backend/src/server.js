@@ -99,14 +99,26 @@ app.use((req, res, next) => {
 });
 
 // CORS configuration - УЛУЧШЕННАЯ ВЕРСИЯ
-const allowedOrigins = [
+const allowedExactOrigins = new Set([
   'https://oimoqr.com',
   'https://www.oimoqr.com',
   'https://oimoqr-frontend.vercel.app',
   'https://oimoqr-frontend-git-main-dastans-projects-e0330c7f.vercel.app',
   'http://localhost:5173',
   'http://localhost:5174'
-];
+]);
+
+const isAllowedOrigin = (origin) => {
+  if (allowedExactOrigins.has(origin)) return true;
+
+  // Allow all oimoqr subdomains (e.g. backend.oimoqr.com, foo.oimoqr.com)
+  if (/^https:\/\/([a-z0-9-]+\.)*oimoqr\.com$/i.test(origin)) return true;
+
+  // Allow Vercel preview/branch deploys
+  if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)) return true;
+
+  return false;
+};
 
 // ✅ Упрощенная и более надежная CORS конфигурация для production
 const corsOptions = {
@@ -116,21 +128,15 @@ const corsOptions = {
       console.log('🔒 CORS CHECK: origin =', origin);
     }
 
-    // В production разрешаем все домены oimoqr.com и vercel.app
-    if (process.env.NODE_ENV === 'production') {
-      if (!origin ||
-        origin.endsWith('.oimoqr.com') ||
-        origin === 'https://oimoqr.com' ||
-        origin.endsWith('.vercel.app')) {
-        callback(null, true);
-      } else {
-        console.warn('⚠️ CORS blocked origin:', origin);
-        callback(null, true); // В production все равно разрешаем (для API может быть без origin)
-      }
-    } else {
-      // В development разрешаем все
-      callback(null, true);
+    // Server-to-server / health checks / curl / Postman
+    if (!origin) return callback(null, true);
+
+    if (isAllowedOrigin(origin)) {
+      return callback(null, true);
     }
+
+    console.warn('⚠️ CORS blocked origin:', origin);
+    return callback(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],

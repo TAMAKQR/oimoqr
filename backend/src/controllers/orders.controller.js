@@ -443,15 +443,47 @@ export const updateOrderStatus = async (req, res, next) => {
 export const getOrderByNumber = async (req, res, next) => {
   try {
     const { orderNumber } = req.params;
-    const fullOrderNumber = `#${orderNumber}`;
+    const fullOrderNumber = orderNumber.startsWith('#') ? orderNumber : `#${orderNumber}`;
 
     const order = await prisma.order.findUnique({
       where: { orderNumber: fullOrderNumber },
-      include: {
-        restaurant: true,
+      select: {
+        id: true,
+        orderNumber: true,
+        status: true,
+        totalAmount: true,
+        deliveryType: true,
+        paymentMethod: true,
+        tableNumber: true,
+        createdAt: true,
+        updatedAt: true,
+        restaurantId: true,
+        assignedRestaurantId: true,
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+            subdomain: true,
+            phone: true,
+            address: true,
+            city: true,
+            country: true,
+            currency: true
+          }
+        },
         items: {
-          include: {
-            dish: true
+          select: {
+            id: true,
+            quantity: true,
+            price: true,
+            selectedModifiers: true,
+            dish: {
+              select: {
+                id: true,
+                name: true,
+                image: true
+              }
+            }
           }
         }
       }
