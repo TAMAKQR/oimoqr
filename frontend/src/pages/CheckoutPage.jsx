@@ -95,9 +95,11 @@ const CheckoutPage = () => {
     const [showGuestAddressForm, setShowGuestAddressForm] = useState(false);
     const [guestAddressDraft, setGuestAddressDraft] = useState('');
     const [guestAddressCoords, setGuestAddressCoords] = useState(null);
+    const [guestAddressCity, setGuestAddressCity] = useState('');
     const [guestAddressDetails, setGuestAddressDetails] = useState({ entrance: '', floor: '', apartment: '' });
     const [guestContactName, setGuestContactName] = useState('');
     const [guestContactPhone, setGuestContactPhone] = useState('');
+    const [newAddressCity, setNewAddressCity] = useState('');
     const [checkoutStep, setCheckoutStep] = useState(1);
 
     // Delivery zone check via Yandex Geocoder
@@ -120,6 +122,13 @@ const CheckoutPage = () => {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [restaurant, cartItems?.length, isCompletingOrder]);
+
+    useEffect(() => {
+        const city = String(restaurant?.city || '').trim();
+        if (!city) return;
+        setGuestAddressCity((prev) => String(prev || '').trim() || city);
+        setNewAddressCity((prev) => String(prev || '').trim() || city);
+    }, [restaurant?.city]);
 
     useEffect(() => {
         if (!customer?.id) {
@@ -412,10 +421,10 @@ const CheckoutPage = () => {
         let longitude = Number(guestAddressCoords?.longitude);
         let finalAddress = draft || guestDeliveryLocation?.address || '';
         let geocodeErrorMessage = '';
+        const city = String(guestAddressCity || restaurant?.city || '').trim();
 
-        if ((!Number.isFinite(latitude) || !Number.isFinite(longitude)) && finalAddress) {
+        if (finalAddress) {
             try {
-                const city = String(restaurant?.city || '').trim();
                 const query = city ? `${city}, ${finalAddress}` : finalAddress;
                 const geoResp = await api.get('/geolocation/geocode', {
                     params: {
@@ -499,7 +508,7 @@ const CheckoutPage = () => {
             // Используем координаты из автокомплита, или геокодируем
             let lat = Number(newAddress.latitude);
             let lng = Number(newAddress.longitude);
-            const city = String(restaurant?.city || '').trim();
+            const city = String(newAddressCity || restaurant?.city || '').trim();
             if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
                 try {
                     const query = city ? `${city}, ${newAddress.address}` : newAddress.address;
@@ -1023,6 +1032,16 @@ const CheckoutPage = () => {
 
                                     {showGuestAddressForm && (
                                         <div className="mt-3 space-y-3">
+                                            <div>
+                                                <label className="block text-xs font-medium text-gray-600 mb-1">Город (если определился неверно)</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder={restaurant?.city || 'Город'}
+                                                    value={guestAddressCity}
+                                                    onChange={(e) => setGuestAddressCity(e.target.value)}
+                                                    className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition"
+                                                />
+                                            </div>
                                             <AddressAutocomplete
                                                 value={guestAddressDraft}
                                                 onChange={(value) => {
@@ -1039,6 +1058,7 @@ const CheckoutPage = () => {
                                                 placeholder="Улица, дом"
                                                 className="w-full px-3.5 py-3 border border-gray-300 rounded-xl text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition"
                                                 restaurant={restaurant}
+                                                cityOverride={guestAddressCity}
                                             />
                                             <div className="grid grid-cols-3 gap-2.5">
                                                 <div>
@@ -1119,6 +1139,16 @@ const CheckoutPage = () => {
                                     {showNewAddressForm && (
                                         <div className="mb-4 p-4 bg-gray-50 rounded-xl space-y-3 border border-gray-200">
                                             <div>
+                                                <label className="block text-xs font-medium text-gray-600 mb-1.5">Город</label>
+                                                <input
+                                                    type="text"
+                                                    value={newAddressCity}
+                                                    onChange={(e) => setNewAddressCity(e.target.value)}
+                                                    placeholder={restaurant?.city || 'Город'}
+                                                    className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition"
+                                                />
+                                            </div>
+                                            <div>
                                                 <label className="block text-xs font-medium text-gray-600 mb-1.5">Адрес *</label>
                                                 <AddressAutocomplete
                                                     value={newAddress.address}
@@ -1134,6 +1164,7 @@ const CheckoutPage = () => {
                                                     placeholder="Улица, дом"
                                                     className="w-full px-3.5 py-3 border border-gray-300 rounded-xl text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition"
                                                     restaurant={restaurant}
+                                                    cityOverride={newAddressCity}
                                                 />
                                             </div>
                                             <div className="grid grid-cols-3 gap-2.5">

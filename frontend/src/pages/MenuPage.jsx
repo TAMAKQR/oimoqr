@@ -181,6 +181,7 @@ const MenuPage = () => {
   const [guestDeliveryLocation, setGuestDeliveryLocation] = useState(null);
   const [guestAddressInput, setGuestAddressInput] = useState('');
   const [guestAddressCoords, setGuestAddressCoords] = useState(null);
+  const [guestAddressCity, setGuestAddressCity] = useState('');
   const [showGuestMapModal, setShowGuestMapModal] = useState(false);
   const categoryRefs = useRef({});
   const categoryButtonRefs = useRef({});
@@ -193,6 +194,12 @@ const MenuPage = () => {
   const prevResolvedSubdomainRef = useRef(null);
 
   const isSearching = Boolean(searchTerm.trim());
+
+  useEffect(() => {
+    const city = String(restaurant?.city || '').trim();
+    if (!city) return;
+    setGuestAddressCity((prev) => String(prev || '').trim() || city);
+  }, [restaurant?.city]);
 
   const visibleCategories = useMemo(() => {
     if (!restaurant) return [];
@@ -268,7 +275,7 @@ const MenuPage = () => {
   }, []);
 
   const reverseGeocodeByCoords = useCallback(async (latitude, longitude) => {
-    const city = String(restaurant?.city || '').trim();
+    const city = String(guestAddressCity || restaurant?.city || '').trim();
     try {
       const response = await api.get('/geolocation/geocode', {
         params: {
@@ -302,7 +309,7 @@ const MenuPage = () => {
       cityMismatch: false,
       message: ''
     };
-  }, [restaurant?.city]);
+  }, [guestAddressCity, restaurant?.city]);
 
   const requestGuestLocation = useCallback(() => {
     if (!navigator?.geolocation) {
@@ -323,6 +330,7 @@ const MenuPage = () => {
           const reverse = await reverseGeocodeByCoords(latitude, longitude);
           if (reverse.cityMismatch) {
             toast.error(reverse.message || 'Адрес вне доступного города');
+            setShowGuestMapModal(true);
             return;
           }
           const formattedAddress = reverse.address || '';
@@ -334,6 +342,7 @@ const MenuPage = () => {
       },
       () => {
         toast.error('Не удалось получить геолокацию. Вы можете разрешить доступ в настройках браузера.');
+        setShowGuestMapModal(true);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
     );
@@ -349,9 +358,9 @@ const MenuPage = () => {
     }
 
     let finalAddress = guestAddressInput?.trim() || guestDeliveryLocation?.address || '';
-    const city = String(restaurant?.city || '').trim();
+    const city = String(guestAddressCity || restaurant?.city || '').trim();
 
-    if (!guestAddressCoords && finalAddress) {
+    if (finalAddress) {
       try {
         const query = city ? `${city}, ${finalAddress}` : finalAddress;
         const geo = await api.get('/geolocation/geocode', {
@@ -391,7 +400,7 @@ const MenuPage = () => {
 
     saveGuestDeliveryLocation(latitude, longitude, finalAddress, true);
     toast.success('Адрес подтвержден');
-  }, [guestAddressCoords, guestDeliveryLocation, guestAddressInput, saveGuestDeliveryLocation, reverseGeocodeByCoords, restaurant?.city]);
+  }, [guestAddressCoords, guestDeliveryLocation, guestAddressInput, saveGuestDeliveryLocation, reverseGeocodeByCoords, guestAddressCity, restaurant?.city]);
 
   const applyGuestMapLocation = useCallback(async () => {
     const latitude = Number(guestAddressCoords?.latitude ?? guestDeliveryLocation?.latitude);
@@ -402,7 +411,7 @@ const MenuPage = () => {
       return;
     }
 
-    const city = String(restaurant?.city || '').trim();
+    const city = String(guestAddressCity || restaurant?.city || '').trim();
     const reverse = await reverseGeocodeByCoords(latitude, longitude);
     if (reverse.cityMismatch) {
       toast.error(reverse.message || (city ? `Адрес должен быть в городе ${city}` : 'Адрес вне доступного города'));
@@ -420,7 +429,7 @@ const MenuPage = () => {
     setGuestAddressCoords({ latitude, longitude });
     setShowGuestMapModal(false);
     toast.success('Адрес подтвержден');
-  }, [guestAddressCoords, guestDeliveryLocation, guestAddressInput, reverseGeocodeByCoords, saveGuestDeliveryLocation, restaurant?.city]);
+  }, [guestAddressCoords, guestDeliveryLocation, guestAddressInput, reverseGeocodeByCoords, saveGuestDeliveryLocation, guestAddressCity, restaurant?.city]);
 
   // Check customer login status
   useEffect(() => {
@@ -916,12 +925,20 @@ const MenuPage = () => {
         {!isCustomerLoggedIn && isDeliveryMode && (
           <div className="px-4 pt-3">
             {!hasGuestDeliveryLocation && (
-              <button
-                onClick={requestGuestLocation}
-                className="w-full rounded-xl py-2.5 bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors"
-              >
-                Определить адрес
-              </button>
+              <div className="space-y-2">
+                <button
+                  onClick={() => setShowGuestMapModal(true)}
+                  className="w-full rounded-xl py-2.5 bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors"
+                >
+                  Указать адрес
+                </button>
+                <button
+                  onClick={requestGuestLocation}
+                  className="w-full rounded-xl py-2.5 border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:bg-gray-50 transition-colors"
+                >
+                  Определить автоматически
+                </button>
+              </div>
             )}
 
             {hasGuestDeliveryLocation && (
@@ -1316,6 +1333,16 @@ const MenuPage = () => {
               </div>
 
               <div className="px-4 py-3 space-y-3 overflow-y-auto flex-1">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Город (если определился неверно)</label>
+                  <input
+                    type="text"
+                    value={guestAddressCity}
+                    onChange={(e) => setGuestAddressCity(e.target.value)}
+                    placeholder={displayRestaurant?.city || 'Город'}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm"
+                  />
+                </div>
                 <AddressAutocomplete
                   value={guestAddressInput}
                   onChange={(value) => {
@@ -1331,6 +1358,7 @@ const MenuPage = () => {
                   placeholder="Улица, дом"
                   className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm"
                   restaurant={displayRestaurant}
+                  cityOverride={guestAddressCity}
                 />
 
                 <MapPicker

@@ -10,7 +10,7 @@ import api from '../services/api';
  * @param {string} className - CSS классы
  * @param {object} restaurant - ресторан (город/страна для точности)
  */
-const AddressAutocomplete = ({ value, onChange, onSelect, placeholder, className, restaurant }) => {
+const AddressAutocomplete = ({ value, onChange, onSelect, placeholder, className, restaurant, cityOverride }) => {
     const [suggestions, setSuggestions] = useState([]);
     const [showDropdown, setShowDropdown] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -38,9 +38,11 @@ const AddressAutocomplete = ({ value, onChange, onSelect, placeholder, className
         setLoading(true);
         try {
             const params = { text };
+            const normalizedCityOverride = String(cityOverride || '').trim();
+            const effectiveCity = normalizedCityOverride || String(restaurant?.city || '').trim();
             // Передаём город/страну ресторана для точности
-            if (restaurant?.city) {
-                params.city = restaurant.city;
+            if (effectiveCity) {
+                params.city = effectiveCity;
                 params.strictCity = true;
             }
             if (restaurant?.country) params.country = restaurant.country;
@@ -54,7 +56,7 @@ const AddressAutocomplete = ({ value, onChange, onSelect, placeholder, className
         } finally {
             setLoading(false);
         }
-    }, [restaurant?.city, restaurant?.country]);
+    }, [restaurant?.city, restaurant?.country, cityOverride]);
 
     const handleChange = (e) => {
         const val = e.target.value;
