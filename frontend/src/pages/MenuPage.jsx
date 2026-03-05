@@ -182,6 +182,7 @@ const MenuPage = () => {
   const [guestAddressInput, setGuestAddressInput] = useState('');
   const [guestAddressCoords, setGuestAddressCoords] = useState(null);
   const [guestAddressCity, setGuestAddressCity] = useState('');
+  const [isAutoLocating, setIsAutoLocating] = useState(false);
   const [showGuestMapModal, setShowGuestMapModal] = useState(false);
   const categoryRefs = useRef({});
   const categoryButtonRefs = useRef({});
@@ -313,15 +314,19 @@ const MenuPage = () => {
 
   const requestGuestLocation = useCallback(() => {
     if (!navigator?.geolocation) {
+      setIsAutoLocating(false);
       toast.error('Геолокация не поддерживается на этом устройстве');
+      setShowGuestMapModal(true);
       return;
     }
 
+    setIsAutoLocating(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const latitude = Number(position.coords?.latitude);
         const longitude = Number(position.coords?.longitude);
         if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+          setIsAutoLocating(false);
           toast.error('Не удалось определить координаты');
           return;
         }
@@ -329,6 +334,7 @@ const MenuPage = () => {
         (async () => {
           const reverse = await reverseGeocodeByCoords(latitude, longitude);
           if (reverse.cityMismatch) {
+            setIsAutoLocating(false);
             toast.error(reverse.message || 'Адрес вне доступного города');
             setShowGuestMapModal(true);
             return;
@@ -337,10 +343,12 @@ const MenuPage = () => {
           saveGuestDeliveryLocation(latitude, longitude, formattedAddress, false);
           setGuestAddressInput(formattedAddress || '');
           setGuestAddressCoords({ latitude, longitude });
+          setIsAutoLocating(false);
           toast.success('Проверьте адрес и подтвердите');
         })();
       },
       () => {
+        setIsAutoLocating(false);
         toast.error('Не удалось получить геолокацию. Вы можете разрешить доступ в настройках браузера.');
         setShowGuestMapModal(true);
       },
@@ -637,8 +645,8 @@ const MenuPage = () => {
 
     if (!isCustomerLoggedIn) {
       if (!hasGuestDeliveryLocation) {
-        toast.error('Для доставки сначала разрешите геолокацию');
-        requestGuestLocation();
+        toast.error('Для доставки сначала укажите адрес');
+        if (!isAutoLocating) requestGuestLocation();
         return;
       }
 
@@ -927,16 +935,17 @@ const MenuPage = () => {
             {!hasGuestDeliveryLocation && (
               <div className="space-y-2">
                 <button
-                  onClick={() => setShowGuestMapModal(true)}
-                  className="w-full rounded-xl py-2.5 bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors"
+                  onClick={requestGuestLocation}
+                  disabled={isAutoLocating}
+                  className="w-full rounded-xl py-2.5 bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Указать адрес
+                  {isAutoLocating ? 'Определяем адрес...' : 'Определить адрес автоматически'}
                 </button>
                 <button
-                  onClick={requestGuestLocation}
+                  onClick={() => setShowGuestMapModal(true)}
                   className="w-full rounded-xl py-2.5 border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:bg-gray-50 transition-colors"
                 >
-                  Определить автоматически
+                  Указать вручную
                 </button>
               </div>
             )}

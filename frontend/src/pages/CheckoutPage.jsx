@@ -596,7 +596,7 @@ const CheckoutPage = () => {
                 const lat = Number(guestDeliveryLocation?.latitude);
                 const lng = Number(guestDeliveryLocation?.longitude);
                 if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-                    toast.error('Сначала определите адрес в меню');
+                    toast.error('Сначала укажите адрес в меню');
                     return;
                 }
                 if (!hasHouseNumber(guestDeliveryLocation?.address || '')) {
@@ -761,7 +761,7 @@ const CheckoutPage = () => {
         if (!isDineIn && deliveryType === 'delivery' && !customer?.id) {
             const lat = Number(guestDeliveryLocation?.latitude);
             const lng = Number(guestDeliveryLocation?.longitude);
-            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return 'Сначала определите адрес в меню';
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return 'Сначала укажите адрес в меню';
             if (!hasExactDeliveryAddress) return 'Укажите улицу и номер дома';
         }
         if (!isDineIn && deliveryType === 'delivery' && customer?.id && !hasExactDeliveryAddress) return 'Укажите улицу и номер дома';
@@ -885,7 +885,7 @@ const CheckoutPage = () => {
                             <div className="col-span-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
                                 <div className="text-[11px] uppercase tracking-wide text-gray-500">Адрес</div>
                                 <div className="text-sm font-semibold text-gray-900 truncate">
-                                    {compactDeliveryAddress || (customer?.id ? 'Выберите адрес доставки' : 'Сначала определите адрес в меню')}
+                                    {compactDeliveryAddress || (customer?.id ? 'Выберите адрес доставки' : 'Сначала укажите адрес в меню')}
                                 </div>
                             </div>
                         )}
@@ -1014,7 +1014,7 @@ const CheckoutPage = () => {
                                         <div className="min-w-0">
                                             <h2 className="font-semibold text-base">Адрес доставки</h2>
                                             <p className="text-sm text-gray-700 truncate mt-0.5">
-                                                {compactDeliveryAddress || 'Сначала определите адрес в меню'}
+                                                {compactDeliveryAddress || 'Сначала укажите адрес в меню'}
                                             </p>
                                         </div>
                                         <button
