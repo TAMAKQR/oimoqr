@@ -8,6 +8,7 @@ import CustomerLoginModal from '../components/CustomerLoginModal';
 import AddressAutocomplete from '../components/AddressAutocomplete';
 import api from '../services/api';
 import customerService from '../services/customerService';
+import { restaurantService } from '../services/restaurantService';
 
 /* ---- palette builder (same as MenuPage) ---- */
 const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
@@ -39,7 +40,17 @@ const CheckoutPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { customer } = useCustomerAuthStore();
-    const { items: cartItems, getTotal, updateQuantity, removeItem, clearCart, orderMode, tableNumber } = useCartStore();
+    const {
+        items: cartItems,
+        getTotal,
+        updateQuantity,
+        removeItem,
+        clearCart,
+        orderMode,
+        tableNumber,
+        restaurantId: cartRestaurantId,
+        reconcileWithRestaurantMenu
+    } = useCartStore();
     const { restaurant, currency } = location.state || {};
     const { setTheme, setCustomColors } = useTheme();
 
@@ -81,6 +92,9 @@ const CheckoutPage = () => {
     const [zoneStatus, setZoneStatus] = useState(null); // null | 'checking' | 'ok' | 'outside' | 'error' | 'no-zone'
     const [zoneMessage, setZoneMessage] = useState('');
     const [zoneDistance, setZoneDistance] = useState(null);
+    const [servingRestaurant, setServingRestaurant] = useState(null);
+    const [selectedDeliveryCoords, setSelectedDeliveryCoords] = useState(null);
+    const [isReconcilingCart, setIsReconcilingCart] = useState(false);
     const [isCompletingOrder, setIsCompletingOrder] = useState(false);
     const [bonusBalance, setBonusBalance] = useState(0);
     const [bonusLoading, setBonusLoading] = useState(false);
@@ -135,6 +149,8 @@ const CheckoutPage = () => {
     useEffect(() => {
         if (deliveryType !== 'delivery') {
             setZoneStatus(null);
+            setServingRestaurant(null);
+            setSelectedDeliveryCoords(null);
         }
     }, [deliveryType]);
 
@@ -154,8 +170,65 @@ const CheckoutPage = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedAddressId, addresses]);
 
+    useEffect(() => {
+        if (deliveryType !== 'delivery') return;
+        if (!servingRestaurant?.id || !restaurant?.subdomain) return;
+        if (!selectedDeliveryCoords?.latitude || !selectedDeliveryCoords?.longitude) return;
+        if (!cartItems?.length) return;
+        if (servingRestaurant.id === cartRestaurantId) return;
+
+        let cancelled = false;
+
+        const reconcileCartForServingPoint = async () => {
+            setIsReconcilingCart(true);
+            try {
+                const nearestMenu = await restaurantService.getBySubdomain(
+                    restaurant.subdomain,
+                    undefined,
+                    {
+                        latitude: selectedDeliveryCoords.latitude,
+                        longitude: selectedDeliveryCoords.longitude,
+                        forceRefresh: true
+                    }
+                );
+
+                if (cancelled || !nearestMenu?.id) return;
+
+                const summary = reconcileWithRestaurantMenu(nearestMenu);
+
+                if (summary?.removedItems > 0) {
+                    toast.error(`Удалено недоступных позиций: ${summary.removedItems}. Корзина обновлена по ближайшей точке.`, { duration: 5000 });
+                } else if (summary?.updatedItems > 0) {
+                    toast('Корзина обновлена по ближайшей точке доставки.', { icon: '📍' });
+                }
+            } catch (error) {
+                console.error('Failed to reconcile cart for serving point', error);
+            } finally {
+                if (!cancelled) {
+                    setIsReconcilingCart(false);
+                }
+            }
+        };
+
+        reconcileCartForServingPoint();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        deliveryType,
+        servingRestaurant?.id,
+        restaurant?.subdomain,
+        selectedDeliveryCoords?.latitude,
+        selectedDeliveryCoords?.longitude,
+        cartItems?.length,
+        cartRestaurantId,
+        reconcileWithRestaurantMenu
+    ]);
+
     const checkZoneByCoords = async (lat, lng) => {
         setZoneStatus('checking');
+        setSelectedDeliveryCoords({ latitude: lat, longitude: lng });
         try {
             const resp = await api.get('/geolocation/check-delivery', {
                 params: { subdomain: restaurant.subdomain, latitude: lat, longitude: lng }
@@ -164,15 +237,22 @@ const CheckoutPage = () => {
             setZoneDistance(data.distance);
             if (data.deliveryAvailable) {
                 setZoneStatus('ok');
-                setZoneMessage(`Доставка доступна (${data.distance} км)`);
+                setZoneMessage(
+                    data.servingRestaurant?.name
+                        ? `Доставка доступна (${data.distance} км). Обслуживает: ${data.servingRestaurant.name}`
+                        : `Доставка доступна (${data.distance} км)`
+                );
+                setServingRestaurant(data.servingRestaurant || null);
             } else {
                 setZoneStatus('outside');
                 setZoneMessage(data.message || `Адрес за пределами зоны доставки (${data.deliveryRadius} км)`);
+                setServingRestaurant(null);
             }
         } catch (err) {
             console.error('Zone check failed:', err);
             setZoneStatus('error');
             setZoneMessage('Не удалось проверить зону доставки');
+            setServingRestaurant(null);
         }
     };
 
@@ -304,7 +384,7 @@ const CheckoutPage = () => {
         try {
             setIsCompletingOrder(true);
             const payload = {
-                restaurantId: restaurant?.id,
+                restaurantId: servingRestaurant?.id || cartRestaurantId || restaurant?.id,
                 items: cartItems.map(item => ({
                     id: item.dish?.id,
                     quantity: item.quantity,
@@ -374,9 +454,10 @@ const CheckoutPage = () => {
         const quantity = Number(item?.quantity) || 0;
         return sum + (getItemUnitPrice(item) * quantity);
     }, 0);
-    const freeDeliveryThreshold = Number(restaurant?.freeDeliveryThreshold || 0);
+    const deliveryPricingSource = deliveryType === 'delivery' && servingRestaurant ? servingRestaurant : restaurant;
+    const freeDeliveryThreshold = Number(deliveryPricingSource?.freeDeliveryThreshold || 0);
     const isFreeDelivery = freeDeliveryThreshold > 0 && total >= freeDeliveryThreshold;
-    const deliveryFee = deliveryType === 'delivery' && !isFreeDelivery ? Number(restaurant?.deliveryFee || 0) : 0;
+    const deliveryFee = deliveryType === 'delivery' && !isFreeDelivery ? Number(deliveryPricingSource?.deliveryFee || 0) : 0;
     const baseTotalWithDelivery = total + deliveryFee;
     const maxBonusApplicable = Math.max(0, Math.floor(baseTotalWithDelivery));
     const normalizedRequestedBonus = Math.floor(Number(bonusRequested || 0));
@@ -388,12 +469,13 @@ const CheckoutPage = () => {
 
     const placeOrderDisabledReason = useMemo(() => {
         if (loading) return 'Оформляем заказ...';
+        if (!isDineIn && deliveryType === 'delivery' && isReconcilingCart) return 'Обновляем корзину по ближайшей точке...';
         if (!isDineIn && deliveryType === 'delivery' && addressesLoading) return 'Загружаем адреса...';
         if (!isDineIn && deliveryType === 'delivery' && !selectedAddressId) return 'Выберите адрес доставки';
         if (!isDineIn && deliveryType === 'delivery' && zoneStatus === 'checking') return 'Проверяем зону доставки...';
         if (!isDineIn && deliveryType === 'delivery' && zoneStatus === 'outside') return 'Адрес вне зоны доставки';
         return '';
-    }, [loading, isDineIn, deliveryType, addressesLoading, selectedAddressId, zoneStatus]);
+    }, [loading, isDineIn, deliveryType, isReconcilingCart, addressesLoading, selectedAddressId, zoneStatus]);
 
     const isPlaceOrderDisabled = Boolean(placeOrderDisabledReason);
 

@@ -133,6 +133,8 @@ const MenuPage = () => {
   const cartItems = useCartStore((state) => state.items);
   const cartTotal = useCartStore((state) => state.getTotal());
   const cartItemCount = useCartStore((state) => state.getItemCount());
+  const cartRestaurantId = useCartStore((state) => state.restaurantId);
+  const switchRestaurant = useCartStore((state) => state.switchRestaurant);
   const { setTheme, themes, setCustomColors } = useTheme();
   const [restaurant, setRestaurant] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -154,6 +156,8 @@ const MenuPage = () => {
   const isUserClick = useRef(false);
   const lastScrollY = useRef(0);
   const ticking = useRef(false);
+  const prevResolvedRestaurantIdRef = useRef(null);
+  const prevResolvedSubdomainRef = useRef(null);
 
   const isSearching = Boolean(searchTerm.trim());
 
@@ -353,6 +357,10 @@ const MenuPage = () => {
   }, [restaurant?.id, restaurant?.subdomain, selectedLanguage, tableFromUrl, dineInParam]);
 
   const displayRestaurant = restaurant;
+  const isCartForCurrentRestaurant =
+    !cartRestaurantId || !displayRestaurant?.id || cartRestaurantId === displayRestaurant.id;
+  const effectiveCartItemCount = isCartForCurrentRestaurant ? cartItemCount : 0;
+  const effectiveCartTotal = isCartForCurrentRestaurant ? cartTotal : 0;
   const isDeliveryMode = orderMode !== 'dine_in';
   const canAddToCart = !isDeliveryMode || (isCustomerLoggedIn && hasDeliveryAddress);
 
@@ -371,7 +379,33 @@ const MenuPage = () => {
 
   const currencySymbol = getCurrencySymbol(displayRestaurant?.currency);
   const minOrderAmount = displayRestaurant?.minOrderAmount || 0;
-  const isBelowMinimum = orderMode !== 'dine_in' && minOrderAmount > 0 && cartTotal < minOrderAmount;
+  const isBelowMinimum = orderMode !== 'dine_in' && minOrderAmount > 0 && effectiveCartTotal < minOrderAmount;
+
+  // If geo-based branch selection changes within the same subdomain, re-bind cart to the new serving point.
+  useEffect(() => {
+    if (!displayRestaurant?.id) return;
+
+    const previousRestaurantId = prevResolvedRestaurantIdRef.current;
+    const previousSubdomain = prevResolvedSubdomainRef.current;
+    const sameSubdomainSession = previousSubdomain && previousSubdomain === subdomain;
+
+    if (
+      sameSubdomainSession &&
+      previousRestaurantId &&
+      previousRestaurantId !== displayRestaurant.id &&
+      orderMode !== 'dine_in' &&
+      cartItemCount > 0 &&
+      cartRestaurantId === previousRestaurantId
+    ) {
+      switchRestaurant(displayRestaurant.id, displayRestaurant.name);
+      toast('Точка доставки обновлена по адресу. Корзина очищена для актуального филиала.', {
+        icon: '📍',
+      });
+    }
+
+    prevResolvedRestaurantIdRef.current = displayRestaurant.id;
+    prevResolvedSubdomainRef.current = subdomain;
+  }, [displayRestaurant?.id, displayRestaurant?.name, subdomain, orderMode, cartItemCount, cartRestaurantId, switchRestaurant]);
 
   const getDisplayDishForOrderMode = useCallback((dish) => {
     const displayDish = { ...dish };
@@ -512,13 +546,17 @@ const MenuPage = () => {
   };
 
   const handleDesktopCheckout = () => {
-    if (!cartItemCount || isBelowMinimum) return;
+    if (!isCartForCurrentRestaurant) {
+      toast.error('Корзина относится к другой точке. Добавьте блюда из текущего меню.');
+      return;
+    }
+    if (!effectiveCartItemCount || isBelowMinimum) return;
 
     navigate('/checkout', {
       state: {
         restaurant: displayRestaurant,
         items: cartItems,
-        total: cartTotal,
+        total: effectiveCartTotal,
         currency: currencySymbol,
       },
     });
@@ -903,13 +941,19 @@ const MenuPage = () => {
             <div className="sticky top-24 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-base font-semibold text-gray-900">Корзина</h3>
-                <span className="text-xs text-gray-500">{cartItemCount} шт.</span>
+                <span className="text-xs text-gray-500">{effectiveCartItemCount} шт.</span>
               </div>
 
               <div className="rounded-xl bg-gray-50 px-3 py-2 border border-gray-200 mb-3">
                 <div className="text-xs text-gray-500 mb-1">Сумма заказа</div>
-                <div className="text-lg font-bold text-gray-900">{cartTotal.toFixed(2)} {currencySymbol}</div>
+                <div className="text-lg font-bold text-gray-900">{effectiveCartTotal.toFixed(2)} {currencySymbol}</div>
               </div>
+
+              {!isCartForCurrentRestaurant && cartItemCount > 0 && (
+                <p className="text-xs text-amber-600 mb-3">
+                  В корзине есть блюда из другой точки. Добавьте позиции из текущего филиала.
+                </p>
+              )}
 
               {orderMode !== 'dine_in' && minOrderAmount > 0 && (
                 <p className={`text-xs mb-3 ${isBelowMinimum ? 'text-amber-600' : 'text-emerald-600'}`}>
@@ -921,8 +965,8 @@ const MenuPage = () => {
 
               <button
                 onClick={handleDesktopCheckout}
-                disabled={!cartItemCount || isBelowMinimum}
-                className={`w-full rounded-xl py-3 text-sm font-semibold transition-colors ${!cartItemCount || isBelowMinimum
+                disabled={!effectiveCartItemCount || isBelowMinimum || !isCartForCurrentRestaurant}
+                className={`w-full rounded-xl py-3 text-sm font-semibold transition-colors ${!effectiveCartItemCount || isBelowMinimum || !isCartForCurrentRestaurant
                   ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                   : 'bg-primary-600 text-white hover:bg-primary-700'
                   }`}

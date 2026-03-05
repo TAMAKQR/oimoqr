@@ -5,7 +5,17 @@ import { cacheBustImage } from '../utils/imageCache';
 import ImageWithLoader from './ImageWithLoader';
 
 // Отдельный компонент для карточки рекомендации, чтобы реагировать на изменения корзины
-const RecommendationCard = ({ dish, currency, addItem, removeItem, onOpenDish, canAddToCart = true, onAddToCartBlocked }) => {
+const RecommendationCard = ({
+  dish,
+  currency,
+  addItem,
+  removeItem,
+  onOpenDish,
+  canAddToCart = true,
+  onAddToCartBlocked,
+  restaurantId,
+  restaurantName
+}) => {
   const items = useCartStore((state) => state.items);
   const updateQuantity = useCartStore((state) => state.updateQuantity);
   const itemInCart = items.find(item => item.dish.id === dish.id);
@@ -46,7 +56,7 @@ const RecommendationCard = ({ dish, currency, addItem, removeItem, onOpenDish, c
                   onOpenDish?.(dish);
                   return;
                 }
-                addItem(dish, []);
+                addItem(dish, [], restaurantId, restaurantName);
               }}
               className="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-primary-600 text-white rounded-full hover:bg-primary-700 active:scale-95 transition-all shadow-md"
             >
@@ -80,7 +90,7 @@ const RecommendationCard = ({ dish, currency, addItem, removeItem, onOpenDish, c
                     onOpenDish?.(dish);
                     return;
                   }
-                  addItem(dish, []);
+                  addItem(dish, [], restaurantId, restaurantName);
                 }}
                 className="w-6 h-6 flex items-center justify-center text-white hover:bg-primary-700 rounded-full active:scale-95 transition-all"
               >
@@ -420,6 +430,8 @@ const DishModal = ({
                       onOpenDish={openDishFromRecommendation}
                       canAddToCart={canAddToCart}
                       onAddToCartBlocked={onAddToCartBlocked}
+                      restaurantId={restaurantId}
+                      restaurantName={restaurantName}
                     />
                   );
                 })}
