@@ -313,7 +313,7 @@ const DishModal = ({
         {currentImage && (
           <div className="relative h-56 sm:h-64 md:h-72">
             <ImageWithLoader
-              src={cacheBustImage(currentImage)}
+              src={cacheBustImage(currentImage, { width: 960, quality: 'auto:good' })}
               alt={dish.name}
               className={`w-full h-full object-cover rounded-t-2xl sm:rounded-t-lg transition-all duration-300 ${!isAvailable ? 'grayscale' : ''}`}
             />

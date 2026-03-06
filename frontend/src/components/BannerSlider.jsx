@@ -41,7 +41,7 @@ const BannerSlider = ({ banners }) => {
         <SwiperSlide key={index}>
           <div className="w-full h-full">
             <ImageWithLoader
-              src={cacheBustImage(banner)}
+              src={cacheBustImage(banner, { width: 1440, quality: 'auto:good' })}
               alt={`Banner ${index + 1}`}
               loading={index === 0 ? "eager" : "lazy"}
               className="w-full h-full object-cover"

@@ -222,7 +222,7 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
             <div className="relative w-20 h-20 sm:w-28 sm:h-28 flex-shrink-0">
               {dish.image ? (
                 <ImageWithLoader
-                  src={cacheBustImage(dish.image)}
+                  src={cacheBustImage(dish.image, { width: 640, quality: 'auto:good' })}
                   alt={dish.name}
                   loading="lazy"
                   className={`w-full h-full object-cover rounded-lg ${!isAvailable ? 'grayscale' : ''}`}
@@ -332,7 +332,7 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
           <div className="relative w-full aspect-[4/3]">
             {dish.image ? (
               <ImageWithLoader
-                src={cacheBustImage(dish.image)}
+                src={cacheBustImage(dish.image, { width: 640, quality: 'auto:good' })}
                 alt={dish.name}
                 loading="lazy"
                 className={`w-full h-full object-cover ${!isAvailable ? 'grayscale' : ''}`}
@@ -455,7 +455,7 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
           {dish.image ? (
             <div className="relative w-full aspect-[3/4]">
               <ImageWithLoader
-                src={cacheBustImage(dish.image)}
+                src={cacheBustImage(dish.image, { width: 640, quality: 'auto:good' })}
                 alt={dish.name}
                 loading="lazy"
                 className={`w-full h-full object-cover ${!isAvailable ? 'grayscale' : ''}`}
@@ -592,7 +592,7 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
         {dish.image ? (
           <div className="relative aspect-square">
             <ImageWithLoader
-              src={cacheBustImage(dish.image)}
+              src={cacheBustImage(dish.image, { width: 640, quality: 'auto:good' })}
               alt={dish.name}
               loading="lazy"
               className="w-full h-full object-cover"
