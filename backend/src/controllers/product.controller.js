@@ -1,5 +1,27 @@
 import { prisma } from '../config/prisma.js';
 import { ensureRestaurantOwnerAccess } from '../utils/restaurantAccess.js';
+import { deleteCloudinaryAssetByUrl } from '../utils/cloudinaryAsset.js';
+
+const parseImageArray = (value) => {
+    if (!value) {
+        return [];
+    }
+
+    if (Array.isArray(value)) {
+        return value;
+    }
+
+    if (typeof value === 'string') {
+        try {
+            const parsed = JSON.parse(value);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    }
+
+    return [];
+};
 
 // Get all product categories for a store
 export const getProductCategories = async (req, res, next) => {
@@ -294,28 +316,6 @@ export const deleteProduct = async (req, res, next) => {
             return res.status(404).json({ error: 'Product not found' });
         }
 
-        import { deleteCloudinaryAssetByUrl } from '../utils/cloudinaryAsset.js';
-
-        const parseImageArray = (value) => {
-            if (!value) {
-                return [];
-            }
-
-            if (Array.isArray(value)) {
-                return value;
-            }
-
-            if (typeof value === 'string') {
-                try {
-                    const parsed = JSON.parse(value);
-                    return Array.isArray(parsed) ? parsed : [];
-                } catch {
-                    return [];
-                }
-            }
-
-            return [];
-        };
         if (!ensureRestaurantOwnerAccess(req, res, existingProduct.restaurantId)) {
             return;
         }
