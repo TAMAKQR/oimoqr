@@ -4,6 +4,7 @@ import { getDistance, getNetworkRankedDeliveryPoints } from './geolocation.contr
 import { buildTrustedOrderItems, calculateDeliveryFee } from '../utils/orderPricing.js';
 import { loadModifierOptionStops } from '../utils/modifierOptionStops.js';
 import { hasRestaurantAccess, ensureRestaurantAccess } from '../utils/restaurantAccess.js';
+import { getRestaurantDeliveryStatus } from '../utils/schedule.js';
 
 const ALLOWED_STATUSES = [
   'new',
@@ -71,7 +72,7 @@ const getNearestServingRestaurant = async ({ restaurantId, latitude, longitude }
     city: baseRestaurant.city || null
   });
 
-  return ranked.find((r) => r.inDeliveryZone) || null;
+  return ranked.find((r) => r.inDeliveryZone && getRestaurantDeliveryStatus(r).isOpen) || null;
 };
 
 const parseSelectedModifiers = (value) => {

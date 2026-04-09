@@ -1,5 +1,6 @@
 import { prisma } from '../config/prisma.js';
 import { ensureRestaurantAccess, ensureRestaurantOwnerAccess } from '../utils/restaurantAccess.js';
+import { deleteCloudinaryAssetByUrl } from '../utils/cloudinaryAsset.js';
 
 /**
  * Получить все группы категорий ресторана
@@ -143,7 +144,7 @@ export const uploadGroupImage = async (req, res, next) => {
         // Check if group exists
         const group = await prisma.categoryGroup.findUnique({
             where: { id },
-            select: { id: true, restaurantId: true }
+            select: { id: true, restaurantId: true, image: true }
         });
 
         if (!group) {
@@ -160,6 +161,10 @@ export const uploadGroupImage = async (req, res, next) => {
             : `/uploads/${req.file.filename}`;
 
         console.log('📸 Group image URL:', imageUrl);
+
+        if (group.image && group.image !== imageUrl) {
+            await deleteCloudinaryAssetByUrl(group.image);
+        }
 
         // Update group with image URL
         const updatedGroup = await prisma.categoryGroup.update({

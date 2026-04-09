@@ -1,4 +1,5 @@
 import { prisma } from '../config/prisma.js';
+import { getRestaurantDeliveryStatus } from '../utils/schedule.js';
 
 const YANDEX_GEOCODER_KEY = process.env.YANDEX_GEOCODER_KEY || '';
 const TRUE_VALUES = new Set(['1', 'true', 'yes', 'on']);
@@ -75,6 +76,7 @@ export const getNetworkRankedDeliveryPoints = async ({ ownerId, latitude, longit
       freeDeliveryThreshold: true,
       currency: true,
       workingHours: true,
+      deliveryHours: true,
       isTemporarilyClosed: true
     }
   });
@@ -95,11 +97,14 @@ export const getNetworkRankedDeliveryPoints = async ({ ownerId, latitude, longit
     .map((restaurant) => {
       const distance = getDistance(latitude, longitude, restaurant.latitude, restaurant.longitude);
       const inDeliveryZone = restaurant.deliveryRadius ? distance <= restaurant.deliveryRadius : true;
+      const deliveryStatus = getRestaurantDeliveryStatus(restaurant);
 
       return {
         ...restaurant,
         distance,
-        inDeliveryZone
+        inDeliveryZone,
+        deliveryOpenNow: deliveryStatus.isOpen,
+        deliveryStatusMessage: deliveryStatus.message
       };
     })
     .sort((a, b) => a.distance - b.distance);
@@ -154,7 +159,40 @@ export const checkDelivery = async (req, res, next) => {
       });
     }
 
-    const nearestInZone = ranked.find((r) => r.inDeliveryZone);
+    const nearestInZone = ranked.find((r) => r.inDeliveryZone && r.deliveryOpenNow);
+
+    if (!nearestInZone) {
+      const nearestClosedInZone = ranked.find((r) => r.inDeliveryZone);
+
+      if (nearestClosedInZone) {
+        return res.json({
+          deliveryAvailable: false,
+          inDeliveryZone: true,
+          message: nearestClosedInZone.deliveryStatusMessage
+            ? `Доставка сейчас недоступна: ${nearestClosedInZone.deliveryStatusMessage}`
+            : 'Доставка сейчас недоступна для этого адреса',
+          servingRestaurant: {
+            id: nearestClosedInZone.id,
+            name: nearestClosedInZone.name,
+            subdomain: nearestClosedInZone.subdomain,
+            distance: Number(nearestClosedInZone.distance.toFixed(2)),
+            deliveryRadius: nearestClosedInZone.deliveryRadius,
+            deliveryOpenNow: false,
+            deliveryStatusMessage: nearestClosedInZone.deliveryStatusMessage
+          },
+          alternatives: ranked.slice(0, 5).map((r) => ({
+            id: r.id,
+            name: r.name,
+            subdomain: r.subdomain,
+            address: r.address,
+            distance: Number(r.distance.toFixed(2)),
+            inDeliveryZone: r.inDeliveryZone,
+            deliveryOpenNow: r.deliveryOpenNow,
+            deliveryStatusMessage: r.deliveryStatusMessage
+          }))
+        });
+      }
+    }
 
     if (!nearestInZone) {
       return res.json({
@@ -190,7 +228,9 @@ export const checkDelivery = async (req, res, next) => {
         deliveryFee: nearestInZone.deliveryFee,
         minOrderAmount: nearestInZone.minOrderAmount,
         freeDeliveryThreshold: nearestInZone.freeDeliveryThreshold,
-        currency: nearestInZone.currency
+        currency: nearestInZone.currency,
+        deliveryOpenNow: nearestInZone.deliveryOpenNow,
+        deliveryStatusMessage: nearestInZone.deliveryStatusMessage
       },
       alternatives: ranked.slice(0, 5).map((r) => ({
         id: r.id,
@@ -198,7 +238,9 @@ export const checkDelivery = async (req, res, next) => {
         subdomain: r.subdomain,
         address: r.address,
         distance: Number(r.distance.toFixed(2)),
-        inDeliveryZone: r.inDeliveryZone
+        inDeliveryZone: r.inDeliveryZone,
+        deliveryOpenNow: r.deliveryOpenNow,
+        deliveryStatusMessage: r.deliveryStatusMessage
       }))
     });
   } catch (error) {

@@ -4,46 +4,10 @@ import { getNetworkRankedDeliveryPoints } from './geolocation.controller.js';
 import { getModifierOptionSelect } from '../utils/modifierOptionFields.js';
 import { loadModifierOptionStops } from '../utils/modifierOptionStops.js';
 import { ensureRestaurantAccess } from '../utils/restaurantAccess.js';
+import { deleteCloudinaryAssetByUrl } from '../utils/cloudinaryAsset.js';
+import { getRestaurantOpenStatus, normalizeSchedule } from '../utils/schedule.js';
 
-const isRestaurantOpen = (restaurant) => {
-  if (restaurant.isTemporarilyClosed) return false;
-
-  let workingHours = restaurant.workingHours;
-  if (!workingHours) return true;
-
-  if (typeof workingHours === 'string') {
-    try {
-      workingHours = JSON.parse(workingHours);
-    } catch (e) {
-      return true;
-    }
-  }
-
-  if (!Array.isArray(workingHours) || workingHours.length === 0) return true;
-
-  const now = new Date();
-  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-  const currentDay = days[now.getDay()];
-
-  const todaySchedule = workingHours.find(day => day.day === currentDay);
-
-  if (!todaySchedule || !todaySchedule.isOpen) return false;
-
-  if (!todaySchedule.openTime || !todaySchedule.closeTime) return true;
-
-  const currentTime = now.getHours() * 60 + now.getMinutes();
-  const [openH, openM] = todaySchedule.openTime.split(':').map(Number);
-  const [closeH, closeM] = todaySchedule.closeTime.split(':').map(Number);
-
-  const openTime = openH * 60 + openM;
-  const closeTime = closeH * 60 + closeM;
-
-  if (closeTime < openTime) {
-    return currentTime >= openTime || currentTime < closeTime;
-  }
-
-  return currentTime >= openTime && currentTime < closeTime;
-};
+const isRestaurantOpen = (restaurant) => getRestaurantOpenStatus(restaurant).isOpen;
 
 const RESTAURANT_SELECT = {
   id: true,
@@ -66,6 +30,7 @@ const RESTAURANT_SELECT = {
   minOrderAmount: true,
   freeDeliveryThreshold: true,
   workingHours: true,
+  deliveryHours: true,
   isTemporarilyClosed: true,
   closureReason: true,
   latitude: true,
@@ -322,18 +287,13 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
     });
 
     // Parse workingHours if it's a JSON string (SQLite compatibility)
-    let workingHours = restaurantBase.workingHours;
-    if (workingHours && typeof workingHours === 'string') {
-      try {
-        workingHours = JSON.parse(workingHours);
-      } catch (e) {
-        workingHours = null;
-      }
-    }
+    const workingHours = normalizeSchedule(restaurantBase.workingHours);
+    const deliveryHours = normalizeSchedule(restaurantBase.deliveryHours);
 
     const restaurantWithImageUrl = {
       ...restaurantBase,
       workingHours,
+      deliveryHours,
       menuCardStyle: restaurantBase.cardStyle,
       categories: categories.map(category => {
         const categoryTranslation = category.translations?.[0];
@@ -456,6 +416,7 @@ export const updateRestaurant = async (req, res, next) => {
       deliveryFee,
       minOrderAmount,
       freeDeliveryThreshold,
+      deliveryHours,
       useTierBonusSettings,
       bonusProgramEnabled,
       bonusAccrualRate,
@@ -514,6 +475,7 @@ export const updateRestaurant = async (req, res, next) => {
       deliveryFee: deliveryFee ? parseFloat(deliveryFee) : null,
       minOrderAmount: minOrderAmount ? parseFloat(minOrderAmount) : null,
       freeDeliveryThreshold: freeDeliveryThreshold ? parseFloat(freeDeliveryThreshold) : null,
+      deliveryHours: deliveryHours ? JSON.stringify(deliveryHours) : null,
       useTierBonusSettings: useTierBonusSettings !== undefined ? Boolean(useTierBonusSettings) : undefined,
       bonusProgramEnabled: bonusProgramEnabled !== undefined ? Boolean(bonusProgramEnabled) : undefined,
       bonusAccrualRate: bonusAccrualRate !== undefined && bonusAccrualRate !== null
@@ -584,13 +546,8 @@ export const updateRestaurant = async (req, res, next) => {
     }
 
     // Parse workingHours if it's a JSON string (SQLite compatibility)
-    if (restaurant.workingHours && typeof restaurant.workingHours === 'string') {
-      try {
-        restaurant.workingHours = JSON.parse(restaurant.workingHours);
-      } catch (e) {
-        restaurant.workingHours = null;
-      }
-    }
+    restaurant.workingHours = normalizeSchedule(restaurant.workingHours);
+    restaurant.deliveryHours = normalizeSchedule(restaurant.deliveryHours);
 
     // Re-fetch the restaurant with the updated social links to ensure the response is fresh
     const updatedRestaurantWithLinks = await prisma.restaurant.findUnique({
@@ -602,13 +559,8 @@ export const updateRestaurant = async (req, res, next) => {
     });
 
     // Parse workingHours for the final response
-    if (updatedRestaurantWithLinks.workingHours && typeof updatedRestaurantWithLinks.workingHours === 'string') {
-      try {
-        updatedRestaurantWithLinks.workingHours = JSON.parse(updatedRestaurantWithLinks.workingHours);
-      } catch (e) {
-        updatedRestaurantWithLinks.workingHours = null;
-      }
-    }
+    updatedRestaurantWithLinks.workingHours = normalizeSchedule(updatedRestaurantWithLinks.workingHours);
+    updatedRestaurantWithLinks.deliveryHours = normalizeSchedule(updatedRestaurantWithLinks.deliveryHours);
 
     // Parse banners for the final response
     if (updatedRestaurantWithLinks.banners && typeof updatedRestaurantWithLinks.banners === 'string') {
@@ -756,6 +708,10 @@ export const deleteBanner = async (req, res, next) => {
 
     const updatedBanners = currentBanners.filter(b => b !== bannerUrl);
 
+    if (bannerUrl) {
+      await deleteCloudinaryAssetByUrl(bannerUrl);
+    }
+
     const updatedRestaurant = await prisma.restaurant.update({
       where: { id },
       data: {
@@ -818,6 +774,15 @@ export const uploadLogo = async (req, res, next) => {
 
     console.log('ðŸ¢ Logo URL:', logoUrl);
 
+    const currentRestaurant = await prisma.restaurant.findUnique({
+      where: { id },
+      select: { logo: true }
+    });
+
+    if (currentRestaurant?.logo && currentRestaurant.logo !== logoUrl) {
+      await deleteCloudinaryAssetByUrl(currentRestaurant.logo);
+    }
+
     const updatedRestaurant = await prisma.restaurant.update({
       where: { id },
       data: { logo: logoUrl }
@@ -866,6 +831,15 @@ export const deleteLogo = async (req, res, next) => {
         error: 'Shared template locked',
         message: 'Этот ресторан наследует оформление от главного. Удалить логотип можно только в главном ресторане.'
       });
+    }
+
+    const currentRestaurant = await prisma.restaurant.findUnique({
+      where: { id },
+      select: { logo: true }
+    });
+
+    if (currentRestaurant?.logo) {
+      await deleteCloudinaryAssetByUrl(currentRestaurant.logo);
     }
 
     const updatedRestaurant = await prisma.restaurant.update({

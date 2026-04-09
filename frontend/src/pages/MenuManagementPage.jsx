@@ -13,6 +13,7 @@ import CategoryGroupsModal from '../components/CategoryGroupsModal';
 import ImageWithLoader from '../components/ImageWithLoader';
 import { useUserData } from '../hooks/useUserData';
 import { useSelectedRestaurant } from '../hooks/useSelectedRestaurant';
+import { cacheBustImage } from '../utils/imageCache';
 
 const MenuManagementPage = () => {
   const navigate = useNavigate();
@@ -1032,9 +1033,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
   const [price, setPrice] = useState(dish?.price || '');
   const [deliveryPrice, setDeliveryPrice] = useState(dish?.deliveryPrice || '');
   const [imageFile, setImageFile] = useState(null);
-  const [currentImageUrl, setCurrentImageUrl] = useState(
-    dish?.imageUrl ? `${dish.imageUrl}?t=${Date.now()}` : null
-  );
+  const [currentImageUrl, setCurrentImageUrl] = useState(dish?.imageUrl || null);
   const [modifiers, setModifiers] = useState(dish?.modifiers || []);
   const [allergens, setAllergens] = useState(dish?.allergens ? JSON.parse(dish.allergens) : []);
   const [discount, setDiscount] = useState(dish?.discount || '');
@@ -1064,7 +1063,9 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
   // Обновляем фото при изменении dish (когда переоткрываем модалку)
   useEffect(() => {
     if (dish?.imageUrl) {
-      setCurrentImageUrl(`${dish.imageUrl}?t=${Date.now()}`);
+      setCurrentImageUrl(dish.imageUrl);
+    } else {
+      setCurrentImageUrl(null);
     }
   }, [dish?.imageUrl]);
 
@@ -1421,8 +1422,8 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
       console.log('✅ [Upload Success] Result:', result);
       console.log('✅ [Upload Success] Image URL:', result.imageUrl);
 
-      // Обновляем URL изображения опции с cache-busting
-      const newImageUrl = `${result.imageUrl}?t=${Date.now()}`;
+      // Upload returns a new asset URL, so cache busting is unnecessary here.
+      const newImageUrl = result.imageUrl;
       console.log('🔄 [Update State] Setting new image URL:', newImageUrl);
 
       setModifiers(modifiers.map(m =>
@@ -1537,9 +1538,9 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
           console.log('✅ [Dish Image] Upload successful:', result);
           console.log('✅ [Dish Image] Image URL:', result?.imageUrl);
 
-          // ✅ Обновляем превью сразу с cache-busting
+          // Upload returns a new asset URL, so cache busting is unnecessary here.
           if (result?.imageUrl) {
-            const newUrl = `${result.imageUrl}?t=${Date.now()}`;
+            const newUrl = result.imageUrl;
             console.log('🔄 [Dish Image] Setting image URL:', newUrl);
             setCurrentImageUrl(newUrl);
           }
@@ -1716,7 +1717,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
             {currentImageUrl && !imageFile && (
               <div className="relative mb-2">
                 <ImageWithLoader
-                  src={currentImageUrl}
+                  src={cacheBustImage(currentImageUrl, { width: 800, quality: 'auto:good' })}
                   alt={dish?.name || 'Блюдо'}
                   className="w-full h-48 object-cover rounded"
                   loading="lazy"
@@ -1814,7 +1815,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
                           {option.image && (
                             <div className="relative w-12 h-12 flex-shrink-0">
                               <ImageWithLoader
-                                src={option.image}
+                                src={cacheBustImage(option.image, { width: 96, height: 96, quality: 'auto:good' })}
                                 alt={option.name}
                                 className="w-full h-full object-cover rounded"
                                 loading="lazy"
@@ -2107,7 +2108,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
                         <div className="w-10 h-10 flex-shrink-0 rounded overflow-hidden bg-gray-200">
                           {availableDish.image ? (
                             <ImageWithLoader
-                              src={availableDish.image}
+                              src={cacheBustImage(availableDish.image, { width: 80, height: 80, quality: 'auto:good' })}
                               alt={availableDish.name}
                               className="w-10 h-10 object-cover"
                               loading="lazy"

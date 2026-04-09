@@ -15,6 +15,7 @@ import AddressAutocomplete from '../components/AddressAutocomplete';
 import MapPicker from '../components/MapPicker';
 import api from '../services/api';
 import { useTheme } from '../theme/ThemeProvider';
+import { cacheBustImage } from '../utils/imageCache';
 
 const clamp = (value, min = 0, max = 1) => Math.min(Math.max(value, min), max);
 
@@ -954,17 +955,15 @@ const MenuPage = () => {
 
             {hasGuestDeliveryLocation && (
               <div
-                className={`rounded-xl border px-3 py-2.5 transition-colors ${
-                  isGuestAddressConfirmed
+                className={`rounded-xl border px-3 py-2.5 transition-colors ${isGuestAddressConfirmed
                     ? 'border-emerald-200 bg-emerald-50/60'
                     : 'border-gray-200 bg-white'
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <span
-                    className={`inline-flex h-2.5 w-2.5 rounded-full shrink-0 ${
-                      isGuestAddressConfirmed ? 'bg-emerald-500' : 'bg-amber-500'
-                    }`}
+                    className={`inline-flex h-2.5 w-2.5 rounded-full shrink-0 ${isGuestAddressConfirmed ? 'bg-emerald-500' : 'bg-amber-500'
+                      }`}
                   />
                   <button
                     onClick={() => setShowGuestMapModal(true)}
@@ -1097,7 +1096,7 @@ const MenuPage = () => {
                           <div className="w-full h-full rounded-full bg-white p-[2px]">
                             <div className="w-full h-full rounded-full overflow-hidden">
                               <ImageWithLoader
-                                src={group.image}
+                                src={cacheBustImage(group.image, { width: 160, height: 160, quality: 'auto:good' })}
                                 alt={group.name}
                                 loading="lazy"
                                 className="w-full h-full object-cover"

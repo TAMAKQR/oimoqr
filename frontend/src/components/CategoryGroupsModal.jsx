@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { categoryGroupService } from '../services/categoryGroupService';
 import toast from 'react-hot-toast';
 import { confirmDialog } from '../utils/confirmDialog';
+import { cacheBustImage } from '../utils/imageCache';
 
 const CategoryGroupsModal = ({ restaurantId, categories, onClose, onSave }) => {
     const [groups, setGroups] = useState([]);
@@ -284,7 +285,7 @@ const CategoryGroupsModal = ({ restaurantId, categories, onClose, onSave }) => {
                                     <div className="flex gap-4">
                                         {group.image && (
                                             <img
-                                                src={group.image}
+                                                src={cacheBustImage(group.image, { width: 192, height: 192, quality: 'auto:good' })}
                                                 alt={group.name}
                                                 className="w-24 h-24 object-cover rounded flex-shrink-0"
                                             />

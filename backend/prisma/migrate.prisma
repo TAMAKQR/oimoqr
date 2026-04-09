@@ -39,6 +39,8 @@ model Restaurant {
   deliveryEnabled   Boolean   @default(false)
   deliveryFee       Float?
   minOrderAmount    Float?
+  freeDeliveryThreshold Float?
+  deliveryHours      String?   // JSON: отдельный график доставки по дням недели
   useTierBonusSettings Boolean @default(true)
   bonusProgramEnabled  Boolean?
   bonusAccrualRate     Float?

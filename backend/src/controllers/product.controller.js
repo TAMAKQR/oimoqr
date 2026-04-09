@@ -294,8 +294,39 @@ export const deleteProduct = async (req, res, next) => {
             return res.status(404).json({ error: 'Product not found' });
         }
 
+        import { deleteCloudinaryAssetByUrl } from '../utils/cloudinaryAsset.js';
+
+        const parseImageArray = (value) => {
+            if (!value) {
+                return [];
+            }
+
+            if (Array.isArray(value)) {
+                return value;
+            }
+
+            if (typeof value === 'string') {
+                try {
+                    const parsed = JSON.parse(value);
+                    return Array.isArray(parsed) ? parsed : [];
+                } catch {
+                    return [];
+                }
+            }
+
+            return [];
+        };
         if (!ensureRestaurantOwnerAccess(req, res, existingProduct.restaurantId)) {
             return;
+        }
+
+        const productWithImages = await prisma.product.findUnique({
+            where: { id },
+            select: { images: true }
+        });
+
+        for (const imageUrl of parseImageArray(productWithImages?.images)) {
+            await deleteCloudinaryAssetByUrl(imageUrl);
         }
 
         await prisma.product.delete({
@@ -325,8 +356,10 @@ export const uploadProductImage = async (req, res, next) => {
             return;
         }
 
-        const imageUrl = req.file.path || `/uploads/${req.file.filename}`;
-        const currentImages = Array.isArray(product.images) ? product.images : [];
+        const imageUrl = req.file.path?.startsWith('http')
+            ? req.file.path
+            : `/uploads/${req.file.filename}`;
+        const currentImages = parseImageArray(product.images);
         const updatedImages = [...currentImages, imageUrl];
 
         const updatedProduct = await prisma.product.update({
@@ -356,8 +389,12 @@ export const deleteProductImage = async (req, res, next) => {
             return;
         }
 
-        const currentImages = Array.isArray(product.images) ? product.images : [];
+        const currentImages = parseImageArray(product.images);
         const updatedImages = currentImages.filter(img => img !== imageUrl);
+
+        if (imageUrl) {
+            await deleteCloudinaryAssetByUrl(imageUrl);
+        }
 
         const updatedProduct = await prisma.product.update({
             where: { id },

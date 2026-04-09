@@ -62,6 +62,7 @@ model Restaurant {
   deliveryFee            Float?
   minOrderAmount         Float?
   freeDeliveryThreshold  Float?    // Бесплатная доставка при заказе от этой суммы
+  deliveryHours          String?   // JSON: отдельный график доставки по дням недели
   useTierBonusSettings   Boolean   @default(true)
   bonusProgramEnabled    Boolean?
   bonusAccrualRate       Float?

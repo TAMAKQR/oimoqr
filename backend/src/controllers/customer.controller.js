@@ -1,9 +1,11 @@
 import { prisma } from '../config/prisma.js';
+import { deleteCloudinaryAssetByUrl } from '../utils/cloudinaryAsset.js';
 import bcrypt from 'bcryptjs';
 import telegramService from '../services/telegram.service.js';
 import { getNetworkRankedDeliveryPoints } from './geolocation.controller.js';
 import { buildTrustedOrderItems, calculateDeliveryFee } from '../utils/orderPricing.js';
 import { loadModifierOptionStops } from '../utils/modifierOptionStops.js';
+import { getRestaurantDeliveryStatus } from '../utils/schedule.js';
 
 const getMenuSourceRestaurantId = async (restaurantId) => {
     const restaurant = await prisma.restaurant.findUnique({
@@ -30,7 +32,7 @@ const getNearestServingRestaurant = async ({ restaurantId, latitude, longitude }
         city: baseRestaurant.city || null
     });
 
-    return ranked.find((r) => r.inDeliveryZone) || null;
+    return ranked.find((r) => r.inDeliveryZone && getRestaurantDeliveryStatus(r).isOpen) || null;
 };
 
 const DEFAULT_BONUS_RATE = 0;
@@ -385,9 +387,18 @@ export const uploadCustomerAvatar = async (req, res, next) => {
             return res.status(400).json({ error: 'No file uploaded' });
         }
 
+        const currentCustomer = await prisma.customer.findUnique({
+            where: { id: customerId },
+            select: { avatar: true }
+        });
+
         const avatarUrl = req.file.path?.startsWith('http')
             ? req.file.path
             : `/uploads/${req.file.filename}`;
+
+        if (currentCustomer?.avatar && currentCustomer.avatar !== avatarUrl) {
+            await deleteCloudinaryAssetByUrl(currentCustomer.avatar);
+        }
 
         const updatedCustomer = await prisma.customer.update({
             where: { id: customerId },

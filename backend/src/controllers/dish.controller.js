@@ -1,5 +1,6 @@
 import { prisma } from '../config/prisma.js';
 import { getModifierOptionSelect, hasModifierOptionDeliveryPriceColumn } from '../utils/modifierOptionFields.js';
+import { deleteCloudinaryAssetByUrl } from '../utils/cloudinaryAsset.js';
 
 const ensureModifierManagementAllowed = async (selectedRestaurantId) => {
   if (!selectedRestaurantId) {
@@ -367,6 +368,10 @@ export const uploadDishImage = async (req, res, next) => {
 
     console.log('🖼️ [Backend] Generated image URL:', imageUrl);
 
+    if (dish.image && dish.image !== imageUrl) {
+      await deleteCloudinaryAssetByUrl(dish.image);
+    }
+
     // Update dish with image
     console.log('💾 [Backend] Updating dish with image...');
     const updatedDish = await prisma.dish.update({
@@ -409,6 +414,10 @@ export const deleteDishImage = async (req, res, next) => {
 
     if (!ensureOwnerAccessToRestaurant(req, res, dish.category.restaurantId)) {
       return;
+    }
+
+    if (dish.image) {
+      await deleteCloudinaryAssetByUrl(dish.image);
     }
 
     // Update dish to remove image
@@ -1009,6 +1018,10 @@ export const uploadModifierOptionImage = async (req, res, next) => {
 
     console.log('📸 [Backend] Generated image URL:', imageUrl);
 
+    if (option.image && option.image !== imageUrl) {
+      await deleteCloudinaryAssetByUrl(option.image);
+    }
+
     // Update option with image
     console.log('💾 [Backend] Updating modifier option with image...');
     const updatedOption = await prisma.modifierOption.update({
@@ -1058,6 +1071,10 @@ export const deleteModifierOptionImage = async (req, res, next) => {
 
     if (!ensureOwnerAccessToRestaurant(req, res, option.modifier.dish.category.restaurantId)) {
       return;
+    }
+
+    if (option.image) {
+      await deleteCloudinaryAssetByUrl(option.image);
     }
 
     const updatedOption = await prisma.modifierOption.update({

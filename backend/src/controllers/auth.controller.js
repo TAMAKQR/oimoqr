@@ -261,6 +261,7 @@ export const getMe = async (req, res, next) => {
       const formatted = { ...restaurant };
       formatted.banners = parseJsonField(formatted.banners, []);
       formatted.workingHours = parseJsonField(formatted.workingHours, null);
+      formatted.deliveryHours = parseJsonField(formatted.deliveryHours, null);
       formatted.menuCardStyle = formatted.cardStyle || 'horizontal';
 
       // Раскладываем socialLinks в поля верхнего уровня для консистентности

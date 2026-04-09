@@ -15,8 +15,29 @@ import { useSelectedRestaurant } from '../hooks/useSelectedRestaurant';
 import { QRCodeSVG } from 'qrcode.react';
 import { getBusinessType } from '../utils/businessTypes';
 import MapPicker from '../components/MapPicker';
+import { cacheBustImage } from '../utils/imageCache';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
+
+const DAY_LABELS = {
+  monday: 'Понедельник',
+  tuesday: 'Вторник',
+  wednesday: 'Среда',
+  thursday: 'Четверг',
+  friday: 'Пятница',
+  saturday: 'Суббота',
+  sunday: 'Воскресенье',
+};
+
+const createDefaultSchedule = () => ({
+  monday: { open: '09:00', close: '22:00', isOpen: true, is247: false },
+  tuesday: { open: '09:00', close: '22:00', isOpen: true, is247: false },
+  wednesday: { open: '09:00', close: '22:00', isOpen: true, is247: false },
+  thursday: { open: '09:00', close: '22:00', isOpen: true, is247: false },
+  friday: { open: '09:00', close: '22:00', isOpen: true, is247: false },
+  saturday: { open: '10:00', close: '23:00', isOpen: true, is247: false },
+  sunday: { open: '10:00', close: '23:00', isOpen: true, is247: false },
+});
 
 const RestaurantSettingsPage = () => {
   const navigate = useNavigate();
@@ -80,6 +101,7 @@ const RestaurantSettingsPage = () => {
     saturday: { open: '10:00', close: '23:00', isOpen: true },
     sunday: { open: '10:00', close: '23:00', isOpen: true },
   });
+  const [deliveryHours, setDeliveryHours] = useState(createDefaultSchedule());
 
 
 
@@ -124,6 +146,74 @@ const RestaurantSettingsPage = () => {
     selectedRestaurant?.sharedMenuSourceRestaurantId !== selectedRestaurantId
   );
 
+  const renderScheduleEditor = (schedule, setSchedule, inputPrefix) => Object.entries(DAY_LABELS).map(([day, label]) => (
+    <div key={`${inputPrefix}-${day}`} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+      <div className="w-32 font-medium text-gray-700">{label}</div>
+
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          id={`${inputPrefix}-${day}-isOpen`}
+          checked={schedule[day].isOpen}
+          onChange={(e) => setSchedule({
+            ...schedule,
+            [day]: { ...schedule[day], isOpen: e.target.checked }
+          })}
+          className="w-4 h-4"
+        />
+        <label htmlFor={`${inputPrefix}-${day}-isOpen`} className="text-sm text-gray-600 w-20">
+          {schedule[day].isOpen ? 'Открыто' : 'Выходной'}
+        </label>
+      </div>
+
+      {schedule[day].isOpen && (
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id={`${inputPrefix}-${day}-is247`}
+            checked={schedule[day].is247 || false}
+            onChange={(e) => setSchedule({
+              ...schedule,
+              [day]: { ...schedule[day], is247: e.target.checked }
+            })}
+            className="w-4 h-4"
+          />
+          <label htmlFor={`${inputPrefix}-${day}-is247`} className="text-sm text-gray-600">Круглосуточно</label>
+        </div>
+      )}
+
+      {schedule[day].isOpen && !schedule[day].is247 && (
+        <>
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-600">С</label>
+            <input
+              type="time"
+              value={schedule[day].open}
+              onChange={(e) => setSchedule({
+                ...schedule,
+                [day]: { ...schedule[day], open: e.target.value }
+              })}
+              className="input w-28 text-sm"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-600">До</label>
+            <input
+              type="time"
+              value={schedule[day].close}
+              onChange={(e) => setSchedule({
+                ...schedule,
+                [day]: { ...schedule[day], close: e.target.value }
+              })}
+              className="input w-28 text-sm"
+            />
+          </div>
+        </>
+      )}
+    </div>
+  ));
+
   const loadRestaurantData = async (restaurant) => {
     console.log('📝 Loading restaurant data into form:', restaurant);
     const r = restaurant;
@@ -153,24 +243,30 @@ const RestaurantSettingsPage = () => {
     setTelegramGroupId(r.telegramGroupId || '');
 
     // Load working hours with defaults to ensure all days are defined
-    const defaultWorkingHours = {
-      monday: { open: '09:00', close: '22:00', isOpen: true, is247: false },
-      tuesday: { open: '09:00', close: '22:00', isOpen: true },
-      wednesday: { open: '09:00', close: '22:00', isOpen: true },
-      thursday: { open: '09:00', close: '22:00', isOpen: true },
-      friday: { open: '09:00', close: '22:00', isOpen: true },
-      saturday: { open: '10:00', close: '23:00', isOpen: true },
-      sunday: { open: '10:00', close: '23:00', isOpen: true },
-    };
+    const defaultWorkingHours = createDefaultSchedule();
+    const defaultDeliveryHours = createDefaultSchedule();
 
     if (r.workingHours) {
-      // Merge API data with defaults to ensure all days exist
       setWorkingHours({
         ...defaultWorkingHours,
         ...r.workingHours
       });
     } else {
       setWorkingHours(defaultWorkingHours);
+    }
+
+    if (r.deliveryHours) {
+      setDeliveryHours({
+        ...defaultDeliveryHours,
+        ...r.deliveryHours
+      });
+    } else if (r.workingHours) {
+      setDeliveryHours({
+        ...defaultDeliveryHours,
+        ...r.workingHours
+      });
+    } else {
+      setDeliveryHours(defaultDeliveryHours);
     }
 
     setIsTemporarilyClosed(r.isTemporarilyClosed || false);
@@ -326,6 +422,7 @@ const RestaurantSettingsPage = () => {
         longitude: longitude ? parseFloat(longitude) : null,
         deliveryRadius: deliveryRadius ? parseFloat(deliveryRadius) : null,
         workingHours,
+        deliveryHours,
         isTemporarilyClosed,
         closureReason: isTemporarilyClosed ? closureReason : null,
         telegramGroupId: telegramGroupId || null,
@@ -667,7 +764,7 @@ const RestaurantSettingsPage = () => {
                       {getSelectedRestaurant().banners.map((banner, index) => (
                         <div key={index} className="relative group flex-shrink-0">
                           <ImageWithLoader
-                            src={banner}
+                            src={cacheBustImage(banner, { width: 224, height: 128, quality: 'auto:good' })}
                             alt={`Banner ${index + 1}`}
                             className="w-28 h-16 object-cover rounded-lg border border-gray-200"
                             loading="lazy"
@@ -991,6 +1088,28 @@ const RestaurantSettingsPage = () => {
                         </p>
                       </div>
                     </div>
+
+                    <div className="border-t pt-4">
+                      <div className="flex items-center justify-between gap-3 mb-3">
+                        <div>
+                          <h3 className="font-medium">🕒 График доставки</h3>
+                          <p className="text-sm text-gray-500 mt-1">
+                            Укажите отдельное время, когда филиал принимает заказы на доставку.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setDeliveryHours({ ...workingHours })}
+                          className="px-3 py-2 text-sm border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50"
+                        >
+                          Скопировать из графика точки
+                        </button>
+                      </div>
+
+                      <div className="space-y-3">
+                        {renderScheduleEditor(deliveryHours, setDeliveryHours, 'delivery-hours')}
+                      </div>
+                    </div>
                   </>
                 )}
               </div>
@@ -1286,81 +1405,7 @@ const RestaurantSettingsPage = () => {
 
               {/* Days of Week */}
               <div className="space-y-3">
-                {Object.entries({
-                  monday: 'Понедельник',
-                  tuesday: 'Вторник',
-                  wednesday: 'Среда',
-                  thursday: 'Четверг',
-                  friday: 'Пятница',
-                  saturday: 'Суббота',
-                  sunday: 'Воскресенье',
-                }).map(([day, label]) => (
-                  <div key={day} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
-                    <div className="w-32 font-medium text-gray-700">{label}</div>
-
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id={`${day}-isOpen`}
-                        checked={workingHours[day].isOpen}
-                        onChange={(e) => setWorkingHours({
-                          ...workingHours,
-                          [day]: { ...workingHours[day], isOpen: e.target.checked }
-                        })}
-                        className="w-4 h-4"
-                      />
-                      <label htmlFor={`${day}-isOpen`} className="text-sm text-gray-600 w-20">
-                        {workingHours[day].isOpen ? 'Открыто' : 'Выходной'}
-                      </label>
-                    </div>
-
-                    {workingHours[day].isOpen && (
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id={`${day}-is247`}
-                          checked={workingHours[day].is247 || false}
-                          onChange={(e) => setWorkingHours({
-                            ...workingHours,
-                            [day]: { ...workingHours[day], is247: e.target.checked }
-                          })}
-                          className="w-4 h-4"
-                        />
-                        <label htmlFor={`${day}-is247`} className="text-sm text-gray-600">Круглосуточно</label>
-                      </div>
-                    )}
-
-                    {workingHours[day].isOpen && !workingHours[day].is247 && (
-                      <>
-                        <div className="flex items-center gap-2">
-                          <label className="text-sm text-gray-600">С</label>
-                          <input
-                            type="time"
-                            value={workingHours[day].open}
-                            onChange={(e) => setWorkingHours({
-                              ...workingHours,
-                              [day]: { ...workingHours[day], open: e.target.value }
-                            })}
-                            className="input w-28 text-sm"
-                          />
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <label className="text-sm text-gray-600">До</label>
-                          <input
-                            type="time"
-                            value={workingHours[day].close}
-                            onChange={(e) => setWorkingHours({
-                              ...workingHours,
-                              [day]: { ...workingHours[day], close: e.target.value }
-                            })}
-                            className="input w-28 text-sm"
-                          />
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))}
+                {renderScheduleEditor(workingHours, setWorkingHours, 'working-hours')}
               </div>
 
               <p className="text-sm text-gray-600 mt-4">
