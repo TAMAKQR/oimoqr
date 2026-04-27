@@ -6,6 +6,7 @@ import { confirmDialog } from '../utils/confirmDialog';
 import RestaurantSelector from '../components/RestaurantSelector';
 import { useUserData } from '../hooks/useUserData';
 import { useSelectedRestaurant } from '../hooks/useSelectedRestaurant';
+import { getBusinessType } from '../utils/businessTypes';
 
 const ModifierTemplatesPage = () => {
     const { userData, loading: pageLoading } = useUserData();
@@ -244,6 +245,7 @@ const ModifierTemplatesPage = () => {
                         <RestaurantSelector
                             userData={userData}
                             selectedRestaurantId={selectedRestaurantId}
+                            placeholderLabel={selectedRestaurant ? getBusinessType(selectedRestaurant.businessType).label.toLowerCase() : 'заведение'}
                             onSelectRestaurant={(id) => {
                                 setSelectedRestaurantId(id);
                                 localStorage.setItem('selectedRestaurantId', id);

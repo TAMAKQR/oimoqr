@@ -1,8 +1,9 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuthStore } from '../store/authStore';
+import { getBusinessType } from '../utils/businessTypes';
 
-const getMenuSections = ({ isAdmin, isOwner, isStore, isHotel, selectedRestaurantId }) => [
+const getMenuSections = ({ isAdmin, isOwner, isStore, isHotel, selectedRestaurantId, settingsLabel }) => [
   {
     id: 'dashboard',
     icon: (
@@ -52,7 +53,7 @@ const getMenuSections = ({ isAdmin, isOwner, isStore, isHotel, selectedRestauran
     show: isOwner,
     expandable: true,
     children: [
-      { label: 'Ресторан', path: '/settings', show: true },
+      { label: settingsLabel, path: '/settings', show: true },
       { label: 'Языки', path: '/languages', show: true },
     ],
   },
@@ -125,14 +126,20 @@ const Sidebar = ({ userData, selectedRestaurantId, collapsed, onToggleCollapsed 
   const [expandedSection, setExpandedSection] = useState(null);
   const sidebarRef = useRef(null);
 
-  const isOwner = !!(userData?.restaurants?.some(r => r.id === selectedRestaurantId));
+  const allRestaurants = useMemo(() => [
+    ...(userData?.restaurants || []),
+    ...(userData?.restaurantStaff?.map(s => s.restaurant) || [])
+  ], [userData]);
+
+  const isOwner = !!userData?.restaurants?.some(r => r.id === selectedRestaurantId);
   const isAdmin = user?.isAdmin;
-  const selectedRestaurant = userData?.restaurants?.find(r => r.id === selectedRestaurantId);
+  const selectedRestaurant = allRestaurants.find(r => r.id === selectedRestaurantId);
   const isStore = selectedRestaurant?.businessType === 'ONLINE_STORE';
   const isHotel = selectedRestaurant?.businessType === 'HOTEL';
+  const settingsLabel = selectedRestaurant ? getBusinessType(selectedRestaurant.businessType).label : 'Ресторан';
 
   // Poster POS style menu structure with sections
-  const menuSections = getMenuSections({ isAdmin, isOwner, isStore, isHotel, selectedRestaurantId });
+  const menuSections = getMenuSections({ isAdmin, isOwner, isStore, isHotel, selectedRestaurantId, settingsLabel });
 
   const isActive = (path) => location.pathname === path;
   const isSectionActive = (section) => {

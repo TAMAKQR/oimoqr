@@ -76,7 +76,9 @@ export const BUSINESS_TYPES = {
  * Get business type config, fallback to RESTAURANT
  */
 export const getBusinessType = (type) => {
-    return BUSINESS_TYPES[type] || BUSINESS_TYPES.RESTAURANT;
+    if (!type || typeof type !== 'string') return BUSINESS_TYPES.RESTAURANT;
+    const normalizedType = type.trim().toUpperCase();
+    return BUSINESS_TYPES[normalizedType] || BUSINESS_TYPES.RESTAURANT;
 };
 
 /**

@@ -655,7 +655,7 @@ const DashboardPage = () => {
         {userData && (
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-gray-700">Выберите ресторан</label>
+              <label className="block text-sm font-medium text-gray-700">Выберите {selectedRestaurant ? getBusinessType(selectedRestaurant.businessType).label.toLowerCase() : 'заведение'}</label>
               {(userData?.restaurants?.length > 0 || (userData?.restaurantStaff?.length === 0 && !userData?.restaurants)) && (
                 <button
                   onClick={() => {
@@ -719,6 +719,7 @@ const DashboardPage = () => {
             <RestaurantSelector
               userData={userData}
               selectedRestaurantId={selectedRestaurantId}
+              placeholderLabel={selectedRestaurant ? getBusinessType(selectedRestaurant.businessType).label.toLowerCase() : 'заведение'}
               onSelectRestaurant={(id) => {
                 setSelectedRestaurantId(id);
                 localStorage.setItem('selectedRestaurantId', id);

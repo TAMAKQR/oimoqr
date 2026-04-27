@@ -517,6 +517,7 @@ const RestaurantSettingsPage = () => {
             <RestaurantSelector
               userData={userData}
               selectedRestaurantId={selectedRestaurantId}
+              placeholderLabel={selectedRestaurant ? entityLabelLower : 'заведение'}
               onSelectRestaurant={(id) => {
                 setSelectedRestaurantId(id);
                 localStorage.setItem('selectedRestaurantId', id);

@@ -13,6 +13,7 @@ import CategoryGroupsModal from '../components/CategoryGroupsModal';
 import ImageWithLoader from '../components/ImageWithLoader';
 import { useUserData } from '../hooks/useUserData';
 import { useSelectedRestaurant } from '../hooks/useSelectedRestaurant';
+import { getBusinessType } from '../utils/businessTypes';
 import { cacheBustImage } from '../utils/imageCache';
 
 const MenuManagementPage = () => {
@@ -494,10 +495,11 @@ const MenuManagementPage = () => {
         {/* Restaurant Selector */}
         {userData && (
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Выберите ресторан</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Выберите {selectedRestaurant ? getBusinessType(selectedRestaurant.businessType).label.toLowerCase() : 'заведение'}</label>
             <RestaurantSelector
               userData={userData}
               selectedRestaurantId={selectedRestaurantId}
+              placeholderLabel={selectedRestaurant ? getBusinessType(selectedRestaurant.businessType).label.toLowerCase() : 'заведение'}
               onSelectRestaurant={(id) => {
                 setSelectedRestaurantId(id);
                 localStorage.setItem('selectedRestaurantId', id);
