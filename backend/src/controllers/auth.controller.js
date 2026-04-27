@@ -7,10 +7,10 @@ import { calculateTrialEndDate } from '../utils/subscription.js';
 
 export const register = async (req, res, next) => {
   try {
-    const { email, password, name, phone, restaurantName, subdomain } = req.body;
+    const { email, password, name, phone, restaurantName, subdomain, businessType } = req.body;
 
     // Validate required fields
-    if (!email || !password || !name || !restaurantName || !subdomain) {
+    if (!email || !password || !name || !restaurantName || !subdomain || !businessType) {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
@@ -52,6 +52,7 @@ export const register = async (req, res, next) => {
             name: restaurantName,
             subdomain,
             currency: 'KGS',
+            businessType,
             isTrialDefault: true
           }
         }

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../services/authService';
+import { getBusinessType, BUSINESS_TYPE_OPTIONS } from '../utils/businessTypes';
 import toast from 'react-hot-toast';
 
 const RegisterPage = () => {
@@ -15,6 +16,7 @@ const RegisterPage = () => {
     phone: '',
     restaurantName: '',
     subdomain: '',
+    businessType: 'RESTAURANT',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -64,8 +66,11 @@ const RegisterPage = () => {
       // Сохраняем данные пользователя
       setAuth(response.user, response.token);
 
-      // Показываем успешное уведомление
-      toast.success(`Добро пожаловать, ${response.user.name}! Ваш ресторан "${formData.restaurantName}" создан.`);
+      // Показываем успешное уведомление с типом бизнеса
+      const businessTypeLabel = getBusinessType(formData.businessType).label;
+      toast.success(
+        `Добро пожаловать, ${response.user.name}! Объект "${formData.restaurantName}" (${businessTypeLabel}) создан.`
+      );
 
       // Даём небольшую задержку для того, чтобы пользователь увидел уведомление
       setTimeout(() => {
@@ -155,9 +160,29 @@ const RegisterPage = () => {
               value={formData.restaurantName}
               onChange={handleChange}
               className="input-field"
-              placeholder="Например: Пиццерия 'Мамино'"
+              placeholder={getBusinessType(formData.businessType).namePlaceholder}
               required
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Тип бизнеса *</label>
+            <select
+              name="businessType"
+              value={formData.businessType}
+              onChange={handleChange}
+              className="input-field"
+              required
+            >
+              {BUSINESS_TYPE_OPTIONS.map((option) => (
+                <option key={option.key} value={option.key}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-sm text-gray-500 mt-1">
+              Выберите, что вы хотите зарегистрировать: ресторан, отель, магазин или сеть ресторанов.
+            </p>
           </div>
 
           <div>
@@ -169,7 +194,7 @@ const RegisterPage = () => {
                 value={formData.subdomain}
                 onChange={handleChange}
                 className="input-field rounded-r-none"
-                placeholder="myrestaurant"
+                placeholder={getBusinessType(formData.businessType).subdomainPlaceholder}
                 minLength={3}
                 required
               />

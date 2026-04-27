@@ -70,6 +70,28 @@ export const BUSINESS_TYPES = {
         hasTableQR: true,
         tableLabel: 'Комната',
     },
+    RESTAURANT_CHAIN: {
+        key: 'RESTAURANT_CHAIN',
+        icon: '🌐',
+        label: 'Сеть ресторанов',
+        route: 'menu',
+        color: 'orange',
+        namePlaceholder: "Сеть ресторанов 'СушиБар'",
+        subdomainPlaceholder: 'sushi-bar-chain',
+        nameLabel: 'Название сети ресторанов',
+        viewLabel: 'Посмотреть сеть ресторанов',
+        overviewLabel: 'Обзор вашей сети ресторанов',
+        qrLabel: 'QR-код сети ресторанов',
+        qrScanLabel: 'просмотра меню сети ресторанов',
+        qrDescription: 'QR-код для всей сети. Используется для быстрого доступа к меню каждой точки.',
+        qrMainTitle: 'QR-код сети',
+        qrMainDescription: 'Ссылка на главную страницу сети ресторанов',
+        itemsLabel: 'Блюда',
+        popularLabel: 'Популярные блюда',
+        tip: '💡 Совет: Укажите общую концепцию сети и первые точки для удобства управления!',
+        hasTableQR: true,
+        tableLabel: 'Стол',
+    },
 };
 
 /**
@@ -96,5 +118,23 @@ export const BUSINESS_TYPE_OPTIONS = [
         icon: BUSINESS_TYPES.RESTAURANT.icon,
         label: BUSINESS_TYPES.RESTAURANT.label,
         color: BUSINESS_TYPES.RESTAURANT.color,
+    },
+    {
+        key: BUSINESS_TYPES.ONLINE_STORE.key,
+        icon: BUSINESS_TYPES.ONLINE_STORE.icon,
+        label: BUSINESS_TYPES.ONLINE_STORE.label,
+        color: BUSINESS_TYPES.ONLINE_STORE.color,
+    },
+    {
+        key: BUSINESS_TYPES.HOTEL.key,
+        icon: BUSINESS_TYPES.HOTEL.icon,
+        label: BUSINESS_TYPES.HOTEL.label,
+        color: BUSINESS_TYPES.HOTEL.color,
+    },
+    {
+        key: BUSINESS_TYPES.RESTAURANT_CHAIN.key,
+        icon: BUSINESS_TYPES.RESTAURANT_CHAIN.icon,
+        label: BUSINESS_TYPES.RESTAURANT_CHAIN.label,
+        color: BUSINESS_TYPES.RESTAURANT_CHAIN.color,
     }
 ];

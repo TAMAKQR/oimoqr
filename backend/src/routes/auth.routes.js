@@ -13,6 +13,11 @@ const registerValidation = [
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
   body('name').trim().notEmpty().withMessage('Name is required'),
   body('restaurantName').trim().notEmpty().withMessage('Restaurant name is required'),
+  body('businessType')
+    .trim()
+    .notEmpty().withMessage('Business type is required')
+    .isIn(['RESTAURANT', 'ONLINE_STORE', 'HOTEL', 'RESTAURANT_CHAIN'])
+    .withMessage('Invalid business type'),
   body('subdomain')
     .trim()
     .notEmpty().withMessage('Subdomain is required')
