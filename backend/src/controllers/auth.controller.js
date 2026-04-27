@@ -163,6 +163,8 @@ export const login = async (req, res, next) => {
         id: true,
         name: true,
         subdomain: true,
+        businessType: true,
+        sharedMenuSourceRestaurantId: true,
         socialLinks: true,
         subscriptions: {
           select: {

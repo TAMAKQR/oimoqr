@@ -146,6 +146,16 @@ const RestaurantSettingsPage = () => {
     selectedRestaurant?.sharedMenuSourceRestaurantId !== selectedRestaurantId
   );
 
+  const selectedBusinessType = getBusinessType(selectedRestaurant?.businessType);
+  const entityLabel = selectedRestaurant ? selectedBusinessType.label : 'Заведение';
+  const entityLabelLower = selectedRestaurant ? selectedBusinessType.label.toLowerCase() : 'заведение';
+  const entityLabelGenitive = selectedRestaurant
+    ? (selectedBusinessType.key === 'RESTAURANT' ? 'ресторана'
+      : selectedBusinessType.key === 'ONLINE_STORE' ? 'магазина'
+        : selectedBusinessType.key === 'HOTEL' ? 'отеля'
+          : selectedBusinessType.label.toLowerCase())
+    : 'заведения';
+
   const renderScheduleEditor = (schedule, setSchedule, inputPrefix) => Object.entries(DAY_LABELS).map(([day, label]) => (
     <div key={`${inputPrefix}-${day}`} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
       <div className="w-32 font-medium text-gray-700">{label}</div>
@@ -320,7 +330,7 @@ const RestaurantSettingsPage = () => {
     const restaurant = getSelectedRestaurant();
     if (!restaurant) return;
 
-    const confirmText = `Вы уверены, что хотите УДАЛИТЬ ресторан "${restaurant.name}"?`;
+    const confirmText = `Вы уверены, что хотите УДАЛИТЬ ${selectedBusinessType.label.toLowerCase()} "${restaurant.name}"?`;
     const confirmText2 = 'Это действие НЕОБРАТИМО! Все данные (меню, категории, блюда, модификаторы) будут удалены навсегда.';
 
     const confirmed = await confirmDialog(`${confirmText}\n\n${confirmText2}`, {
@@ -335,7 +345,7 @@ const RestaurantSettingsPage = () => {
     }
 
     // Дополнительное подтверждение
-    const finalConfirm = prompt(`Введите название ресторана "${restaurant.name}" для подтверждения удаления:`);
+    const finalConfirm = prompt(`Введите название ${selectedBusinessType.label.toLowerCase()} "${restaurant.name}" для подтверждения удаления:`);
     if (finalConfirm !== restaurant.name) {
       toast.error('Название не совпадает. Удаление отменено.');
       return;
@@ -344,12 +354,12 @@ const RestaurantSettingsPage = () => {
     try {
       setSaving(true);
       await restaurantService.deleteRestaurant(selectedRestaurantId);
-      toast.success('Ресторан успешно удален');
+      toast.success(`${selectedBusinessType.label} успешно удален`);
       // Обновляем данные и переходим на dashboard
       await refreshUserData();
       navigate('/dashboard');
     } catch (err) {
-      const errorMsg = err.response?.data?.message || err.response?.data?.error || 'Ошибка при удалении ресторана';
+      const errorMsg = err.response?.data?.message || err.response?.data?.error || `Ошибка при удалении ${selectedBusinessType.label.toLowerCase()}`;
       toast.error(errorMsg);
       console.error(err);
     } finally {
@@ -364,7 +374,7 @@ const RestaurantSettingsPage = () => {
     }
 
     if (!selectedRestaurantId) {
-      toast.error('Выберите ресторан');
+      toast.error('Выберите заведение');
       return;
     }
 
@@ -496,14 +506,14 @@ const RestaurantSettingsPage = () => {
     <DashboardLayout userData={userData} selectedRestaurantId={selectedRestaurantId}>
       <div className="max-w-3xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Настройки ресторана</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Настройки {entityLabelGenitive}</h1>
           <p className="text-gray-500 text-sm mt-1">Основные параметры и внешний вид</p>
         </div>
 
         {/* Restaurant Selector */}
         {userData && (
           <div className="mb-8">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Выберите ресторан</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Выберите {selectedRestaurant ? entityLabelLower : 'заведение'}</label>
             <RestaurantSelector
               userData={userData}
               selectedRestaurantId={selectedRestaurantId}
@@ -518,8 +528,8 @@ const RestaurantSettingsPage = () => {
         {selectedRestaurantId && (
           <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             {isInheritedSettingsRestaurant
-              ? 'Часть настроек (описание, страна/город, валюта, логотип, баннеры, тема и стиль карточек) наследуется от главного ресторана и недоступна для изменения в филиале.'
-              : 'Вы редактируете главный ресторан. Все настройки доступны.'}
+              ? `Часть настроек (описание, страна/город, валюта, логотип, баннеры, тема и стиль карточек) наследуется от главного ${entityLabelLower} и недоступна для изменения в филиале.`
+              : `Вы редактируете главный ${entityLabelLower}. Все настройки доступны.`}
           </div>
         )}
 
@@ -531,7 +541,7 @@ const RestaurantSettingsPage = () => {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Название ресторана *</label>
+                  <label className="block text-sm font-medium mb-1">{selectedBusinessType.nameLabel} *</label>
                   <input
                     type="text"
                     value={name}
@@ -548,7 +558,7 @@ const RestaurantSettingsPage = () => {
                     onChange={(e) => setDescription(e.target.value)}
                     className="input w-full"
                     rows="3"
-                    placeholder="Например: Краткое описание вашего ресторана"
+                    placeholder={`Например: Краткое описание вашего ${entityLabelLower}`}
                     disabled={isInheritedSettingsRestaurant}
                   />
                 </div>
@@ -647,7 +657,7 @@ const RestaurantSettingsPage = () => {
 
             {/* Logo */}
             <div className="bg-white rounded-xl border border-gray-100 p-5">
-              <h2 className="text-xl font-bold mb-4">Логотип ресторана</h2>
+              <h2 className="text-xl font-bold mb-4">Логотип {entityLabelLower}</h2>
 
               {getSelectedRestaurant()?.logo ? (
                 /* Compact view when logo exists */
@@ -881,7 +891,7 @@ const RestaurantSettingsPage = () => {
                   />
                   <span className="text-sm font-mono text-gray-700">{primaryColor}</span>
                 </div>
-                <p className="text-xs text-gray-500">Цвет сохранится для этого ресторана и будет применяться в меню.</p>
+                <p className="text-xs text-gray-500">Цвет сохранится для этого {entityLabelLower} и будет применяться в меню.</p>
               </div>
 
               <ThemeSwitcher inline />
@@ -1084,7 +1094,7 @@ const RestaurantSettingsPage = () => {
                           placeholder="5"
                         />
                         <p className="text-sm text-gray-500 mt-1">
-                          Максимальное расстояние доставки от вашего ресторана. Зона показана на карте.
+                          Максимальное расстояние доставки от вашего {entityLabelLower}. Зона показана на карте.
                         </p>
                       </div>
                     </div>
@@ -1382,7 +1392,7 @@ const RestaurantSettingsPage = () => {
                     className="w-5 h-5"
                   />
                   <label htmlFor="isTemporarilyClosed" className="font-medium text-gray-700">
-                    🚫 Ресторан временно закрыт
+                    🚫 {entityLabel} временно закрыт
                   </label>
                 </div>
 
@@ -1440,7 +1450,7 @@ const RestaurantSettingsPage = () => {
             <div className="bg-red-50 rounded-xl border-2 border-red-200 p-5 mt-8">
               <h2 className="text-xl font-bold text-red-600 mb-2">Опасная зона</h2>
               <p className="text-sm text-gray-700 mb-4">
-                Удаление ресторана необратимо. Все данные (меню, категории, блюда, модификаторы) будут удалены навсегда.
+                Удаление {entityLabelLower} необратимо. Все данные (меню, категории, блюда, модификаторы) будут удалены навсегда.
               </p>
               <button
                 type="button"
@@ -1448,7 +1458,7 @@ const RestaurantSettingsPage = () => {
                 className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
                 disabled={saving}
               >
-                🗑️ Удалить ресторан
+                🗑️ Удалить {entityLabelLower}
               </button>
             </div>
           )
