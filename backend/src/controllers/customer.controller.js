@@ -903,6 +903,19 @@ export const createCustomerOrder = async (req, res, next) => {
 
         const normalizedDeliveryType = deliveryType || 'delivery';
 
+        const restaurantDetails = await prisma.restaurant.findUnique({
+            where: { id: restaurantId },
+            select: { id: true, businessType: true }
+        });
+
+        if (!restaurantDetails) {
+            return res.status(404).json({ error: 'Restaurant not found' });
+        }
+
+        if (restaurantDetails.businessType === 'ONLINE_STORE' && normalizedDeliveryType === 'dine_in') {
+            return res.status(400).json({ error: 'Заказ в зале недоступен для магазина' });
+        }
+
         const requestedBonusToSpend = bonusToSpend !== undefined && bonusToSpend !== null
             ? parseInt(bonusToSpend, 10)
             : 0;
@@ -1103,7 +1116,9 @@ export const createCustomerOrder = async (req, res, next) => {
             notes: comment || null,
             deliveryType: normalizedDeliveryType,
             paymentMethod: paymentMethod || 'cash',
-            tableNumber: tableNumber || null,
+            tableNumber: restaurantDetails.businessType === 'ONLINE_STORE'
+                ? null
+                : (normalizedDeliveryType === 'dine_in' ? tableNumber || null : null),
             customerAddressId: customerAddressId || null,
             items: {
                 create: trustedItems
