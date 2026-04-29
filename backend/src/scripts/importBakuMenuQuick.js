@@ -53,7 +53,9 @@ async function importBakuMenu() {
         phone: '+905545334946',
         whatsapp: '905545334946',
         currency: '₺',
-        userId: owner.id,
+        owner: {
+          connect: { id: owner.id }
+        },
         subscription: {
           create: {
             plan: 'PREMIUM',
@@ -206,7 +208,7 @@ async function importBakuMenu() {
       for (let dishIdx = 0; dishIdx < cat.dishes.length; dishIdx++) {
         const dishName = cat.dishes[dishIdx];
         const image = getNextImage();
-        
+
         await prisma.dish.upsert({
           where: { id: `${category.id}-${dishName}` },
           update: { image },
