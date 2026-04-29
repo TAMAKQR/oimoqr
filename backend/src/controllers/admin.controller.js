@@ -9,6 +9,16 @@ let adminDashboardStatsCache = {
   payload: null
 };
 
+const isPricingTierCompatibleWithBusinessType = (pricingTier, businessType) => {
+  const tierBusinessType = pricingTier?.businessType || 'RESTAURANT';
+  return tierBusinessType === 'ALL' || tierBusinessType === businessType;
+};
+
+const getIncompatibleBusinessTypes = (restaurants, pricingTier) => {
+  const businessTypes = [...new Set((restaurants || []).map((restaurant) => restaurant.businessType || 'RESTAURANT'))];
+  return businessTypes.filter((businessType) => !isPricingTierCompatibleWithBusinessType(pricingTier, businessType));
+};
+
 // ======================== DASHBOARD STATS ========================
 
 export const getDashboardStats = async (req, res, next) => {
@@ -227,6 +237,13 @@ export const updateUserSubscription = async (req, res, next) => {
         return res.status(404).json({ error: 'Pricing tier not found' });
       }
 
+      const incompatibleBusinessTypes = getIncompatibleBusinessTypes(user.restaurants, pricingTier);
+      if (incompatibleBusinessTypes.length > 0) {
+        return res.status(400).json({
+          error: `Невозможно применить тариф "${pricingTier.name}" к типу бизнеса: ${incompatibleBusinessTypes.join(', ')}. Выберите тариф для этого типа бизнеса или универсальный тариф.`
+        });
+      }
+
       // Проверяем, не превышает ли количество ресторанов лимит нового тарифа
       const restaurantCount = user.restaurants.length;
       if (pricingTier.maxRestaurants && restaurantCount > pricingTier.maxRestaurants) {
@@ -324,6 +341,7 @@ export const updateSubscription = async (req, res, next) => {
       where: { id },
       include: {
         user: true,
+        restaurant: true,
         pricingTier: true
       }
     });
@@ -342,6 +360,12 @@ export const updateSubscription = async (req, res, next) => {
 
       if (!pricingTier) {
         return res.status(404).json({ error: 'Pricing tier not found' });
+      }
+
+      if (!isPricingTierCompatibleWithBusinessType(pricingTier, subscription.restaurant?.businessType || 'RESTAURANT')) {
+        return res.status(400).json({
+          error: `Невозможно применить тариф "${pricingTier.name}" к типу бизнеса: ${subscription.restaurant?.businessType || 'RESTAURANT'}. Выберите тариф для этого типа бизнеса или универсальный тариф.`
+        });
       }
 
       // Проверяем количество ресторанов пользователя
@@ -684,6 +708,8 @@ export const getAllUsers = async (req, res, next) => {
         // Включаем все подписки пользователя с информацией о тарифе
         subscriptions: {
           select: {
+            id: true,
+            pricingTierId: true,
             status: true,
             plan: true,
             currentPeriodEnd: true,

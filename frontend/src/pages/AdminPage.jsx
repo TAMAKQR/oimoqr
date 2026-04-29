@@ -7,6 +7,35 @@ import DashboardLayout from '../components/DashboardLayout';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 
+const BUSINESS_TYPE_LABELS = {
+  RESTAURANT: { label: 'Ресторан', icon: '🍽', badge: 'bg-blue-100 text-blue-700' },
+  ONLINE_STORE: { label: 'Магазин', icon: '🛍', badge: 'bg-purple-100 text-purple-700' },
+  HOTEL: { label: 'Отель', icon: '🏨', badge: 'bg-green-100 text-green-700' },
+  ALL: { label: 'Универсальный', icon: '📦', badge: 'bg-gray-100 text-gray-700' }
+};
+
+const getBusinessTypeMeta = (businessType) => (
+  BUSINESS_TYPE_LABELS[businessType] || BUSINESS_TYPE_LABELS.RESTAURANT
+);
+
+const getPrimaryBusinessType = (user) => {
+  const restaurantTypes = user?.restaurants?.map((restaurant) => restaurant.businessType).filter(Boolean) || [];
+  const uniqueTypes = [...new Set(restaurantTypes)];
+
+  if (uniqueTypes.length === 1) {
+    return uniqueTypes[0];
+  }
+
+  return uniqueTypes.length > 1 ? 'ALL' : 'RESTAURANT';
+};
+
+const getCompatiblePricingTiers = (pricingTiers, businessType) => (
+  pricingTiers.filter((tier) => {
+    const tierBusinessType = tier.businessType || 'RESTAURANT';
+    return tierBusinessType === 'ALL' || (businessType !== 'ALL' && tierBusinessType === businessType);
+  })
+);
+
 const AdminPage = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -98,8 +127,15 @@ const AdminPage = () => {
   const handleOpenSubscriptionModal = (user) => {
     setEditingUser(user);
     const today = new Date().toISOString().split('T')[0];
+    const businessType = getPrimaryBusinessType(user);
+    const currentPricingTierId = user.subscriptions?.[0]?.pricingTierId || '';
+    const compatibleTiers = getCompatiblePricingTiers(pricingTiers, businessType);
+    const pricingTierId = compatibleTiers.some((tier) => tier.id === currentPricingTierId)
+      ? currentPricingTierId
+      : '';
+
     setSubscriptionForm({
-      pricingTierId: user.subscriptions?.[0]?.pricingTierId || '',
+      pricingTierId,
       durationMonths: 1,
       startDate: today,
       endDate: ''
@@ -362,9 +398,9 @@ const AdminPage = () => {
                           defaultValue=""
                         >
                           <option value="">{t('admin.table.selectPricing')}</option>
-                          {pricingTiers.map((tier) => (
+                          {getCompatiblePricingTiers(pricingTiers, getPrimaryBusinessType(user)).map((tier) => (
                             <option key={tier.id} value={tier.id}>
-                              {tier.name} (${tier.price})
+                              {tier.name} (${tier.price}) {getBusinessTypeMeta(tier.businessType || 'RESTAURANT').icon}
                             </option>
                           ))}
                         </select>
@@ -483,15 +519,28 @@ const AdminPage = () => {
             <h2 className="text-xl font-bold mb-4">{t('admin.modals.subscriptionTitle')}</h2>
             <p className="text-sm text-gray-600 mb-4">
               {t('admin.table.user')}: <strong>{editingUser?.name}</strong>
-              {editingUser?.restaurants?.[0]?.businessType && (
-                <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-medium ${editingUser.restaurants[0].businessType === 'ONLINE_STORE' ? 'bg-purple-100 text-purple-700' :
-                  editingUser.restaurants[0].businessType === 'HOTEL' ? 'bg-green-100 text-green-700' :
-                    'bg-blue-100 text-blue-700'
-                  }`}>
-                  {editingUser.restaurants[0].businessType === 'ONLINE_STORE' ? '🛍 Магазин' : editingUser.restaurants[0].businessType === 'HOTEL' ? '🏨 Отель' : '🍽 Ресторан'}
-                </span>
-              )}
+              {editingUser?.restaurants?.length > 0 && (() => {
+                const businessType = getPrimaryBusinessType(editingUser);
+                const meta = getBusinessTypeMeta(businessType);
+
+                return (
+                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-medium ${meta.badge}`}>
+                    {meta.icon} {businessType === 'ALL' ? 'Несколько типов' : meta.label}
+                  </span>
+                );
+              })()}
             </p>
+
+            {editingUser?.restaurants?.length > 0 && getCompatiblePricingTiers(pricingTiers, getPrimaryBusinessType(editingUser)).length === 0 && (
+              <p className="text-sm text-amber-700 bg-amber-50 border border-amber-100 rounded-md px-3 py-2 mb-4">
+                Для этого типа бизнеса нет активных тарифов. Создайте тариф в разделе управления тарифами.
+              </p>
+            )}
+            {editingUser?.restaurants?.length > 1 && getPrimaryBusinessType(editingUser) === 'ALL' && (
+              <p className="text-sm text-gray-600 bg-gray-50 border border-gray-100 rounded-md px-3 py-2 mb-4">
+                У пользователя несколько типов бизнеса, поэтому доступны только универсальные тарифы.
+              </p>
+            )}
 
             <form onSubmit={handleSubmitSubscription} className="space-y-4">
               <div>
@@ -505,9 +554,9 @@ const AdminPage = () => {
                   required
                 >
                   <option value="">{t('admin.table.selectPricing')}</option>
-                  {pricingTiers.map((tier) => (
+                  {getCompatiblePricingTiers(pricingTiers, getPrimaryBusinessType(editingUser)).map((tier) => (
                     <option key={tier.id} value={tier.id}>
-                      {tier.name} (${tier.price}/мес) {tier.businessType === 'ONLINE_STORE' ? '🛍' : tier.businessType === 'HOTEL' ? '🏨' : tier.businessType === 'ALL' ? '📦' : '🍽'}
+                      {tier.name} (${tier.price}/мес) {getBusinessTypeMeta(tier.businessType || 'RESTAURANT').icon}
                     </option>
                   ))}
                 </select>
