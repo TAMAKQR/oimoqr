@@ -30,7 +30,7 @@ export const BUSINESS_TYPES = {
         key: 'ONLINE_STORE',
         icon: '🛍',
         label: 'Магазин',
-        route: 'shop',
+        route: 'menu',
         color: 'purple',
         namePlaceholder: "Магазин 'Свежесть'",
         subdomainPlaceholder: 'my-store',
