@@ -24,8 +24,8 @@ nslookup api.oimoqr.com
 Если еще не создали:
 
 ```powershell
-# Подключитесь к production БД
-$env:DATABASE_URL="ваш-supabase-url"
+# Подключитесь к production БД (используя External URL от Render)
+$env:DATABASE_URL="ваш-render-external-url"
 
 # Создайте админа
 Set-Location "d:\QR MENU\backend"
@@ -83,14 +83,14 @@ npm run create-admin admin@oimoqr.com SecurePassword123 "Admin Name"
    - Добавьте email для алертов
 
 ### 3. Supabase Monitoring
+### 3. Render Database Monitoring
 
-1. Зайдите в [Supabase Dashboard](https://app.supabase.com)
-2. Выберите проект **oimoqr-db**
-3. Перейдите в **Database → Usage**
+1. Зайдите в Render Dashboard
+2. Выберите вашу базу данных **oimoqr-db**
+3. Перейдите в **Info** и **Metrics**
 4. Отслеживайте:
-   - Размер БД (лимит 500MB)
-   - Количество подключений
-   - Bandwidth (лимит 2GB/месяц)
+   - Storage (лимит 1GB)
+   - CPU / Memory Usage
 
 ### 4. Uptime мониторинг
 
@@ -117,12 +117,12 @@ npm run create-admin admin@oimoqr.com SecurePassword123 "Admin Name"
 
 ### 2. Настройте backup базы данных
 
-**Supabase автоматически делает backup**, но для надежности:
+**Render на бесплатном плане НЕ делает автоматических бэкапов.**
 
-1. В Supabase перейдите в **Database → Backups**
-2. Убедитесь, что Point-in-Time Recovery включен
-3. Сделайте ручной backup:
-   - **Database → Backups → Create backup**
+**Решение:**
+1. **Перейдите на платный план** ($20/месяц за DB) для автоматических бэкапов.
+2. **Делайте ручные бэкапы** с помощью `pg_dump` и External Connection URL.
+   - `pg_dump "YOUR_EXTERNAL_DB_URL" > backup.sql`
 
 ### 3. Проверьте environment variables
 
@@ -141,7 +141,6 @@ git log --all --full-history --source -- **/.env
 - GitHub: Settings → Password and authentication → Two-factor authentication
 - Vercel: Settings → Security → Two-Factor Authentication
 - Render: Account Settings → Security
-- Supabase: Account → Security
 
 ---
 
@@ -325,12 +324,12 @@ app.use(
 - Backend часто засыпает (плохой UX)
 - Нужна стабильная производительность
 - > 10 активных ресторанов
+ 
+**Render DB Starter** ($20/мес) - когда:
 
-**Supabase Pro** ($25/мес) - когда:
-
-- Database size > 400MB
-- Bandwidth > 1.5GB/месяц
-- Нужны ежедневные backups
+- Database size > 800MB
+- Нужны автоматические бэкапы
+- Приближается 90-дневный лимит бесплатного плана
 
 ### Когда нужен dedicated сервер?
 

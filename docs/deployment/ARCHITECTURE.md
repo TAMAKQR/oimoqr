@@ -29,7 +29,7 @@
          │                    ▼                   ▼
          │            ┌──────────────┐   ┌──────────────┐
          │            │  DATABASE    │   │   STORAGE    │
-         │            │  Render PostgreSQL    │   │  Cloudinary  │
+         │            │  Render      │   │  Cloudinary  │
          │            │  PostgreSQL  │   │   Images     │
          │            └──────────────┘   └──────────────┘
          │                    │
@@ -196,7 +196,7 @@ Frontend
 ┌─────────────────────────────────────────────────────────┐
 │  Layer 5: Infrastructure Security                       │
 │  - Environment Variables (secrets)                      │
-│  - Database Encryption (Render PostgreSQL)                      │
+│  - Database Encryption (Render)                         │
 │  - Secure Storage (Cloudinary)                         │
 └─────────────────────────────────────────────────────────┘
 ```

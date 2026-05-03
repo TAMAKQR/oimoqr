@@ -109,8 +109,7 @@ const LanguageSettingsPage = () => {
 
       const data = await response.json();
       setDishes(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error('Error loading dishes:', err);
+    } catch (err) { // eslint-disable-line no-unused-vars
       setDishes([]);
     }
   };
@@ -132,8 +131,7 @@ const LanguageSettingsPage = () => {
 
       const data = await response.json();
       setCategories(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error('Error loading categories:', err);
+    } catch (err) { // eslint-disable-line no-unused-vars
       setCategories([]);
     }
   };
@@ -146,8 +144,8 @@ const LanguageSettingsPage = () => {
       );
       const data = await response.json();
       setTranslations(data || []);
-    } catch (err) {
-      console.error('Error loading translations:', err);
+    } catch (err) { // eslint-disable-line no-unused-vars
+      // Error is not critical, just means no translations
     }
   };
 
@@ -159,8 +157,8 @@ const LanguageSettingsPage = () => {
       );
       const data = await response.json();
       setCategoryTranslations(data || []);
-    } catch (err) {
-      console.error('Error loading category translations:', err);
+    } catch (err) { // eslint-disable-line no-unused-vars
+      // Error is not critical, just means no translations
     }
   };
 

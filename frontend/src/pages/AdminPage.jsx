@@ -103,7 +103,6 @@ const AdminPage = () => {
       setStats(statsRes.data);
       setPricingTiers(pricingRes.data);
     } catch (err) {
-      console.error('Error loading data:', err);
       showNotification(t('common.error'), 'error');
     } finally {
       setLoading(false);
@@ -118,7 +117,6 @@ const AdminPage = () => {
       showNotification(t('admin.messages.subscriptionUpdated'));
       setShowSubscriptionModal(false);
     } catch (err) {
-      console.error('Error updating user subscription:', err);
       const errorMessage = err.response?.data?.error || err.message || t('common.error');
       showNotification(`${t('common.error')}: ${errorMessage}`, 'error');
     }
@@ -190,7 +188,6 @@ const AdminPage = () => {
       await loadData();
       showNotification(t('admin.messages.userDeactivated'));
     } catch (err) {
-      console.error('Error deactivating user:', err);
       const errorMessage = err.response?.data?.error || err.message || t('common.error');
       showNotification(`${t('common.error')}: ${errorMessage}`, 'error');
     }
@@ -215,7 +212,6 @@ const AdminPage = () => {
       await loadData();
       showNotification(t('admin.messages.userDeleted'));
     } catch (err) {
-      console.error('Error deleting user:', err);
       const errorMessage = err.response?.data?.error || err.message || t('common.error');
       showNotification(`${t('common.error')}: ${errorMessage}`, 'error');
     }
@@ -248,7 +244,6 @@ const AdminPage = () => {
       handleCloseEditModal();
       showNotification(t('admin.messages.credentialsUpdated'));
     } catch (err) {
-      console.error('Error updating credentials:', err);
       const errorMessage = err.response?.data?.error || err.message || t('common.error');
       showNotification(`${t('common.error')}: ${errorMessage}`, 'error');
     }

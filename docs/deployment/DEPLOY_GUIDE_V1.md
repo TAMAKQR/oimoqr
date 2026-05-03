@@ -62,51 +62,47 @@ git push -u origin main
 
 ---
 
-## 🗄️ Шаг 2: База данных на Render PostgreSQL (10 минут)
+## 🗄️ Шаг 2: База данных на Render (10 минут)
 
 ### 2.1 Создайте аккаунт
 
-1. Перейдите на https://Render PostgreSQL.com
-2. Нажмите "Start your project"
+1. Перейдите на https://render.com
+2. Нажмите "Get Started"
 3. Войдите через GitHub (рекомендуется)
 
-### 2.2 Создайте проект
+### 2.2 Создайте базу данных
 
-1. Нажмите "New Project"
+1. Нажмите "New +" → "PostgreSQL"
 2. Заполните:
-   - **Name:** oimoqr-db
-   - **Database Password:** Придумайте надежный пароль (сохраните его!)
-   - **Region:** Ohio (Europe) - ближайший к СНГ
-   - **Pricing Plan:** Free
-3. Нажмите "Create new project"
-4. Подождите 2-3 минуты (создается база данных)
+   - **Name:** `oimoqr-db`
+   - **Database:** `oimoqr_db` (или оставьте по умолчанию)
+   - **User:** `oimoqr_user` (или оставьте по умолчанию)
+   - **Region:** Frankfurt (EU Central) - ближайший к СНГ
+   - **Plan:** Free
+3. Нажмите "Create Database"
+4. Подождите 2-3 минуты, пока база данных создается.
 
 ### 2.3 Получите Connection String
 
-1. Перейдите в **Settings** (иконка шестеренки слева)
-2. Выберите **Database**
-3. Прокрутите до **Connection string**
-4. Выберите **URI** (не Session mode!)
-5. Скопируйте строку подключения
-6. Замените `[YOUR-PASSWORD]` на ваш пароль из шага 2.2
+1. На странице вашей новой базы данных найдите раздел **Connections**.
+2. Скопируйте строку **"Internal Database URL"**. Это ваш `DATABASE_URL`.
 
 Пример:
-
-```
-postgresql://postgres.xxxxx:ВАШ_ПАРОЛЬ@aws-0-eu-central-1.pooler.Render PostgreSQL.com:5432/postgres
-```
+`postgresql://oimoqr_user:ВАШ_ПАРОЛЬ@dpg-xxxx.frankfurt-postgres.render.com/oimoqr_db`
 
 ### 2.4 Примените миграции
 
+**Важно:** Для production базы данных используется команда `migrate deploy`, а не `db push`. Это гарантирует применение версионированных миграций и предотвращает потерю данных.
+
 ```powershell
 # Установите временную переменную окружения
-$env:DATABASE_URL="postgresql://postgres.xxxxx:ВАШ_ПАРОЛЬ@aws-0-eu-central-1.pooler.Render PostgreSQL.com:5432/postgres"
+$env:DATABASE_URL="СКОПИРОВАННАЯ_СТРОКА_ИЗ_RENDER"
 
 # Перейдите в backend
 Set-Location "d:\QR MENU\backend"
 
 # Примените миграции
-npx prisma db push
+npx prisma migrate deploy
 
 # Сгенерируйте Prisma Client
 npx prisma generate
@@ -142,8 +138,8 @@ npm run create-admin admin@yourdomain.com SecurePassword123 "Admin Name"
 
 Заполните форму:
 
-- **Name:** `qr-menu-backend` (или любое имя)
-- **Region:** Ohio (EU) или ближайший
+- **Name:** `oimoqr-backend` (для консистентности)
+- **Region:** Frankfurt (EU Central)
 - **Branch:** `main`
 - **Root Directory:** `backend`
 - **Runtime:** Node

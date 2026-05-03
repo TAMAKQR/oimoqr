@@ -32,7 +32,7 @@ const RegisterPage = () => {
           setTrialDays(data.days || 7);
         }
       } catch (err) {
-        console.error('Error fetching trial config:', err);
+        // console.error('Error fetching trial config:', err);
       }
     };
     fetchTrialConfig();
@@ -57,11 +57,8 @@ const RegisterPage = () => {
     setError('');
     setLoading(true);
 
-    console.log('🚀 Submitting registration:', formData);
-
     try {
       const response = await authService.register(formData);
-      console.log('✅ Registration successful:', response);
 
       // Сохраняем данные пользователя
       setAuth(response.user, response.token);
@@ -77,8 +74,6 @@ const RegisterPage = () => {
         navigate('/dashboard');
       }, 500);
     } catch (err) {
-      console.error('❌ Registration error:', err);
-      console.error('Error response:', err.response);
       setError(err.response?.data?.error || 'Ошибка регистрации');
       toast.error(err.response?.data?.error || 'Ошибка регистрации');
       setLoading(false);

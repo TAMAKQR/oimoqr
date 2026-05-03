@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { getBySubdomain } from '../api/restaurantApi';
-import { getProductsByRestaurant } from '../api/productApi';
-import LoadingSpinner from '../components/common/LoadingSpinner';
-import ProductCard from '../components/products/ProductCard'; // Мы создадим этот компонент позже
+import { restaurantService } from '../services/restaurantService';
+import api from '../services/api';
+// import ProductCard from '../components/products/ProductCard'; // Мы создадим этот компонент позже
 import { useTranslation } from 'react-i18next';
 
 const ShopPage = () => {
@@ -18,19 +17,19 @@ const ShopPage = () => {
         const fetchShopData = async () => {
             try {
                 setLoading(true);
-                const restaurantData = await getBySubdomain(subdomain);
+                const restaurantData = await restaurantService.getBySubdomain(subdomain);
                 setRestaurant(restaurantData);
 
-                if (restaurantData.restaurantType !== 'STORE') {
+                if (restaurantData.businessType !== 'ONLINE_STORE') {
                     setError('Этот проект не является магазином.');
                     return;
                 }
 
-                const productsData = await getProductsByRestaurant(restaurantData.id);
+                const productsResponse = await api.get(`/products/restaurant/${restaurantData.id}`);
+                const productsData = productsResponse.data;
                 setProducts(productsData);
             } catch (err) {
                 setError(err.response?.data?.error || 'Не удалось загрузить данные магазина.');
-                console.error(err);
             } finally {
                 setLoading(false);
             }
@@ -40,7 +39,14 @@ const ShopPage = () => {
     }, [subdomain]);
 
     if (loading) {
-        return <LoadingSpinner message={t('common.loading')} fullScreen />;
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="text-center">
+                    <div className="w-16 h-16 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="mt-4 text-gray-600">{t('common.loading')}</p>
+                </div>
+            </div>
+        );
     }
 
     if (error) {

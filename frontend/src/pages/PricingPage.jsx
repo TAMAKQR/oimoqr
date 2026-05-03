@@ -52,8 +52,7 @@ const PricingPage = () => {
                 };
             });
             setPricingTiers(parsedTiers);
-        } catch (err) {
-            console.error('Error loading pricing tiers:', err);
+        } catch (err) { // eslint-disable-line no-unused-vars
         } finally {
             setLoading(false);
         }

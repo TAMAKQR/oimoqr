@@ -22,7 +22,6 @@ export default function CustomerRestaurantsPage() {
             const data = await customerService.getMyRestaurants();
             setRestaurants(data.restaurants || []);
         } catch (error) {
-            console.error('Error loading restaurants:', error);
             toast.error('Ошибка загрузки ресторанов');
         } finally {
             setLoading(false);

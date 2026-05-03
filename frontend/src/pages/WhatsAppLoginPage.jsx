@@ -78,8 +78,6 @@ const WhatsAppLoginPage = () => {
             setStep(2);
             setRetryAfter(60);
         } catch (error) {
-            console.error('Failed to send code:', error);
-
             if (error.response?.status === 429) {
                 const retry = error.response.data.retryAfter || 60;
                 setRetryAfter(retry);
@@ -131,8 +129,6 @@ const WhatsAppLoginPage = () => {
                 navigate('/customer/profile');
             }
         } catch (error) {
-            console.error('Failed to verify code:', error);
-
             if (error.response?.data?.attemptsLeft !== undefined) {
                 toast.error(`Неверный код. Осталось попыток: ${error.response.data.attemptsLeft}`);
             } else {

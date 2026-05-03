@@ -263,6 +263,7 @@ const DashboardPage = () => {
     } catch (err) {
       if (err?.status === 403) return;
       console.error('Error polling orders:', err);
+      // console.error('Error polling orders:', err);
     }
   };
 

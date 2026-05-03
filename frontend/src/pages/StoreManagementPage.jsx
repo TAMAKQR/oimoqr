@@ -45,7 +45,6 @@ const StoreManagementPage = () => {
             }
             setProducts(allProducts);
         } catch (error) {
-            console.error('Error loading store data:', error);
             toast.error('Ошибка загрузки данных');
         } finally {
             setLoading(false);

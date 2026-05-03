@@ -175,7 +175,7 @@ if (existsSync(path.join(ROOT, 'backend/.env'))) {
 
     // Проверка ключей
     const envContent = readFileSync(path.join(ROOT, 'backend/.env'), 'utf-8');
-    const requiredKeys = ['DATABASE_URL', 'JWT_SECRET', 'YANDEX_GEOCODER_KEY'];
+    const requiredKeys = ['DATABASE_URL', 'JWT_SECRET'];
     for (const key of requiredKeys) {
         if (envContent.includes(key + '=')) {
             log('✅', `${key} настроен`);

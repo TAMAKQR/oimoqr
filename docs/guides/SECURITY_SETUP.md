@@ -1,4 +1,4 @@
-﻿# 🔒 Настройка безопасности для Production
+﻿﻿# 🔒 Настройка безопасности для Production
 
 > **⚠️ КРИТИЧЕСКИ ВАЖНО:** Следуйте этим инструкциям перед деплоем!
 
@@ -25,26 +25,26 @@ a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2g3h4i5j6k7l8m9n0
 
 ---
 
-### ✅ 2. Настройка Render PostgreSQL Database
+### ✅ 2. Настройка базы данных (Render PostgreSQL)
 
-Ваш текущий DATABASE_URL:
+**Важно:** В документации была путаница между Supabase и Render. Ниже приведены правильные инструкции для **Render PostgreSQL**.
 
-```
-postgresql://postgres:DAS230411Alina%40@db.lsqssdpsozjtmvzfqtws.Render PostgreSQL.co:5432/postgres?sslmode=require
-```
+Ваш `DATABASE_URL` должен выглядеть примерно так (это **Internal Connection String** на Render):
+`postgresql://user:password@host.oregon-postgres.render.com/db_name`
 
 **Проверьте:**
 
 - ✅ Пароль правильно закодирован (`@` = `%40`)
-- ✅ Хост правильный: `db.lsqssdpsozjtmvzfqtws.Render PostgreSQL.co`
+- ✅ Хост правильный (должен заканчиваться на `.render.com`)
 - ✅ SSL включен: `sslmode=require`
 
 **Где найти правильный URL:**
 
-1. Откройте: https://Render PostgreSQL.com/dashboard
+1. Откройте: https://dashboard.render.com
 2. Выберите проект
-3. Settings → Database → Connection string → URI
-4. Скопируйте и замените `[YOUR-PASSWORD]` на ваш пароль
+3. Перейдите к вашей базе данных PostgreSQL
+4. В разделе "Connections" найдите **"Internal Database URL"**
+5. Скопируйте эту строку. Это и есть ваш `DATABASE_URL`.
 
 ---
 
@@ -134,22 +134,21 @@ FRONTEND_URL=https://oimoqr.com
    - **Name:** `oimoqr-backend`
    - **Root Directory:** `backend`
    - **Environment:** `Node`
-   - **Build Command:** `npm install && npx prisma generate && npx prisma migrate deploy`
+   - **Build Command:** `npm install --production=false && npx prisma generate && npx prisma migrate deploy`
    - **Start Command:** `npm start`
    - **Plan:** Free
 
 ### Шаг 2: Добавьте Environment Variables
 
 В Render Dashboard → Environment:
-
 ```env
-DATABASE_URL=postgresql://postgres:DAS230411Alina%40@db.lsqssdpsozjtmvzfqtws.Render PostgreSQL.co:5432/postgres?sslmode=require
+DATABASE_URL=<YOUR_RENDER_DATABASE_URL>
 
 JWT_SECRET=<СГЕНЕРИРОВАННЫЙ_64_СИМВОЛА>
 JWT_EXPIRES_IN=7d
 
 NODE_ENV=production
-PORT=10000
+PORT=10000 # Render предоставляет порт автоматически, но это хорошая практика
 
 FRONTEND_URL=https://oimoqr-frontend.vercel.app
 
@@ -236,7 +235,7 @@ FRONTEND_URL=https://oimoqr-frontend.vercel.app
 ### 1. Проверьте Backend API
 
 ```powershell
-# Health check
+# Health check (убедитесь, что URL правильный)
 curl https://oimoqr-backend.onrender.com/api/health
 
 # Должен вернуть: {"status":"ok"}
@@ -295,8 +294,6 @@ curl https://oimoqr-backend.onrender.com/api/health
 ---
 
 ## 📚 Дополнительные ресурсы
-
-- **Render PostgreSQL Docs:** https://Render PostgreSQL.com/docs
 - **Render Docs:** https://render.com/docs
 - **Vercel Docs:** https://vercel.com/docs
 - **Cloudinary Docs:** https://cloudinary.com/documentation

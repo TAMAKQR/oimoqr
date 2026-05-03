@@ -35,7 +35,6 @@ const CustomersPage = () => {
             const customersData = await api.get(`/restaurants/${restaurantId}/customers`);
             setCustomers(customersData.data.customers || []);
         } catch (error) {
-            console.error('Error loading data:', error);
             toast.error('Ошибка загрузки данных');
             if (error.response?.status === 403) {
                 toast.error('Доступ запрещён');

@@ -64,7 +64,6 @@ const AdminPricingPage = () => {
       setTrialConfig(trialRes.data);
     } catch (err) {
       showNotification('Ошибка при загрузке данных', 'error');
-      console.error(err);
     } finally {
       setLoading(false);
     }

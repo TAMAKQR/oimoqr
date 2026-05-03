@@ -34,7 +34,6 @@ const StaffManagementPage = () => {
       const response = await api.get(`/restaurants/${restaurantId}/staff`);
       setStaff(response.data);
     } catch (err) {
-      console.error('Error loading staff:', err);
       setError('Ошибка при загрузке сотрудников');
     } finally {
       setLoading(false);
@@ -67,7 +66,6 @@ const StaffManagementPage = () => {
       setShowAddForm(false);
       await loadStaff();
     } catch (err) {
-      console.error('Error adding staff:', err);
       setError(err.response?.data?.error || 'Ошибка при добавлении менеджера');
     }
   };
@@ -81,7 +79,6 @@ const StaffManagementPage = () => {
       setSuccess('Роль обновлена успешно!');
       await loadStaff();
     } catch (err) {
-      console.error('Error updating staff:', err);
       setError(err.response?.data?.error || 'Ошибка при обновлении роли');
     }
   };
@@ -102,7 +99,6 @@ const StaffManagementPage = () => {
       setSuccess('Сотрудник удален успешно!');
       await loadStaff();
     } catch (err) {
-      console.error('Error removing staff:', err);
       setError(err.response?.data?.error || 'Ошибка при удалении сотрудника');
     }
   };

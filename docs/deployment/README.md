@@ -127,7 +127,7 @@
 | ---------- | ----------- | ---- | ---------- |
 | Frontend   | Vercel      | Free | $0/мес     |
 | Backend    | Render      | Free | $0/мес     |
-| Database   | Supabase    | Free | $0/мес     |
+| Database   | Render      | Free | $0/мес     |
 | Storage    | Cloudinary  | Free | $0/мес     |
 | Email      | Gmail SMTP  | Free | $0/мес     |
 | Monitoring | UptimeRobot | Free | $0/мес     |
@@ -150,7 +150,6 @@ Health Check: https://backend.oimoqr.com/health
 | ----------- | --------------------------------- |
 | Render      | https://dashboard.render.com      |
 | Vercel      | https://vercel.com/dashboard      |
-| Supabase    | https://supabase.com/dashboard    |
 | Cloudinary  | https://cloudinary.com/console    |
 | UptimeRobot | https://uptimerobot.com/dashboard |
 
@@ -162,14 +161,12 @@ Health Check: https://backend.oimoqr.com/health
 
 - Render: https://status.render.com
 - Vercel: https://www.vercel-status.com
-- Supabase: https://status.supabase.com
 - Cloudinary: https://status.cloudinary.com
 
 ### Документация провайдеров
 
 - Render: https://render.com/docs
 - Vercel: https://vercel.com/docs
-- Supabase: https://supabase.com/docs
 - Cloudinary: https://cloudinary.com/documentation
 
 ---

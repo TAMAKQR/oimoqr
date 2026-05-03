@@ -285,10 +285,9 @@ CLOUDINARY_API_SECRET=REMOVED_CLOUDINARY_API_SECRET
 ### Email не отправляется
 
 **Проверьте Gmail App Password в Render:**
-
 ```env
-EMAIL_USER=yadjekvorobei@gmail.com
-EMAIL_PASSWORD=tflgfblrgijvfutc
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=<YOUR_GMAIL_APP_PASSWORD>
 ```
 
 **Создайте новый App Password:**

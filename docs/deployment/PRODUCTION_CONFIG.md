@@ -5,10 +5,10 @@
 ### ✅ Развернутые сервисы
 
 | Сервис       | URL                        | Статус        |
-| ------------ | -------------------------- | ------------- |
+| ------------ | -------------------------- | ----------------- |
 | **Frontend** | https://oimoqr.com         | ✅ Vercel     |
 | **Backend**  | https://backend.oimoqr.com | ✅ Render     |
-| **Database** | Render PostgreSQL (Ohio)       | ✅ PostgreSQL |
+| **Database** | Render (Frankfurt)         | ✅ PostgreSQL |
 | **Storage**  | Cloudinary                 | ✅ Активен    |
 | **Email**    | Gmail SMTP                 | ✅ Настроен   |
 
@@ -19,9 +19,9 @@
 Текущие переменные окружения на Render:
 
 ```env
-# Database (Supabase)
-DATABASE_URL=postgresql://postgres.ewdctxszewboasgikpce:qrmenu123@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true
-DIRECT_URL=postgresql://postgres.ewdctxszewboasgikpce:qrmenu123@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres
+# Database (Render PostgreSQL)
+DATABASE_URL=postgresql://user:password@host.render.com/db_name
+# DIRECT_URL не требуется для Render, используется только DATABASE_URL
 
 # JWT Authentication
 JWT_SECRET=8cfcac3503c20bf5bb27281429925626b41d50fd95c13a40f67ffb3274a4a1e1d26f70325a11e2843e79e1364b5a25ffb6ecb65dfe62c5dd80eb8f04b83af93e
@@ -41,17 +41,10 @@ UPLOAD_DIR=./uploads
 MAX_FILE_SIZE=5242880
 
 # Email (Gmail SMTP)
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_SECURE=false
-EMAIL_USER=yadjekvorobei@gmail.com
-EMAIL_PASSWORD=tflgfblrgijvfutc
-
-# SMTP (Alternative config)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=yadjekvorobei@gmail.com
-SMTP_PASS=tflgfblrgijvfutc
+SMTP_PASS=<YOUR_GMAIL_APP_PASSWORD>
 SMTP_FROM="QR Menu <noreply@yourdomain.com>"
 
 # Rate Limiting
@@ -265,22 +258,16 @@ fetch('https://oimoqr.onrender.com/api/auth/login', ...)
 
 ### 5. База данных не подключается
 
-**Проверьте Supabase:**
+**Проверьте на Render:**
 
-1. Откройте https://supabase.com/dashboard
-2. Проверьте, что проект активен
-3. Settings → Database → Connection string
-4. Убедитесь, что используете **Connection Pooling** (порт 6543)
+1. Откройте https://dashboard.render.com
+2. Перейдите к вашей базе данных PostgreSQL.
+3. Убедитесь, что статус **"Available"**.
+4. В разделе "Connections" скопируйте **"Internal Database URL"**.
 
 **Проверьте переменные:**
 
-```env
-# Для приложения (с pgbouncer)
-DATABASE_URL=...pooler.supabase.com:6543/postgres?pgbouncer=true
-
-# Для миграций (прямое подключение)
-DIRECT_URL=...pooler.supabase.com:5432/postgres
-```
+Убедитесь, что в `DATABASE_URL` вашего backend-сервиса на Render вставлена именно **Internal Database URL**. External URL предназначен для подключения с вашего локального компьютера, а не для связи между сервисами внутри Render.
 
 ---
 
@@ -308,31 +295,31 @@ DIRECT_URL=...pooler.supabase.com:5432/postgres
 | Сервис     | План | Стоимость    |
 | ---------- | ---- | ------------ |
 | Vercel     | Free | $0/месяц     |
-| Render     | Free | $0/месяц     |
-| Supabase   | Free | $0/месяц     |
+| Render (Web Service) | Free | $0/месяц     |
+| Render (PostgreSQL)  | Free | $0/месяц     |
 | Cloudinary | Free | $0/месяц     |
 | Gmail SMTP | Free | $0/месяц     |
 | **Итого**  |      | **$0/месяц** |
 
 ### Лимиты бесплатных планов
 
-**Vercel:**
+**Vercel (Frontend):**
 
 - ✅ 100 GB bandwidth/месяц
 - ✅ Неограниченные деплои
 - ✅ Автоматический SSL
 
-**Render:**
+**Render (Backend):**
 
 - ✅ 750 часов/месяц (достаточно для 1 сервиса 24/7)
 - ⚠️ Засыпает после 15 минут неактивности
 - ⚠️ 512 MB RAM (shared)
 
-**Supabase:**
+**Render (Database):**
 
-- ✅ 500 MB хранилища
-- ✅ 2 GB bandwidth/месяц
-- ✅ Неограниченные API запросы
+- ✅ 1 GB хранилища
+- ⚠️ **База данных удаляется через 90 дней**, если не обновляться.
+- ✅ Не засыпает.
 
 **Cloudinary:**
 
@@ -384,18 +371,6 @@ git push origin main
 - Docs: https://render.com/docs
 - Status: https://status.render.com
 
-**Vercel Support:**
-
-- Dashboard: https://vercel.com/dashboard
-- Docs: https://vercel.com/docs
-- Status: https://www.vercel-status.com
-
-**Supabase Support:**
-
-- Dashboard: https://supabase.com/dashboard
-- Docs: https://supabase.com/docs
-- Status: https://status.supabase.com
-
 ---
 
 ## ✅ Quick Reference
@@ -410,7 +385,6 @@ API Endpoint:   https://backend.oimoqr.com/api
 
 Render Dashboard:   https://dashboard.render.com
 Vercel Dashboard:   https://vercel.com/dashboard
-Supabase Dashboard: https://supabase.com/dashboard
 Cloudinary:         https://cloudinary.com/console
 ```
 

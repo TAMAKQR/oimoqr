@@ -225,7 +225,6 @@ const RestaurantSettingsPage = () => {
   ));
 
   const loadRestaurantData = async (restaurant) => {
-    console.log('📝 Loading restaurant data into form:', restaurant);
     const r = restaurant;
     setName(r.name || '');
     setDescription(r.description || '');
@@ -1033,7 +1032,6 @@ const RestaurantSettingsPage = () => {
                                 toast.error('Не удалось определить координаты. Проверьте адрес.');
                               }
                             } catch (err) {
-                              console.error('Geocode error:', err);
                               toast.error('Ошибка при определении координат');
                             } finally {
                               setGeocoding(false);

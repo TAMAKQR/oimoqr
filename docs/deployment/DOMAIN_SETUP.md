@@ -21,7 +21,7 @@ api.oimoqr.com                → Backend API
 
 - **Frontend**: Vercel (с поддержкой wildcard доменов)
 - **Backend**: Render или Railway
-- **Database**: Render PostgreSQL (PostgreSQL)
+- **Database**: Render (PostgreSQL)
 
 ---
 
@@ -200,31 +200,24 @@ SMTP_PASS=your-app-password
 
 ---
 
-## 🗄️ Шаг 4: Настройка базы данных Render PostgreSQL
+## 🗄️ Шаг 4: Настройка базы данных на Render
 
 ### 4.1 Создание проекта
 
-1. Зайдите на [Render PostgreSQL.com](https://Render PostgreSQL.com)
+1. Зайдите на [render.com](https://render.com)
 2. Создайте новый проект:
-   - Name: `oimoqr`
-   - Database Password: (сохраните надежно!)
-   - Region: Ohio
+   - **New +** → **PostgreSQL**
+   - **Name:** `oimoqr-db`
+   - **Region:** Frankfurt (EU Central)
+   - **Plan:** Free
 
 ### 4.2 Получение DATABASE_URL
 
-1. Перейдите в **Settings → Database**
-2. Найдите **Connection string** → **URI**
-3. Скопируйте строку подключения:
+1. На странице вашей новой базы данных найдите раздел **Connections**.
+2. Скопируйте строку **"Internal Database URL"**. Это и есть ваш `DATABASE_URL`.
 
-```
-postgresql://postgres:[YOUR-PASSWORD]@[HOST]:[PORT]/postgres
-```
-
-4. Добавьте параметры для Prisma:
-
-```
-postgresql://postgres:[YOUR-PASSWORD]@[HOST]:[PORT]/postgres?pgbouncer=true&connection_limit=1
-```
+**Пример:**
+`postgresql://oimoqr_user:ВАШ_ПАРОЛЬ@dpg-xxxx.frankfurt-postgres.render.com/oimoqr_db`
 
 ### 4.3 Запуск миграций
 
@@ -232,9 +225,9 @@ postgresql://postgres:[YOUR-PASSWORD]@[HOST]:[PORT]/postgres?pgbouncer=true&conn
 
 ```powershell
 Set-Location "d:\QR MENU\backend"
-
-# Установите DATABASE_URL из Render PostgreSQL
-$env:DATABASE_URL="postgresql://postgres:..."
+ 
+# Установите DATABASE_URL из Render
+$env:DATABASE_URL="ВАША_INTERNAL_DATABASE_URL"
 
 # Запустите миграции
 npx prisma migrate deploy
@@ -524,7 +517,7 @@ const corsOptions = {
 
 - [Vercel Domains Documentation](https://vercel.com/docs/concepts/projects/domains)
 - [Render Custom Domains](https://render.com/docs/custom-domains)
-- [Render PostgreSQL Connection Pooling](https://Render PostgreSQL.com/docs/guides/database/connecting-to-postgres#connection-pooler)
+- [Render PostgreSQL Docs](https://render.com/docs/databases#postgresql)
 - [Wildcard DNS Setup](https://vercel.com/docs/concepts/projects/domains/wildcard-domains)
 
 ---
