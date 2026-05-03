@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { restaurantService, generateOrderNumber } from '../services/restaurantService';
+import { restaurantService } from '../services/restaurantService';
 import api from '../services/api';
 // import ProductCard from '../components/products/ProductCard'; // Мы создадим этот компонент позже
 import { useTranslation } from 'react-i18next';
+
+// Вспомогательная функция для генерации номера заказа.
+// Была ошибочно импортирована, теперь определена здесь.
+const generateOrderNumber = () => {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+};
 
 const ShopPage = () => {
     const { subdomain } = useParams();
