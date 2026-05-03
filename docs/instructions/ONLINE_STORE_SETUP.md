@@ -219,10 +219,12 @@ PATCH /api/products/:id/stock
 
 ## 📝 Миграция
 
-База данных уже обновлена командой:
+Для применения изменений в схеме базы данных используйте версионированные миграции.
+
+**Для разработки:**
 ```bash
 cd backend
-npx prisma db push
+npx prisma migrate dev --name add_store_entities
 ```
 
 Тариф создан командой:

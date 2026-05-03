@@ -43,9 +43,9 @@ MAX_FILE_SIZE=5242880
 # Email (Gmail SMTP)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USER=yadjekvorobei@gmail.com
+SMTP_USER=your-email@gmail.com
 SMTP_PASS=<YOUR_GMAIL_APP_PASSWORD>
-SMTP_FROM="QR Menu <noreply@yourdomain.com>"
+SMTP_FROM="OimoQR <noreply@oimoqr.com>"
 
 # Rate Limiting
 RATE_LIMIT_WINDOW_MS=900000
