@@ -545,6 +545,11 @@ const MenuPage = () => {
           ? { latitude: guestLat, longitude: guestLon, forceRefresh: true }
           : {}
       );
+      if (String(data?.businessType || '').toUpperCase() === 'ONLINE_STORE') {
+        const query = window.location.search || '';
+        navigate(`/shop/${data.subdomain || subdomain}${query}`, { replace: true });
+        return;
+      }
       setRestaurant(data);
       if (data.primaryColor) {
         const palette = buildPaletteFromBase(data.primaryColor);
@@ -562,6 +567,7 @@ const MenuPage = () => {
           name: data.name,
           description: data.description,
           logo: data.logo,
+          businessType: data.businessType,
         };
         localStorage.setItem('customer-last-restaurant', JSON.stringify(payload));
       }
@@ -579,7 +585,7 @@ const MenuPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [subdomain, orderMode, guestDeliveryLocation, setCustomColors, setTheme, themes]);
+  }, [subdomain, navigate, orderMode, guestDeliveryLocation, setCustomColors, setTheme, themes]);
 
   // ✅ ОПТИМИЗАЦИЯ: Один useEffect для загрузки - избегаем дублирования
   useEffect(() => {
