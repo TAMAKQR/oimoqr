@@ -18,6 +18,11 @@ const getBusinessTypeMeta = (businessType) => (
   BUSINESS_TYPE_LABELS[businessType] || BUSINESS_TYPE_LABELS.RESTAURANT
 );
 
+const getPublicObjectPath = (restaurant) => {
+  const route = restaurant?.businessType === 'ONLINE_STORE' ? 'shop' : 'menu';
+  return `/${route}/${restaurant.subdomain}`;
+};
+
 const getPrimaryBusinessType = (user) => {
   const restaurantTypes = user?.restaurants?.map((restaurant) => restaurant.businessType).filter(Boolean) || [];
   const uniqueTypes = [...new Set(restaurantTypes)];
@@ -356,7 +361,7 @@ const AdminPage = () => {
                                 <div key={restaurant.id} className="text-xs text-gray-600">
                                   • {restaurant.name}
                                   <a
-                                    href={`/menu/${restaurant.subdomain}`}
+                                    href={getPublicObjectPath(restaurant)}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-primary-500 hover:underline ml-1"
