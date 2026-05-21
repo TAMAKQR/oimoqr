@@ -9,7 +9,6 @@ import { useTranslation } from 'react-i18next';
 
 const BUSINESS_TYPE_LABELS = {
   RESTAURANT: { label: 'Ресторан', icon: '🍽', badge: 'bg-blue-100 text-blue-700' },
-  ONLINE_STORE: { label: 'Магазин', icon: '🛍', badge: 'bg-purple-100 text-purple-700' },
   HOTEL: { label: 'Отель', icon: '🏨', badge: 'bg-green-100 text-green-700' },
   ALL: { label: 'Универсальный', icon: '📦', badge: 'bg-gray-100 text-gray-700' }
 };
@@ -19,8 +18,7 @@ const getBusinessTypeMeta = (businessType) => (
 );
 
 const getPublicObjectPath = (restaurant) => {
-  const route = restaurant?.businessType === 'ONLINE_STORE' ? 'shop' : 'menu';
-  return `/${route}/${restaurant.subdomain}`;
+  return `/menu/${restaurant.subdomain}`;
 };
 
 const getPrimaryBusinessType = (user) => {

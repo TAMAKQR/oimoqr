@@ -12,12 +12,3 @@ ALTER TABLE "OrderItem"
   ON DELETE SET NULL 
   ON UPDATE CASCADE;
 
--- Do the same for productId
-ALTER TABLE "OrderItem" DROP CONSTRAINT IF EXISTS "OrderItem_productId_fkey";
-
-ALTER TABLE "OrderItem" 
-  ADD CONSTRAINT "OrderItem_productId_fkey" 
-  FOREIGN KEY ("productId") 
-  REFERENCES "Product"("id") 
-  ON DELETE SET NULL 
-  ON UPDATE CASCADE;

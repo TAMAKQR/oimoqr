@@ -151,9 +151,8 @@ const RestaurantSettingsPage = () => {
   const entityLabelLower = selectedRestaurant ? selectedBusinessType.label.toLowerCase() : 'заведение';
   const entityLabelGenitive = selectedRestaurant
     ? (selectedBusinessType.key === 'RESTAURANT' ? 'ресторана'
-      : selectedBusinessType.key === 'ONLINE_STORE' ? 'магазина'
-        : selectedBusinessType.key === 'HOTEL' ? 'отеля'
-          : selectedBusinessType.label.toLowerCase())
+      : selectedBusinessType.key === 'HOTEL' ? 'отеля'
+        : selectedBusinessType.label.toLowerCase())
     : 'заведения';
 
   const renderScheduleEditor = (schedule, setSchedule, inputPrefix) => Object.entries(DAY_LABELS).map(([day, label]) => (

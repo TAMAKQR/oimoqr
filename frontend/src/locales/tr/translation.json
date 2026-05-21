@@ -31,7 +31,7 @@
       "badge": "5 dakikada başlayın — kod gerektirmez",
       "titleStart": "İşletmenizi büyüten",
       "titleHighlight": "QR menü",
-      "subtitle": "QR menüler, online vitrinler ve oda servisi — restoranlar, mağazalar ve oteller için tek platform. WhatsApp ile sipariş.",
+      "subtitle": "QR menüler ve oda servisi — restoranlar ve oteller için tek platform. WhatsApp ile sipariş.",
       "demo": "Demo izle",
       "trust": "işletme bizimle"
     },
@@ -42,7 +42,7 @@
       "uptime": "çalışma süresi"
     },
     "business": {
-      "title": "Tek Platform — Üç Çözüm",
+      "title": "Tek Platform — İki Çözüm",
       "subtitle": "OimoQR işletme türünüze uyum sağlar",
       "restaurant": {
         "title": "Restoranlar ve Kafeler",
@@ -51,14 +51,6 @@
         "point1": "Her masa için QR kod",
         "point2": "WhatsApp'a doğrudan sipariş",
         "point3": "Promosyonlar için afişler"
-      },
-      "store": {
-        "title": "Online Mağazalar",
-        "tag": "Katalog",
-        "desc": "Sepet ve WhatsApp ile sipariş imkanı sunan ürün kataloğu.",
-        "point1": "Fotoğraflı ürün kataloğu",
-        "point2": "Sepet ve sipariş verme",
-        "point3": "Stok ve fiyat yönetimi"
       },
       "hotel": {
         "title": "Oteller",
@@ -75,7 +67,7 @@
       "qrmenu": "QR Menü",
       "qrmenuDesc": "Konuklar QR kodu tarayarak telefonlarında menünüzü görür. Güzel, hızlı, uygulama gerektirmez.",
       "whatsapp": "WhatsApp Siparişleri",
-      "whatsappDesc": "Müşteriler ürünleri seçer ve tek dokunuşla WhatsApp'ınıza gönderir.",
+      "whatsappDesc": "Müşteriler yemekleri seçer ve tek dokunuşla WhatsApp'ınıza gönderir.",
       "realtime": "Anlık Güncellemeler",
       "realtimeDesc": "Fiyatları, yemekleri gerçek zamanlı değiştirin. Artık yeniden baskı yok.",
       "customization": "Markalaşma",
@@ -121,7 +113,7 @@
       },
       "faq2": {
         "q": "Müşteriler nasıl sipariş veriyor?",
-        "a": "QR tara → ürünleri seç → 'Sipariş Ver' düğmesine bas. Sipariş WhatsApp'ınıza otomatik gider."
+        "a": "QR tara → yemekleri seç → 'Sipariş Ver' düğmesine bas. Sipariş WhatsApp'ınıza otomatik gider."
       },
       "faq3": {
         "q": "Ücretsiz deneme var mı?",
@@ -132,8 +124,8 @@
         "a": "Rusça, İngilizce, Kırgızca ve Türkçe. Yeni diller ekliyoruz."
       },
       "faq5": {
-        "q": "Mağaza veya otel için kullanabilir miyim?",
-        "a": "Evet! OimoQR restoranları, mağazaları ve otelleri destekler."
+        "q": "Otel için kullanabilir miyim?",
+        "a": "Evet! OimoQR restoranları ve otelleri destekler."
       }
     },
     "finalCta": {
@@ -141,7 +133,7 @@
       "subtitle": "OimoQR kullanan yüzlerce şirkete katılın"
     },
     "footer": {
-      "tagline": "Her işletme için QR menü ve online sipariş. Hızlı, basit, güzel.",
+      "tagline": "Restoranlar ve oteller için QR menü ve online sipariş. Hızlı, basit, güzel.",
       "copy": "© 2026 OimoQR. Tüm hakları saklıdır.",
       "product": "Ürün",
       "getStarted": "Başla"

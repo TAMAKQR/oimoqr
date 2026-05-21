@@ -70,7 +70,7 @@ model Restaurant {
   defaultLanguage   String    @default("ru")
   
   // Business type
-  businessType      String    @default("RESTAURANT") // RESTAURANT | ONLINE_STORE | HOTEL
+  businessType      String    @default("RESTAURANT") // RESTAURANT | HOTEL
   
   // Geolocation fields
   latitude          Float?
@@ -112,9 +112,6 @@ model Restaurant {
   // Modifier Templates (шаблоны модификаторов)
   modifierTemplates ModifierTemplate[]
   
-  // Online Store relations
-  productCategories ProductCategory[]
-  products          Product[]
   dishStops         DishStop[]
   modifierOptionStops ModifierOptionStop[]
 
@@ -475,10 +472,6 @@ model OrderItem {
   dishId            String?
   dish              Dish?     @relation(fields: [dishId], references: [id], onDelete: SetNull)
   
-  // For online store orders
-  productId         String?
-  product           Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
-  
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 }
@@ -581,89 +574,6 @@ model TrialConfig {
   updatedAt         DateTime  @updatedAt
 }
 
-// ========================================
-// Online Store Models
-// ========================================
-
-model ProductCategory {
-  id                String    @id @default(cuid())
-  name              String
-  description       String?
-  image             String?
-  order             Int       @default(0)
-  isActive          Boolean   @default(true)
-  
-  restaurantId      String
-  restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  
-  products          Product[]
-  
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-}
-
-model Product {
-  id                String    @id @default(cuid())
-  name              String
-  description       String?
-  sku               String?   // SKU/Артикул
-  price             Float
-  compareAtPrice    Float?    // Цена для сравнения (было)
-  cost              Float?    // Себестоимость
-  images            String?   // JSON массив изображений
-  available         Boolean   @default(true)
-  featured          Boolean   @default(false) // Рекомендуемый товар
-  order             Int       @default(0)
-  
-  // SEO
-  metaTitle         String?
-  metaDescription   String?
-  
-  // Stock
-  trackInventory    Boolean   @default(true)
-  stockQuantity     Int       @default(0)
-  lowStockThreshold Int?
-  
-  // Attributes
-  weight            Float?    // Вес в граммах
-  dimensions        String?   // JSON: {length, width, height}
-  
-  categoryId        String
-  category          ProductCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  
-  restaurantId      String
-  restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  
-  variants          ProductVariant[]
-  orderItems        OrderItem[]
-  
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  
-  @@index([restaurantId, available])
-  @@index([categoryId])
-}
-
-model ProductVariant {
-  id                String    @id @default(cuid())
-  name              String    // Например: "Размер: L, Цвет: Красный"
-  sku               String?
-  price             Float?    // Цена варианта (если отличается от базовой)
-  compareAtPrice    Float?
-  stockQuantity     Int       @default(0)
-  image             String?
-  
-  // Опции варианта (размер, цвет и т.д.)
-  options           String    // JSON: {"size": "L", "color": "Red"}
-  
-  productId         String
-  product           Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  
-  @@index([productId])
-}
 
 model MenuView {
   id                String    @id @default(cuid())

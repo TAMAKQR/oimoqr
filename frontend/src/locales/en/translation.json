@@ -31,7 +31,7 @@
       "badge": "Launch in 5 minutes — no code",
       "titleStart": "QR menu for",
       "titleHighlight": "business growth",
-      "subtitle": "QR menus, online storefronts, and room service — one platform for restaurants, stores, and hotels. Orders via WhatsApp.",
+      "subtitle": "QR menus and room service — one platform for restaurants and hotels. Orders via WhatsApp.",
       "demo": "Watch demo",
       "trust": "businesses already with us"
     },
@@ -42,7 +42,7 @@
       "uptime": "uptime"
     },
     "business": {
-      "title": "One Platform — Three Solutions",
+      "title": "One Platform — Two Solutions",
       "subtitle": "OimoQR adapts to your business type",
       "restaurant": {
         "title": "Restaurants & Cafés",
@@ -51,14 +51,6 @@
         "point1": "QR code for each table",
         "point2": "Orders directly to WhatsApp",
         "point3": "Banners for promotions and deals"
-      },
-      "store": {
-        "title": "Online Stores",
-        "tag": "Catalog",
-        "desc": "Product catalog with cart and checkout via WhatsApp.",
-        "point1": "Product catalog with photos",
-        "point2": "Cart and order placement",
-        "point3": "Inventory and price management"
       },
       "hotel": {
         "title": "Hotels & Hospitality",
@@ -132,8 +124,8 @@
         "a": "Russian, English, Kyrgyz, and Turkish. We're adding more."
       },
       "faq5": {
-        "q": "Can I use it for a store or hotel?",
-        "a": "Yes! OimoQR works with restaurants, online stores, and hotels. Pick your type when signing up."
+        "q": "Can I use it for a hotel?",
+        "a": "Yes! OimoQR works with restaurants and hotels. Pick your type when signing up."
       }
     },
     "finalCta": {
@@ -141,7 +133,7 @@
       "subtitle": "Join hundreds of companies already using OimoQR"
     },
     "footer": {
-      "tagline": "QR menus and online orders for any business. Fast, simple, beautiful.",
+      "tagline": "QR menus and online orders for restaurants and hotels. Fast, simple, beautiful.",
       "copy": "© 2026 OimoQR. All rights reserved.",
       "product": "Product",
       "getStarted": "Get Started"

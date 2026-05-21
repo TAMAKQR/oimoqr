@@ -26,28 +26,6 @@ export const BUSINESS_TYPES = {
         hasTableQR: true,
         tableLabel: 'Стол',
     },
-    ONLINE_STORE: {
-        key: 'ONLINE_STORE',
-        icon: '🛍',
-        label: 'Магазин',
-        route: 'shop',
-        color: 'purple',
-        namePlaceholder: "Магазин 'Свежесть'",
-        subdomainPlaceholder: 'my-store',
-        nameLabel: 'Название магазина',
-        viewLabel: 'Посмотреть магазин',
-        overviewLabel: 'Обзор вашего магазина',
-        qrLabel: 'QR-код магазина',
-        qrScanLabel: 'перехода в магазин',
-        qrDescription: 'QR-код для вашего магазина. Клиенты могут отсканировать его для быстрого перехода.',
-        qrMainTitle: 'QR-код магазина',
-        qrMainDescription: 'Ссылка на ваш интернет-магазин',
-        itemsLabel: 'Товары',
-        popularLabel: 'Популярные товары',
-        tip: '💡 Совет: Добавьте фото к товарам и укажите акционные цены для привлечения клиентов!',
-        hasTableQR: false,
-        tableLabel: null,
-    },
     HOTEL: {
         key: 'HOTEL',
         icon: '🏨',
@@ -111,7 +89,6 @@ export const BUSINESS_TYPE_KEYS = Object.keys(BUSINESS_TYPES);
 /**
  * Business types for selector UI (create restaurant modal, etc.)
  */
-// Store plans are disabled; keep ONLINE_STORE config only for legacy objects.
 export const BUSINESS_TYPE_OPTIONS = [
     {
         key: BUSINESS_TYPES.RESTAURANT.key,

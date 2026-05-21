@@ -35,10 +35,6 @@ export const register = async (req, res, next) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const normalizedBusinessType = businessType.trim().toUpperCase();
-    if (normalizedBusinessType === 'ONLINE_STORE') {
-      return res.status(400).json({ error: 'Online store registration is disabled' });
-    }
-
     const { trialConfig, subscriptionData } = await buildTrialSubscriptionData(normalizedBusinessType);
 
     const user = await prisma.user.create({

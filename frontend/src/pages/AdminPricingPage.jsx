@@ -69,10 +69,8 @@ const AdminPricingPage = () => {
         api.get('/admin/pricing-tiers'),
         api.get('/admin/trial-config?all=true')
       ]);
-      setTiers((tiersRes.data || []).filter((tier) => tier.businessType !== 'ONLINE_STORE'));
-      setTrialConfigs(Array.isArray(trialRes.data)
-        ? trialRes.data.filter((config) => config.businessType !== 'ONLINE_STORE')
-        : []);
+      setTiers(tiersRes.data || []);
+      setTrialConfigs(Array.isArray(trialRes.data) ? trialRes.data : []);
     } catch (err) {
       showNotification('Ошибка при загрузке данных', 'error');
     } finally {

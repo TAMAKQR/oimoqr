@@ -49,8 +49,7 @@ const normalizePhoneDigits = (phone = '') => String(phone || '').replace(/\D/g, 
 
 const includeOrderItems = {
   include: {
-    dish: true,
-    product: true
+    dish: true
   }
 };
 
@@ -80,87 +79,6 @@ const getNearestServingRestaurant = async ({ restaurantId, latitude, longitude }
   });
 
   return ranked.find((r) => r.inDeliveryZone && getRestaurantDeliveryStatus(r).isOpen) || null;
-};
-
-const buildTrustedProductOrderItems = async ({ items, restaurantId }) => {
-  const validItems = Array.isArray(items) ? items.filter((item) => item && item.id) : [];
-  if (validItems.length === 0) {
-    return { ok: false, error: 'Order must contain at least one valid product item' };
-  }
-
-  const productIds = [...new Set(validItems.map((item) => item.id))];
-  const products = await prisma.product.findMany({
-    where: {
-      id: { in: productIds },
-      restaurantId,
-      available: true
-    },
-    select: {
-      id: true,
-      name: true,
-      price: true,
-      trackInventory: true,
-      stockQuantity: true
-    }
-  });
-
-  if (products.length !== productIds.length) {
-    const foundIds = new Set(products.map((product) => product.id));
-    const notFoundIds = productIds.filter((id) => !foundIds.has(id));
-    return { ok: false, error: `One or more products not found: ${notFoundIds.join(', ')}` };
-  }
-
-  const productById = new Map(products.map((product) => [product.id, product]));
-  const trustedItems = [];
-  const requestedQuantities = new Map();
-  const inventoryUpdates = new Map();
-  let itemsSubtotal = 0;
-
-  for (const item of validItems) {
-    const product = productById.get(item.id);
-    if (!product) {
-      return { ok: false, error: `Product not found: ${item.id}` };
-    }
-
-    const quantity = parseInt(item.quantity, 10);
-    if (!Number.isFinite(quantity) || quantity <= 0) {
-      return { ok: false, error: `Invalid quantity for product: ${item.id}` };
-    }
-
-    const unitPrice = roundCurrency(product.price);
-    if (!Number.isFinite(unitPrice) || unitPrice < 0) {
-      return { ok: false, error: `Invalid product price for product: ${item.id}` };
-    }
-
-    const requestedQuantity = (requestedQuantities.get(product.id) || 0) + quantity;
-    if (product.trackInventory && requestedQuantity > product.stockQuantity) {
-      return {
-        ok: false,
-        error: `Недостаточно товара "${product.name}" на складе`
-      };
-    }
-
-    requestedQuantities.set(product.id, requestedQuantity);
-    if (product.trackInventory) {
-      inventoryUpdates.set(product.id, requestedQuantity);
-    }
-    itemsSubtotal += unitPrice * quantity;
-    trustedItems.push({
-      productId: product.id,
-      quantity,
-      price: unitPrice
-    });
-  }
-
-  return {
-    ok: true,
-    trustedItems,
-    itemsSubtotal: roundCurrency(itemsSubtotal),
-    inventoryUpdates: Array.from(inventoryUpdates.entries()).map(([productId, quantity]) => ({
-      productId,
-      quantity
-    }))
-  };
 };
 
 const parseSelectedModifiers = (value) => {
@@ -216,100 +134,11 @@ export const createOrder = async (req, res, next) => {
 
     const restaurantDetails = await prisma.restaurant.findUnique({
       where: { id: restaurantId },
-      select: { id: true, businessType: true }
+      select: { id: true }
     });
 
     if (!restaurantDetails) {
       return res.status(404).json({ error: 'Restaurant not found' });
-    }
-
-    if (restaurantDetails.businessType === 'ONLINE_STORE' && normalizedDeliveryType === 'dine_in') {
-      return res.status(400).json({ error: 'Заказ в зале недоступен для магазина' });
-    }
-
-    if (restaurantDetails.businessType === 'ONLINE_STORE') {
-      if (normalizedCustomerName.length < 2 || phoneDigits.length < 8) {
-        return res.status(400).json({ error: 'Укажите имя и корректный телефон' });
-      }
-
-      if (normalizedDeliveryType === 'delivery' && !normalizedDeliveryAddress) {
-        return res.status(400).json({ error: 'Укажите адрес доставки' });
-      }
-
-      const trustedPricing = await buildTrustedProductOrderItems({
-        items,
-        restaurantId
-      });
-
-      if (!trustedPricing.ok) {
-        return res.status(400).json({ error: trustedPricing.error || 'Invalid order payload' });
-      }
-
-      const { trustedItems, itemsSubtotal, inventoryUpdates } = trustedPricing;
-      const orderNumber = generateOrderNumber();
-
-      const order = await prisma.$transaction(async (tx) => {
-        const createdOrder = await tx.order.create({
-          data: {
-            orderNumber,
-            restaurantId,
-            totalAmount: itemsSubtotal,
-            customerName: normalizedCustomerName,
-            customerPhone: normalizedCustomerPhone,
-            customerEmail: customerEmail || null,
-            deliveryAddress: normalizedDeliveryAddress || null,
-            deliveryLatitude: null,
-            deliveryLongitude: null,
-            deliveryType: normalizedDeliveryType === 'pickup' ? 'pickup' : 'delivery',
-            tableNumber: null,
-            paymentMethod: paymentMethod || 'cash',
-            notes: comment || null,
-            items: {
-              create: trustedItems
-            }
-          },
-          include: {
-            items: includeOrderItems,
-            restaurant: {
-              include: {
-                socialLinks: true
-              }
-            },
-            customerAddress: true
-          }
-        });
-
-        for (const update of inventoryUpdates) {
-          const result = await tx.product.updateMany({
-            where: {
-              id: update.productId,
-              trackInventory: true,
-              stockQuantity: { gte: update.quantity }
-            },
-            data: {
-              stockQuantity: { decrement: update.quantity }
-            }
-          });
-
-          if (result.count === 0) {
-            throw new Error('Недостаточно товара на складе');
-          }
-        }
-
-        return createdOrder;
-      });
-
-      if (order.restaurant?.telegramGroupId) {
-        telegramService.sendNewOrderNotification(order, order.restaurant).catch(err => {
-          console.error('Failed to send Telegram notification:', err);
-        });
-      }
-
-      return res.status(201).json({
-        message: 'Order created successfully',
-        order,
-        orderNumber: order.orderNumber
-      });
     }
 
     if (normalizedDeliveryType !== 'dine_in') {
@@ -508,9 +337,7 @@ export const createOrder = async (req, res, next) => {
         deliveryLatitude: normalizedDeliveryLatitude,
         deliveryLongitude: normalizedDeliveryLongitude,
         deliveryType: normalizedDeliveryType,
-        tableNumber: restaurantDetails.businessType === 'ONLINE_STORE'
-          ? null
-          : (normalizedDeliveryType === 'dine_in' ? tableNumber || null : null),
+        tableNumber: normalizedDeliveryType === 'dine_in' ? tableNumber || null : null,
         paymentMethod: paymentMethod || 'cash',
         notes: comment || null,
         items: {
@@ -709,13 +536,6 @@ export const getOrderByNumber = async (req, res, next) => {
                 id: true,
                 name: true,
                 image: true
-              }
-            },
-            product: {
-              select: {
-                id: true,
-                name: true,
-                images: true
               }
             }
           }
@@ -1068,7 +888,7 @@ export const getAssignedRestaurant = async (req, res, next) => {
         : '';
 
       return {
-        dishName: item.dish?.name || item.product?.name || 'Удалённая позиция',
+        dishName: item.dish?.name || 'Удалённая позиция',
         quantity: item.quantity,
         price: item.price,
         total: (item.price * item.quantity).toFixed(2),
@@ -1078,7 +898,7 @@ export const getAssignedRestaurant = async (req, res, next) => {
 
     // Формируем текстовое сообщение для клиента
     const itemsText = order.items.map(item => {
-      const dishName = item.dish?.name || item.product?.name || 'Удалённая позиция';
+      const dishName = item.dish?.name || 'Удалённая позиция';
       const modifiers = parseSelectedModifiers(item.selectedModifiers);
       const modifiersText = modifiers.length > 0
         ? ` (${modifiers.map(m => m.name).join(', ')})`

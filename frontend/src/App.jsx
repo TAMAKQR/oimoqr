@@ -26,8 +26,6 @@ import PricingPage from './pages/PricingPage';
 import CustomersPage from './pages/CustomersPage';
 import CheckoutPage from './pages/CheckoutPage';
 import ModifierTemplatesPage from './pages/ModifierTemplatesPage';
-import StoreManagementPage from './pages/StoreManagementPage';
-import ShopPage from './pages/ShopPage';
 import OrderSuccessPage from './pages/OrderSuccessPage';
 
 // Components
@@ -40,7 +38,7 @@ const CACHE_VERSION =
   import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA ||
   import.meta.env.VERCEL_GIT_COMMIT_SHA ||
   import.meta.env.VITE_COMMIT_SHA ||
-  (typeof __APP_BUILD_ID__ !== 'undefined' ? `build-${__APP_BUILD_ID__}` : 'v2026-05-21-remove-store-pricing');
+  (typeof __APP_BUILD_ID__ !== 'undefined' ? `build-${__APP_BUILD_ID__}` : 'v2026-05-21-remove-shop');
 
 function App() {
   // Keep bottom-fixed UI aligned with the visible viewport on mobile browsers
@@ -110,7 +108,6 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/menu/:subdomain" element={<MenuPage />} />
-          <Route path="/shop/:subdomain" element={<ShopPage />} />
           <Route path="/:subdomain" element={<MenuPage />} />
 
           {/* Customer routes */}
@@ -162,14 +159,6 @@ function App() {
             element={
               <PrivateRoute>
                 <ModifierTemplatesPage />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/store-management"
-            element={
-              <PrivateRoute>
-                <StoreManagementPage />
               </PrivateRoute>
             }
           />

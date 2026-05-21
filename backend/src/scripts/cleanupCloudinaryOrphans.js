@@ -77,10 +77,7 @@ const collectUsedCloudinaryPublicIds = async () => {
         dishes,
         modifierOptions,
         modifierTemplateOptions,
-        customers,
-        productCategories,
-        products,
-        productVariants
+        customers
     ] = await Promise.all([
         prisma.restaurant.findMany({ select: { logo: true, banners: true } }),
         prisma.restaurantBrand.findMany({ select: { logo: true } }),
@@ -89,10 +86,7 @@ const collectUsedCloudinaryPublicIds = async () => {
         prisma.dish.findMany({ select: { image: true } }),
         prisma.modifierOption.findMany({ select: { image: true } }),
         prisma.modifierTemplateOption.findMany({ select: { image: true } }),
-        prisma.customer.findMany({ select: { avatar: true } }),
-        prisma.productCategory.findMany({ select: { image: true } }),
-        prisma.product.findMany({ select: { images: true } }),
-        prisma.productVariant.findMany({ select: { image: true } })
+        prisma.customer.findMany({ select: { avatar: true } })
     ]);
 
     collectPublicIds(restaurants.map((restaurant) => restaurant.logo), usedPublicIds);
@@ -107,12 +101,6 @@ const collectUsedCloudinaryPublicIds = async () => {
     collectPublicIds(modifierOptions.map((option) => option.image), usedPublicIds);
     collectPublicIds(modifierTemplateOptions.map((option) => option.image), usedPublicIds);
     collectPublicIds(customers.map((customer) => customer.avatar), usedPublicIds);
-    collectPublicIds(productCategories.map((category) => category.image), usedPublicIds);
-    collectPublicIds(productVariants.map((variant) => variant.image), usedPublicIds);
-
-    for (const product of products) {
-        collectPublicIds(parseJsonArray(product.images), usedPublicIds);
-    }
 
     return usedPublicIds;
 };

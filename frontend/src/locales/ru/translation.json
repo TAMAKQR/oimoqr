@@ -172,32 +172,6 @@
     "modifiers": "Модификаторы",
     "noMenu": "Меню пусто"
   },
-  "store": {
-    "title": "Управление магазином",
-    "categories": "Категории товаров",
-    "products": "Товары",
-    "addProduct": "Добавить товар",
-    "addCategory": "Добавить категорию",
-    "productName": "Название товара",
-    "categoryName": "Название категории",
-    "description": "Описание",
-    "price": "Цена",
-    "compareAtPrice": "Цена до скидки",
-    "sku": "Артикул (SKU)",
-    "stock": "Остаток на складе",
-    "trackInventory": "Отслеживать остатки",
-    "featured": "Рекомендуемый товар",
-    "available": "Доступен для продажи",
-    "noProducts": "Товары еще не добавлены"
-  },
-  "shop": {
-    "title": "Магазин",
-    "searchPlaceholder": "Поиск товаров...",
-    "allCategories": "Все категории",
-    "empty": "В этом магазине пока нет товаров.",
-    "viewCart": "Посмотреть корзину",
-    "addToCart": "В корзину"
-  },
   "restaurant": {
     "settings": "Настройки ресторана",
     "name": "Название ресторана",
@@ -255,7 +229,6 @@
   "nav": {
     "dashboard": "Главная",
     "menuManagement": "Управление меню",
-    "storeManagement": "Управление магазином",
     "settings": "Настройки",
     "languages": "Языки",
     "staff": "Персонал",

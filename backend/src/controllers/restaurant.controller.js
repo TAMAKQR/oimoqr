@@ -921,10 +921,6 @@ export const createRestaurant = async (req, res, next) => {
       ? businessType.trim().toUpperCase()
       : 'RESTAURANT';
 
-    if (requestedBusinessType === 'ONLINE_STORE') {
-      return res.status(400).json({ error: 'Online store creation is disabled' });
-    }
-
     if (!name) {
       return res.status(400).json({ error: 'Restaurant name is required' });
     }

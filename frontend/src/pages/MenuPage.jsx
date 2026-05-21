@@ -545,11 +545,6 @@ const MenuPage = () => {
           ? { latitude: guestLat, longitude: guestLon, forceRefresh: true }
           : {}
       );
-      if (String(data?.businessType || '').toUpperCase() === 'ONLINE_STORE') {
-        const query = window.location.search || '';
-        navigate(`/shop/${data.subdomain || subdomain}${query}`, { replace: true });
-        return;
-      }
       setRestaurant(data);
       if (data.primaryColor) {
         const palette = buildPaletteFromBase(data.primaryColor);

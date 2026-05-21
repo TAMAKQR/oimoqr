@@ -14,7 +14,6 @@ export const getRestaurantStats = async (req, res, next) => {
       where: { id: restaurantId },
       select: {
         id: true,
-        businessType: true,
         sharedMenuSourceRestaurantId: true
       }
     });
@@ -24,7 +23,6 @@ export const getRestaurantStats = async (req, res, next) => {
     }
 
     const menuSourceRestaurantId = restaurant.sharedMenuSourceRestaurantId || restaurant.id;
-    const isOnlineStore = restaurant.businessType === 'ONLINE_STORE';
 
     // Условие для фильтрации заказов:
     // Заказ принадлежит ресторану, если:
@@ -52,21 +50,13 @@ export const getRestaurantStats = async (req, res, next) => {
       topItems,
       revenue
     ] = await Promise.all([
-      isOnlineStore
-        ? prisma.product.count({
-          where: { restaurantId, available: true }
-        })
-        : prisma.dish.count({
-          where: { restaurantId: menuSourceRestaurantId }
-        }),
+      prisma.dish.count({
+        where: { restaurantId: menuSourceRestaurantId }
+      }),
 
-      isOnlineStore
-        ? prisma.productCategory.count({
-          where: { restaurantId, isActive: true }
-        })
-        : prisma.category.count({
-          where: { restaurantId: menuSourceRestaurantId }
-        }),
+      prisma.category.count({
+        where: { restaurantId: menuSourceRestaurantId }
+      }),
 
       // Все заказы (с учетом assignedRestaurantId)
       prisma.order.count({
@@ -111,52 +101,31 @@ export const getRestaurantStats = async (req, res, next) => {
         include: {
           items: {
             include: {
-              dish: true,
-              product: true
+              dish: true
             }
           }
         }
       }),
 
-      isOnlineStore
-        ? prisma.orderItem.groupBy({
-          by: ['productId'],
-          where: {
-            order: orderFilter,
-            productId: { not: null }
-          },
-          _count: {
-            productId: true
-          },
+      prisma.orderItem.groupBy({
+        by: ['dishId'],
+        where: {
+          order: orderFilter,
+          dishId: { not: null } // Исключаем удаленные блюда
+        },
+        _count: {
+          dishId: true
+        },
+        _sum: {
+          quantity: true
+        },
+        orderBy: {
           _sum: {
-            quantity: true
-          },
-          orderBy: {
-            _sum: {
-              quantity: 'desc'
-            }
-          },
-          take: 5
-        })
-        : prisma.orderItem.groupBy({
-          by: ['dishId'],
-          where: {
-            order: orderFilter,
-            dishId: { not: null } // Исключаем удаленные блюда
-          },
-          _count: {
-            dishId: true
-          },
-          _sum: {
-            quantity: true
-          },
-          orderBy: {
-            _sum: {
-              quantity: 'desc'
-            }
-          },
-          take: 5
-        }),
+            quantity: 'desc'
+          }
+        },
+        take: 5
+      }),
 
       // Выручка
       prisma.order.aggregate({
@@ -175,15 +144,13 @@ export const getRestaurantStats = async (req, res, next) => {
     // Получаем детали для популярных позиций
     const topItemsDetails = await Promise.all(
       topItems
-        .filter(item => isOnlineStore ? item.productId !== null : item.dishId !== null)
+        .filter(item => item.dishId !== null)
         .map(async (item) => {
-          const menuItem = isOnlineStore
-            ? await prisma.product.findUnique({ where: { id: item.productId } })
-            : await prisma.dish.findUnique({ where: { id: item.dishId } });
+          const menuItem = await prisma.dish.findUnique({ where: { id: item.dishId } });
           if (!menuItem) return null;
           return {
             ...menuItem,
-            orderCount: isOnlineStore ? item._count.productId : item._count.dishId,
+            orderCount: item._count.dishId,
             totalQuantity: item._sum.quantity
           };
         })

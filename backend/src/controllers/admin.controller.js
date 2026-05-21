@@ -748,9 +748,6 @@ export const getAllUsers = async (req, res, next) => {
 export const getPricingTiers = async (req, res, next) => {
   try {
     const tiers = await prisma.pricingTier.findMany({
-      where: {
-        businessType: { not: 'ONLINE_STORE' }
-      },
       orderBy: { order: 'asc' }
     });
 
@@ -759,7 +756,7 @@ export const getPricingTiers = async (req, res, next) => {
     console.error('Error in getPricingTiers:', error.message);
     // Fallback: use raw SQL if Prisma Client is out of sync
     try {
-      const tiers = await prisma.$queryRawUnsafe('SELECT * FROM "PricingTier" WHERE "businessType" <> \'ONLINE_STORE\' ORDER BY "order" ASC');
+      const tiers = await prisma.$queryRawUnsafe('SELECT * FROM "PricingTier" ORDER BY "order" ASC');
       return res.json(tiers);
     } catch (rawError) {
       console.error('Raw fallback also failed:', rawError.message);

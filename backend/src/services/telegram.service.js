@@ -140,7 +140,7 @@ class TelegramService {
         try {
             const items = order.items || [];
             const itemsList = items.map(item => {
-                let line = `• ${item.dish?.name || item.product?.name || 'Unknown'} x${item.quantity} - ${item.price} ${restaurant.currency || '₽'}`;
+                let line = `• ${item.dish?.name || 'Unknown'} x${item.quantity} - ${item.price} ${restaurant.currency || '₽'}`;
                 // Parse and append modifiers
                 let modifiers = item.selectedModifiers;
                 if (typeof modifiers === 'string') {

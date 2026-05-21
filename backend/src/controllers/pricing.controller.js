@@ -4,8 +4,7 @@ export const getActivePricingTiers = async (req, res, next) => {
   try {
     const pricingTiers = await prisma.pricingTier.findMany({
       where: {
-        isActive: true,
-        businessType: { not: 'ONLINE_STORE' }
+        isActive: true
       },
       orderBy: { order: 'asc' }
     });
