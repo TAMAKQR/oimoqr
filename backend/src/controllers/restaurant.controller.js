@@ -1,5 +1,5 @@
 import { prisma } from '../config/prisma.js';
-import { calculateTrialEndDate, calculateSubscriptionPrice, getTrialDaysRemaining } from '../utils/subscription.js';
+import { buildTrialSubscriptionData, calculateSubscriptionPrice, getTrialDaysRemaining } from '../utils/subscription.js';
 import { getNetworkRankedDeliveryPoints } from './geolocation.controller.js';
 import { getModifierOptionSelect } from '../utils/modifierOptionFields.js';
 import { loadModifierOptionStops } from '../utils/modifierOptionStops.js';
@@ -917,6 +917,9 @@ export const updateMenuCardStyle = async (req, res, next) => {
 export const createRestaurant = async (req, res, next) => {
   try {
     const { name, subdomain: providedSubdomain, businessType } = req.body;
+    const requestedBusinessType = typeof businessType === 'string' && businessType.trim()
+      ? businessType.trim().toUpperCase()
+      : 'RESTAURANT';
 
     if (!name) {
       return res.status(400).json({ error: 'Restaurant name is required' });
@@ -1013,10 +1016,28 @@ export const createRestaurant = async (req, res, next) => {
     // Ð•ÑÐ»Ð¸ ÑÑ‚Ð¾ Ð½Ðµ Ð¿ÐµÑ€Ð²Ñ‹Ð¹ Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½, Ð¿Ñ€Ð¾Ð²ÐµÑ€ÑÐµÐ¼ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ¸
     if (!isFirstRestaurant) {
       const newRestaurantCount = existingCount + 1;
-      const monthlyPrice = await calculateSubscriptionPrice(newRestaurantCount);
+      const monthlyPrice = await calculateSubscriptionPrice(newRestaurantCount, requestedBusinessType);
 
       // Ð•ÑÐ»Ð¸ Ñƒ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»Ñ ÐµÑÑ‚ÑŒ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð°Ñ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ° Ñ Ñ‚Ð°Ñ€Ð¸Ñ„Ð½Ñ‹Ð¼ Ð¿Ð»Ð°Ð½Ð¾Ð¼ - Ð¸ÑÐ¿Ð¾Ð»ÑŒÐ·ÑƒÐµÐ¼ ÐµÐ³Ð¾ Ð»Ð¸Ð¼Ð¸Ñ‚
       if (activeUserSubscription?.pricingTier) {
+        const tierBusinessType = activeUserSubscription.pricingTier.businessType || 'RESTAURANT';
+        const isCompatibleBusinessType = tierBusinessType === 'ALL' || tierBusinessType === requestedBusinessType;
+
+        if (!isCompatibleBusinessType) {
+          return res.status(403).json({
+            error: 'Subscription business type mismatch',
+            message: `Текущий тариф "${activeUserSubscription.pricingTier.name}" не подходит для типа бизнеса ${requestedBusinessType}. Выберите тариф для этого типа бизнеса или универсальный тариф.`,
+            requiresPayment: true,
+            pricing: {
+              monthlyPrice,
+              currentRestaurants: existingCount,
+              requestedBusinessType,
+              currentBusinessType: tierBusinessType,
+              currency: 'USD'
+            }
+          });
+        }
+
         // ÐŸÑ€Ð¾Ð²ÐµÑ€ÑÐµÐ¼ Ð»Ð¸Ð¼Ð¸Ñ‚ Ð¸Ð· Ñ‚Ð°Ñ€Ð¸Ñ„Ð° - ÑÑ‚Ð° Ð¿Ñ€Ð¾Ð²ÐµÑ€ÐºÐ° Ð½Ð¸Ð¶Ðµ (ÑÑ‚Ñ€Ð¾ÐºÐ° ~575)
         // ÐŸÑ€Ð¾Ð¿ÑƒÑÐºÐ°ÐµÐ¼ ÑÑ‚Ð°Ñ€ÑƒÑŽ Ð¿Ñ€Ð¾Ð²ÐµÑ€ÐºÑƒ activeCount
       } else {
@@ -1045,9 +1066,8 @@ export const createRestaurant = async (req, res, next) => {
       }
     }
 
-    const trialEndDate = calculateTrialEndDate(parseInt(process.env.TRIAL_PERIOD_DAYS) || 7);
     const newRestaurantCount = existingCount + 1;
-    const monthlyPrice = await calculateSubscriptionPrice(newRestaurantCount);
+    const monthlyPrice = await calculateSubscriptionPrice(newRestaurantCount, requestedBusinessType);
 
     // Ð˜ÑÐ¿Ð¾Ð»ÑŒÐ·ÑƒÐµÐ¼ ÑƒÐ¶Ðµ Ð¿Ð¾Ð»ÑƒÑ‡ÐµÐ½Ð½ÑƒÑŽ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÑƒ Ð¸Ð· Ð¿Ñ€ÐµÐ´Ñ‹Ð´ÑƒÑ‰ÐµÐ¹ Ð¿Ñ€Ð¾Ð²ÐµÑ€ÐºÐ¸
     // (activeUserSubscription ÑƒÐ¶Ðµ Ð·Ð°Ð³Ñ€ÑƒÐ¶ÐµÐ½Ð° Ð²Ñ‹ÑˆÐµ)
@@ -1066,7 +1086,7 @@ export const createRestaurant = async (req, res, next) => {
         message: 'Ð”Ð¾ÑÑ‚Ð¸Ð³Ð½ÑƒÑ‚ Ð»Ð¸Ð¼Ð¸Ñ‚ Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½Ð¾Ð² Ð´Ð»Ñ Ñ‚ÐµÐºÑƒÑ‰ÐµÐ¹ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ¸',
         requiresPayment: true,
         pricing: {
-          monthlyPrice: await calculateSubscriptionPrice(existingCount + 1),
+          monthlyPrice: await calculateSubscriptionPrice(existingCount + 1, requestedBusinessType),
           currentRestaurants: existingCount,
           activeRestaurants: activeCount,
           maxRestaurants: maxRestaurants,
@@ -1132,7 +1152,7 @@ export const createRestaurant = async (req, res, next) => {
       data: {
         name,
         subdomain,
-        businessType: businessType || 'RESTAURANT',
+        businessType: requestedBusinessType,
         ...inheritedTemplateData,
         ownerId: req.user.id,
         sharedMenuSourceRestaurantId: isFirstRestaurant ? null : primaryRestaurant?.id || null
@@ -1143,15 +1163,8 @@ export const createRestaurant = async (req, res, next) => {
     let subscriptionData;
 
     if (isFirstRestaurant) {
-      // Логика для самого первого ресторана верна: даем триал.
-      const trialEndDate = calculateTrialEndDate(parseInt(process.env.TRIAL_PERIOD_DAYS) || 7);
-      subscriptionData = {
-        plan: 'TRIAL',
-        status: 'TRIAL',
-        trialEndsAt: trialEndDate,
-        currentPeriodStart: new Date(),
-        currentPeriodEnd: trialEndDate,
-      };
+      const trial = await buildTrialSubscriptionData(requestedBusinessType);
+      subscriptionData = trial.subscriptionData;
     } else if (activeUserSubscription) {
       // Если это не первый ресторан, но у пользователя есть активная подписка,
       // новый ресторан сразу становится активным в рамках этой подписки.

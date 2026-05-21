@@ -26,7 +26,7 @@ const RegisterPage = () => {
     const fetchTrialConfig = async () => {
       try {
         const apiBase = import.meta.env.VITE_API_URL || '/api';
-        const response = await fetch(`${apiBase}/trial-config`);
+        const response = await fetch(`${apiBase}/trial-config?businessType=${encodeURIComponent(formData.businessType)}`);
         if (response.ok) {
           const data = await response.json();
           setTrialDays(data.days || 7);
@@ -36,7 +36,7 @@ const RegisterPage = () => {
       }
     };
     fetchTrialConfig();
-  }, []);
+  }, [formData.businessType]);
 
   const handleChange = (e) => {
     let value = e.target.value;

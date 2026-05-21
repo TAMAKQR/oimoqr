@@ -1,6 +1,6 @@
 import { prisma } from '../config/prisma.js';
 import bcrypt from 'bcryptjs';
-import { calculateSubscriptionEndDate } from '../utils/subscription.js';
+import { calculateSubscriptionEndDate, getTrialConfigForBusinessType } from '../utils/subscription.js';
 import { sendSubscriptionActivatedEmail } from '../utils/email.js';
 
 const ADMIN_DASHBOARD_CACHE_TTL_MS = 30 * 1000;
@@ -17,6 +17,13 @@ const isPricingTierCompatibleWithBusinessType = (pricingTier, businessType) => {
 const getIncompatibleBusinessTypes = (restaurants, pricingTier) => {
   const businessTypes = [...new Set((restaurants || []).map((restaurant) => restaurant.businessType || 'RESTAURANT'))];
   return businessTypes.filter((businessType) => !isPricingTierCompatibleWithBusinessType(pricingTier, businessType));
+};
+
+const TRIAL_BUSINESS_TYPES = ['ALL', 'RESTAURANT', 'ONLINE_STORE', 'HOTEL'];
+
+const normalizeTrialBusinessType = (businessType) => {
+  const value = typeof businessType === 'string' ? businessType.trim().toUpperCase() : '';
+  return TRIAL_BUSINESS_TYPES.includes(value) ? value : 'ALL';
 };
 
 // ======================== DASHBOARD STATS ========================
@@ -949,8 +956,31 @@ export const deletePricingTier = async (req, res, next) => {
 
 export const getTrialConfig = async (req, res, next) => {
   try {
-    const trialDays = parseInt(process.env.TRIAL_PERIOD_DAYS) || 7;
-    res.json({ days: trialDays });
+    if (req.query.all === 'true') {
+      const configs = await prisma.trialConfig.findMany({
+        where: {
+          businessType: { in: TRIAL_BUSINESS_TYPES }
+        },
+        orderBy: { businessType: 'asc' }
+      });
+
+      const byType = new Map(configs.map((config) => [config.businessType, config]));
+      const fallbackDays = parseInt(process.env.TRIAL_PERIOD_DAYS) || 7;
+
+      return res.json(TRIAL_BUSINESS_TYPES.map((businessType) => (
+        byType.get(businessType) || {
+          id: null,
+          businessType,
+          name: businessType === 'ALL' ? 'Пробный период' : `Пробный период (${businessType})`,
+          days: fallbackDays,
+          message: `Вы получите ${fallbackDays} дней бесплатного пробного периода`
+        }
+      )));
+    }
+
+    const businessType = normalizeTrialBusinessType(req.query.businessType);
+    const config = await getTrialConfigForBusinessType(businessType);
+    res.json(config);
   } catch (error) {
     next(error);
   }
@@ -959,31 +989,26 @@ export const getTrialConfig = async (req, res, next) => {
 export const updateTrialConfig = async (req, res, next) => {
   try {
     const { name, days, message } = req.body;
+    const businessType = normalizeTrialBusinessType(req.body.businessType);
 
     if (!days || days < 1) {
       return res.status(400).json({ error: 'Days must be >= 1' });
     }
 
-    let config = await prisma.trialConfig.findFirst();
-
-    if (!config) {
-      config = await prisma.trialConfig.create({
-        data: {
-          name: name || 'Пробный период',
-          days: parseInt(days),
-          message: message || 'Вы получите пробный период'
-        }
-      });
-    } else {
-      config = await prisma.trialConfig.update({
-        where: { id: config.id },
-        data: {
-          name: name || config.name,
-          days: parseInt(days),
-          message: message || config.message
-        }
-      });
-    }
+    const config = await prisma.trialConfig.upsert({
+      where: { businessType },
+      create: {
+        businessType,
+        name: name || 'Пробный период',
+        days: parseInt(days),
+        message: message || 'Вы получите пробный период'
+      },
+      update: {
+        name: name || 'Пробный период',
+        days: parseInt(days),
+        message: message || 'Вы получите пробный период'
+      }
+    });
 
     res.json({
       message: 'Trial config updated successfully',

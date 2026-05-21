@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '../config/prisma.js';
 import { config } from '../config/env.js';
 import { sendWelcomeEmail } from '../utils/email.js';
-import { calculateTrialEndDate } from '../utils/subscription.js';
+import { buildTrialSubscriptionData } from '../utils/subscription.js';
 
 export const register = async (req, res, next) => {
   try {
@@ -34,12 +34,8 @@ export const register = async (req, res, next) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Get trial configuration from DB
-    // const trialConfig = await prisma.trialConfig.findFirst();
-    const trialDays = parseInt(process.env.TRIAL_PERIOD_DAYS) || 7;
-
-    // Create user with restaurant and trial subscription
-    const trialEndDate = calculateTrialEndDate(trialDays);
+    const normalizedBusinessType = businessType.trim().toUpperCase();
+    const { trialConfig, subscriptionData } = await buildTrialSubscriptionData(normalizedBusinessType);
 
     const user = await prisma.user.create({
       data: {
@@ -52,7 +48,7 @@ export const register = async (req, res, next) => {
             name: restaurantName,
             subdomain,
             currency: 'KGS',
-            businessType,
+            businessType: normalizedBusinessType,
             isTrialDefault: true
           }
         }
@@ -67,16 +63,12 @@ export const register = async (req, res, next) => {
       data: {
         userId: user.id,
         restaurantId: user.restaurants[0].id,
-        plan: 'TRIAL',
-        status: 'TRIAL',
-        trialEndsAt: trialEndDate,
-        currentPeriodStart: new Date(),
-        currentPeriodEnd: trialEndDate
+        ...subscriptionData
       }
     });
 
     // Send welcome email
-    await sendWelcomeEmail(email, name, restaurantName, trialDays);
+    await sendWelcomeEmail(email, name, restaurantName, trialConfig.days);
 
     // Generate JWT token
     const token = jwt.sign(

@@ -1143,10 +1143,11 @@ const DashboardPage = () => {
                       <div className="space-y-3">
                         {selectedOrder.items?.map((item) => {
                           const modifiers = parseModifiers(item.selectedModifiers);
+                          const itemName = item.dish?.name || item.product?.name || 'Позиция удалена';
                           return (
                             <div key={item.id} className="flex justify-between items-start border-b last:border-0 pb-3 last:pb-0">
                               <div>
-                                <p className="font-semibold text-gray-900">{item.dish?.name || 'Блюдо удалено'}</p>
+                                <p className="font-semibold text-gray-900">{itemName}</p>
                                 {modifiers.length > 0 && (
                                   <p className="text-xs text-gray-600 mt-1">{modifiers.map((m) => m.name).join(', ')}</p>
                                 )}

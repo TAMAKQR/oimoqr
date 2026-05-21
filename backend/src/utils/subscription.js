@@ -8,6 +8,70 @@ export const calculateTrialEndDate = (days = 7) => {
   return date;
 };
 
+const normalizeBusinessType = (businessType) => {
+  const value = typeof businessType === 'string' ? businessType.trim().toUpperCase() : '';
+  return value || 'RESTAURANT';
+};
+
+export const getTrialConfigForBusinessType = async (businessType) => {
+  const normalizedBusinessType = normalizeBusinessType(businessType);
+  const fallbackDays = parseInt(process.env.TRIAL_PERIOD_DAYS) || 7;
+
+  try {
+    const config = await prisma.trialConfig.findFirst({
+      where: {
+        OR: [
+          { businessType: normalizedBusinessType },
+          { businessType: 'ALL' }
+        ]
+      },
+      orderBy: [
+        { businessType: 'asc' }
+      ]
+    });
+
+    if (config?.businessType === normalizedBusinessType) {
+      return config;
+    }
+
+    const exactConfig = await prisma.trialConfig.findUnique({
+      where: { businessType: normalizedBusinessType }
+    });
+
+    return exactConfig || config || {
+      businessType: normalizedBusinessType,
+      name: 'Пробный период',
+      days: fallbackDays,
+      message: `Вы получите ${fallbackDays} дней бесплатного пробного периода`
+    };
+  } catch (error) {
+    console.error('Error fetching trial config:', error);
+    return {
+      businessType: normalizedBusinessType,
+      name: 'Пробный период',
+      days: fallbackDays,
+      message: `Вы получите ${fallbackDays} дней бесплатного пробного периода`
+    };
+  }
+};
+
+export const buildTrialSubscriptionData = async (businessType) => {
+  const normalizedBusinessType = normalizeBusinessType(businessType);
+  const trialConfig = await getTrialConfigForBusinessType(normalizedBusinessType);
+  const trialEndDate = calculateTrialEndDate(trialConfig.days);
+
+  return {
+    trialConfig,
+    subscriptionData: {
+      plan: `TRIAL_${normalizedBusinessType}`,
+      status: 'TRIAL',
+      trialEndsAt: trialEndDate,
+      currentPeriodStart: new Date(),
+      currentPeriodEnd: trialEndDate
+    }
+  };
+};
+
 export const calculateSubscriptionEndDate = (plan) => {
   const date = new Date();
   
@@ -70,16 +134,28 @@ export const getTrialDaysRemaining = (subscription) => {
   return daysRemaining;
 };
 
-export const calculateSubscriptionPrice = async (restaurantCount) => {
+export const calculateSubscriptionPrice = async (restaurantCount, businessType = null) => {
   if (restaurantCount <= 0) return 0;
 
   try {
+    const normalizedBusinessType = typeof businessType === 'string' && businessType.trim()
+      ? businessType.trim().toUpperCase()
+      : null;
+
     const tier = await prisma.pricingTier.findFirst({
-      where: { 
+      where: {
         maxRestaurants: {
           gte: restaurantCount
         },
-        isActive: true
+        isActive: true,
+        ...(normalizedBusinessType
+          ? {
+            OR: [
+              { businessType: normalizedBusinessType },
+              { businessType: 'ALL' }
+            ]
+          }
+          : {})
       },
       orderBy: {
         maxRestaurants: 'asc'

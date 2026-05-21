@@ -6,11 +6,19 @@ import { confirmDialog } from '../utils/confirmDialog';
 import DashboardLayout from '../components/DashboardLayout';
 import toast from 'react-hot-toast';
 
+const TRIAL_TYPE_OPTIONS = [
+  { value: 'RESTAURANT', label: '🍽 Ресторан' },
+  { value: 'ONLINE_STORE', label: '🛍 Магазин' },
+  { value: 'HOTEL', label: '🏨 Отель' },
+  { value: 'ALL', label: '📦 По умолчанию' },
+];
+
 const AdminPricingPage = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const [tiers, setTiers] = useState([]);
-  const [trialConfig, setTrialConfig] = useState(null);
+  const [trialConfigs, setTrialConfigs] = useState([]);
+  const [selectedTrialBusinessType, setSelectedTrialBusinessType] = useState('RESTAURANT');
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -40,6 +48,8 @@ const AdminPricingPage = () => {
     message: ''
   });
 
+  const trialConfig = trialConfigs.find((config) => config.businessType === selectedTrialBusinessType) || null;
+
   useEffect(() => {
     if (!user?.isAdmin) {
       navigate('/dashboard');
@@ -58,10 +68,10 @@ const AdminPricingPage = () => {
       setLoading(true);
       const [tiersRes, trialRes] = await Promise.all([
         api.get('/admin/pricing-tiers'),
-        api.get('/admin/trial-config')
+        api.get('/admin/trial-config?all=true')
       ]);
       setTiers(tiersRes.data);
-      setTrialConfig(trialRes.data);
+      setTrialConfigs(Array.isArray(trialRes.data) ? trialRes.data : []);
     } catch (err) {
       showNotification('Ошибка при загрузке данных', 'error');
     } finally {
@@ -240,6 +250,7 @@ const AdminPricingPage = () => {
 
     try {
       await api.put('/admin/trial-config', {
+        businessType: selectedTrialBusinessType,
         name: trialFormData.name,
         days: parseInt(trialFormData.days),
         message: trialFormData.message
@@ -683,6 +694,22 @@ const AdminPricingPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Тип бизнеса
+                </label>
+                <select
+                  value={selectedTrialBusinessType}
+                  onChange={(e) => setSelectedTrialBusinessType(e.target.value)}
+                  className="input w-full"
+                  disabled={saving}
+                >
+                  {TRIAL_TYPE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Название
                 </label>
                 <input
@@ -747,17 +774,32 @@ const AdminPricingPage = () => {
           </div>
         )}
 
-        {!isEditingTrial && trialConfig && (
+        {!isEditingTrial && (
           <div className="bg-blue-50 rounded-xl border border-blue-200 p-5">
             <div className="flex justify-between items-start">
               <div className="flex-1">
                 <h3 className="text-lg font-semibold">Настройки пробного периода</h3>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {TRIAL_TYPE_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setSelectedTrialBusinessType(option.value)}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${selectedTrialBusinessType === option.value
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-white text-gray-700 border border-gray-200'
+                        }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
                 <div className="mt-3 space-y-2">
                   <p className="text-xl font-bold text-primary-600">
-                    {trialConfig.days} дней
+                    {trialConfig?.days || 7} дней
                   </p>
-                  <p className="text-gray-600">{trialConfig.name}</p>
-                  <p className="text-sm text-gray-500">{trialConfig.message}</p>
+                  <p className="text-gray-600">{trialConfig?.name || 'Пробный период'}</p>
+                  <p className="text-sm text-gray-500">{trialConfig?.message || 'Вы получите пробный период'}</p>
                 </div>
               </div>
 
