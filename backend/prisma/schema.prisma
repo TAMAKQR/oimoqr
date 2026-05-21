@@ -506,7 +506,7 @@ model PricingTier {
   bonusSilverFromOrders Int   @default(8)          // Порог заказов для Silver
   bonusGoldFromOrders   Int   @default(20)         // Порог заказов для Gold
   
-  businessType      String    @default("RESTAURANT") // RESTAURANT | ONLINE_STORE | HOTEL | ALL
+  businessType      String    @default("RESTAURANT") // RESTAURANT | HOTEL | ALL
   order             Int       @default(0)
   isActive          Boolean   @default(true)
   
@@ -573,7 +573,7 @@ model CategoryTranslation {
 
 model TrialConfig {
   id                String    @id @default(cuid())
-  businessType      String    @unique @default("ALL") // RESTAURANT | ONLINE_STORE | HOTEL | ALL
+  businessType      String    @unique @default("ALL") // RESTAURANT | HOTEL | ALL
   name              String    @default("Пробный период")
   days              Int       @default(7)
   message           String    @default("Вы получите 7 дней бесплатного пробного периода")

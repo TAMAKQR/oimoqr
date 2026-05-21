@@ -8,7 +8,6 @@ import toast from 'react-hot-toast';
 
 const TRIAL_TYPE_OPTIONS = [
   { value: 'RESTAURANT', label: '🍽 Ресторан' },
-  { value: 'ONLINE_STORE', label: '🛍 Магазин' },
   { value: 'HOTEL', label: '🏨 Отель' },
   { value: 'ALL', label: '📦 По умолчанию' },
 ];
@@ -70,8 +69,10 @@ const AdminPricingPage = () => {
         api.get('/admin/pricing-tiers'),
         api.get('/admin/trial-config?all=true')
       ]);
-      setTiers(tiersRes.data);
-      setTrialConfigs(Array.isArray(trialRes.data) ? trialRes.data : []);
+      setTiers((tiersRes.data || []).filter((tier) => tier.businessType !== 'ONLINE_STORE'));
+      setTrialConfigs(Array.isArray(trialRes.data)
+        ? trialRes.data.filter((config) => config.businessType !== 'ONLINE_STORE')
+        : []);
     } catch (err) {
       showNotification('Ошибка при загрузке данных', 'error');
     } finally {
@@ -541,7 +542,6 @@ const AdminPricingPage = () => {
                   disabled={saving}
                 >
                   <option value="RESTAURANT">🍽 Ресторан</option>
-                  <option value="ONLINE_STORE">🛍 Магазин</option>
                   <option value="HOTEL">🏨 Отель</option>
                   <option value="ALL">📦 Универсальный</option>
                 </select>
@@ -617,12 +617,11 @@ const AdminPricingPage = () => {
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <h3 className="text-lg font-semibold">{tier.name}</h3>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${tier.businessType === 'ONLINE_STORE' ? 'bg-purple-100 text-purple-700' :
-                        tier.businessType === 'HOTEL' ? 'bg-green-100 text-green-700' :
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${tier.businessType === 'HOTEL' ? 'bg-green-100 text-green-700' :
                           tier.businessType === 'ALL' ? 'bg-gray-100 text-gray-700' :
                             'bg-blue-100 text-blue-700'
                         }`}>
-                        {tier.businessType === 'ONLINE_STORE' ? '🛍 Магазин' : tier.businessType === 'HOTEL' ? '🏨 Отель' : tier.businessType === 'ALL' ? '📦 Все' : '🍽 Ресторан'}
+                        {tier.businessType === 'HOTEL' ? '🏨 Отель' : tier.businessType === 'ALL' ? '📦 Все' : '🍽 Ресторан'}
                       </span>
                     </div>
                     <div className="mt-3 space-y-2">

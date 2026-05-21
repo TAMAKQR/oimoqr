@@ -504,7 +504,7 @@ const DashboardPage = () => {
               </svg>
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-3">Создайте свой первый бизнес</h2>
-            <p className="text-gray-500 mb-8 max-w-md mx-auto">У вас ещё нет ресторанов или магазинов. Создайте первый, чтобы начать работу с платформой.</p>
+            <p className="text-gray-500 mb-8 max-w-md mx-auto">У вас ещё нет объектов. Создайте первый, чтобы начать работу с платформой.</p>
             <button
               onClick={openCreateRestaurantModal}
               className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors"

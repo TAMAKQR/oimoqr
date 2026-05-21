@@ -90,15 +90,6 @@ const PricingPage = () => {
                             🍽 Рестораны
                         </button>
                         <button
-                            onClick={() => setActiveTab('ONLINE_STORE')}
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'ONLINE_STORE'
-                                ? 'bg-white text-gray-900 shadow-sm'
-                                : 'text-gray-500 hover:text-gray-700'
-                                }`}
-                        >
-                            🛍 Магазины
-                        </button>
-                        <button
                             onClick={() => setActiveTab('HOTEL')}
                             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'HOTEL'
                                 ? 'bg-white text-gray-900 shadow-sm'
@@ -185,6 +176,7 @@ const PricingPage = () => {
                 {/* Pricing Cards */}
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {pricingTiers
+                        .filter(tier => tier.businessType !== 'ONLINE_STORE')
                         .filter(tier => !tier.businessType || tier.businessType === activeTab || tier.businessType === 'ALL')
                         .map((tier) => {
                             const isCurrentTier = tier.id === currentTierId;

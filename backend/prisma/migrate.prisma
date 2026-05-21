@@ -353,7 +353,7 @@ model CategoryTranslation {
 
 model TrialConfig {
   id                String    @id @default(cuid())
-  businessType      String    @unique @default("ALL") // RESTAURANT | ONLINE_STORE | HOTEL | ALL
+  businessType      String    @unique @default("ALL") // RESTAURANT | HOTEL | ALL
   name              String    @default("Пробный период")
   days              Int       @default(7)
   message           String    @default("Вы получите 7 дней бесплатного пробного периода")

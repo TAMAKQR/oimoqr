@@ -19,7 +19,8 @@ const getIncompatibleBusinessTypes = (restaurants, pricingTier) => {
   return businessTypes.filter((businessType) => !isPricingTierCompatibleWithBusinessType(pricingTier, businessType));
 };
 
-const TRIAL_BUSINESS_TYPES = ['ALL', 'RESTAURANT', 'ONLINE_STORE', 'HOTEL'];
+const PRICING_BUSINESS_TYPES = ['RESTAURANT', 'HOTEL', 'ALL'];
+const TRIAL_BUSINESS_TYPES = ['ALL', 'RESTAURANT', 'HOTEL'];
 
 const normalizeTrialBusinessType = (businessType) => {
   const value = typeof businessType === 'string' ? businessType.trim().toUpperCase() : '';
@@ -747,6 +748,9 @@ export const getAllUsers = async (req, res, next) => {
 export const getPricingTiers = async (req, res, next) => {
   try {
     const tiers = await prisma.pricingTier.findMany({
+      where: {
+        businessType: { not: 'ONLINE_STORE' }
+      },
       orderBy: { order: 'asc' }
     });
 
@@ -755,7 +759,7 @@ export const getPricingTiers = async (req, res, next) => {
     console.error('Error in getPricingTiers:', error.message);
     // Fallback: use raw SQL if Prisma Client is out of sync
     try {
-      const tiers = await prisma.$queryRawUnsafe('SELECT * FROM "PricingTier" ORDER BY "order" ASC');
+      const tiers = await prisma.$queryRawUnsafe('SELECT * FROM "PricingTier" WHERE "businessType" <> \'ONLINE_STORE\' ORDER BY "order" ASC');
       return res.json(tiers);
     } catch (rawError) {
       console.error('Raw fallback also failed:', rawError.message);
@@ -821,6 +825,14 @@ export const createPricingTier = async (req, res, next) => {
       return res.status(400).json({ error: 'bonusGoldFromOrders must be greater than bonusSilverFromOrders' });
     }
 
+    const normalizedBusinessType = typeof businessType === 'string' && businessType.trim()
+      ? businessType.trim().toUpperCase()
+      : 'RESTAURANT';
+
+    if (!PRICING_BUSINESS_TYPES.includes(normalizedBusinessType)) {
+      return res.status(400).json({ error: 'Unsupported pricing business type' });
+    }
+
     const tier = await prisma.pricingTier.create({
       data: {
         name,
@@ -828,7 +840,7 @@ export const createPricingTier = async (req, res, next) => {
         description,
         features,
         maxRestaurants: maxRestaurants ? parseInt(maxRestaurants) : null,
-        businessType: businessType || 'RESTAURANT',
+        businessType: normalizedBusinessType,
         order: order || 0,
         bonusProgramEnabled: Boolean(bonusProgramEnabled),
         bonusAccrualRate: parsedBonusRate,
@@ -909,6 +921,14 @@ export const updatePricingTier = async (req, res, next) => {
       return res.status(400).json({ error: 'bonusGoldFromOrders must be greater than bonusSilverFromOrders' });
     }
 
+    const normalizedBusinessType = typeof businessType === 'string' && businessType.trim()
+      ? businessType.trim().toUpperCase()
+      : 'RESTAURANT';
+
+    if (!PRICING_BUSINESS_TYPES.includes(normalizedBusinessType)) {
+      return res.status(400).json({ error: 'Unsupported pricing business type' });
+    }
+
     const tier = await prisma.pricingTier.update({
       where: { id },
       data: {
@@ -917,7 +937,7 @@ export const updatePricingTier = async (req, res, next) => {
         description,
         features,
         maxRestaurants: maxRestaurants ? parseInt(maxRestaurants) : null,
-        businessType: businessType || 'RESTAURANT',
+        businessType: normalizedBusinessType,
         order: order || 0,
         isActive,
         bonusProgramEnabled: Boolean(bonusProgramEnabled),

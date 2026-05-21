@@ -40,7 +40,7 @@ const CACHE_VERSION =
   import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA ||
   import.meta.env.VERCEL_GIT_COMMIT_SHA ||
   import.meta.env.VITE_COMMIT_SHA ||
-  (typeof __APP_BUILD_ID__ !== 'undefined' ? `build-${__APP_BUILD_ID__}` : 'v2026-05-21-shop-route-cachebust');
+  (typeof __APP_BUILD_ID__ !== 'undefined' ? `build-${__APP_BUILD_ID__}` : 'v2026-05-21-remove-store-pricing');
 
 function App() {
   // Keep bottom-fixed UI aligned with the visible viewport on mobile browsers

@@ -16,7 +16,7 @@ const registerValidation = [
   body('businessType')
     .trim()
     .notEmpty().withMessage('Business type is required')
-    .isIn(['RESTAURANT', 'ONLINE_STORE', 'HOTEL', 'RESTAURANT_CHAIN'])
+    .isIn(['RESTAURANT', 'HOTEL', 'RESTAURANT_CHAIN'])
     .withMessage('Invalid business type'),
   body('subdomain')
     .trim()

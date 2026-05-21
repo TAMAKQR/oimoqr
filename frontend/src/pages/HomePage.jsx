@@ -137,7 +137,6 @@ const HomePage = () => {
 
   const businessTypes = [
     { icon: '🍽️', key: 'restaurant', gradient: 'from-primary-500 to-primary-700', bg: 'bg-primary-50', ring: 'ring-primary-200' },
-    { icon: '🛒', key: 'store', gradient: 'from-amber-500 to-amber-700', bg: 'bg-amber-50', ring: 'ring-amber-200' },
     { icon: '🏨', key: 'hotel', gradient: 'from-emerald-500 to-emerald-700', bg: 'bg-emerald-50', ring: 'ring-emerald-200' },
   ];
 

@@ -111,19 +111,13 @@ export const BUSINESS_TYPE_KEYS = Object.keys(BUSINESS_TYPES);
 /**
  * Business types for selector UI (create restaurant modal, etc.)
  */
-// На текущих тарифах разрешаем создавать только рестораны (магазин/отель скрыты)
+// Store plans are disabled; keep ONLINE_STORE config only for legacy objects.
 export const BUSINESS_TYPE_OPTIONS = [
     {
         key: BUSINESS_TYPES.RESTAURANT.key,
         icon: BUSINESS_TYPES.RESTAURANT.icon,
         label: BUSINESS_TYPES.RESTAURANT.label,
         color: BUSINESS_TYPES.RESTAURANT.color,
-    },
-    {
-        key: BUSINESS_TYPES.ONLINE_STORE.key,
-        icon: BUSINESS_TYPES.ONLINE_STORE.icon,
-        label: BUSINESS_TYPES.ONLINE_STORE.label,
-        color: BUSINESS_TYPES.ONLINE_STORE.color,
     },
     {
         key: BUSINESS_TYPES.HOTEL.key,
