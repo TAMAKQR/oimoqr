@@ -1,0 +1,2 @@
+ALTER TABLE "Restaurant"
+ADD COLUMN IF NOT EXISTS "showLanguagePopup" BOOLEAN NOT NULL DEFAULT false;

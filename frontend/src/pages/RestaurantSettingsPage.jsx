@@ -62,6 +62,7 @@ const RestaurantSettingsPage = () => {
   const [menuCardStyle, setMenuCardStyle] = useState('horizontal');
   const [primaryColor, setPrimaryColor] = useState('#374B6A');
   const [deliveryEnabled, setDeliveryEnabled] = useState(false);
+  const [showLanguagePopup, setShowLanguagePopup] = useState(false);
   const [deliveryFee, setDeliveryFee] = useState('');
   const [minOrderAmount, setMinOrderAmount] = useState('');
   const [freeDeliveryThreshold, setFreeDeliveryThreshold] = useState('');
@@ -238,6 +239,7 @@ const RestaurantSettingsPage = () => {
     setMenuCardStyle(r.cardStyle || 'horizontal');
     setPrimaryColor(r.primaryColor || '#374B6A');
     setDeliveryEnabled(r.deliveryEnabled || false);
+    setShowLanguagePopup(Boolean(r.showLanguagePopup));
     setDeliveryFee(r.deliveryFee || '');
     setMinOrderAmount(r.minOrderAmount || '');
     setFreeDeliveryThreshold(r.freeDeliveryThreshold || '');
@@ -419,6 +421,7 @@ const RestaurantSettingsPage = () => {
         instagram,
         facebook,
         deliveryEnabled,
+        showLanguagePopup,
         deliveryFee: deliveryFee ? parseFloat(deliveryFee) : null,
         minOrderAmount: minOrderAmount ? parseFloat(minOrderAmount) : null,
         freeDeliveryThreshold: freeDeliveryThreshold ? parseFloat(freeDeliveryThreshold) : null,
@@ -937,6 +940,30 @@ const RestaurantSettingsPage = () => {
                     className="input w-full"
                     placeholder="Например: facebook.com/your-restaurant"
                   />
+                </div>
+              </div>
+            </div>
+
+            {/* QR menu settings */}
+            <div className="bg-white rounded-xl border border-gray-100 p-5">
+              <h2 className="text-xl font-bold mb-4">QR-меню</h2>
+
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  id="showLanguagePopup"
+                  checked={showLanguagePopup}
+                  onChange={(e) => setShowLanguagePopup(e.target.checked)}
+                  className="w-5 h-5 mt-0.5"
+                  disabled={isInheritedSettingsRestaurant}
+                />
+                <div>
+                  <label htmlFor="showLanguagePopup" className="font-medium">
+                    Показывать попап выбора языка при открытии меню
+                  </label>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Для филиалов настройка наследуется от главного ресторана.
+                  </p>
                 </div>
               </div>
             </div>

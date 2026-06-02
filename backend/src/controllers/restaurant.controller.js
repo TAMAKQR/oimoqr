@@ -25,6 +25,7 @@ const RESTAURANT_SELECT = {
   primaryColor: true,
   themePalette: true,
   defaultLanguage: true,
+  showLanguagePopup: true,
   deliveryEnabled: true,
   deliveryFee: true,
   minOrderAmount: true,
@@ -249,6 +250,33 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
       ? [restaurantBase.sharedMenuSourceRestaurantId, restaurantBase.id]
       : [restaurantBase.id];
 
+    let effectiveLanguageSettings = {
+      showLanguagePopup: restaurantBase.showLanguagePopup,
+      languages: restaurantBase.languages
+    };
+
+    if (restaurantBase.sharedMenuSourceRestaurantId) {
+      const sourceLanguageSettings = await prisma.restaurant.findUnique({
+        where: { id: menuSourceRestaurantId },
+        select: {
+          showLanguagePopup: true,
+          languages: {
+            where: { isEnabled: true },
+            orderBy: { order: 'asc' }
+          }
+        }
+      });
+
+      if (sourceLanguageSettings) {
+        effectiveLanguageSettings = {
+          showLanguagePopup: sourceLanguageSettings.showLanguagePopup,
+          languages: sourceLanguageSettings.languages?.length
+            ? sourceLanguageSettings.languages
+            : restaurantBase.languages
+        };
+      }
+    }
+
     const stopList = await prisma.dishStop.findMany({
       where: {
         restaurantId: { in: effectiveStopRestaurantIds },
@@ -292,6 +320,8 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
 
     const restaurantWithImageUrl = {
       ...restaurantBase,
+      showLanguagePopup: effectiveLanguageSettings.showLanguagePopup,
+      languages: effectiveLanguageSettings.languages,
       workingHours,
       deliveryHours,
       menuCardStyle: restaurantBase.cardStyle,
@@ -417,6 +447,7 @@ export const updateRestaurant = async (req, res, next) => {
       minOrderAmount,
       freeDeliveryThreshold,
       deliveryHours,
+      showLanguagePopup,
       useTierBonusSettings,
       bonusProgramEnabled,
       bonusAccrualRate,
@@ -476,6 +507,7 @@ export const updateRestaurant = async (req, res, next) => {
       minOrderAmount: minOrderAmount ? parseFloat(minOrderAmount) : null,
       freeDeliveryThreshold: freeDeliveryThreshold ? parseFloat(freeDeliveryThreshold) : null,
       deliveryHours: deliveryHours ? JSON.stringify(deliveryHours) : null,
+      showLanguagePopup: showLanguagePopup !== undefined ? Boolean(showLanguagePopup) : undefined,
       useTierBonusSettings: useTierBonusSettings !== undefined ? Boolean(useTierBonusSettings) : undefined,
       bonusProgramEnabled: bonusProgramEnabled !== undefined ? Boolean(bonusProgramEnabled) : undefined,
       bonusAccrualRate: bonusAccrualRate !== undefined && bonusAccrualRate !== null

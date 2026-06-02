@@ -68,6 +68,7 @@ model Restaurant {
   bonusAccrualRate       Float?
   bonusExpiryDays        Int?
   defaultLanguage   String    @default("ru")
+  showLanguagePopup Boolean   @default(false)
   
   // Business type
   businessType      String    @default("RESTAURANT") // RESTAURANT | HOTEL

@@ -152,6 +152,13 @@ const formatCompactAddress = (address = '') => {
   return source.slice(-2).join(', ') || normalized;
 };
 
+const LANGUAGE_LABELS = {
+  ru: 'Русский',
+  en: 'English',
+  kg: 'Кыргызча',
+  tr: 'Turkce'
+};
+
 const MenuPage = () => {
   const { subdomain } = useParams();
   const navigate = useNavigate();
@@ -173,6 +180,8 @@ const MenuPage = () => {
   const [selectedLanguage, setSelectedLanguage] = useState('ru');
   const [availableLanguages, setAvailableLanguages] = useState([]);
   const [showLanguageSwitcher, setShowLanguageSwitcher] = useState(true);
+  const [showLanguagePrompt, setShowLanguagePrompt] = useState(false);
+  const [languagePromptHandled, setLanguagePromptHandled] = useState(false);
   const [isCustomerLoggedIn, setIsCustomerLoggedIn] = useState(false);
   const [hasDeliveryAddress, setHasDeliveryAddress] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -587,6 +596,29 @@ const MenuPage = () => {
     loadRestaurant(selectedLanguage);
   }, [subdomain, selectedLanguage, loadRestaurant]);
 
+  useEffect(() => {
+    if (!restaurant?.id || languagePromptHandled) return;
+    if (!restaurant.showLanguagePopup || availableLanguages.length <= 1) return;
+
+    const promptKey = `language_prompt_seen_${restaurant.id}`;
+    if (sessionStorage.getItem(promptKey) === 'true') return;
+
+    setShowLanguagePrompt(true);
+  }, [restaurant?.id, restaurant?.showLanguagePopup, availableLanguages, languagePromptHandled]);
+
+  const closeLanguagePrompt = () => {
+    if (restaurant?.id) {
+      sessionStorage.setItem(`language_prompt_seen_${restaurant.id}`, 'true');
+    }
+    setLanguagePromptHandled(true);
+    setShowLanguagePrompt(false);
+  };
+
+  const handlePromptLanguageSelect = (languageCode) => {
+    setSelectedLanguage(languageCode);
+    closeLanguagePrompt();
+  };
+
   // Определение ближайшего филиала по адресу авторизованного клиента
   useEffect(() => {
     if (!restaurant || !restaurant.subdomain || tableFromUrl || dineInParam) return;
@@ -866,6 +898,49 @@ const MenuPage = () => {
     <div className="min-h-screen bg-gray-100 flex justify-center">
       {/* Responsive container: mobile-first with desktop expansion */}
       <div className="w-full max-w-[480px] lg:max-w-[1100px] min-h-screen bg-gray-50 shadow-2xl lg:shadow-xl relative">
+        {showLanguagePrompt && availableLanguages.length > 1 && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4">
+            <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl border border-gray-100 p-5">
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">Выберите язык</h2>
+                  <p className="text-sm text-gray-500 mt-1">Select language / Тилди тандаңыз</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeLanguagePrompt}
+                  className="w-9 h-9 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 flex items-center justify-center"
+                  aria-label="Закрыть"
+                >
+                  <span className="text-xl leading-none">&times;</span>
+                </button>
+              </div>
+
+              <div className="grid gap-2">
+                {availableLanguages.map((lang) => {
+                  const languageCode = lang.languageCode;
+                  const isActive = languageCode === selectedLanguage;
+
+                  return (
+                    <button
+                      key={languageCode}
+                      type="button"
+                      onClick={() => handlePromptLanguageSelect(languageCode)}
+                      className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left transition-colors ${isActive
+                        ? 'border-primary-500 bg-primary-50 text-primary-700'
+                        : 'border-gray-200 bg-white text-gray-800 hover:bg-gray-50'
+                        }`}
+                    >
+                      <span className="font-semibold">{LANGUAGE_LABELS[languageCode] || languageCode.toUpperCase()}</span>
+                      <span className="text-xs font-bold uppercase text-gray-400">{languageCode}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Language Switcher - Top Left */}
         {availableLanguages.length > 0 && (
           <div className={`fixed top-4 left-4 z-40 bg-white rounded-lg shadow-md border border-gray-200 transition-all duration-300 ${showLanguageSwitcher ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'
