@@ -80,13 +80,32 @@ const MenuManagementPage = () => {
   );
 
   const getStopTargetRestaurantId = () => {
-    if (isManagerForSelectedRestaurant) {
+    if (isManagerForSelectedRestaurant || isSharedMenuConsumer) {
       return selectedRestaurantId;
     }
-    if (isSharedMenuConsumer) {
-      return selectedRestaurant?.sharedMenuSourceRestaurantId || selectedRestaurantId;
-    }
     return selectedRestaurantId;
+  };
+
+  const isLocalStopScope = () => isManagerForSelectedRestaurant || isSharedMenuConsumer;
+
+  const getDishStoppedStateForScope = (dish) => {
+    if (isLocalStopScope()) {
+      return Boolean(dish?.stoppedAtLocalRestaurant);
+    }
+    return !dish?.available;
+  };
+
+  const getDishStopButtonTitle = (dish) => {
+    if (isLocalStopScope()) {
+      if (dish?.stoppedAtMenuSource && !dish?.stoppedAtLocalRestaurant) {
+        return 'Блюдо в глобальном стоп-листе. Снимите стоп в ресторане-источнике';
+      }
+      return dish?.stoppedAtLocalRestaurant
+        ? 'Снять с локального стоп-листа точки'
+        : 'Поставить в локальный стоп-лист точки';
+    }
+
+    return dish?.available ? 'Поставить на стоп' : 'Вернуть в меню';
   };
 
   const findDishInCategories = (categoriesList, dishId) => {
@@ -249,12 +268,14 @@ const MenuManagementPage = () => {
     if (!dish?.id) return;
 
     try {
-      if (isSharedMenuConsumer || isManagerForSelectedRestaurant) {
-        const sourceRestaurantId = selectedRestaurant?.sharedMenuSourceRestaurantId || selectedRestaurantId;
-        const targetRestaurantId = isManagerForSelectedRestaurant ? selectedRestaurantId : sourceRestaurantId;
-        const isStoppedForTarget = isManagerForSelectedRestaurant
-          ? Boolean(dish.stoppedAtLocalRestaurant)
-          : Boolean(dish.stoppedAtMenuSource);
+      if (isLocalStopScope()) {
+        if (dish.stoppedAtMenuSource && !dish.stoppedAtLocalRestaurant) {
+          toast.error('Блюдо в глобальном стоп-листе. Снимите стоп в ресторане-источнике.');
+          return;
+        }
+
+        const targetRestaurantId = getStopTargetRestaurantId();
+        const isStoppedForTarget = Boolean(dish.stoppedAtLocalRestaurant);
         const nextStoppedState = !isStoppedForTarget;
         let reason = dish.stopReason || null;
 
@@ -269,8 +290,8 @@ const MenuManagementPage = () => {
         await restaurantService.setDishStop(targetRestaurantId, dish.id, nextStoppedState, reason);
         toast.success(
           nextStoppedState
-            ? (isManagerForSelectedRestaurant ? 'Блюдо добавлено в локальный стоп-лист точки' : 'Блюдо добавлено в глобальный стоп-лист')
-            : (isManagerForSelectedRestaurant ? 'Блюдо снято с локального стоп-листа точки' : 'Блюдо снято с глобального стоп-листа')
+            ? 'Блюдо добавлено в локальный стоп-лист точки'
+            : (dish.stoppedAtMenuSource ? 'Локальный стоп снят, но блюдо осталось в глобальном стоп-листе' : 'Блюдо снято с локального стоп-листа точки')
         );
         await loadCategories(selectedRestaurantId);
         return;
@@ -715,22 +736,12 @@ const MenuManagementPage = () => {
                             )}
                             <button
                               onClick={() => handleToggleAvailability(dish)}
-                              className={`p-1.5 rounded-lg transition-colors ${isManagerForSelectedRestaurant
-                                ? (dish.stoppedAtLocalRestaurant ? 'text-red-500 hover:bg-red-50' : 'text-green-500 hover:bg-green-50')
-                                : isSharedMenuConsumer
-                                  ? (dish.stoppedAtMenuSource ? 'text-red-500 hover:bg-red-50' : 'text-green-500 hover:bg-green-50')
-                                  : (!dish.available ? 'text-red-500 hover:bg-red-50' : 'text-green-500 hover:bg-green-50')}`}
-                              title={isSharedMenuConsumer
-                                ? (dish.stoppedAtMenuSource ? 'Снять с глобального стоп-листа' : 'Поставить в глобальный стоп-лист')
-                                : isManagerForSelectedRestaurant
-                                  ? (dish.stoppedAtLocalRestaurant ? 'Снять с локального стоп-листа точки' : 'Поставить в локальный стоп-лист точки')
-                                  : (dish.available ? 'Поставить на стоп' : 'Вернуть в меню')}
+                              className={`p-1.5 rounded-lg transition-colors ${getDishStoppedStateForScope(dish) || (isLocalStopScope() && dish.stoppedAtMenuSource)
+                                ? 'text-red-500 hover:bg-red-50'
+                                : 'text-green-500 hover:bg-green-50'}`}
+                              title={getDishStopButtonTitle(dish)}
                             >
-                              {(isManagerForSelectedRestaurant
-                                ? dish.stoppedAtLocalRestaurant
-                                : isSharedMenuConsumer
-                                  ? dish.stoppedAtMenuSource
-                                  : !dish.available) ? (
+                              {(getDishStoppedStateForScope(dish) || (isLocalStopScope() && dish.stoppedAtMenuSource)) ? (
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" /></svg>
                               ) : (
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
