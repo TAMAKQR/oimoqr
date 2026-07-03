@@ -1143,7 +1143,7 @@ const DashboardPage = () => {
                       <div className="space-y-3">
                         {selectedOrder.items?.map((item) => {
                           const modifiers = parseModifiers(item.selectedModifiers);
-                          const itemName = item.dish?.name || item.product?.name || 'Позиция удалена';
+                          const itemName = item.dish?.name || item.dishName || item.product?.name || 'Позиция удалена';
                           return (
                             <div key={item.id} className="flex justify-between items-start border-b last:border-0 pb-3 last:pb-0">
                               <div>

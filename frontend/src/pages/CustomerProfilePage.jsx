@@ -956,7 +956,7 @@ function OrdersTab({ orders }) {
                     <div className="space-y-3 mb-4">
                         {order.items?.map((item, idx) => {
                             const modifiers = parseModifiers(item.selectedModifiers);
-                            const name = item.dish?.name || item.product?.name || item.dishName || item.productName || 'Блюдо';
+                            const name = item.dish?.name || item.dishName || item.product?.name || item.productName || 'Блюдо';
                             const currency = order.restaurant?.currency || 'RUB';
                             const quantity = Number(item.quantity) || 0;
                             return (

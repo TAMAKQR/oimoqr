@@ -34,6 +34,7 @@ export const buildTrustedOrderItems = async ({ items, menuSourceRestaurantId, de
         },
         select: {
             id: true,
+            name: true,
             price: true,
             deliveryPrice: true
         }
@@ -137,6 +138,7 @@ export const buildTrustedOrderItems = async ({ items, menuSourceRestaurantId, de
 
         trustedItems.push({
             dishId: dish.id,
+            dishName: dish.name,
             quantity,
             price: unitPrice,
             selectedModifiers: trustedModifiers.length > 0 ? trustedModifiers : undefined

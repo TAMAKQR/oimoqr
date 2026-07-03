@@ -214,7 +214,7 @@ const OrderSuccessPage = () => {
                                         : typeof item.selectedModifiers === 'string'
                                             ? (() => { try { return JSON.parse(item.selectedModifiers); } catch { return []; } })()
                                             : [];
-                                    const name = item.dish?.name || item.product?.name || item.name || item.dishName || item.productName || 'Позиция';
+                                    const name = item.dish?.name || item.dishName || item.product?.name || item.name || item.productName || 'Позиция';
                                     const itemPrice = Number(item.price) || 0;
                                     const itemQty = Number(item.quantity) || 0;
                                     return (

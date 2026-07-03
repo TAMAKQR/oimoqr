@@ -888,7 +888,7 @@ export const getAssignedRestaurant = async (req, res, next) => {
         : '';
 
       return {
-        dishName: item.dish?.name || 'Удалённая позиция',
+        dishName: item.dish?.name || item.dishName || 'Удалённая позиция',
         quantity: item.quantity,
         price: item.price,
         total: (item.price * item.quantity).toFixed(2),
@@ -898,7 +898,7 @@ export const getAssignedRestaurant = async (req, res, next) => {
 
     // Формируем текстовое сообщение для клиента
     const itemsText = order.items.map(item => {
-      const dishName = item.dish?.name || 'Удалённая позиция';
+      const dishName = item.dish?.name || item.dishName || 'Удалённая позиция';
       const modifiers = parseSelectedModifiers(item.selectedModifiers);
       const modifiersText = modifiers.length > 0
         ? ` (${modifiers.map(m => m.name).join(', ')})`
