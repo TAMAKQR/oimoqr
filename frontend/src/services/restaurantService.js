@@ -121,6 +121,16 @@ export const restaurantService = {
     return response.data;
   },
 
+  getDishStopMatrix: async (restaurantId, dishId) => {
+    const response = await api.get(`/restaurants/${restaurantId}/dishes/${dishId}/stop-matrix`);
+    return response.data;
+  },
+
+  updateDishStopMatrix: async (restaurantId, dishId, data) => {
+    const response = await api.put(`/restaurants/${restaurantId}/dishes/${dishId}/stop-matrix`, data);
+    return response.data;
+  },
+
   setDishStop: async (restaurantId, dishId, isStopped = true, reason = null) => {
     const response = await api.put(`/restaurants/${restaurantId}/dishes/${dishId}/stop`, {
       isStopped,

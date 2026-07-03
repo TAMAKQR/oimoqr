@@ -44,6 +44,11 @@ const MenuManagementPage = () => {
   const [showOptionStopModal, setShowOptionStopModal] = useState(false);
   const [selectedDishForOptionStops, setSelectedDishForOptionStops] = useState(null);
   const [optionStopLoadingId, setOptionStopLoadingId] = useState(null);
+  const [showDishStopMatrixModal, setShowDishStopMatrixModal] = useState(false);
+  const [selectedDishForStops, setSelectedDishForStops] = useState(null);
+  const [dishStopMatrix, setDishStopMatrix] = useState(null);
+  const [loadingDishStopMatrix, setLoadingDishStopMatrix] = useState(false);
+  const [savingDishStopMatrix, setSavingDishStopMatrix] = useState(false);
 
   // Автоматически выбираем ресторан при загрузке (handled by useSelectedRestaurant)
 
@@ -57,6 +62,10 @@ const MenuManagementPage = () => {
     userData?.restaurantStaff?.some(
       (staff) => staff.restaurantId === selectedRestaurantId && staff.role === 'manager'
     )
+  );
+  const isOwnerForSelectedRestaurant = Boolean(
+    userData?.isAdmin ||
+    (selectedRestaurantId && userData?.restaurants?.some((restaurant) => restaurant.id === selectedRestaurantId))
   );
 
   const ensureMenuEditAllowed = () => {
@@ -86,13 +95,14 @@ const MenuManagementPage = () => {
     return selectedRestaurantId;
   };
 
-  const isLocalStopScope = () => isManagerForSelectedRestaurant || isSharedMenuConsumer;
+  const isLocalStopScope = () => isManagerForSelectedRestaurant && !isOwnerForSelectedRestaurant;
+  const canManageDishStopMatrix = () => Boolean(isOwnerForSelectedRestaurant && selectedRestaurantId);
 
   const getDishStoppedStateForScope = (dish) => {
     if (isLocalStopScope()) {
       return Boolean(dish?.stoppedAtLocalRestaurant);
     }
-    return !dish?.available;
+    return Boolean(dish?.stoppedAtRestaurant || !dish?.available);
   };
 
   const getDishStopButtonTitle = (dish) => {
@@ -105,7 +115,9 @@ const MenuManagementPage = () => {
         : 'Поставить в локальный стоп-лист точки';
     }
 
-    return dish?.available ? 'Поставить на стоп' : 'Вернуть в меню';
+    return canManageDishStopMatrix()
+      ? 'Управлять стоп-листом по точкам'
+      : (dish?.available ? 'Поставить на стоп' : 'Вернуть в меню');
   };
 
   const findDishInCategories = (categoriesList, dishId) => {
@@ -264,10 +276,62 @@ const MenuManagementPage = () => {
     }
   };
 
+  const handleOpenDishStopMatrixModal = async (dish) => {
+    if (!dish?.id || !selectedRestaurantId) return;
+
+    setSelectedDishForStops(dish);
+    setDishStopMatrix(null);
+    setShowDishStopMatrixModal(true);
+    setLoadingDishStopMatrix(true);
+
+    try {
+      const matrix = await restaurantService.getDishStopMatrix(selectedRestaurantId, dish.id);
+      setDishStopMatrix(matrix);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Ошибка при загрузке стоп-листа');
+      setShowDishStopMatrixModal(false);
+      setSelectedDishForStops(null);
+      console.error(err);
+    } finally {
+      setLoadingDishStopMatrix(false);
+    }
+  };
+
+  const handleCloseDishStopMatrixModal = () => {
+    if (savingDishStopMatrix) return;
+    setShowDishStopMatrixModal(false);
+    setSelectedDishForStops(null);
+    setDishStopMatrix(null);
+  };
+
+  const handleSaveDishStopMatrix = async (data) => {
+    if (!selectedDishForStops?.id || !selectedRestaurantId) return;
+
+    setSavingDishStopMatrix(true);
+    try {
+      await restaurantService.updateDishStopMatrix(selectedRestaurantId, selectedDishForStops.id, data);
+      toast.success('Стоп-лист блюда обновлён');
+      setShowDishStopMatrixModal(false);
+      setSelectedDishForStops(null);
+      setDishStopMatrix(null);
+      await loadCategories(selectedRestaurantId);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Ошибка при сохранении стоп-листа');
+      console.error(err);
+    } finally {
+      setSavingDishStopMatrix(false);
+    }
+  };
+
   const handleToggleAvailability = async (dish) => {
     if (!dish?.id) return;
 
     try {
+      if (canManageDishStopMatrix()) {
+        await handleOpenDishStopMatrixModal(dish);
+        return;
+      }
+
       if (isLocalStopScope()) {
         if (dish.stoppedAtMenuSource && !dish.stoppedAtLocalRestaurant) {
           toast.error('Блюдо в глобальном стоп-листе. Снимите стоп в ресторане-источнике.');
@@ -788,6 +852,18 @@ const MenuManagementPage = () => {
         />
       )}
 
+      {/* Dish Stop Matrix Modal */}
+      {showDishStopMatrixModal && selectedDishForStops && (
+        <DishStopMatrixModal
+          dish={selectedDishForStops}
+          matrix={dishStopMatrix}
+          loading={loadingDishStopMatrix}
+          saving={savingDishStopMatrix}
+          onSave={handleSaveDishStopMatrix}
+          onClose={handleCloseDishStopMatrixModal}
+        />
+      )}
+
       {/* Category Modal */}
       {showCategoryModal && selectedRestaurantId && (
         <CategoryModal
@@ -898,6 +974,231 @@ const MenuManagementPage = () => {
         </div>
       )}
     </DashboardLayout>
+  );
+};
+
+const DishStopMatrixModal = ({ dish, matrix, loading, saving, onSave, onClose }) => {
+  const [globalStopped, setGlobalStopped] = useState(false);
+  const [pointStops, setPointStops] = useState({});
+
+  useEffect(() => {
+    if (!matrix) return;
+
+    setGlobalStopped(Boolean(matrix.globalStopped));
+    setPointStops(
+      Object.fromEntries(
+        (matrix.points || [])
+          .filter((point) => !point.isSource)
+          .map((point) => [point.id, Boolean(point.localStopped)])
+      )
+    );
+  }, [matrix]);
+
+  const points = matrix?.points || [];
+  const sourcePoint = points.find((point) => point.isSource);
+  const outletPoints = points.filter((point) => !point.isSource);
+  const stoppedOutletCount = outletPoints.filter((point) => pointStops[point.id]).length;
+  const effectiveStoppedCount = points.filter((point) => globalStopped || pointStops[point.id] || point.isSource && globalStopped).length;
+
+  const setAllOutletStops = (isStopped) => {
+    setPointStops(
+      Object.fromEntries(outletPoints.map((point) => [point.id, isStopped]))
+    );
+  };
+
+  const handleSave = () => {
+    onSave({
+      globalStopped,
+      globalReason: null,
+      pointStops: outletPoints.map((point) => ({
+        restaurantId: point.id,
+        isStopped: Boolean(pointStops[point.id]),
+        reason: null
+      }))
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="px-5 py-4 border-b flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold text-gray-900">Стоп-лист блюда</h2>
+            <p className="text-sm text-gray-500 truncate">{dish?.name || matrix?.dish?.name}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="text-gray-400 hover:text-gray-600 transition-colors p-1 disabled:opacity-50"
+            aria-label="Закрыть"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="overflow-y-auto p-5 space-y-4">
+          {loading || !matrix ? (
+            <div className="py-10 text-center text-sm text-gray-500">Загрузка...</div>
+          ) : (
+            <>
+              <div className="border rounded-lg p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-gray-900">Глобальный стоп</div>
+                    <div className="text-xs text-gray-500">Источник меню: {sourcePoint?.name || 'главная точка'}</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setGlobalStopped((value) => !value)}
+                    disabled={saving}
+                    className={`relative inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${globalStopped ? 'bg-red-500' : 'bg-gray-300'}`}
+                    aria-pressed={globalStopped}
+                  >
+                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${globalStopped ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setGlobalStopped(true)}
+                    disabled={saving}
+                    className="px-3 py-1.5 text-xs rounded-lg border border-red-200 text-red-700 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    Стоп везде
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGlobalStopped(false)}
+                    disabled={saving}
+                    className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Снять глобальный
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGlobalStopped(false);
+                      setAllOutletStops(false);
+                    }}
+                    disabled={saving}
+                    className="px-3 py-1.5 text-xs rounded-lg border border-green-200 text-green-700 hover:bg-green-50 disabled:opacity-50"
+                  >
+                    Снять везде
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900">Точки</h3>
+                    <p className="text-xs text-gray-500">
+                      Скрыто: {globalStopped ? points.length : effectiveStoppedCount} из {points.length}
+                    </p>
+                  </div>
+                  {outletPoints.length > 0 && (
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setAllOutletStops(true)}
+                        disabled={saving}
+                        className="px-2.5 py-1.5 text-xs rounded-lg border border-red-200 text-red-700 hover:bg-red-50 disabled:opacity-50"
+                      >
+                        Все точки на стоп
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAllOutletStops(false)}
+                        disabled={saving}
+                        className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                      >
+                        Снять с точек
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  {sourcePoint && (
+                    <div className="border rounded-lg px-3 py-3 bg-gray-50 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-gray-900 truncate">{sourcePoint.name}</div>
+                        <div className="text-xs text-gray-500">Главная точка, управляется глобальным стопом</div>
+                      </div>
+                      <span className={`px-2 py-1 rounded text-xs font-semibold ${globalStopped ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                        {globalStopped ? 'СТОП' : 'В меню'}
+                      </span>
+                    </div>
+                  )}
+
+                  {outletPoints.map((point) => {
+                    const localStopped = Boolean(pointStops[point.id]);
+                    const effectiveStopped = globalStopped || localStopped;
+
+                    return (
+                      <div key={point.id} className="border rounded-lg px-3 py-3 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium text-gray-900 truncate">{point.name}</div>
+                          <div className="text-xs text-gray-500 truncate">{point.subdomain ? `${point.subdomain}.oimoqr.com` : 'Точка сети'}</div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className={`hidden sm:inline px-2 py-1 rounded text-xs font-semibold ${effectiveStopped ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                            {effectiveStopped ? (globalStopped ? 'Глобальный стоп' : 'СТОП') : 'В меню'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setPointStops((prev) => ({ ...prev, [point.id]: !localStopped }))}
+                            disabled={saving}
+                            className={`relative inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${localStopped ? 'bg-red-500' : 'bg-gray-300'}`}
+                            aria-pressed={localStopped}
+                          >
+                            <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${localStopped ? 'translate-x-6' : 'translate-x-1'}`} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {outletPoints.length === 0 && (
+                    <div className="border rounded-lg p-4 text-sm text-gray-500">
+                      Для этого меню нет отдельных точек.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {stoppedOutletCount > 0 && !globalStopped && (
+                <div className="text-xs text-gray-500">
+                  Отдельный стоп включён в {stoppedOutletCount} точк{stoppedOutletCount === 1 ? 'е' : 'ах'}.
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        <div className="px-5 py-4 border-t flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="btn-secondary flex-1"
+          >
+            Отмена
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving || loading || !matrix}
+            className="btn-primary flex-1"
+          >
+            {saving ? 'Сохранение...' : 'Сохранить'}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
 

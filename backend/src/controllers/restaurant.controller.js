@@ -1617,6 +1617,250 @@ export const getDishStops = async (req, res, next) => {
   }
 };
 
+const getDishStopMatrixPayload = async ({ restaurantId, dishId, userId, isAdmin = false }) => {
+  const selectedRestaurant = await prisma.restaurant.findFirst({
+    where: {
+      id: restaurantId,
+      OR: isAdmin
+        ? undefined
+        : [
+          { ownerId: userId },
+          { staff: { some: { userId } } }
+        ]
+    },
+    select: {
+      id: true,
+      ownerId: true,
+      sharedMenuSourceRestaurantId: true
+    }
+  });
+
+  if (!selectedRestaurant) {
+    const error = new Error('Access denied');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  const menuSourceRestaurantId = selectedRestaurant.sharedMenuSourceRestaurantId || selectedRestaurant.id;
+  const sourceRestaurant = await prisma.restaurant.findUnique({
+    where: { id: menuSourceRestaurantId },
+    select: {
+      id: true,
+      ownerId: true
+    }
+  });
+
+  if (!sourceRestaurant) {
+    const error = new Error('Source restaurant not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (!isAdmin && sourceRestaurant.ownerId !== userId) {
+    const error = new Error('Only owner can manage stop-list across all points');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  const dish = await prisma.dish.findUnique({
+    where: { id: dishId },
+    select: {
+      id: true,
+      name: true,
+      available: true,
+      restaurantId: true
+    }
+  });
+
+  if (!dish || dish.restaurantId !== menuSourceRestaurantId) {
+    const error = new Error('Dish is not part of this restaurant shared menu');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const points = await prisma.restaurant.findMany({
+    where: {
+      ownerId: sourceRestaurant.ownerId,
+      OR: [
+        { id: menuSourceRestaurantId },
+        { sharedMenuSourceRestaurantId: menuSourceRestaurantId }
+      ]
+    },
+    select: {
+      id: true,
+      name: true,
+      subdomain: true,
+      sharedMenuSourceRestaurantId: true
+    },
+    orderBy: [
+      { sharedMenuSourceRestaurantId: 'asc' },
+      { name: 'asc' }
+    ]
+  });
+
+  const pointIds = points.map((point) => point.id);
+  const stopRows = await prisma.dishStop.findMany({
+    where: {
+      dishId,
+      restaurantId: { in: pointIds },
+      isStopped: true
+    },
+    select: {
+      restaurantId: true,
+      reason: true,
+      updatedAt: true
+    }
+  });
+
+  const stopByRestaurantId = new Map(stopRows.map((stop) => [stop.restaurantId, stop]));
+  const sourceStop = stopByRestaurantId.get(menuSourceRestaurantId);
+  const globalStopped = Boolean(sourceStop) || dish.available === false;
+
+  return {
+    selectedRestaurantId: restaurantId,
+    menuSourceRestaurantId,
+    dish: {
+      id: dish.id,
+      name: dish.name,
+      available: dish.available
+    },
+    globalStopped,
+    globalReason: sourceStop?.reason || null,
+    points: points.map((point) => {
+      const isSource = point.id === menuSourceRestaurantId;
+      const localStop = stopByRestaurantId.get(point.id);
+      const localStopped = isSource ? globalStopped : Boolean(localStop);
+
+      return {
+        id: point.id,
+        name: point.name,
+        subdomain: point.subdomain,
+        isSource,
+        localStopped,
+        effectiveStopped: globalStopped || localStopped,
+        reason: isSource ? sourceStop?.reason || null : localStop?.reason || null
+      };
+    })
+  };
+};
+
+export const getDishStopMatrix = async (req, res, next) => {
+  try {
+    const { restaurantId, dishId } = req.params;
+    const payload = await getDishStopMatrixPayload({
+      restaurantId,
+      dishId,
+      userId: req.user.id,
+      isAdmin: Boolean(req.user?.isAdmin)
+    });
+
+    res.json(payload);
+  } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+    next(error);
+  }
+};
+
+export const updateDishStopMatrix = async (req, res, next) => {
+  try {
+    const { restaurantId, dishId } = req.params;
+    const { globalStopped = false, globalReason = null, pointStops = [] } = req.body;
+    const payload = await getDishStopMatrixPayload({
+      restaurantId,
+      dishId,
+      userId: req.user.id,
+      isAdmin: Boolean(req.user?.isAdmin)
+    });
+
+    const pointIds = new Set(payload.points.map((point) => point.id));
+    const outletStops = Array.isArray(pointStops)
+      ? pointStops.filter((stop) => stop && pointIds.has(stop.restaurantId) && stop.restaurantId !== payload.menuSourceRestaurantId)
+      : [];
+
+    await prisma.$transaction(async (tx) => {
+      await tx.dish.update({
+        where: { id: dishId },
+        data: { available: true }
+      });
+
+      if (globalStopped) {
+        await tx.dishStop.upsert({
+          where: {
+            restaurantId_dishId: {
+              restaurantId: payload.menuSourceRestaurantId,
+              dishId
+            }
+          },
+          create: {
+            restaurantId: payload.menuSourceRestaurantId,
+            dishId,
+            isStopped: true,
+            reason: globalReason || null
+          },
+          update: {
+            isStopped: true,
+            reason: globalReason || null
+          }
+        });
+      } else {
+        await tx.dishStop.deleteMany({
+          where: {
+            restaurantId: payload.menuSourceRestaurantId,
+            dishId
+          }
+        });
+      }
+
+      await Promise.all(outletStops.map((stop) => {
+        const shouldStop = Boolean(stop.isStopped);
+        if (shouldStop) {
+          return tx.dishStop.upsert({
+            where: {
+              restaurantId_dishId: {
+                restaurantId: stop.restaurantId,
+                dishId
+              }
+            },
+            create: {
+              restaurantId: stop.restaurantId,
+              dishId,
+              isStopped: true,
+              reason: stop.reason || null
+            },
+            update: {
+              isStopped: true,
+              reason: stop.reason || null
+            }
+          });
+        }
+
+        return tx.dishStop.deleteMany({
+          where: {
+            restaurantId: stop.restaurantId,
+            dishId
+          }
+        });
+      }));
+    });
+
+    const updatedPayload = await getDishStopMatrixPayload({
+      restaurantId,
+      dishId,
+      userId: req.user.id,
+      isAdmin: Boolean(req.user?.isAdmin)
+    });
+
+    res.json(updatedPayload);
+  } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+    next(error);
+  }
+};
+
 export const setDishStop = async (req, res, next) => {
   try {
     const { restaurantId, dishId } = req.params;

@@ -12,6 +12,8 @@ import {
   copyMenu,
   setSharedMenuSource,
   getDishStops,
+  getDishStopMatrix,
+  updateDishStopMatrix,
   setDishStop,
   setModifierOptionStop,
   getRestaurantCategories,
@@ -39,6 +41,8 @@ router.get('/:restaurantId/categories', authenticate, getCategories);
 // Get dishes for a restaurant (protected) - MUST be before /:subdomain
 router.get('/:restaurantId/dishes', authenticate, getRestaurantDishes);
 router.get('/:restaurantId/dish-stops', authenticate, getDishStops);
+router.get('/:restaurantId/dishes/:dishId/stop-matrix', authenticate, getDishStopMatrix);
+router.put('/:restaurantId/dishes/:dishId/stop-matrix', authenticate, updateDishStopMatrix);
 router.put('/:restaurantId/dishes/:dishId/stop', authenticate, setDishStop);
 router.put('/:restaurantId/modifier-options/:optionId/stop', authenticate, setModifierOptionStop);
 
