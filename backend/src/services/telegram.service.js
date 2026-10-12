@@ -118,7 +118,7 @@ class TelegramService {
                     `/help — Показать это сообщение\n\n` +
                     `*Как настроить уведомления:*\n` +
                     `1. Создайте группу в Telegram\n` +
-                    `2. Добавьте @OimoQR\\_bot в группу\n` +
+                    `2. Добавьте @oimo\\_dillevery\\_bot в группу\n` +
                     `3. Отправьте /getid в группе\n` +
                     `4. Скопируйте ID и вставьте в настройки ресторана\n` +
                     `5. Нажмите "Проверить подключение"`;
@@ -163,7 +163,7 @@ class TelegramService {
 
             // Формируем адрес (приоритет у customerAddress с деталями)
             let addressLine = '';
-            if (order.customerAddress) {
+            if (order.deliveryType === 'delivery' && order.customerAddress) {
                 const addressParts = [
                     order.customerAddress.address,
                     order.customerAddress.entrance && `подъезд ${order.customerAddress.entrance}`,
@@ -172,7 +172,7 @@ class TelegramService {
                 ].filter(Boolean).join(', ');
                 const comment = order.customerAddress.comment ? ` (${order.customerAddress.comment})` : '';
                 addressLine = `📍 **Адрес:** ${addressParts}${comment}`;
-            } else if (order.deliveryAddress) {
+            } else if (order.deliveryType === 'delivery' && order.deliveryAddress) {
                 addressLine = `📍 **Адрес:** ${order.deliveryAddress}`;
             }
 

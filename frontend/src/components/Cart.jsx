@@ -18,7 +18,8 @@ const Cart = ({ restaurant, isDishModalOpen = false, hideOnDesktop = false }) =>
   const total = getTotal();
   const itemCount = getItemCount();
   const minAmount = restaurant?.minOrderAmount;
-  const isBelowMinimum = orderMode !== 'dine_in' && minAmount && total < minAmount;
+  const isBelowMinimum = orderMode === 'delivery' && minAmount && total < minAmount;
+  const needsFulfillmentChoice = orderMode !== 'dine_in' && orderMode !== 'delivery' && orderMode !== 'pickup';
 
   const [isTrackVisible, setIsTrackVisible] = useState(false);
 
@@ -30,6 +31,11 @@ const Cart = ({ restaurant, isDishModalOpen = false, hideOnDesktop = false }) =>
 
   const handleCheckout = async () => {
     if (!items.length) return;
+
+    if (needsFulfillmentChoice) {
+      toast.error('Выберите способ получения: доставка или самовывоз');
+      return;
+    }
 
     if (isBelowMinimum) {
       toast.error(`Минимальная сумма заказа: ${minAmount} ${currency}\nТекущая сумма: ${total} ${currency}`);

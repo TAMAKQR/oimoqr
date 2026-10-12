@@ -52,6 +52,7 @@ const CheckoutPage = () => {
         removeItem,
         clearCart,
         orderMode,
+        setOrderMode,
         tableNumber,
         restaurantId: cartRestaurantId,
         reconcileWithRestaurantMenu
@@ -77,16 +78,23 @@ const CheckoutPage = () => {
     const [addressesLoading, setAddressesLoading] = useState(false);
     const [selectedAddressId, setSelectedAddressId] = useState(null);
     const [guestDeliveryLocation, setGuestDeliveryLocation] = useState(null);
-    const [deliveryType, setDeliveryType] = useState(isDineIn ? 'dine_in' : 'delivery');
+    const [deliveryType, setDeliveryType] = useState(
+        isDineIn ? 'dine_in' : (orderMode === 'pickup' ? 'pickup' : 'delivery')
+    );
 
-    // Гарантируем правильный режим при переключении (QR vs Доставка)
+    // Сохраняем выбранный в меню способ получения и корректный режим для QR-заказа за столом.
     useEffect(() => {
-        if (isDineIn) {
-            setDeliveryType('dine_in');
-        } else if (deliveryType === 'dine_in') {
-            setDeliveryType('delivery');
-        }
-    }, [isDineIn]);
+        setDeliveryType((currentType) => {
+            if (isDineIn) return 'dine_in';
+            if (orderMode === 'delivery' || orderMode === 'pickup') return orderMode;
+            return currentType === 'dine_in' ? 'delivery' : currentType;
+        });
+    }, [isDineIn, orderMode]);
+
+    const selectDeliveryType = (nextType) => {
+        setDeliveryType(nextType);
+        setOrderMode(nextType, null);
+    };
 
     const [paymentMethod, setPaymentMethod] = useState('cash');
     const [comment, setComment] = useState('');
@@ -917,7 +925,7 @@ const CheckoutPage = () => {
                                     <h2 className="font-semibold text-base mb-3">Способ получения</h2>
                                     <div className="grid grid-cols-2 gap-2 rounded-xl bg-gray-100 p-1.5">
                                         <button
-                                            onClick={() => setDeliveryType('delivery')}
+                                            onClick={() => selectDeliveryType('delivery')}
                                             className={`rounded-lg px-3 py-2.5 text-left transition-all ${deliveryType === 'delivery'
                                                 ? 'bg-white border border-primary-500 shadow-sm'
                                                 : 'border border-transparent text-gray-700'
@@ -931,7 +939,7 @@ const CheckoutPage = () => {
                                             ) : null}
                                         </button>
                                         <button
-                                            onClick={() => setDeliveryType('pickup')}
+                                            onClick={() => selectDeliveryType('pickup')}
                                             className={`rounded-lg px-3 py-2.5 text-left transition-all ${deliveryType === 'pickup'
                                                 ? 'bg-white border border-primary-500 shadow-sm'
                                                 : 'border border-transparent text-gray-700'

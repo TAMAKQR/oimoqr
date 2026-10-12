@@ -495,20 +495,19 @@ const MenuPage = () => {
     };
   }, [isCustomerLoggedIn]);
 
-  // Определяем режим: заказ в зале (?table=X или ?dine_in) или доставка
+  // Определяем режим: заказ в зале (?table=X или ?dine_in), доставка или самовывоз
   useEffect(() => {
     if (tableFromUrl) {
       setOrderMode('dine_in', tableFromUrl);
     } else if (dineInParam) {
       setOrderMode('dine_in', null);
-    } else {
-      // Сбрасываем режим dine_in если нет параметров в URL
+    } else if (orderMode === 'dine_in') {
       setOrderMode(null, null);
     }
-  }, [tableFromUrl, dineInParam, setOrderMode]);
+  }, [tableFromUrl, dineInParam, orderMode, setOrderMode]);
 
   useEffect(() => {
-    if (orderMode === 'dine_in') return;
+    if (orderMode !== 'delivery') return;
 
     const alreadyPrompted = localStorage.getItem(GUEST_DELIVERY_LOCATION_PROMPT_KEY) === '1';
     if (alreadyPrompted) return;
@@ -543,7 +542,7 @@ const MenuPage = () => {
       const guestLat = Number(guestDeliveryLocation?.latitude);
       const guestLon = Number(guestDeliveryLocation?.longitude);
       const useGuestCoords = !customerService.isAuthenticated()
-        && orderMode !== 'dine_in'
+        && orderMode === 'delivery'
         && Number.isFinite(guestLat)
         && Number.isFinite(guestLon);
 
@@ -621,7 +620,7 @@ const MenuPage = () => {
 
   // Определение ближайшего филиала по адресу авторизованного клиента
   useEffect(() => {
-    if (!restaurant || !restaurant.subdomain || tableFromUrl || dineInParam) return;
+    if (!restaurant || !restaurant.subdomain || tableFromUrl || dineInParam || orderMode !== 'delivery') return;
     if (!customerService.isAuthenticated()) return;
 
     let isCancelled = false;
@@ -658,23 +657,32 @@ const MenuPage = () => {
     return () => {
       isCancelled = true;
     };
-  }, [restaurant?.id, restaurant?.subdomain, selectedLanguage, tableFromUrl, dineInParam]);
+  }, [restaurant?.id, restaurant?.subdomain, selectedLanguage, tableFromUrl, dineInParam, orderMode]);
 
   const displayRestaurant = restaurant;
   const isCartForCurrentRestaurant =
     !cartRestaurantId || !displayRestaurant?.id || cartRestaurantId === displayRestaurant.id;
   const effectiveCartItemCount = isCartForCurrentRestaurant ? cartItemCount : 0;
   const effectiveCartTotal = isCartForCurrentRestaurant ? cartTotal : 0;
-  const isDeliveryMode = orderMode !== 'dine_in';
+  const isDeliveryMode = orderMode === 'delivery';
+  const isPickupMode = orderMode === 'pickup';
+  const hasSelectedFulfillmentMode = isDeliveryMode || isPickupMode;
   const hasGuestDeliveryLocation = Boolean(
     Number.isFinite(Number(guestDeliveryLocation?.latitude))
     && Number.isFinite(Number(guestDeliveryLocation?.longitude))
   );
   const isGuestAddressConfirmed = Boolean(guestDeliveryLocation?.confirmed);
   const hasConfirmedGuestDeliveryLocation = hasGuestDeliveryLocation && Boolean(guestDeliveryLocation?.confirmed);
-  const canAddToCart = !isDeliveryMode || (isCustomerLoggedIn ? hasDeliveryAddress : hasConfirmedGuestDeliveryLocation);
+  const canAddToCart = orderMode === 'dine_in'
+    || isPickupMode
+    || (isDeliveryMode && (isCustomerLoggedIn ? hasDeliveryAddress : hasConfirmedGuestDeliveryLocation));
 
   const handleAddToCartBlocked = () => {
+    if (!hasSelectedFulfillmentMode && orderMode !== 'dine_in') {
+      toast.error('Выберите способ получения: доставка или самовывоз');
+      return;
+    }
+
     if (!isDeliveryMode) return;
 
     if (!isCustomerLoggedIn) {
@@ -694,7 +702,7 @@ const MenuPage = () => {
 
   const currencySymbol = getCurrencySymbol(displayRestaurant?.currency);
   const minOrderAmount = displayRestaurant?.minOrderAmount || 0;
-  const isBelowMinimum = orderMode !== 'dine_in' && minOrderAmount > 0 && effectiveCartTotal < minOrderAmount;
+  const isBelowMinimum = orderMode === 'delivery' && minOrderAmount > 0 && effectiveCartTotal < minOrderAmount;
 
   // If geo-based branch selection changes within the same subdomain, re-bind cart to the new serving point.
   useEffect(() => {
@@ -713,20 +721,23 @@ const MenuPage = () => {
       cartRestaurantId === previousRestaurantId
     ) {
       switchRestaurant(displayRestaurant.id, displayRestaurant.name);
-      toast('Точка доставки обновлена по адресу. Корзина очищена для актуального филиала.', {
+      setOrderMode(orderMode, null);
+      toast(orderMode === 'delivery'
+        ? 'Точка доставки обновлена по адресу. Корзина очищена для актуального филиала.'
+        : 'Точка самовывоза изменена. Корзина очищена для актуального филиала.', {
         icon: '📍',
       });
     }
 
     prevResolvedRestaurantIdRef.current = displayRestaurant.id;
     prevResolvedSubdomainRef.current = subdomain;
-  }, [displayRestaurant?.id, displayRestaurant?.name, subdomain, orderMode, cartItemCount, cartRestaurantId, switchRestaurant]);
+  }, [displayRestaurant?.id, displayRestaurant?.name, subdomain, orderMode, cartItemCount, cartRestaurantId, switchRestaurant, setOrderMode]);
 
   const getDisplayDishForOrderMode = useCallback((dish) => {
     const displayDish = { ...dish };
-    const isDeliveryMode = orderMode !== 'dine_in';
+    const isOffPremiseMode = orderMode !== 'dine_in';
 
-    if (isDeliveryMode && dish.deliveryPrice !== null && dish.deliveryPrice !== undefined) {
+    if (isOffPremiseMode && dish.deliveryPrice !== null && dish.deliveryPrice !== undefined) {
       displayDish.price = dish.deliveryPrice;
     }
 
@@ -738,7 +749,7 @@ const MenuPage = () => {
             .filter((option) => option?.available !== false)
             .map((option) => ({
               ...option,
-              price: isDeliveryMode && option.deliveryPrice !== null && option.deliveryPrice !== undefined
+              price: isOffPremiseMode && option.deliveryPrice !== null && option.deliveryPrice !== undefined
                 ? option.deliveryPrice
                 : option.price
             }))
@@ -865,6 +876,10 @@ const MenuPage = () => {
   const handleDesktopCheckout = () => {
     if (!isCartForCurrentRestaurant) {
       toast.error('Корзина относится к другой точке. Добавьте блюда из текущего меню.');
+      return;
+    }
+    if (!hasSelectedFulfillmentMode && orderMode !== 'dine_in') {
+      toast.error('Выберите способ получения: доставка или самовывоз');
       return;
     }
     if (!effectiveCartItemCount || isBelowMinimum) return;
@@ -1008,6 +1023,41 @@ const MenuPage = () => {
 
         {/* Banner Slider */}
         <BannerSlider banners={displayRestaurant.banners} />
+
+        {orderMode !== 'dine_in' && (
+          <div className="px-4 pt-3">
+            <div className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
+              <div className="mb-2 text-sm font-semibold text-gray-900">Способ получения</div>
+              <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-gray-100 p-1.5">
+                <button
+                  type="button"
+                  onClick={() => setOrderMode('delivery', null)}
+                  className={`rounded-lg px-3 py-2.5 text-sm font-semibold transition-all ${isDeliveryMode
+                      ? 'bg-white text-gray-900 border border-primary-500 shadow-sm'
+                      : 'border border-transparent text-gray-600 hover:text-gray-900'
+                    }`}
+                >
+                  🚗 Доставка
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOrderMode('pickup', null)}
+                  className={`rounded-lg px-3 py-2.5 text-sm font-semibold transition-all ${isPickupMode
+                      ? 'bg-white text-gray-900 border border-primary-500 shadow-sm'
+                      : 'border border-transparent text-gray-600 hover:text-gray-900'
+                    }`}
+                >
+                  🏃 Самовывоз
+                </button>
+              </div>
+              {isPickupMode && (
+                <p className="mt-2 text-xs text-emerald-700">
+                  Адрес доставки не нужен — заказ нужно забрать самостоятельно.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         {!isCustomerLoggedIn && isDeliveryMode && (
           <div className="px-4 pt-3">

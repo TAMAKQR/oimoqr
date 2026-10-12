@@ -40,6 +40,11 @@ const DEFAULT_BONUS_EXPIRY_DAYS = 90;
 const roundCurrency = (value) => Number((Number(value) || 0).toFixed(2));
 const hasHouseNumber = (address = '') => /\d/.test(String(address || '').trim());
 const normalizePhoneDigits = (phone = '') => String(phone || '').replace(/\D/g, '');
+const ALLOWED_DELIVERY_TYPES = new Set(['delivery', 'pickup', 'dine_in']);
+const normalizeDeliveryType = (deliveryType) => {
+    const normalized = String(deliveryType || 'delivery').trim().toLowerCase();
+    return normalized === 'takeaway' ? 'pickup' : normalized;
+};
 
 const isDeliveredStatus = (status) => {
     const normalized = String(status || '').toLowerCase();
@@ -323,13 +328,6 @@ export const getProfile = async (req, res, next) => {
 
         if (!customer) {
             return res.status(404).json({ error: 'Customer not found' });
-        }
-
-        const normalizedCustomerName = String(customer.name || '').trim();
-        const normalizedCustomerPhone = String(customer.phone || '').trim();
-        const phoneDigits = normalizePhoneDigits(normalizedCustomerPhone);
-        if (normalizedDeliveryType !== 'dine_in' && (normalizedCustomerName.length < 2 || phoneDigits.length < 8)) {
-            return res.status(400).json({ error: 'Профиль должен содержать имя и корректный телефон' });
         }
 
         // Parse preferences if it's a JSON string
@@ -900,7 +898,10 @@ export const createCustomerOrder = async (req, res, next) => {
             return res.status(400).json({ error: 'Invalid total amount' });
         }
 
-        const normalizedDeliveryType = deliveryType || 'delivery';
+        const normalizedDeliveryType = normalizeDeliveryType(deliveryType);
+        if (!ALLOWED_DELIVERY_TYPES.has(normalizedDeliveryType)) {
+            return res.status(400).json({ error: 'Invalid delivery type' });
+        }
 
         const restaurantDetails = await prisma.restaurant.findUnique({
             where: { id: restaurantId },
@@ -927,6 +928,13 @@ export const createCustomerOrder = async (req, res, next) => {
             return res.status(404).json({ error: 'Customer not found' });
         }
 
+        const normalizedCustomerName = String(customer.name || '').trim();
+        const normalizedCustomerPhone = String(customer.phone || '').trim();
+        const phoneDigits = normalizePhoneDigits(normalizedCustomerPhone);
+        if (normalizedDeliveryType !== 'dine_in' && (normalizedCustomerName.length < 2 || phoneDigits.length < 8)) {
+            return res.status(400).json({ error: 'Профиль должен содержать имя и корректный телефон' });
+        }
+
         const timestamp = Date.now().toString().slice(-6);
         const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
         const orderNumber = `#${timestamp}${random}`;
@@ -950,7 +958,7 @@ export const createCustomerOrder = async (req, res, next) => {
 
         let normalizedDeliveryLatitude = null;
         let normalizedDeliveryLongitude = null;
-        let resolvedDeliveryAddress = deliveryAddress || null;
+        let resolvedDeliveryAddress = null;
         let assignedRestaurantId = null;
         let servingRestaurantId = restaurantId;
         let nearestServingPoint = null;
@@ -976,7 +984,7 @@ export const createCustomerOrder = async (req, res, next) => {
 
             normalizedDeliveryLatitude = selectedAddress.latitude ?? null;
             normalizedDeliveryLongitude = selectedAddress.longitude ?? null;
-            resolvedDeliveryAddress = selectedAddress.address || resolvedDeliveryAddress;
+            resolvedDeliveryAddress = selectedAddress.address || String(deliveryAddress || '').trim() || null;
 
             if (!String(resolvedDeliveryAddress || '').trim() || !hasHouseNumber(resolvedDeliveryAddress)) {
                 return res.status(400).json({ error: 'Укажите улицу и номер дома' });
@@ -1105,14 +1113,14 @@ export const createCustomerOrder = async (req, res, next) => {
             customerName: normalizedCustomerName || 'Customer',
             customerPhone: normalizedCustomerPhone,
             customerEmail: customer.email,
-            deliveryAddress: resolvedDeliveryAddress,
-            deliveryLatitude: normalizedDeliveryLatitude,
-            deliveryLongitude: normalizedDeliveryLongitude,
+            deliveryAddress: normalizedDeliveryType === 'delivery' ? resolvedDeliveryAddress : null,
+            deliveryLatitude: normalizedDeliveryType === 'delivery' ? normalizedDeliveryLatitude : null,
+            deliveryLongitude: normalizedDeliveryType === 'delivery' ? normalizedDeliveryLongitude : null,
             notes: comment || null,
             deliveryType: normalizedDeliveryType,
             paymentMethod: paymentMethod || 'cash',
             tableNumber: normalizedDeliveryType === 'dine_in' ? tableNumber || null : null,
-            customerAddressId: customerAddressId || null,
+            customerAddressId: normalizedDeliveryType === 'delivery' ? customerAddressId || null : null,
             items: {
                 create: trustedItems
             }

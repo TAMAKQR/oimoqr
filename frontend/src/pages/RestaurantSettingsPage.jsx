@@ -1230,7 +1230,7 @@ const RestaurantSettingsPage = () => {
                   <h3 className="font-semibold text-blue-900 mb-2">Как настроить уведомления:</h3>
                   <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
                     <li>Создайте группу в Telegram</li>
-                    <li>Добавьте бота <strong>@OimoQR_bot</strong> в группу</li>
+                    <li>Добавьте бота <strong>@oimo_dillevery_bot</strong> в группу</li>
                     <li>Отправьте команду <code className="bg-blue-100 px-1 rounded">/getid</code> в группе</li>
                     <li>Скопируйте ID группы и вставьте ниже</li>
                     <li>Нажмите "Проверить подключение"</li>

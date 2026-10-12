@@ -5,7 +5,7 @@ export const useCartStore = create(persist((set, get) => ({
   items: [],
   restaurantId: null,
   restaurantName: null,
-  orderMode: null, // 'dine_in' | 'delivery' | null
+  orderMode: null, // 'dine_in' | 'delivery' | 'pickup' | null
   tableNumber: null, // номер стола для заказов в зале
 
   // Установить режим заказа

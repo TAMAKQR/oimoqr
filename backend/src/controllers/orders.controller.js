@@ -46,6 +46,11 @@ const generateOrderNumber = () => {
 const roundCurrency = (value) => Number((Number(value) || 0).toFixed(2));
 const hasHouseNumber = (address = '') => /\d/.test(String(address || '').trim());
 const normalizePhoneDigits = (phone = '') => String(phone || '').replace(/\D/g, '');
+const ALLOWED_DELIVERY_TYPES = new Set(['delivery', 'pickup', 'dine_in']);
+const normalizeDeliveryType = (deliveryType) => {
+  const normalized = String(deliveryType || 'delivery').trim().toLowerCase();
+  return normalized === 'takeaway' ? 'pickup' : normalized;
+};
 
 const includeOrderItems = {
   include: {
@@ -126,7 +131,10 @@ export const createOrder = async (req, res, next) => {
       return res.status(400).json({ error: 'Invalid total amount' });
     }
 
-    const normalizedDeliveryType = deliveryType || 'delivery';
+    const normalizedDeliveryType = normalizeDeliveryType(deliveryType);
+    if (!ALLOWED_DELIVERY_TYPES.has(normalizedDeliveryType)) {
+      return res.status(400).json({ error: 'Invalid delivery type' });
+    }
     const normalizedCustomerName = String(customerName || '').trim();
     const normalizedCustomerPhone = String(customerPhone || '').trim();
     const normalizedDeliveryAddress = String(deliveryAddress || '').trim();
@@ -333,9 +341,9 @@ export const createOrder = async (req, res, next) => {
         customerName: normalizedCustomerName || 'Customer',
         customerPhone: normalizedCustomerPhone || 'Not specified',
         customerEmail: customerEmail || null,
-        deliveryAddress: normalizedDeliveryAddress || null,
-        deliveryLatitude: normalizedDeliveryLatitude,
-        deliveryLongitude: normalizedDeliveryLongitude,
+        deliveryAddress: normalizedDeliveryType === 'delivery' ? normalizedDeliveryAddress || null : null,
+        deliveryLatitude: normalizedDeliveryType === 'delivery' ? normalizedDeliveryLatitude : null,
+        deliveryLongitude: normalizedDeliveryType === 'delivery' ? normalizedDeliveryLongitude : null,
         deliveryType: normalizedDeliveryType,
         tableNumber: normalizedDeliveryType === 'dine_in' ? tableNumber || null : null,
         paymentMethod: paymentMethod || 'cash',
