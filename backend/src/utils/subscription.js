@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../config/prisma.js';
 
 export const calculateTrialEndDate = (days = 7) => {
   const date = new Date();
@@ -65,6 +63,7 @@ export const buildTrialSubscriptionData = async (businessType) => {
     subscriptionData: {
       plan: `TRIAL_${normalizedBusinessType}`,
       status: 'TRIAL',
+      source: 'TRIAL',
       trialEndsAt: trialEndDate,
       currentPeriodStart: new Date(),
       currentPeriodEnd: trialEndDate

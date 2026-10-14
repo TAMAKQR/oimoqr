@@ -21,6 +21,7 @@ export const authenticate = async (req, res, next) => {
         email: true,
         name: true,
         isAdmin: true,
+        billingCustomerId: true,
         restaurants: {
           select: {
             id: true,

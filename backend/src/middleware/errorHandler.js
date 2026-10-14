@@ -2,7 +2,11 @@ export const errorHandler = (err, req, res, next) => {
   console.error('Error:', err);
   console.error('Stack:', err.stack);
   console.error('Request path:', req.path);
-  console.error('Request body:', req.body);
+  const requestUrl = req.originalUrl || req.path || '';
+  const isSensitiveRequest = requestUrl.includes('/auth') || requestUrl.includes('/billing');
+  if (process.env.NODE_ENV !== 'production' && !isSensitiveRequest) {
+    console.error('Request body:', req.body);
+  }
 
   // Prisma errors
   if (err.code === 'P2002') {
@@ -28,6 +32,7 @@ export const errorHandler = (err, req, res, next) => {
 
   // Default error
   res.status(err.status || 500).json({
-    error: err.message || 'Internal server error'
+    error: err.message || 'Internal server error',
+    ...(err.code ? { code: err.code } : {})
   });
 };

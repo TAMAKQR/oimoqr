@@ -13,6 +13,9 @@ import {
   createPricingTier,
   updatePricingTier,
   deletePricingTier,
+  getBillingIssues,
+  reconcileBillingIssue,
+  resolveBillingIssue,
   getTrialConfig,
   updateTrialConfig
 } from '../controllers/admin.controller.js';
@@ -37,6 +40,10 @@ router.get('/pricing-tiers', getPricingTiers);
 router.post('/pricing-tiers', createPricingTier);
 router.put('/pricing-tiers/:id', updatePricingTier);
 router.delete('/pricing-tiers/:id', deletePricingTier);
+
+router.get('/billing-issues', getBillingIssues);
+router.post('/billing-issues/:id/reconcile', reconcileBillingIssue);
+router.post('/billing-issues/:id/resolve', resolveBillingIssue);
 
 router.get('/trial-config', getTrialConfig);
 router.put('/trial-config', updateTrialConfig);

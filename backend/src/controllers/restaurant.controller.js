@@ -6,6 +6,11 @@ import { loadModifierOptionStops } from '../utils/modifierOptionStops.js';
 import { ensureRestaurantAccess } from '../utils/restaurantAccess.js';
 import { deleteCloudinaryAssetByUrl } from '../utils/cloudinaryAsset.js';
 import { getRestaurantOpenStatus, normalizeSchedule } from '../utils/schedule.js';
+import {
+  hasUnsettledBillingTransition,
+  isTierCompatibleWithRestaurants,
+  withAccountBillingLock,
+} from '../services/finikBilling.service.js';
 
 const isRestaurantOpen = (restaurant) => getRestaurantOpenStatus(restaurant).isOpen;
 
@@ -1053,7 +1058,10 @@ export const createRestaurant = async (req, res, next) => {
       // Ð•ÑÐ»Ð¸ Ñƒ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»Ñ ÐµÑÑ‚ÑŒ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð°Ñ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ° Ñ Ñ‚Ð°Ñ€Ð¸Ñ„Ð½Ñ‹Ð¼ Ð¿Ð»Ð°Ð½Ð¾Ð¼ - Ð¸ÑÐ¿Ð¾Ð»ÑŒÐ·ÑƒÐµÐ¼ ÐµÐ³Ð¾ Ð»Ð¸Ð¼Ð¸Ñ‚
       if (activeUserSubscription?.pricingTier) {
         const tierBusinessType = activeUserSubscription.pricingTier.businessType || 'RESTAURANT';
-        const isCompatibleBusinessType = tierBusinessType === 'ALL' || tierBusinessType === requestedBusinessType;
+        const isCompatibleBusinessType = isTierCompatibleWithRestaurants(
+          activeUserSubscription.pricingTier,
+          [{ businessType: requestedBusinessType }]
+        );
 
         if (!isCompatibleBusinessType) {
           return res.status(403).json({
@@ -1105,11 +1113,15 @@ export const createRestaurant = async (req, res, next) => {
     // (activeUserSubscription ÑƒÐ¶Ðµ Ð·Ð°Ð³Ñ€ÑƒÐ¶ÐµÐ½Ð° Ð²Ñ‹ÑˆÐµ)
 
     // ÐžÐ¿Ñ€ÐµÐ´ÐµÐ»ÑÐµÐ¼ Ð¼Ð°ÐºÑÐ¸Ð¼Ð°Ð»ÑŒÐ½Ð¾Ðµ ÐºÐ¾Ð»Ð¸Ñ‡ÐµÑÑ‚Ð²Ð¾ Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½Ð¾Ð² Ð¸Ð· Ñ‚Ð°Ñ€Ð¸Ñ„Ð° Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ¸
-    const maxRestaurants = activeUserSubscription?.pricingTier?.maxRestaurants || 1;
+    // A null maxRestaurants on an active tier means unlimited. Accounts
+    // without a tier keep the legacy single-restaurant fallback.
+    const maxRestaurants = activeUserSubscription?.pricingTier
+      ? activeUserSubscription.pricingTier.maxRestaurants
+      : 1;
 
     // Ð”Ð¾Ð¿Ð¾Ð»Ð½Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ð°Ñ Ð¿Ñ€Ð¾Ð²ÐµÑ€ÐºÐ° Ð¿ÐµÑ€ÐµÐ´ ÑÐ¾Ð·Ð´Ð°Ð½Ð¸ÐµÐ¼
     // Ð•ÑÐ»Ð¸ Ñƒ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»Ñ Ð±Ð¾Ð»ÑŒÑˆÐµ Ð°ÐºÑ‚Ð¸Ð²Ð½Ñ‹Ñ… Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½Ð¾Ð² Ñ‡ÐµÐ¼ Ð¿Ð¾Ð·Ð²Ð¾Ð»ÑÐµÑ‚ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ°
-    if (existingCount >= maxRestaurants) {
+    if (maxRestaurants !== null && existingCount >= maxRestaurants) {
       const trialSubscription = userSubscriptions.find(sub => sub.status === 'TRIAL');
       const trialDaysRemaining = trialSubscription ? getTrialDaysRemaining(trialSubscription) : 0;
 
@@ -1161,71 +1173,208 @@ export const createRestaurant = async (req, res, next) => {
       }
     }
 
-    const inheritedTemplateData = !isFirstRestaurant && primaryRestaurant
-      ? {
-        description: primaryRestaurant.description || null,
-        country: req.body.country || primaryRestaurant.country || null,
-        city: req.body.city || primaryRestaurant.city || null,
-        currency: primaryRestaurant.currency || 'RUB',
-        logo: primaryRestaurant.logo || null,
-        banners: primaryRestaurant.banners || null,
-        cardStyle: primaryRestaurant.cardStyle || 'horizontal',
-        primaryColor: primaryRestaurant.primaryColor || null,
-        themePalette: primaryRestaurant.themePalette || null,
+    const trialForCreation = await buildTrialSubscriptionData(requestedBusinessType);
+    const creationResult = await withAccountBillingLock(req.user.id, async (tx) => {
+      const [lockedRestaurants, lockedAccount] = await Promise.all([
+        tx.restaurant.findMany({
+          where: { ownerId: req.user.id },
+          orderBy: { createdAt: 'asc' },
+        }),
+        tx.user.findUnique({
+          where: { id: req.user.id },
+          select: {
+            billingCustomerId: true,
+            billingSubscription: {
+              include: { pricingTier: true },
+            },
+          },
+        }),
+      ]);
+      if (!lockedAccount) {
+        const error = new Error('Пользователь не найден');
+        error.status = 404;
+        error.code = 'USER_NOT_FOUND';
+        throw error;
       }
-      : {
-        description: req.body.description || null,
-        country: req.body.country || null,
-        city: req.body.city || null,
-      };
+      const lockedCount = lockedRestaurants.length;
+      const lockedIsFirstRestaurant = lockedCount === 0;
+      const lockedPrimaryRestaurant = lockedRestaurants[0] || null;
+      const now = new Date();
 
-    // Ð¡Ð¾Ð·Ð´Ð°ÐµÐ¼ Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ ÐµÑÐ»Ð¸ Ð²ÑÐµ Ð¿Ñ€Ð¾Ð²ÐµÑ€ÐºÐ¸ Ð¿Ñ€Ð¾Ð¹Ð´ÐµÐ½Ñ‹
-    const restaurant = await prisma.restaurant.create({
-      data: {
-        name,
-        subdomain,
-        businessType: requestedBusinessType,
-        ...inheritedTemplateData,
-        ownerId: req.user.id,
-        sharedMenuSourceRestaurantId: isFirstRestaurant ? null : primaryRestaurant?.id || null
+      if (await hasUnsettledBillingTransition(req.user.id, tx)) {
+        const error = new Error(
+          'Сначала завершите или отмените открытую оплату подписки и дождитесь обновления статуса.'
+        );
+        error.status = 409;
+        error.code = 'BILLING_TRANSITION_PENDING';
+        throw error;
       }
+
+      const lockedActiveSubscription = lockedIsFirstRestaurant
+        ? null
+        : await tx.subscription.findFirst({
+          where: {
+            userId: req.user.id,
+            status: 'ACTIVE',
+            currentPeriodEnd: { gt: now },
+          },
+          include: { pricingTier: true },
+          orderBy: { updatedAt: 'desc' },
+        });
+
+      const lockedBilling = lockedAccount.billingSubscription;
+      const billingStatus = String(lockedBilling?.status || '').toUpperCase();
+      const billingGrantsAccess = Boolean(
+        lockedBilling?.pricingTier
+        && (
+          (billingStatus === 'ACTIVE'
+            && lockedBilling.currentPeriodEnd
+            && lockedBilling.currentPeriodEnd > now)
+          || (['TRIAL', 'TRIALING'].includes(billingStatus)
+            && (lockedBilling.trialEndsAt || lockedBilling.currentPeriodEnd)
+            && (lockedBilling.trialEndsAt || lockedBilling.currentPeriodEnd) > now)
+        )
+      );
+      const activeEntitlementTier = lockedIsFirstRestaurant && billingGrantsAccess
+        ? lockedBilling.pricingTier
+        : lockedActiveSubscription?.pricingTier;
+
+      if (!lockedIsFirstRestaurant || billingGrantsAccess) {
+        const lockedTier = activeEntitlementTier;
+        if (!lockedTier) {
+          const error = new Error('Для создания дополнительного ресторана требуется активный тариф.');
+          error.status = 403;
+          error.code = 'ACTIVE_SUBSCRIPTION_REQUIRED';
+          throw error;
+        }
+
+        if (!isTierCompatibleWithRestaurants(lockedTier, [{ businessType: requestedBusinessType }])) {
+          const error = new Error(`Тариф "${lockedTier.name}" не подходит для типа бизнеса ${requestedBusinessType}.`);
+          error.status = 403;
+          error.code = 'SUBSCRIPTION_BUSINESS_TYPE_MISMATCH';
+          throw error;
+        }
+
+        if (lockedTier.maxRestaurants !== null && lockedCount >= lockedTier.maxRestaurants) {
+          const error = new Error(`Достигнут лимит ресторанов тарифа (${lockedTier.maxRestaurants}).`);
+          error.status = 403;
+          error.code = 'SUBSCRIPTION_RESTAURANT_LIMIT';
+          throw error;
+        }
+      }
+
+      let lockedSubdomain = subdomain;
+      if (!normalizedSubdomain) {
+        const normalizeSlug = value => value
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .replace(/--+/g, '-');
+        const base = lockedPrimaryRestaurant?.subdomain || normalizeSlug(name) || 'restaurant';
+        lockedSubdomain = base;
+        let suffix = 2;
+        while (await tx.restaurant.findUnique({ where: { subdomain: lockedSubdomain } })) {
+          lockedSubdomain = `${base}-${suffix}`;
+          suffix += 1;
+        }
+      } else if (await tx.restaurant.findUnique({ where: { subdomain: lockedSubdomain } })) {
+        const error = new Error('Subdomain already taken');
+        error.status = 409;
+        error.code = 'SUBDOMAIN_TAKEN';
+        throw error;
+      }
+
+      const lockedTemplateData = !lockedIsFirstRestaurant && lockedPrimaryRestaurant
+        ? {
+          description: lockedPrimaryRestaurant.description || null,
+          country: req.body.country || lockedPrimaryRestaurant.country || null,
+          city: req.body.city || lockedPrimaryRestaurant.city || null,
+          currency: lockedPrimaryRestaurant.currency || 'RUB',
+          logo: lockedPrimaryRestaurant.logo || null,
+          banners: lockedPrimaryRestaurant.banners || null,
+          cardStyle: lockedPrimaryRestaurant.cardStyle || 'horizontal',
+          primaryColor: lockedPrimaryRestaurant.primaryColor || null,
+          themePalette: lockedPrimaryRestaurant.themePalette || null,
+        }
+        : {
+          description: req.body.description || null,
+          country: req.body.country || null,
+          city: req.body.city || null,
+        };
+
+      const restaurant = await tx.restaurant.create({
+        data: {
+          name,
+          subdomain: lockedSubdomain,
+          businessType: requestedBusinessType,
+          ...lockedTemplateData,
+          ownerId: req.user.id,
+          sharedMenuSourceRestaurantId: lockedIsFirstRestaurant ? null : lockedPrimaryRestaurant?.id || null
+        }
+      });
+
+      const isFreshAccount = lockedIsFirstRestaurant
+        && !lockedAccount.billingCustomerId
+        && !lockedBilling;
+      const subscriptionData = isFreshAccount
+        ? trialForCreation.subscriptionData
+        : lockedIsFirstRestaurant && billingGrantsAccess
+          ? {
+            plan: lockedBilling.pricingTier.name,
+            status: ['TRIAL', 'TRIALING'].includes(billingStatus) ? 'TRIAL' : 'ACTIVE',
+            source: lockedBilling.provider || 'MANUAL',
+            pricingTierId: lockedBilling.pricingTierId,
+            currentPeriodStart: lockedBilling.currentPeriodStart,
+            currentPeriodEnd: lockedBilling.currentPeriodEnd,
+            trialEndsAt: ['TRIAL', 'TRIALING'].includes(billingStatus)
+              ? (lockedBilling.trialEndsAt || lockedBilling.currentPeriodEnd)
+              : null,
+          }
+          : !lockedIsFirstRestaurant
+            ? {
+          plan: lockedActiveSubscription.plan,
+          status: 'ACTIVE',
+          source: lockedActiveSubscription.source,
+          pricingTierId: lockedActiveSubscription.pricingTierId,
+          currentPeriodStart: lockedActiveSubscription.currentPeriodStart,
+          currentPeriodEnd: lockedActiveSubscription.currentPeriodEnd,
+            }
+            : {
+              plan: 'BILLING_PENDING',
+              status: 'PENDING',
+              source: lockedBilling?.provider || 'MANUAL',
+              currentPeriodStart: now,
+              currentPeriodEnd: now,
+            };
+
+      const subscription = await tx.subscription.create({
+        data: {
+          userId: req.user.id,
+          restaurantId: restaurant.id,
+          ...subscriptionData
+        }
+      });
+
+      return {
+        restaurant,
+        subscription,
+        isFirstRestaurant: lockedIsFirstRestaurant,
+        startedTrial: isFreshAccount,
+        totalRestaurants: lockedCount + 1,
+      };
     });
 
-    // --- NEW LOGIC FOR SUBSCRIPTION ---
-    let subscriptionData;
-
-    if (isFirstRestaurant) {
-      const trial = await buildTrialSubscriptionData(requestedBusinessType);
-      subscriptionData = trial.subscriptionData;
-    } else if (activeUserSubscription) {
-      // Если это не первый ресторан, но у пользователя есть активная подписка,
-      // новый ресторан сразу становится активным в рамках этой подписки.
-      subscriptionData = {
-        plan: activeUserSubscription.plan,
-        status: 'ACTIVE',
-        pricingTierId: activeUserSubscription.pricingTierId,
-        currentPeriodStart: activeUserSubscription.currentPeriodStart,
-        currentPeriodEnd: activeUserSubscription.currentPeriodEnd,
-      };
-    } else {
-      // Запасной вариант: если нет активной подписки (например, триал истек),
-      // то новый ресторан требует активации.
-      subscriptionData = {
-        plan: 'MONTHLY',
-        status: 'PENDING',
-        currentPeriodStart: new Date(),
-        currentPeriodEnd: new Date(),
-      };
-    }
-
-    // Create subscription after restaurant is created
-    const subscription = await prisma.subscription.create({
-      data: {
-        userId: req.user.id,
-        restaurantId: restaurant.id,
-        ...subscriptionData
-      }
-    });
+    const {
+      restaurant,
+      subscription,
+      isFirstRestaurant: createdAsFirstRestaurant,
+      startedTrial,
+      totalRestaurants,
+    } = creationResult;
+    const responseMonthlyPrice = await calculateSubscriptionPrice(
+      totalRestaurants,
+      requestedBusinessType
+    );
 
     const restaurantWithSubscription = {
       ...restaurant,
@@ -1236,15 +1385,15 @@ export const createRestaurant = async (req, res, next) => {
       message: 'Restaurant created successfully',
       restaurant: restaurantWithSubscription,
       pricing: {
-        isFirstRestaurant,
-        totalRestaurants: newRestaurantCount,
-        monthlyPrice: monthlyPrice,
+        isFirstRestaurant: createdAsFirstRestaurant,
+        totalRestaurants,
+        monthlyPrice: responseMonthlyPrice,
         currency: 'USD',
-        requiresPayment: !isFirstRestaurant
+        requiresPayment: !['ACTIVE', 'TRIAL'].includes(subscription.status)
       }
     };
 
-    if (isFirstRestaurant) {
+    if (startedTrial) {
       const trialDaysRemaining = getTrialDaysRemaining(subscription);
       successResponse.trial = {
         daysRemaining: trialDaysRemaining
@@ -1272,35 +1421,53 @@ export const deleteRestaurant = async (req, res, next) => {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
-    if (restaurant.isTrialDefault) {
-      const userRestaurants = await prisma.restaurant.findMany({
-        where: { ownerId: req.user.id },
-        include: {
-          subscriptions: true
-        }
-      });
-
-      const hasOtherPaidRestaurants = userRestaurants.some(r =>
-        r.id !== id && r.subscriptions.some(sub =>
-          sub.status === 'ACTIVE' && new Date(sub.currentPeriodEnd) > new Date()
-        )
-      );
-
-      if (userRestaurants.length === 1 || !hasOtherPaidRestaurants) {
-        return res.status(403).json({
-          error: 'Cannot delete trial restaurant',
-          message: 'ÐÐµÐ²Ð¾Ð·Ð¼Ð¾Ð¶Ð½Ð¾ ÑƒÐ´Ð°Ð»Ð¸Ñ‚ÑŒ Ð¿Ñ€Ð¾Ð±Ð½Ñ‹Ð¹ Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½. Ð¡Ð½Ð°Ñ‡Ð°Ð»Ð° ÑÐ¾Ð·Ð´Ð°Ð¹Ñ‚Ðµ Ð½Ð¾Ð²Ñ‹Ð¹ Ñ€ÐµÑÑ‚Ð¾Ñ€Ð°Ð½ Ñ Ð¿Ð»Ð°Ñ‚Ð½Ð¾Ð¹ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐºÐ¾Ð¹.'
-        });
-      }
-
-      await prisma.restaurant.update({
-        where: { id },
-        data: { isTrialDefault: false }
-      });
+    if (restaurant.ownerId !== req.user.id && !req.user.isAdmin) {
+      return res.status(403).json({ error: 'Only the owner can delete this restaurant' });
     }
 
-    await prisma.restaurant.delete({
-      where: { id }
+    await withAccountBillingLock(restaurant.ownerId, async (tx) => {
+      const lockedRestaurant = await tx.restaurant.findUnique({
+        where: { id },
+      });
+      if (!lockedRestaurant) return;
+
+      if (lockedRestaurant.ownerId !== restaurant.ownerId) {
+        const error = new Error('Restaurant ownership changed');
+        error.status = 409;
+        error.code = 'RESTAURANT_OWNER_CHANGED';
+        throw error;
+      }
+
+      if (await hasUnsettledBillingTransition(restaurant.ownerId, tx)) {
+        const error = new Error('Нельзя удалить бизнес, пока платёж Finik ожидает завершения или проверки.');
+        error.status = 409;
+        error.code = 'BILLING_TRANSITION_PENDING';
+        throw error;
+      }
+
+      if (lockedRestaurant.isTrialDefault) {
+        const userRestaurants = await tx.restaurant.findMany({
+          where: { ownerId: restaurant.ownerId },
+          include: { subscriptions: true }
+        });
+
+        const hasOtherPaidRestaurants = userRestaurants.some(r =>
+          r.id !== id && r.subscriptions.some(sub =>
+            sub.status === 'ACTIVE' && new Date(sub.currentPeriodEnd) > new Date()
+          )
+        );
+
+        if (userRestaurants.length === 1 || !hasOtherPaidRestaurants) {
+          const error = new Error('Невозможно удалить пробный ресторан. Сначала создайте новый ресторан с платной подпиской.');
+          error.status = 403;
+          error.code = 'CANNOT_DELETE_TRIAL_RESTAURANT';
+          throw error;
+        }
+      }
+
+      await tx.restaurant.delete({
+        where: { id }
+      });
     });
 
     res.json({

@@ -5,6 +5,7 @@ import api from '../services/api';
 import { confirmDialog } from '../utils/confirmDialog';
 import DashboardLayout from '../components/DashboardLayout';
 import toast from 'react-hot-toast';
+import { formatBillingPrice } from '../utils/billingFormat';
 
 const TRIAL_TYPE_OPTIONS = [
   { value: 'RESTAURANT', label: '🍽 Ресторан' },
@@ -27,6 +28,9 @@ const AdminPricingPage = () => {
   const [formData, setFormData] = useState({
     name: '',
     price: '',
+    currency: 'kgs',
+    billingInterval: 'month',
+    onlinePaymentEnabled: true,
     description: '',
     features: '',
     maxRestaurants: '',
@@ -39,7 +43,8 @@ const AdminPricingPage = () => {
     bonusSilverFromOrders: '8',
     bonusGoldFromOrders: '20',
     businessType: 'RESTAURANT',
-    order: ''
+    order: '',
+    isActive: true
   });
   const [trialFormData, setTrialFormData] = useState({
     name: '',
@@ -83,6 +88,9 @@ const AdminPricingPage = () => {
     setFormData({
       name: tier.name,
       price: tier.price.toString(),
+      currency: tier.currency || 'kgs',
+      billingInterval: tier.billingInterval || 'month',
+      onlinePaymentEnabled: tier.onlinePaymentEnabled !== false,
       description: tier.description || '',
       features: tier.features || '',
       maxRestaurants: tier.maxRestaurants || '',
@@ -95,7 +103,8 @@ const AdminPricingPage = () => {
       bonusSilverFromOrders: tier.bonusSilverFromOrders?.toString?.() || '8',
       bonusGoldFromOrders: tier.bonusGoldFromOrders?.toString?.() || '20',
       businessType: tier.businessType || 'RESTAURANT',
-      order: tier.order || ''
+      order: tier.order || '',
+      isActive: tier.isActive !== false
     });
     setError('');
   };
@@ -105,6 +114,9 @@ const AdminPricingPage = () => {
     setFormData({
       name: '',
       price: '',
+      currency: 'kgs',
+      billingInterval: 'month',
+      onlinePaymentEnabled: true,
       description: '',
       features: '',
       maxRestaurants: '',
@@ -117,7 +129,8 @@ const AdminPricingPage = () => {
       bonusSilverFromOrders: '8',
       bonusGoldFromOrders: '20',
       businessType: 'RESTAURANT',
-      order: ''
+      order: '',
+      isActive: true
     });
     setError('');
   };
@@ -128,6 +141,9 @@ const AdminPricingPage = () => {
     setFormData({
       name: '',
       price: '',
+      currency: 'kgs',
+      billingInterval: 'month',
+      onlinePaymentEnabled: true,
       description: '',
       features: '',
       maxRestaurants: '',
@@ -140,7 +156,8 @@ const AdminPricingPage = () => {
       bonusSilverFromOrders: '8',
       bonusGoldFromOrders: '20',
       businessType: 'RESTAURANT',
-      order: ''
+      order: '',
+      isActive: true
     });
   };
 
@@ -165,6 +182,9 @@ const AdminPricingPage = () => {
         await api.post('/admin/pricing-tiers', {
           name: formData.name,
           price: parseFloat(formData.price),
+          currency: (formData.currency || 'kgs').trim().toLowerCase(),
+          billingInterval: formData.billingInterval || 'month',
+          onlinePaymentEnabled: Boolean(formData.onlinePaymentEnabled),
           description: formData.description || null,
           features: formData.features || null,
           maxRestaurants: formData.maxRestaurants ? parseInt(formData.maxRestaurants) : null,
@@ -177,13 +197,17 @@ const AdminPricingPage = () => {
           bonusSilverFromOrders: formData.bonusSilverFromOrders ? parseInt(formData.bonusSilverFromOrders) : 8,
           bonusGoldFromOrders: formData.bonusGoldFromOrders ? parseInt(formData.bonusGoldFromOrders) : 20,
           businessType: formData.businessType || 'RESTAURANT',
-          order: formData.order ? parseInt(formData.order) : 0
+          order: formData.order ? parseInt(formData.order) : 0,
+          isActive: Boolean(formData.isActive)
         });
         showNotification('Тариф создан успешно!');
       } else {
         await api.put(`/admin/pricing-tiers/${editingId}`, {
           name: formData.name,
           price: parseFloat(formData.price),
+          currency: (formData.currency || 'kgs').trim().toLowerCase(),
+          billingInterval: formData.billingInterval || 'month',
+          onlinePaymentEnabled: Boolean(formData.onlinePaymentEnabled),
           description: formData.description || null,
           features: formData.features || null,
           maxRestaurants: formData.maxRestaurants ? parseInt(formData.maxRestaurants) : null,
@@ -196,7 +220,8 @@ const AdminPricingPage = () => {
           bonusSilverFromOrders: formData.bonusSilverFromOrders ? parseInt(formData.bonusSilverFromOrders) : 8,
           bonusGoldFromOrders: formData.bonusGoldFromOrders ? parseInt(formData.bonusGoldFromOrders) : 20,
           businessType: formData.businessType || 'RESTAURANT',
-          order: formData.order ? parseInt(formData.order) : 0
+          order: formData.order ? parseInt(formData.order) : 0,
+          isActive: Boolean(formData.isActive)
         });
         showNotification('Тариф обновлен успешно!');
       }
@@ -290,6 +315,9 @@ const AdminPricingPage = () => {
   const silverLabel = (formData.bonusSilverLabel || 'Silver').trim() || 'Silver';
   const goldLabel = (formData.bonusGoldLabel || 'Gold').trim() || 'Gold';
   const isTierThresholdValid = goldFromOrders > silverFromOrders;
+  const isPublished = Boolean(
+    editingId && tiers.find((tier) => tier.id === editingId)?.hasPayments
+  );
 
   if (loading) {
     return (
@@ -341,7 +369,7 @@ const AdminPricingPage = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Цена (USD) *
+                  Стоимость периода *
                 </label>
                 <input
                   type="number"
@@ -352,8 +380,59 @@ const AdminPricingPage = () => {
                   min="0"
                   placeholder="20.00"
                   className="input w-full"
-                  disabled={saving}
+                  disabled={saving || isPublished}
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Валюта
+                </label>
+                <input
+                  type="text"
+                  name="currency"
+                  value={formData.currency}
+                  onChange={handleInputChange}
+                  maxLength={3}
+                  placeholder="kgs"
+                  className="input w-full uppercase"
+                  disabled={saving || isPublished}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Оплачиваемый период
+                </label>
+                <select
+                  name="billingInterval"
+                  value={formData.billingInterval}
+                  onChange={handleInputChange}
+                  className="input w-full"
+                  disabled={saving || isPublished}
+                >
+                  <option value="month">1 месяц</option>
+                  <option value="year">1 год</option>
+                </select>
+              </div>
+
+              <div className="md:col-span-2 rounded-lg border border-gray-200 bg-white p-3">
+                <label className="flex items-center gap-3 text-sm font-medium text-gray-700">
+                  <input
+                    type="checkbox"
+                    name="onlinePaymentEnabled"
+                    checked={formData.onlinePaymentEnabled}
+                    onChange={handleInputChange}
+                    disabled={saving}
+                    className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  Разрешить разовую онлайн-оплату через Finik
+                </label>
+                <p className="text-xs text-gray-500 mt-1">
+                  {isPublished
+                    ? 'У тарифа уже есть платежи: цена, валюта, период и лимиты неизменяемы. Онлайн-оплату можно временно выключить.'
+                    : 'Продление не автоматическое — клиент оплачивает каждый следующий период вручную.'}
+                </p>
               </div>
 
               <div>
@@ -537,7 +616,7 @@ const AdminPricingPage = () => {
                   value={formData.businessType}
                   onChange={handleInputChange}
                   className="input w-full"
-                  disabled={saving}
+                  disabled={saving || isPublished}
                 >
                   <option value="RESTAURANT">🍽 Ресторан</option>
                   <option value="HOTEL">🏨 Отель</option>
@@ -557,7 +636,7 @@ const AdminPricingPage = () => {
                   min="1"
                   placeholder="5"
                   className="input w-full"
-                  disabled={saving}
+                  disabled={saving || isPublished}
                 />
               </div>
 
@@ -576,6 +655,20 @@ const AdminPricingPage = () => {
                   disabled={saving}
                 />
               </div>
+
+              <label className="flex items-center gap-3 self-end min-h-11">
+                <input
+                  type="checkbox"
+                  name="isActive"
+                  checked={formData.isActive}
+                  onChange={handleInputChange}
+                  disabled={saving}
+                  className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                />
+                <span className="text-sm font-medium text-gray-700">
+                  Доступен для новых покупок
+                </span>
+              </label>
             </div>
 
             <div className="flex gap-2 mt-4">
@@ -621,10 +714,25 @@ const AdminPricingPage = () => {
                         }`}>
                         {tier.businessType === 'HOTEL' ? '🏨 Отель' : tier.businessType === 'ALL' ? '📦 Все' : '🍽 Ресторан'}
                       </span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${tier.isActive
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-gray-100 text-gray-600'}`}>
+                        {tier.isActive ? 'В продаже' : 'Архивный'}
+                      </span>
                     </div>
                     <div className="mt-3 space-y-2">
                       <p className="text-2xl font-bold text-primary-600">
-                        ${tier.price.toFixed(2)}/месяц
+                        {formatBillingPrice(tier)}/{tier.billingInterval === 'year' ? 'год' : 'месяц'}
+                      </p>
+                      <p className={`text-sm ${tier.onlinePaymentEnabled !== false ? 'text-green-600' : 'text-gray-500'}`}>
+                        {tier.onlinePaymentEnabled !== false
+                          ? 'Разовая онлайн-оплата через Finik включена'
+                          : 'Онлайн-оплата выключена'}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {tier.hasPayments
+                          ? 'Есть платежи — финансовые параметры зафиксированы'
+                          : 'Платежей ещё нет — финансовые параметры можно изменить'}
                       </p>
                       {tier.description && (
                         <p className="text-gray-600">{tier.description}</p>
@@ -660,7 +768,8 @@ const AdminPricingPage = () => {
                     <button
                       onClick={() => handleDelete(tier.id)}
                       className="px-3 py-1.5 border border-gray-200 rounded-lg text-red-600 bg-white hover:bg-red-50 transition-colors text-sm"
-                      disabled={saving}
+                      disabled={saving || Boolean(tier.hasPayments)}
+                      title={tier.hasPayments ? 'Тариф с платежами нельзя удалить; отключите его для новых оплат' : undefined}
                     >
                       Удалить
                     </button>

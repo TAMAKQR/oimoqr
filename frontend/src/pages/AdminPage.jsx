@@ -6,6 +6,7 @@ import { confirmDialog } from '../utils/confirmDialog';
 import DashboardLayout from '../components/DashboardLayout';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
+import { formatBillingPrice, getBillingIntervalLabel } from '../utils/billingFormat';
 
 const BUSINESS_TYPE_LABELS = {
   RESTAURANT: { label: 'Ресторан', icon: '🍽', badge: 'bg-blue-100 text-blue-700' },
@@ -398,7 +399,7 @@ const AdminPage = () => {
                           <option value="">{t('admin.table.selectPricing')}</option>
                           {getCompatiblePricingTiers(pricingTiers, getPrimaryBusinessType(user)).map((tier) => (
                             <option key={tier.id} value={tier.id}>
-                              {tier.name} (${tier.price}) {getBusinessTypeMeta(tier.businessType || 'RESTAURANT').icon}
+                              {tier.name} ({formatBillingPrice(tier)}/{getBillingIntervalLabel(tier, true)}) {getBusinessTypeMeta(tier.businessType || 'RESTAURANT').icon}
                             </option>
                           ))}
                         </select>
@@ -554,7 +555,7 @@ const AdminPage = () => {
                   <option value="">{t('admin.table.selectPricing')}</option>
                   {getCompatiblePricingTiers(pricingTiers, getPrimaryBusinessType(editingUser)).map((tier) => (
                     <option key={tier.id} value={tier.id}>
-                      {tier.name} (${tier.price}/мес) {getBusinessTypeMeta(tier.businessType || 'RESTAURANT').icon}
+                      {tier.name} ({formatBillingPrice(tier)}/{getBillingIntervalLabel(tier, true)}) {getBusinessTypeMeta(tier.businessType || 'RESTAURANT').icon}
                     </option>
                   ))}
                 </select>

@@ -4,13 +4,17 @@
   "description": "OimoQR Backend API",
   "main": "src/server.js",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "nodemon -r dotenv/config src/server.js",
     "start": "node src/server.js",
+    "test": "node --test src/utils/finikBilling.test.js src/utils/finikSignature.test.js",
     "build": "npx prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:db:push": "prisma db push --accept-data-loss",
+    "prisma:db:push": "prisma db push",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "apply:indexes": "node apply-indexes.js",

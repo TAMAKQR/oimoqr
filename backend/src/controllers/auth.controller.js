@@ -100,7 +100,11 @@ export const register = async (req, res, next) => {
     });
 
     // Remove password from response
-    const { password: _, ...userWithoutPassword } = userWithRestaurants;
+    const {
+      password: _,
+      billingCustomerId: _billingCustomerId,
+      ...userWithoutPassword
+    } = userWithRestaurants;
 
     res.status(201).json({
       message: 'Registration successful',
@@ -147,7 +151,11 @@ export const login = async (req, res, next) => {
     );
 
     // Remove password from response
-    const { password: _, ...userWithoutPassword } = user; // Basic user info
+    const {
+      password: _,
+      billingCustomerId: _billingCustomerId,
+      ...userWithoutPassword
+    } = user; // Basic user info
 
     // Fetch restaurants separately for the response, but keep it lean
     const restaurants = await prisma.restaurant.findMany({
@@ -279,7 +287,13 @@ export const getMe = async (req, res, next) => {
       }));
     }
 
-    res.json(user);
+    const {
+      password: _,
+      billingCustomerId: _billingCustomerId,
+      ...safeUser
+    } = user || {};
+
+    res.json(safeUser);
   } catch (error) {
     next(error);
   }

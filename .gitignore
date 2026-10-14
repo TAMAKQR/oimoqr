@@ -16,6 +16,22 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Finik merchant RSA private keys
+finik_private.pem
+backend/finik_private.pem
+finik_public.pem
+backend/finik_public.pem
+*.private.pem
+*.private.key
+
+# Obsolete local Stripe prototype files (superseded by Finik; never deploy)
+backend/src/config/stripe.js
+backend/src/services/billing.service.js
+backend/src/utils/stripeBilling.js
+backend/src/utils/stripeBilling.test.js
 
 # Сгенерированные файлы
 frontend/dist/

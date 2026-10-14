@@ -2,6 +2,41 @@ import { prisma } from '../config/prisma.js';
 import bcrypt from 'bcryptjs';
 import { calculateSubscriptionEndDate, getTrialConfigForBusinessType } from '../utils/subscription.js';
 import { sendSubscriptionActivatedEmail } from '../utils/email.js';
+import { addBillingInterval, getMoneyMinorUnits } from '../utils/finikBilling.js';
+import {
+  listOpenBillingIssues,
+  reconcileBillingIssue as reconcileOpenBillingIssue,
+  resolveBillingIssue as resolveOpenBillingIssue,
+  withBillingLifecycleLock,
+} from '../services/finikBilling.service.js';
+
+export const getBillingIssues = async (req, res, next) => {
+  try {
+    res.json({ issues: await listOpenBillingIssues() });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const reconcileBillingIssue = async (req, res, next) => {
+  try {
+    res.json(await reconcileOpenBillingIssue(req.params.id));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const resolveBillingIssue = async (req, res, next) => {
+  try {
+    res.json(await resolveOpenBillingIssue(req.params.id, {
+      decision: req.body?.decision,
+      note: req.body?.note,
+      resolvedBy: req.user?.email || req.user?.id,
+    }));
+  } catch (error) {
+    next(error);
+  }
+};
 
 const ADMIN_DASHBOARD_CACHE_TTL_MS = 30 * 1000;
 let adminDashboardStatsCache = {
@@ -21,10 +56,57 @@ const getIncompatibleBusinessTypes = (restaurants, pricingTier) => {
 
 const PRICING_BUSINESS_TYPES = ['RESTAURANT', 'HOTEL', 'ALL'];
 const TRIAL_BUSINESS_TYPES = ['ALL', 'RESTAURANT', 'HOTEL'];
+const BILLING_INTERVALS = ['month', 'year'];
+
+const normalizeBillingCurrency = (value) => (
+  typeof value === 'string' && /^[a-zA-Z]{3}$/.test(value.trim())
+    ? value.trim().toLowerCase()
+    : null
+);
 
 const normalizeTrialBusinessType = (businessType) => {
   const value = typeof businessType === 'string' ? businessType.trim().toUpperCase() : '';
   return TRIAL_BUSINESS_TYPES.includes(value) ? value : 'ALL';
+};
+
+// BillingSubscription is the account-level source used by pricing and new
+// restaurant flows; Subscription rows are per-restaurant projections. Keep
+// both representations in the same transaction for every manual admin change.
+const syncAccountBillingProjection = async (tx, userId, preferredSubscription = null) => {
+  const subscription = preferredSubscription || await tx.subscription.findFirst({
+    where: { userId },
+    orderBy: { updatedAt: 'desc' },
+  });
+  if (!subscription) {
+    await tx.billingSubscription.deleteMany({ where: { userId } });
+    return null;
+  }
+
+  const rawStatus = String(subscription.status || 'PENDING').toUpperCase();
+  const status = rawStatus === 'TRIALING'
+    ? 'TRIAL'
+    : (rawStatus === 'CANCELED' ? 'CANCELLED' : rawStatus);
+  const data = {
+    provider: subscription.source || 'MANUAL',
+    providerSubscriptionId: null,
+    externalPriceId: null,
+    pricingTierId: subscription.pricingTierId,
+    status,
+    cancelAtPeriodEnd: false,
+    currentPeriodStart: subscription.currentPeriodStart,
+    currentPeriodEnd: subscription.currentPeriodEnd,
+    trialEndsAt: subscription.trialEndsAt,
+    activatedAt: status === 'ACTIVE'
+      ? (subscription.currentPeriodStart || new Date())
+      : null,
+    providerCreatedAt: null,
+    pastDueSince: null,
+  };
+  return tx.billingSubscription.upsert({
+    where: { userId },
+    update: data,
+    create: { userId, ...data },
+  });
 };
 
 // ======================== DASHBOARD STATS ========================
@@ -234,6 +316,7 @@ export const updateUserSubscription = async (req, res, next) => {
     }
 
     let updateData = {};
+    let activationEmailPlan = null;
 
     // If activating a pricing tier
     if (pricingTierId) {
@@ -280,6 +363,7 @@ export const updateUserSubscription = async (req, res, next) => {
       updateData = {
         plan: pricingTier.name,
         status: 'ACTIVE',
+        source: 'MANUAL',
         pricingTierId,
         currentPeriodStart: periodStart,
         currentPeriodEnd: periodEnd
@@ -287,43 +371,105 @@ export const updateUserSubscription = async (req, res, next) => {
 
       console.log('Activating pricing tier:', updateData);
 
-      // Send activation email (don't fail if email fails)
+      activationEmailPlan = pricingTier.name;
+    } else if (status) {
+      updateData.status = status;
+      updateData.source = 'MANUAL';
+    }
+
+    const subscriptions = await withBillingLifecycleLock(userId, async (tx) => {
+      const lockedUser = await tx.user.findUnique({
+        where: { id: userId },
+        include: { restaurants: true },
+      });
+      if (!lockedUser) {
+        const error = new Error('User not found');
+        error.status = 404;
+        throw error;
+      }
+      if (lockedUser.restaurants.length === 0) {
+        const error = new Error('User has no restaurants');
+        error.status = 404;
+        throw error;
+      }
+
+      if (!pricingTierId) {
+        await tx.subscription.updateMany({
+          where: { userId },
+          data: updateData,
+        });
+        const updatedSubscriptions = await tx.subscription.findMany({
+          where: { userId },
+          orderBy: [{ currentPeriodEnd: 'desc' }, { updatedAt: 'desc' }],
+          include: {
+            user: { select: { id: true, email: true, name: true } },
+            pricingTier: true,
+          },
+        });
+        await syncAccountBillingProjection(tx, userId, updatedSubscriptions[0]);
+        return updatedSubscriptions;
+      }
+
+      const lockedPricingTier = await tx.pricingTier.findUnique({
+        where: { id: pricingTierId },
+      });
+      if (!lockedPricingTier) {
+        const error = new Error('Pricing tier not found');
+        error.status = 404;
+        throw error;
+      }
+      const incompatibleBusinessTypes = getIncompatibleBusinessTypes(
+        lockedUser.restaurants,
+        lockedPricingTier
+      );
+      if (incompatibleBusinessTypes.length > 0) {
+        const error = new Error(
+          `Невозможно применить тариф "${lockedPricingTier.name}" к типу бизнеса: ${incompatibleBusinessTypes.join(', ')}.`
+        );
+        error.status = 400;
+        throw error;
+      }
+      if (
+        lockedPricingTier.maxRestaurants !== null
+        && lockedUser.restaurants.length > lockedPricingTier.maxRestaurants
+      ) {
+        const error = new Error(
+          `У пользователя ${lockedUser.restaurants.length} ресторанов, тариф позволяет ${lockedPricingTier.maxRestaurants}.`
+        );
+        error.status = 400;
+        throw error;
+      }
+
+      await tx.subscription.deleteMany({
+        where: { userId }
+      });
+
+      await tx.subscription.createMany({
+        data: lockedUser.restaurants.map((restaurant) => ({
+          userId,
+          restaurantId: restaurant.id,
+          ...updateData,
+        })),
+      });
+      const updatedSubscriptions = await tx.subscription.findMany({
+        where: { userId },
+        orderBy: [{ currentPeriodEnd: 'desc' }, { updatedAt: 'desc' }],
+        include: {
+          user: { select: { id: true, email: true, name: true } },
+          pricingTier: true,
+        },
+      });
+      await syncAccountBillingProjection(tx, userId, updatedSubscriptions[0]);
+      return updatedSubscriptions;
+    });
+
+    if (activationEmailPlan) {
       try {
-        await sendSubscriptionActivatedEmail(user.email, user.name, pricingTier.name);
+        await sendSubscriptionActivatedEmail(user.email, user.name, activationEmailPlan);
       } catch (emailError) {
         console.error('Failed to send activation email:', emailError);
       }
-    } else if (status) {
-      updateData.status = status;
     }
-
-    // Сначала удалим все существующие подписки пользователя
-    await prisma.subscription.deleteMany({
-      where: {
-        userId
-      }
-    });
-
-    // Создаем новые подписки для всех ресторанов пользователя
-    const subscriptions = await Promise.all(user.restaurants.map(restaurant =>
-      prisma.subscription.create({
-        data: {
-          userId,
-          restaurantId: restaurant.id,
-          ...updateData
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              email: true,
-              name: true
-            }
-          },
-          pricingTier: true
-        }
-      })
-    ));
 
     console.log('Subscriptions updated successfully:', subscriptions.map(s => s.id).join(', '));
     res.json(subscriptions[0]); // Возвращаем первую подписку для обратной совместимости
@@ -345,113 +491,136 @@ export const updateSubscription = async (req, res, next) => {
       return res.status(400).json({ error: 'Plan, status or pricingTierId is required' });
     }
 
-    const subscription = await prisma.subscription.findUnique({
+    const initialSubscription = await prisma.subscription.findUnique({
       where: { id },
-      include: {
-        user: true,
-        restaurant: true,
-        pricingTier: true
-      }
+      select: { userId: true },
     });
 
-    if (!subscription) {
+    if (!initialSubscription) {
       return res.status(404).json({ error: 'Subscription not found' });
     }
-
-    let updateData = {};
-
-    // If activating a pricing tier
-    if (pricingTierId) {
-      const pricingTier = await prisma.pricingTier.findUnique({
-        where: { id: pricingTierId }
-      });
-
-      if (!pricingTier) {
-        return res.status(404).json({ error: 'Pricing tier not found' });
-      }
-
-      if (!isPricingTierCompatibleWithBusinessType(pricingTier, subscription.restaurant?.businessType || 'RESTAURANT')) {
-        return res.status(400).json({
-          error: `Невозможно применить тариф "${pricingTier.name}" к типу бизнеса: ${subscription.restaurant?.businessType || 'RESTAURANT'}. Выберите тариф для этого типа бизнеса или универсальный тариф.`
+    const result = await withBillingLifecycleLock(
+      initialSubscription.userId,
+      async (tx) => {
+        const subscription = await tx.subscription.findUnique({
+          where: { id },
+          include: {
+            user: { select: { id: true, email: true, name: true } },
+          },
         });
-      }
+        if (!subscription) {
+          const error = new Error('Subscription not found');
+          error.status = 404;
+          throw error;
+        }
 
-      // Проверяем количество ресторанов пользователя
-      const user = await prisma.user.findUnique({
-        where: { id: subscription.userId },
-        include: { restaurants: true }
-      });
+        let updateData = {};
+        let activationEmailPlan = null;
+        if (pricingTierId) {
+          const [pricingTier, restaurants] = await Promise.all([
+            tx.pricingTier.findUnique({ where: { id: pricingTierId } }),
+            tx.restaurant.findMany({
+              where: { ownerId: subscription.userId },
+              select: { id: true, businessType: true },
+            }),
+          ]);
+          if (!pricingTier) {
+            const error = new Error('Pricing tier not found');
+            error.status = 404;
+            throw error;
+          }
+          const incompatibleTypes = getIncompatibleBusinessTypes(restaurants, pricingTier);
+          if (incompatibleTypes.length) {
+            const error = new Error(
+              `Невозможно применить тариф "${pricingTier.name}" к типам бизнеса: ${incompatibleTypes.join(', ')}.`
+            );
+            error.status = 400;
+            throw error;
+          }
+          if (
+            pricingTier.maxRestaurants !== null
+            && restaurants.length > pricingTier.maxRestaurants
+          ) {
+            const error = new Error(
+              `Невозможно применить тариф "${pricingTier.name}". У пользователя ${restaurants.length} ресторанов, а тариф позволяет только ${pricingTier.maxRestaurants}.`
+            );
+            error.status = 400;
+            throw error;
+          }
 
-      // Проверяем, не превышает ли количество ресторанов лимит нового тарифа
-      if (user && pricingTier.maxRestaurants && user.restaurants.length > pricingTier.maxRestaurants) {
-        return res.status(400).json({
-          error: `Невозможно применить тариф "${pricingTier.name}". У пользователя ${user.restaurants.length} ресторанов, а тариф позволяет только ${pricingTier.maxRestaurants}. Сначала нужно удалить лишние рестораны.`
+          const periodStart = new Date();
+          updateData = {
+            plan: pricingTier.name,
+            status: 'ACTIVE',
+            source: 'MANUAL',
+            pricingTierId,
+            currentPeriodStart: periodStart,
+            currentPeriodEnd: addBillingInterval(periodStart, pricingTier.billingInterval),
+          };
+          activationEmailPlan = pricingTier.name;
+        } else if (plan && (plan === 'MONTHLY' || plan === 'YEARLY')) {
+          updateData = {
+            plan,
+            status: 'ACTIVE',
+            source: 'MANUAL',
+            currentPeriodStart: new Date(),
+            currentPeriodEnd: calculateSubscriptionEndDate(plan),
+          };
+          activationEmailPlan = plan;
+        } else if (status) {
+          updateData = { status, source: 'MANUAL' };
+        } else {
+          const error = new Error('Unsupported subscription plan');
+          error.status = 400;
+          throw error;
+        }
+
+        await tx.subscription.updateMany({
+          where: { userId: subscription.userId },
+          data: updateData,
         });
+        const updated = await tx.subscription.findUnique({
+          where: { id },
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                name: true
+              }
+            },
+            pricingTier: true
+          }
+        });
+        if (!updated) {
+          const error = new Error('Subscription not found');
+          error.status = 404;
+          throw error;
+        }
+        await syncAccountBillingProjection(tx, subscription.userId, updated);
+        return {
+          updatedSubscription: updated,
+          activationEmailPlan,
+          email: subscription.user.email,
+          name: subscription.user.name,
+        };
       }
+    );
 
-      const endDate = new Date();
-      endDate.setDate(endDate.getDate() + 30);
-
-      updateData = {
-        plan: pricingTier.name,
-        status: 'ACTIVE',
-        pricingTierId,
-        currentPeriodStart: new Date(),
-        currentPeriodEnd: endDate
-      };
-
-      console.log('Activating pricing tier:', updateData);
-
+    if (result.activationEmailPlan) {
       try {
         await sendSubscriptionActivatedEmail(
-          subscription.user.email,
-          subscription.user.name,
-          pricingTier.name
+          result.email,
+          result.name,
+          result.activationEmailPlan
         );
       } catch (emailError) {
         console.error('Failed to send activation email:', emailError);
       }
-    } else if (plan && (plan === 'MONTHLY' || plan === 'YEARLY')) {
-      const endDate = calculateSubscriptionEndDate(plan);
-      updateData = {
-        plan,
-        status: 'ACTIVE',
-        currentPeriodStart: new Date(),
-        currentPeriodEnd: endDate
-      };
-
-      console.log('Activating paid plan:', updateData);
-
-      try {
-        await sendSubscriptionActivatedEmail(
-          subscription.user.email,
-          subscription.user.name,
-          plan
-        );
-      } catch (emailError) {
-        console.error('Failed to send activation email:', emailError);
-      }
-    } else if (status) {
-      updateData.status = status;
     }
 
-    const updatedSubscription = await prisma.subscription.update({
-      where: { id },
-      data: updateData,
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            name: true
-          }
-        },
-        pricingTier: true
-      }
-    });
-
-    console.log('Subscription updated successfully:', updatedSubscription.id);
-    res.json(updatedSubscription);
+    console.log('Subscription updated successfully:', result.updatedSubscription.id);
+    res.json(result.updatedSubscription);
   } catch (error) {
     console.error('Error in updateSubscription:', error);
     next(error);
@@ -463,7 +632,8 @@ export const extendSubscription = async (req, res, next) => {
     const { id } = req.params;
     const { months } = req.body;
 
-    if (!months || months < 1) {
+    const parsedMonths = Number(months);
+    if (!Number.isInteger(parsedMonths) || parsedMonths < 1 || parsedMonths > 120) {
       return res.status(400).json({ error: 'Invalid months value' });
     }
 
@@ -475,17 +645,51 @@ export const extendSubscription = async (req, res, next) => {
       return res.status(404).json({ error: 'Subscription not found' });
     }
 
-    const currentEnd = new Date(subscription.currentPeriodEnd);
-    const newEnd = new Date(currentEnd);
-    newEnd.setMonth(newEnd.getMonth() + parseInt(months));
+    const updatedSubscription = await withBillingLifecycleLock(
+      subscription.userId,
+      async (tx) => {
+        const [lockedSubscription, accountSubscriptions, accountBilling] = await Promise.all([
+          tx.subscription.findUnique({ where: { id } }),
+          tx.subscription.findMany({
+            where: { userId: subscription.userId },
+            select: { currentPeriodEnd: true },
+          }),
+          tx.billingSubscription.findUnique({
+            where: { userId: subscription.userId },
+            select: { currentPeriodEnd: true },
+          }),
+        ]);
+        if (!lockedSubscription) {
+          const error = new Error('Subscription not found');
+          error.status = 404;
+          throw error;
+        }
+        const now = new Date();
+        const currentEnd = [
+          now,
+          ...accountSubscriptions.map((item) => item.currentPeriodEnd).filter(Boolean),
+          accountBilling?.currentPeriodEnd,
+        ].filter(Boolean).reduce((latest, value) => (
+          value > latest ? value : latest
+        ), now);
+        let newEnd = currentEnd;
+        for (let index = 0; index < parsedMonths; index += 1) {
+          newEnd = addBillingInterval(newEnd, 'month');
+        }
 
-    const updatedSubscription = await prisma.subscription.update({
-      where: { id },
-      data: {
-        currentPeriodEnd: newEnd,
-        status: 'ACTIVE'
+        await tx.subscription.updateMany({
+          where: { userId: subscription.userId },
+          data: {
+            currentPeriodEnd: newEnd,
+            status: 'ACTIVE',
+            source: 'MANUAL'
+          }
+        });
+        const updated = await tx.subscription.findUnique({ where: { id } });
+        await syncAccountBillingProjection(tx, subscription.userId, updated);
+        return updated;
       }
-    });
+    );
 
     res.json(updatedSubscription);
   } catch (error) {
@@ -642,13 +846,18 @@ export const deactivateUser = async (req, res, next) => {
       return res.status(403).json({ error: 'Невозможно деактивировать администратора' });
     }
 
-    // Обновляем статус всех подписок пользователя на CANCELLED
-    await prisma.subscription.updateMany({
-      where: { userId },
-      data: {
-        status: 'CANCELLED',
-        currentPeriodEnd: new Date() // Немедленное окончание подписки
-      }
+    await withBillingLifecycleLock(userId, async (tx) => {
+      // Обновляем статус всех подписок пользователя на CANCELLED
+      await tx.subscription.updateMany({
+        where: { userId },
+        data: {
+          status: 'CANCELLED',
+          source: 'MANUAL',
+          currentPeriodEnd: new Date() // Немедленное окончание подписки
+        }
+      });
+      const updated = await tx.subscription.findFirst({ where: { userId } });
+      await syncAccountBillingProjection(tx, userId, updated);
     });
 
     res.json({ message: 'Пользователь успешно деактивирован' });
@@ -675,9 +884,34 @@ export const deleteUser = async (req, res, next) => {
       return res.status(403).json({ error: 'Невозможно удалить администратора' });
     }
 
-    // Удаляем пользователя (каскадное удаление затронет все связанные данные)
-    await prisma.user.delete({
-      where: { id: userId }
+    await withBillingLifecycleLock(userId, async (tx) => {
+      const lockedUser = await tx.user.findUnique({
+        where: { id: userId },
+        select: {
+          billingCustomerId: true,
+          _count: { select: { billingPayments: true } },
+        },
+      });
+
+      // Preserve any legacy external customer linkage until support explicitly
+      // cleans it up; deleting a local account must not orphan remote billing.
+      if (lockedUser?.billingCustomerId) {
+        const error = new Error('Перед удалением пользователя удалите его внешний платёжный профиль и повторите попытку.');
+        error.status = 409;
+        error.code = 'BILLING_CUSTOMER_DELETE_REQUIRED';
+        throw error;
+      }
+      if (lockedUser?._count.billingPayments > 0) {
+        const error = new Error('Пользователя с историей платежей нельзя удалить. Деактивируйте его вместо удаления.');
+        error.status = 409;
+        error.code = 'BILLING_HISTORY_DELETE_FORBIDDEN';
+        throw error;
+      }
+
+      // Удаляем пользователя (каскадное удаление затронет все связанные данные)
+      await tx.user.delete({
+        where: { id: userId }
+      });
     });
 
     res.json({ message: 'Пользователь и все его данные успешно удалены' });
@@ -748,10 +982,16 @@ export const getAllUsers = async (req, res, next) => {
 export const getPricingTiers = async (req, res, next) => {
   try {
     const tiers = await prisma.pricingTier.findMany({
+      include: {
+        _count: { select: { billingPayments: true } },
+      },
       orderBy: { order: 'asc' }
     });
 
-    res.json(tiers);
+    res.json(tiers.map(({ _count, ...tier }) => ({
+      ...tier,
+      hasPayments: _count.billingPayments > 0,
+    })));
   } catch (error) {
     console.error('Error in getPricingTiers:', error.message);
     // Fallback: use raw SQL if Prisma Client is out of sync
@@ -773,8 +1013,12 @@ export const createPricingTier = async (req, res, next) => {
       description,
       features,
       maxRestaurants,
+      currency,
+      billingInterval,
+      onlinePaymentEnabled,
       businessType,
       order,
+      isActive,
       bonusProgramEnabled,
       bonusAccrualRate,
       bonusExpiryDays,
@@ -789,8 +1033,35 @@ export const createPricingTier = async (req, res, next) => {
       return res.status(400).json({ error: 'Name and price are required' });
     }
 
-    if (price < 0) {
-      return res.status(400).json({ error: 'Price must be >= 0' });
+    if (!Number.isFinite(Number(price)) || Number(price) < 0) {
+      return res.status(400).json({ error: 'Price must be a finite number >= 0' });
+    }
+
+    const normalizedCurrency = normalizeBillingCurrency(currency || 'kgs');
+    const normalizedBillingInterval = String(billingInterval || 'month').trim().toLowerCase();
+    const paymentEnabled = Boolean(onlinePaymentEnabled);
+    const normalizedMaxRestaurants = maxRestaurants === '' || maxRestaurants === null || maxRestaurants === undefined
+      ? null
+      : Number.parseInt(maxRestaurants, 10);
+
+    if (!normalizedCurrency) {
+      return res.status(400).json({ error: 'Currency must be a 3-letter ISO code' });
+    }
+
+    if (!BILLING_INTERVALS.includes(normalizedBillingInterval)) {
+      return res.status(400).json({ error: 'billingInterval must be month or year' });
+    }
+
+    if (normalizedMaxRestaurants !== null && (!Number.isInteger(normalizedMaxRestaurants) || normalizedMaxRestaurants < 1)) {
+      return res.status(400).json({ error: 'maxRestaurants must be an integer >= 1' });
+    }
+
+    if (paymentEnabled && normalizedCurrency !== 'kgs') {
+      return res.status(400).json({ error: 'Finik online payment requires KGS currency' });
+    }
+
+    if (paymentEnabled && getMoneyMinorUnits(price) === null) {
+      return res.status(400).json({ error: 'Finik price must be > 0 with no more than two decimal places' });
     }
 
     const parsedBonusRate = bonusAccrualRate !== undefined && bonusAccrualRate !== null
@@ -833,12 +1104,16 @@ export const createPricingTier = async (req, res, next) => {
     const tier = await prisma.pricingTier.create({
       data: {
         name,
-        price: parseFloat(price),
+        price: Number(price),
+        currency: normalizedCurrency,
+        billingInterval: normalizedBillingInterval,
+        onlinePaymentEnabled: paymentEnabled,
         description,
         features,
-        maxRestaurants: maxRestaurants ? parseInt(maxRestaurants) : null,
+        maxRestaurants: normalizedMaxRestaurants,
         businessType: normalizedBusinessType,
         order: order || 0,
+        isActive: isActive === undefined ? true : Boolean(isActive),
         bonusProgramEnabled: Boolean(bonusProgramEnabled),
         bonusAccrualRate: parsedBonusRate,
         bonusExpiryDays: parsedBonusExpiryDays,
@@ -868,6 +1143,9 @@ export const updatePricingTier = async (req, res, next) => {
       description,
       features,
       maxRestaurants,
+      currency,
+      billingInterval,
+      onlinePaymentEnabled,
       businessType,
       order,
       isActive,
@@ -885,8 +1163,35 @@ export const updatePricingTier = async (req, res, next) => {
       return res.status(400).json({ error: 'Name and price are required' });
     }
 
-    if (price < 0) {
-      return res.status(400).json({ error: 'Price must be >= 0' });
+    if (!Number.isFinite(Number(price)) || Number(price) < 0) {
+      return res.status(400).json({ error: 'Price must be a finite number >= 0' });
+    }
+
+    const normalizedCurrency = normalizeBillingCurrency(currency || 'kgs');
+    const normalizedBillingInterval = String(billingInterval || 'month').trim().toLowerCase();
+    const paymentEnabled = Boolean(onlinePaymentEnabled);
+    const normalizedMaxRestaurants = maxRestaurants === '' || maxRestaurants === null || maxRestaurants === undefined
+      ? null
+      : Number.parseInt(maxRestaurants, 10);
+
+    if (!normalizedCurrency) {
+      return res.status(400).json({ error: 'Currency must be a 3-letter ISO code' });
+    }
+
+    if (!BILLING_INTERVALS.includes(normalizedBillingInterval)) {
+      return res.status(400).json({ error: 'billingInterval must be month or year' });
+    }
+
+    if (normalizedMaxRestaurants !== null && (!Number.isInteger(normalizedMaxRestaurants) || normalizedMaxRestaurants < 1)) {
+      return res.status(400).json({ error: 'maxRestaurants must be an integer >= 1' });
+    }
+
+    if (paymentEnabled && normalizedCurrency !== 'kgs') {
+      return res.status(400).json({ error: 'Finik online payment requires KGS currency' });
+    }
+
+    if (paymentEnabled && getMoneyMinorUnits(price) === null) {
+      return res.status(400).json({ error: 'Finik price must be > 0 with no more than two decimal places' });
     }
 
     const parsedBonusRate = bonusAccrualRate !== undefined && bonusAccrualRate !== null
@@ -926,27 +1231,67 @@ export const updatePricingTier = async (req, res, next) => {
       return res.status(400).json({ error: 'Unsupported pricing business type' });
     }
 
-    const tier = await prisma.pricingTier.update({
-      where: { id },
-      data: {
-        name,
-        price: parseFloat(price),
-        description,
-        features,
-        maxRestaurants: maxRestaurants ? parseInt(maxRestaurants) : null,
-        businessType: normalizedBusinessType,
-        order: order || 0,
-        isActive,
-        bonusProgramEnabled: Boolean(bonusProgramEnabled),
-        bonusAccrualRate: parsedBonusRate,
-        bonusExpiryDays: parsedBonusExpiryDays,
-        bonusBronzeLabel: bonusBronzeLabel || 'Bronze',
-        bonusSilverLabel: bonusSilverLabel || 'Silver',
-        bonusGoldLabel: bonusGoldLabel || 'Gold',
-        bonusSilverFromOrders: parsedSilverFromOrders,
-        bonusGoldFromOrders: parsedGoldFromOrders
+    const tier = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`pricing-tier:${id}`}))`;
+      const existingTier = await tx.pricingTier.findUnique({
+        where: { id },
+        select: {
+          externalPriceId: true,
+          currency: true,
+          billingInterval: true,
+          price: true,
+          businessType: true,
+          maxRestaurants: true,
+          _count: { select: { billingPayments: true } },
+        },
+      });
+      if (!existingTier) {
+        const error = new Error('Pricing tier not found');
+        error.status = 404;
+        throw error;
       }
-    });
+
+      const immutableBillingFieldsChanged = existingTier.currency !== normalizedCurrency
+        || existingTier.billingInterval !== normalizedBillingInterval
+        || Number(existingTier.price) !== Number(price)
+        || existingTier.businessType !== normalizedBusinessType
+        || existingTier.maxRestaurants !== normalizedMaxRestaurants;
+      const hasPublishedPayments = existingTier._count.billingPayments > 0
+        || Boolean(existingTier.externalPriceId);
+      if (hasPublishedPayments && immutableBillingFieldsChanged) {
+        const error = new Error(
+          'Цена, валюта, период, тип бизнеса и лимит оплаченного тарифа неизменяемы. Создайте новый тариф.'
+        );
+        error.status = 409;
+        error.code = 'BILLING_TIER_IMMUTABLE';
+        throw error;
+      }
+
+      return tx.pricingTier.update({
+        where: { id },
+        data: {
+          name,
+          price: Number(price),
+          currency: normalizedCurrency,
+          billingInterval: normalizedBillingInterval,
+          onlinePaymentEnabled: paymentEnabled,
+          description,
+          features,
+          maxRestaurants: normalizedMaxRestaurants,
+          businessType: normalizedBusinessType,
+          order: order || 0,
+          isActive,
+          bonusProgramEnabled: Boolean(bonusProgramEnabled),
+          bonusAccrualRate: parsedBonusRate,
+          bonusExpiryDays: parsedBonusExpiryDays,
+          bonusBronzeLabel: bonusBronzeLabel || 'Bronze',
+          bonusSilverLabel: bonusSilverLabel || 'Silver',
+          bonusGoldLabel: bonusGoldLabel || 'Gold',
+          bonusSilverFromOrders: parsedSilverFromOrders,
+          bonusGoldFromOrders: parsedGoldFromOrders,
+        },
+      });
+    }, { isolationLevel: 'ReadCommitted', maxWait: 5000, timeout: 30000 });
 
     res.json({
       message: 'Pricing tier updated successfully',
@@ -961,9 +1306,28 @@ export const deletePricingTier = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    await prisma.pricingTier.delete({
-      where: { id }
-    });
+    await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`pricing-tier:${id}`}))`;
+      const tier = await tx.pricingTier.findUnique({
+        where: { id },
+        select: {
+          externalPriceId: true,
+          _count: { select: { billingPayments: true } },
+        },
+      });
+      if (!tier) {
+        const error = new Error('Pricing tier not found');
+        error.status = 404;
+        throw error;
+      }
+      if (tier.externalPriceId || tier._count.billingPayments > 0) {
+        const error = new Error('Нельзя удалить тариф с историей платежей. Отключите его для новых продаж.');
+        error.status = 409;
+        error.code = 'BILLING_TIER_IN_USE';
+        throw error;
+      }
+      await tx.pricingTier.delete({ where: { id } });
+    }, { isolationLevel: 'ReadCommitted', maxWait: 5000, timeout: 30000 });
 
     res.json({ message: 'Pricing tier deleted successfully' });
   } catch (error) {

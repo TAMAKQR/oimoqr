@@ -6,6 +6,7 @@
  */
 
 import { prisma } from '../config/prisma.js';
+import { isSubscriptionActive } from '../utils/subscription.js';
 
 /**
  * Проверка доступности модуля доставки
@@ -28,7 +29,7 @@ export const checkDeliveryAccess = async (req, res, next) => {
         }
 
         const subscription = restaurant.subscriptions?.[0];
-        if (!subscription) {
+        if (!isSubscriptionActive(subscription)) {
             return res.status(402).json({
                 error: 'No active subscription',
                 code: 'SUBSCRIPTION_REQUIRED'
@@ -82,7 +83,7 @@ export const checkSmsLimit = async (req, res, next) => {
         });
 
         const subscription = restaurant?.subscriptions?.[0];
-        if (!subscription?.pricingTier) {
+        if (!isSubscriptionActive(subscription) || !subscription?.pricingTier) {
             return res.status(402).json({
                 error: 'Active subscription required to send SMS',
                 code: 'SUBSCRIPTION_REQUIRED'
@@ -177,7 +178,7 @@ export const checkCustomerLimit = async (req, res, next) => {
         });
 
         const subscription = restaurant?.subscriptions?.[0];
-        if (!subscription?.pricingTier) {
+        if (!isSubscriptionActive(subscription) || !subscription?.pricingTier) {
             return res.status(402).json({
                 error: 'Active subscription required',
                 code: 'SUBSCRIPTION_REQUIRED'
@@ -241,7 +242,8 @@ export const getSubscriptionUsage = async (req, res) => {
             return res.status(404).json({ error: 'No active subscription' });
         }
 
-        const tier = subscription.pricingTier;
+        const subscriptionIsActive = isSubscriptionActive(subscription);
+        const tier = subscriptionIsActive ? subscription.pricingTier : null;
 
         // Считаем использование
         const customerCount = await prisma.customer.count({
@@ -272,9 +274,9 @@ export const getSubscriptionUsage = async (req, res) => {
                 limit: tier?.maxRestaurants || 'unlimited'
             },
             modules: {
-                delivery: tier?.includesDelivery || subscription.addons?.includes('delivery'),
-                analytics: subscription.addons?.includes('analytics'),
-                customersPro: subscription.addons?.includes('customers_pro')
+                delivery: Boolean(subscriptionIsActive && (tier?.includesDelivery || subscription.addons?.includes('delivery'))),
+                analytics: Boolean(subscriptionIsActive && subscription.addons?.includes('analytics')),
+                customersPro: Boolean(subscriptionIsActive && subscription.addons?.includes('customers_pro'))
             },
             plan: {
                 name: tier?.name,

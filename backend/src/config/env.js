@@ -22,6 +22,21 @@ export const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
 
+  // Finik Web SDK (optional until online tariff payments are enabled)
+  finik: {
+    apiKey: process.env.FINIK_API_KEY,
+    privateKey: process.env.FINIK_PRIVATE_KEY,
+    publicKey: process.env.FINIK_PUBLIC_KEY,
+    accountId: process.env.FINIK_ACCOUNT_ID,
+    mode: (process.env.FINIK_MODE || 'beta').toLowerCase(),
+    webhookUrl: process.env.FINIK_WEBHOOK_URL,
+    merchantName: process.env.FINIK_MERCHANT_NAME || 'OimoQR',
+    paymentTtlMinutes: Number.parseInt(process.env.FINIK_PAYMENT_TTL_MINUTES || '30', 10),
+    settlementGraceMinutes: Number.parseInt(process.env.FINIK_SETTLEMENT_GRACE_MINUTES || '1440', 10),
+    webhookToleranceSeconds: Number.parseInt(process.env.FINIK_WEBHOOK_TOLERANCE_SECONDS || '300', 10),
+    requestTimeoutMs: Number.parseInt(process.env.FINIK_REQUEST_TIMEOUT_MS || '10000', 10),
+  },
+
   // Cloudinary (опционально)
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME,
@@ -42,6 +57,26 @@ export const config = {
 // Валидация числовых значений
 if (isNaN(config.port)) {
   throw new Error('❌ PORT must be a valid number');
+}
+
+if (!['beta', 'prod'].includes(config.finik.mode)) {
+  throw new Error('❌ FINIK_MODE must be either beta or prod');
+}
+
+if (!Number.isInteger(config.finik.paymentTtlMinutes) || config.finik.paymentTtlMinutes < 5) {
+  throw new Error('❌ FINIK_PAYMENT_TTL_MINUTES must be an integer >= 5');
+}
+
+if (!Number.isInteger(config.finik.settlementGraceMinutes) || config.finik.settlementGraceMinutes < 5) {
+  throw new Error('❌ FINIK_SETTLEMENT_GRACE_MINUTES must be an integer >= 5');
+}
+
+if (!Number.isInteger(config.finik.webhookToleranceSeconds) || config.finik.webhookToleranceSeconds < 30) {
+  throw new Error('❌ FINIK_WEBHOOK_TOLERANCE_SECONDS must be an integer >= 30');
+}
+
+if (!Number.isInteger(config.finik.requestTimeoutMs) || config.finik.requestTimeoutMs < 1000) {
+  throw new Error('❌ FINIK_REQUEST_TIMEOUT_MS must be an integer >= 1000');
 }
 
 console.log('✅ Environment variables validated successfully');

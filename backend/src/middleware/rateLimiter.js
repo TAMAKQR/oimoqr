@@ -39,3 +39,12 @@ export const registerLimiter = rateLimit({
   message: 'Too many registration attempts, please try again later.',
   skip: () => !isProduction,
 });
+
+export const finikWebhookLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: isProduction ? 120 : 1000,
+  message: { error: 'Too many webhook requests' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => !isProduction,
+});

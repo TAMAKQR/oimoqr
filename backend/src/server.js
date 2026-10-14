@@ -27,10 +27,12 @@ import migrationRoutes from './routes/migration.routes.js';
 import customerRoutes from './routes/customer.routes.js';
 import telegramRoutes from './routes/telegram.routes.js';
 import modifierTemplateRoutes from './routes/modifierTemplate.routes.js';
+import billingRoutes from './routes/billing.routes.js';
+import { finikWebhook } from './controllers/billing.controller.js';
 
 // Middleware
 import { errorHandler } from './middleware/errorHandler.js';
-import { rateLimiter } from './middleware/rateLimiter.js';
+import { finikWebhookLimiter, rateLimiter } from './middleware/rateLimiter.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -162,6 +164,24 @@ app.use(compression({
   level: 6 // Баланс между скоростью и степенью сжатия
 }));
 
+// Finik retries signed success webhooks until it receives 200. Keep this public
+// endpoint outside the global rate limiter; only a verified webhook changes data.
+app.post(
+  '/api/billing/finik/webhook',
+  finikWebhookLimiter,
+  (req, res, next) => {
+    if (
+      typeof req.headers.signature !== 'string'
+      || typeof req.headers['x-api-timestamp'] !== 'string'
+    ) {
+      return res.status(400).json({ error: 'Finik signature headers are required' });
+    }
+    return next();
+  },
+  express.json({ type: 'application/json', limit: '128kb' }),
+  finikWebhook
+);
+
 // Rate limiting
 app.use('/api/', rateLimiter);
 
@@ -190,6 +210,7 @@ app.use('/api/languages', languageRoutes);
 app.use('/api/geolocation', geolocationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/migration', migrationRoutes);
+app.use('/api/billing', billingRoutes);
 app.use('/api', telegramRoutes);
 
 // Health check route

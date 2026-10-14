@@ -12,6 +12,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useUserData } from '../hooks/useUserData';
 import { useSelectedRestaurant } from '../hooks/useSelectedRestaurant';
 import { getBusinessType, BUSINESS_TYPE_OPTIONS } from '../utils/businessTypes';
+import { formatBillingPrice, getBillingIntervalLabel } from '../utils/billingFormat';
 
 const getCurrencySymbol = (currencyCode) => {
   const currencySymbols = {
@@ -339,10 +340,10 @@ const DashboardPage = () => {
       if (response.error) {
         let errorMessage = response.message || '';
         if (response.pricing?.monthlyPrice) {
-          const currency = response.pricing?.currency || 'USD';
+          const currency = response.pricing?.currency || 'KGS';
           const maxRestaurants = response.pricing?.maxRestaurants || response.pricing?.totalRestaurants;
           if (maxRestaurants) {
-            errorMessage += `\n\nТребуемый тариф: $${response.pricing.monthlyPrice.toFixed(2)}/${currency === 'USD' ? 'мес' : 'мес'} за ${maxRestaurants} ${maxRestaurants === 1 ? 'ресторан' : 'ресторанов'}`;
+            errorMessage += `\n\nТребуемый тариф: ${new Intl.NumberFormat('ru-RU', { style: 'currency', currency }).format(response.pricing.monthlyPrice)}/мес за ${maxRestaurants} ${maxRestaurants === 1 ? 'ресторан' : 'ресторанов'}`;
           }
         }
         if (response.trial?.daysRemaining && response.trial.daysRemaining > 0) {
@@ -679,7 +680,7 @@ const DashboardPage = () => {
                       }
                       const pricingMessage = pricingTiers.length > 0
                         ? `\n\nДоступные тарифы:\n${pricingTiers.map(tier => {
-                          const tierInfo = `${tier.name} - $${tier.price.toFixed(2)}/мес`;
+                          const tierInfo = `${tier.name} - ${formatBillingPrice(tier)}/${getBillingIntervalLabel(tier, true)}`;
                           const restaurantInfo = tier.maxRestaurants ? ` (до ${tier.maxRestaurants} ресторанов)` : '';
                           return tierInfo + restaurantInfo;
                         }).join('\n')}`

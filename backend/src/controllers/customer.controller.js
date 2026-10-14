@@ -6,6 +6,7 @@ import { getNetworkRankedDeliveryPoints } from './geolocation.controller.js';
 import { buildTrustedOrderItems, calculateDeliveryFee } from '../utils/orderPricing.js';
 import { loadModifierOptionStops } from '../utils/modifierOptionStops.js';
 import { getRestaurantDeliveryStatus } from '../utils/schedule.js';
+import { isSubscriptionActive } from '../utils/subscription.js';
 
 const getMenuSourceRestaurantId = async (restaurantId) => {
     const restaurant = await prisma.restaurant.findUnique({
@@ -171,8 +172,7 @@ const buildBonusSummaryFromOrders = (orders = []) => {
         const config = getEffectiveBonusConfig(order?.restaurant);
         return config.enabled;
     });
-    const activeSubscription = tierSourceOrder?.restaurant?.subscriptions?.find((s) => s?.status === 'ACTIVE')
-        || tierSourceOrder?.restaurant?.subscriptions?.[0];
+    const activeSubscription = tierSourceOrder?.restaurant?.subscriptions?.find(isSubscriptionActive);
     const tierConfig = activeSubscription?.pricingTier || null;
     const tier = getTier(deliveryOrdersCount, tierConfig);
 
@@ -190,7 +190,7 @@ const buildBonusSummaryFromOrders = (orders = []) => {
 
 const getActiveTierBonusConfig = (subscriptions = []) => {
     if (!Array.isArray(subscriptions) || subscriptions.length === 0) return null;
-    const active = subscriptions.find((s) => s?.status === 'ACTIVE') || subscriptions[0];
+    const active = subscriptions.find(isSubscriptionActive);
     return active?.pricingTier || null;
 };
 
@@ -198,6 +198,16 @@ const getEffectiveBonusConfig = (restaurant) => {
     const tier = getActiveTierBonusConfig(restaurant?.subscriptions || []);
     const useTier = restaurant?.useTierBonusSettings !== false;
     const hasTierBonusConfig = Boolean(tier);
+
+    // Local customization is allowed only while an active tier actually grants
+    // the bonus module; otherwise toggling restaurant flags would bypass expiry.
+    if (!hasTierBonusConfig || !tier.bonusProgramEnabled) {
+        return {
+            enabled: false,
+            rate: DEFAULT_BONUS_RATE,
+            expiryDays: DEFAULT_BONUS_EXPIRY_DAYS
+        };
+    }
 
     if (useTier && hasTierBonusConfig) {
         return {
@@ -233,6 +243,8 @@ const getCustomerAvailableBonusPoints = async (customerId, dbClient = prisma) =>
                     subscriptions: {
                         select: {
                             status: true,
+                            trialEndsAt: true,
+                            currentPeriodEnd: true,
                             pricingTier: {
                                 select: {
                                     bonusProgramEnabled: true,
@@ -487,6 +499,8 @@ export const getOrderHistory = async (req, res, next) => {
                         subscriptions: {
                             select: {
                                 status: true,
+                                trialEndsAt: true,
+                                currentPeriodEnd: true,
                                 pricingTier: {
                                     select: {
                                         bonusProgramEnabled: true,
@@ -552,6 +566,8 @@ export const getBonusSummary = async (req, res, next) => {
                         subscriptions: {
                             select: {
                                 status: true,
+                                trialEndsAt: true,
+                                currentPeriodEnd: true,
                                 pricingTier: {
                                     select: {
                                         bonusProgramEnabled: true,
@@ -1154,6 +1170,8 @@ export const createCustomerOrder = async (req, res, next) => {
                         subscriptions: {
                             select: {
                                 status: true,
+                                trialEndsAt: true,
+                                currentPeriodEnd: true,
                                 pricingTier: {
                                     select: {
                                         bonusProgramEnabled: true,

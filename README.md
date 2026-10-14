@@ -12,6 +12,7 @@
 - 📸 **Фото блюд** - загрузка изображений
 - 🔧 **Модификаторы** - размеры, добавки, соусы
 - 🌐 **Уникальные поддомены** - `ваш-ресторан.oimoqr.com`
+- 💳 **Оплата тарифов через Finik** - разовая предоплата в KGS на месяц или год
 
 Новый комит
 
@@ -57,7 +58,7 @@
 
 ### Требования
 
-- Node.js >= 18.0.0
+- Node.js >= 20.0.0
 - npm или yarn
 
 ### Установка и запуск
@@ -74,9 +75,11 @@ npm run install:all
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
 
-# Запустите миграции БД (опционально, БД создастся автоматически)
+# Только для одноразовой локальной dev-БД синхронизируйте схему.
+# Для staging/production сначала прочитайте migration gate Finik ниже.
 cd backend
-npx prisma migrate deploy
+npx prisma generate
+npx prisma db push
 cd ..
 
 # Запустите приложение (frontend + backend одновременно)
@@ -100,10 +103,7 @@ npm run dev:backend
 
 ## 🗄️ База данных
 
-Проект использует **SQLite** для локальной разработки:
-
-- БД файл: `backend/prisma/dev.db`
-- Миграции: `backend/prisma/migrations/`
+Проект использует **PostgreSQL** через Prisma. Исторически production синхронизировался через `prisma db push`, а старый versioned migration chain требует отдельного baseline/reconcile. Не запускайте `migrate deploy` на существующей production-БД вслепую и не используйте `db push --accept-data-loss`: переход Stripe → Finik содержит явные SQL-переименования для сохранения данных. Порядок действий описан в [инструкции Finik](docs/FINIK_BILLING_SETUP.md#5-обновите-схему-бд-без-потери-данных).
 
 Для работы с БД:
 
@@ -113,8 +113,9 @@ cd backend
 # Просмотр БД в Prisma Studio
 npx prisma studio
 
-# Примените миграции
-npx prisma migrate deploy
+# Только для одноразовой локальной dev-БД, без --accept-data-loss.
+# Для новой staging/production нужен проверенный consolidated baseline.
+npx prisma db push
 
 # Создайте новую миграцию (если меняли schema)
 npx prisma migrate dev --name migration_name
@@ -125,11 +126,19 @@ npx prisma migrate dev --name migration_name
 **Backend** (`backend/.env`):
 
 ```
-DATABASE_URL=file:./prisma/dev.db
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DATABASE
+DIRECT_URL=postgresql://USER:PASSWORD@HOST:5432/DATABASE
 JWT_SECRET=your-secret-key
 PORT=5000
 NODE_ENV=development
+FINIK_MODE=beta
+FINIK_API_KEY=replace-with-beta-api-key
+FINIK_ACCOUNT_ID=replace-with-beta-account-id
+FINIK_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+FINIK_WEBHOOK_URL=https://your-public-backend.example/api/billing/finik/webhook
 ```
+
+`FINIK_PRIVATE_KEY` остаётся только на backend. Для локальной проверки webhook также нужен публичный HTTPS URL (например, через доверенный tunnel). Полный список переменных и переход в production описаны в инструкции Finik.
 
 **Frontend** (`frontend/.env`):
 
@@ -150,6 +159,7 @@ npm run seed
 
 - [TODO.md](docs/TODO.md) - планы на развитие
 - [DOCUMENTATION_INDEX.md](docs/DOCUMENTATION_INDEX.md) - полный индекс
+- [FINIK_BILLING_SETUP.md](docs/FINIK_BILLING_SETUP.md) - настройка оплаты тарифов через Finik
 
 ## 🤝 Вклад в проект
 
