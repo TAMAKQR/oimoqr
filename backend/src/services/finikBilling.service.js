@@ -211,7 +211,7 @@ const assertNoConflictingActiveTier = (subscriptions, pricingTierId, now = new D
 
 export const withAccountBillingLock = async (userId, operation, timeout = 60000) => (
   prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`billing:${userId}`}))`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`billing:${userId}`}))`;
     return operation(tx);
   }, {
     isolationLevel: 'ReadCommitted',
@@ -396,7 +396,7 @@ export const createBillingPayment = async (userId, pricingTierId) => {
 
   const prepared = await withAccountBillingLock(userId, async (tx) => {
     await expireStalePayments(tx, userId);
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`pricing-tier:${pricingTierId}`}))`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`pricing-tier:${pricingTierId}`}))`;
     const [user, pricingTier] = await Promise.all([
       tx.user.findUnique({
         where: { id: userId },
@@ -620,16 +620,16 @@ const acquirePaymentLocks = async (tx, {
   operationId,
 }) => {
   if (userId) {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`billing:${userId}`}))`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`billing:${userId}`}))`;
   }
-  await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`finik-payment:${paymentId}`}))`;
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`finik-payment:${paymentId}`}))`;
 
   const providerLockKeys = [
     transactionId ? `finik-transaction:${transactionId}` : null,
     operationId ? `finik-operation:${operationId}` : null,
   ].filter(Boolean).sort();
   for (const lockKey of providerLockKeys) {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`;
   }
 };
 
@@ -707,7 +707,7 @@ const recordOrphanWebhook = async (payload, reason, details = {}) => {
     .digest('hex');
   const providerReferenceId = `finik-orphan:${fingerprint}`;
   await prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`billing-issue:${providerReferenceId}`}))`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`billing-issue:${providerReferenceId}`}))`;
     const existing = await tx.billingIssue.findUnique({
       where: { providerReferenceId },
       select: { status: true, details: true },
@@ -1387,9 +1387,9 @@ export const resolveBillingIssue = async (issueId, {
 
   return prisma.$transaction(async (tx) => {
     if (initialIssue.userId) {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`billing:${initialIssue.userId}`}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`billing:${initialIssue.userId}`}))`;
     }
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`billing-issue:${issueId}`}))`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`billing-issue:${issueId}`}))`;
 
     const issue = await tx.billingIssue.findUnique({ where: { id: issueId } });
     if (!issue) {

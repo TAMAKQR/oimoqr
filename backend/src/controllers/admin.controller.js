@@ -1232,7 +1232,7 @@ export const updatePricingTier = async (req, res, next) => {
     }
 
     const tier = await prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`pricing-tier:${id}`}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`pricing-tier:${id}`}))`;
       const existingTier = await tx.pricingTier.findUnique({
         where: { id },
         select: {
@@ -1307,7 +1307,7 @@ export const deletePricingTier = async (req, res, next) => {
     const { id } = req.params;
 
     await prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`pricing-tier:${id}`}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`pricing-tier:${id}`}))`;
       const tier = await tx.pricingTier.findUnique({
         where: { id },
         select: {
