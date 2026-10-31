@@ -202,7 +202,7 @@ const AdminPricingPage = () => {
         });
         showNotification('Тариф создан успешно!');
       } else {
-        await api.put(`/admin/pricing-tiers/${editingId}`, {
+        const response = await api.put(`/admin/pricing-tiers/${editingId}`, {
           name: formData.name,
           price: parseFloat(formData.price),
           currency: (formData.currency || 'kgs').trim().toLowerCase(),
@@ -223,7 +223,9 @@ const AdminPricingPage = () => {
           order: formData.order ? parseInt(formData.order) : 0,
           isActive: Boolean(formData.isActive)
         });
-        showNotification('Тариф обновлен успешно!');
+        showNotification(response.data?.versioned
+          ? 'Создана новая версия тарифа. Предыдущая сохранена в архиве.'
+          : 'Тариф обновлен успешно!');
       }
 
       handleCancel();
@@ -380,7 +382,7 @@ const AdminPricingPage = () => {
                   min="0"
                   placeholder="20.00"
                   className="input w-full"
-                  disabled={saving || isPublished}
+                  disabled={saving}
                 />
               </div>
 
@@ -396,7 +398,7 @@ const AdminPricingPage = () => {
                   maxLength={3}
                   placeholder="kgs"
                   className="input w-full uppercase"
-                  disabled={saving || isPublished}
+                  disabled={saving}
                 />
               </div>
 
@@ -409,7 +411,7 @@ const AdminPricingPage = () => {
                   value={formData.billingInterval}
                   onChange={handleInputChange}
                   className="input w-full"
-                  disabled={saving || isPublished}
+                  disabled={saving}
                 >
                   <option value="month">1 месяц</option>
                   <option value="year">1 год</option>
@@ -430,7 +432,7 @@ const AdminPricingPage = () => {
                 </label>
                 <p className="text-xs text-gray-500 mt-1">
                   {isPublished
-                    ? 'У тарифа уже есть платежи: цена, валюта, период и лимиты неизменяемы. Онлайн-оплату можно временно выключить.'
+                    ? 'У тарифа уже есть платежи. При изменении цены, валюты, периода, типа бизнеса или лимита будет создана новая версия, а прежняя останется в архиве.'
                     : 'Продление не автоматическое — клиент оплачивает каждый следующий период вручную.'}
                 </p>
               </div>
@@ -616,7 +618,7 @@ const AdminPricingPage = () => {
                   value={formData.businessType}
                   onChange={handleInputChange}
                   className="input w-full"
-                  disabled={saving || isPublished}
+                  disabled={saving}
                 >
                   <option value="RESTAURANT">🍽 Ресторан</option>
                   <option value="HOTEL">🏨 Отель</option>
@@ -636,7 +638,7 @@ const AdminPricingPage = () => {
                   min="1"
                   placeholder="5"
                   className="input w-full"
-                  disabled={saving || isPublished}
+                  disabled={saving}
                 />
               </div>
 
@@ -731,7 +733,7 @@ const AdminPricingPage = () => {
                       </p>
                       <p className="text-xs text-gray-500">
                         {tier.hasPayments
-                          ? 'Есть платежи — финансовые параметры зафиксированы'
+                          ? 'Есть платежи — финансовые изменения создадут новую версию'
                           : 'Платежей ещё нет — финансовые параметры можно изменить'}
                       </p>
                       {tier.description && (

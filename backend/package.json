@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "nodemon -r dotenv/config src/server.js",
     "start": "node src/server.js",
-    "test": "node --test src/utils/finikBilling.test.js src/utils/finikSignature.test.js",
+    "test": "node --test src/utils/finikBilling.test.js src/utils/finikSignature.test.js src/utils/pricingTierVersioning.test.js",
     "build": "npx prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",

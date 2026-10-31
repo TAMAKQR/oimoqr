@@ -4,6 +4,10 @@ import { calculateSubscriptionEndDate, getTrialConfigForBusinessType } from '../
 import { sendSubscriptionActivatedEmail } from '../utils/email.js';
 import { addBillingInterval, getMoneyMinorUnits } from '../utils/finikBilling.js';
 import {
+  buildReplacementPricingTierData,
+  shouldVersionPricingTier,
+} from '../utils/pricingTierVersioning.js';
+import {
   listOpenBillingIssues,
   reconcileBillingIssue as reconcileOpenBillingIssue,
   resolveBillingIssue as resolveOpenBillingIssue,
@@ -990,7 +994,7 @@ export const getPricingTiers = async (req, res, next) => {
 
     res.json(tiers.map(({ _count, ...tier }) => ({
       ...tier,
-      hasPayments: _count.billingPayments > 0,
+      hasPayments: _count.billingPayments > 0 || Boolean(tier.externalPriceId),
     })));
   } catch (error) {
     console.error('Error in getPricingTiers:', error.message);
@@ -1231,17 +1235,33 @@ export const updatePricingTier = async (req, res, next) => {
       return res.status(400).json({ error: 'Unsupported pricing business type' });
     }
 
-    const tier = await prisma.$transaction(async (tx) => {
+    const nextTierData = {
+      name,
+      price: Number(price),
+      currency: normalizedCurrency,
+      billingInterval: normalizedBillingInterval,
+      onlinePaymentEnabled: paymentEnabled,
+      description,
+      features,
+      maxRestaurants: normalizedMaxRestaurants,
+      businessType: normalizedBusinessType,
+      order: order || 0,
+      isActive: isActive === undefined ? undefined : Boolean(isActive),
+      bonusProgramEnabled: Boolean(bonusProgramEnabled),
+      bonusAccrualRate: parsedBonusRate,
+      bonusExpiryDays: parsedBonusExpiryDays,
+      bonusBronzeLabel: bonusBronzeLabel || 'Bronze',
+      bonusSilverLabel: bonusSilverLabel || 'Silver',
+      bonusGoldLabel: bonusGoldLabel || 'Gold',
+      bonusSilverFromOrders: parsedSilverFromOrders,
+      bonusGoldFromOrders: parsedGoldFromOrders,
+    };
+
+    const result = await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`pricing-tier:${id}`}))`;
       const existingTier = await tx.pricingTier.findUnique({
         where: { id },
-        select: {
-          externalPriceId: true,
-          currency: true,
-          billingInterval: true,
-          price: true,
-          businessType: true,
-          maxRestaurants: true,
+        include: {
           _count: { select: { billingPayments: true } },
         },
       });
@@ -1251,51 +1271,47 @@ export const updatePricingTier = async (req, res, next) => {
         throw error;
       }
 
-      const immutableBillingFieldsChanged = existingTier.currency !== normalizedCurrency
-        || existingTier.billingInterval !== normalizedBillingInterval
-        || Number(existingTier.price) !== Number(price)
-        || existingTier.businessType !== normalizedBusinessType
-        || existingTier.maxRestaurants !== normalizedMaxRestaurants;
-      const hasPublishedPayments = existingTier._count.billingPayments > 0
+      const hasBillingHistory = existingTier._count.billingPayments > 0
         || Boolean(existingTier.externalPriceId);
-      if (hasPublishedPayments && immutableBillingFieldsChanged) {
-        const error = new Error(
-          'Цена, валюта, период, тип бизнеса и лимит оплаченного тарифа неизменяемы. Создайте новый тариф.'
-        );
-        error.status = 409;
-        error.code = 'BILLING_TIER_IMMUTABLE';
-        throw error;
+      if (shouldVersionPricingTier({
+        currentTier: existingTier,
+        nextTier: nextTierData,
+        hasBillingHistory,
+      })) {
+        const replacementTier = await tx.pricingTier.create({
+          data: buildReplacementPricingTierData(existingTier, nextTierData),
+        });
+        await tx.pricingTier.update({
+          where: { id },
+          data: {
+            isActive: false,
+            onlinePaymentEnabled: false,
+          },
+        });
+        return {
+          tier: replacementTier,
+          versioned: true,
+          replacedTierId: id,
+        };
       }
 
-      return tx.pricingTier.update({
-        where: { id },
-        data: {
-          name,
-          price: Number(price),
-          currency: normalizedCurrency,
-          billingInterval: normalizedBillingInterval,
-          onlinePaymentEnabled: paymentEnabled,
-          description,
-          features,
-          maxRestaurants: normalizedMaxRestaurants,
-          businessType: normalizedBusinessType,
-          order: order || 0,
-          isActive,
-          bonusProgramEnabled: Boolean(bonusProgramEnabled),
-          bonusAccrualRate: parsedBonusRate,
-          bonusExpiryDays: parsedBonusExpiryDays,
-          bonusBronzeLabel: bonusBronzeLabel || 'Bronze',
-          bonusSilverLabel: bonusSilverLabel || 'Silver',
-          bonusGoldLabel: bonusGoldLabel || 'Gold',
-          bonusSilverFromOrders: parsedSilverFromOrders,
-          bonusGoldFromOrders: parsedGoldFromOrders,
-        },
-      });
+      return {
+        tier: await tx.pricingTier.update({
+          where: { id },
+          data: nextTierData,
+        }),
+        versioned: false,
+        replacedTierId: null,
+      };
     }, { isolationLevel: 'ReadCommitted', maxWait: 5000, timeout: 30000 });
 
     res.json({
-      message: 'Pricing tier updated successfully',
-      tier
+      message: result.versioned
+        ? 'Создана новая версия тарифа; прежняя сохранена в архиве'
+        : 'Pricing tier updated successfully',
+      tier: result.tier,
+      versioned: result.versioned,
+      replacedTierId: result.replacedTierId,
     });
   } catch (error) {
     next(error);
