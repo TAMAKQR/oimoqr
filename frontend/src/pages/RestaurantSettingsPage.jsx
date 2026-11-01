@@ -16,6 +16,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { getBusinessType } from '../utils/businessTypes';
 import MapPicker from '../components/MapPicker';
 import { cacheBustImage } from '../utils/imageCache';
+import './RestaurantSettingsPage.css';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -61,6 +62,8 @@ const RestaurantSettingsPage = () => {
   const [saving, setSaving] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [logoUrl, setLogoUrl] = useState(null);
+  const [logoLoading, setLogoLoading] = useState(false);
   const [activeSettingsSection, setActiveSettingsSection] = useState('general');
 
   // Form fields
@@ -146,6 +149,33 @@ const RestaurantSettingsPage = () => {
       }
     }
   }, [selectedRestaurantId, userData]);
+
+  useEffect(() => {
+    if (!selectedRestaurantId) {
+      setLogoUrl(null);
+      setLogoLoading(false);
+      return undefined;
+    }
+
+    let active = true;
+    setLogoUrl(selectedRestaurant?.logo || null);
+    setLogoLoading(true);
+    restaurantService.getLogo(selectedRestaurantId)
+      .then(({ logo }) => {
+        if (active) setLogoUrl(logo || null);
+      })
+      .catch((error) => {
+        console.error('Failed to load restaurant logo:', error);
+        if (active) toast.error('Не удалось загрузить текущий логотип');
+      })
+      .finally(() => {
+        if (active) setLogoLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedRestaurantId, selectedRestaurant?.logo]);
 
   // Обработчики выбора файлов (обновлены для работы с ImageUploader)
   const handleBannerFileSelect = (file) => {
@@ -334,6 +364,7 @@ const RestaurantSettingsPage = () => {
 
     try {
       await restaurantService.deleteLogo(selectedRestaurantId);
+      setLogoUrl(null);
       toast.success('Логотип удален');
       const restaurant = getSelectedRestaurant();
       if (restaurant) loadRestaurantData(restaurant);
@@ -473,9 +504,10 @@ const RestaurantSettingsPage = () => {
         setUploadingLogo(true);
         setLogoUploadProgress(0);
         try {
-          await restaurantService.uploadLogo(selectedRestaurantId, logoFile, (progress) => {
+          const result = await restaurantService.uploadLogo(selectedRestaurantId, logoFile, (progress) => {
             setLogoUploadProgress(progress);
           });
+          setLogoUrl(result.logoUrl || result.restaurant?.logo || null);
           setLogoFile(null);
         } finally {
           setUploadingLogo(false);
@@ -523,30 +555,54 @@ const RestaurantSettingsPage = () => {
 
   return (
     <DashboardLayout userData={userData} selectedRestaurantId={selectedRestaurantId}>
-      <div className="max-w-3xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Настройки {entityLabelGenitive}</h1>
-          <p className="text-gray-500 text-sm mt-1">Выберите раздел и измените нужные параметры</p>
+      <div className="restaurant-settings-page mx-auto max-w-7xl pb-24">
+        <div className="settings-page-header mb-6 sm:mb-8">
+          <span className="settings-eyebrow">УПРАВЛЕНИЕ ЗАВЕДЕНИЕМ</span>
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-gray-950 sm:text-4xl">Настройки {entityLabelGenitive}</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600 sm:text-base">Настройте профиль, оформление меню и работу с заказами — всё в одном месте.</p>
+            </div>
+            {selectedRestaurant && (
+              <span className="settings-status-badge">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                {isInheritedSettingsRestaurant ? 'Филиал' : 'Основное заведение'}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Restaurant Selector */}
         {userData && (
-          <div className="mb-8">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Выберите {selectedRestaurant ? entityLabelLower : 'заведение'}</label>
-            <RestaurantSelector
-              userData={userData}
-              selectedRestaurantId={selectedRestaurantId}
-              placeholderLabel={selectedRestaurant ? entityLabelLower : 'заведение'}
-              onSelectRestaurant={(id) => {
-                setSelectedRestaurantId(id);
-                localStorage.setItem('selectedRestaurantId', id);
-              }}
-            />
+          <div className="settings-restaurant-picker mb-5">
+            <div className="flex items-center gap-3">
+              <span className="settings-picker-icon" aria-hidden="true">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4M9 9v.01M9 12v.01M9 15v.01M9 18v.01" />
+                </svg>
+              </span>
+              <label className="flex-1 text-sm font-semibold text-gray-900">
+                Выберите {selectedRestaurant ? entityLabelLower : 'заведение'}
+                <span className="mt-0.5 block text-xs font-normal text-gray-500">Настройки будут применены к выбранному заведению</span>
+              </label>
+              <div className="w-full max-w-sm">
+                <RestaurantSelector
+                  userData={userData}
+                  selectedRestaurantId={selectedRestaurantId}
+                  placeholderLabel={selectedRestaurant ? entityLabelLower : 'заведение'}
+                  onSelectRestaurant={(id) => {
+                    setSelectedRestaurantId(id);
+                    localStorage.setItem('selectedRestaurantId', id);
+                  }}
+                />
+              </div>
+            </div>
           </div>
         )}
 
         {selectedRestaurantId && (
-          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className={`settings-context-note mb-5 ${isInheritedSettingsRestaurant ? 'settings-context-note-inherited' : 'settings-context-note-owner'}`}>
+            <span className="settings-context-icon" aria-hidden="true">{isInheritedSettingsRestaurant ? 'i' : '✓'}</span>
             {isInheritedSettingsRestaurant
               ? `Часть настроек (описание, страна/город, валюта, логотип, баннеры, тема и стиль карточек) наследуется от главного ${entityLabelLower} и недоступна для изменения в филиале.`
               : `Вы редактируете главный ${entityLabelLower}. Все настройки доступны.`}
@@ -557,9 +613,9 @@ const RestaurantSettingsPage = () => {
           <nav
             aria-label="Разделы настроек ресторана"
             role="tablist"
-            className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6"
+            className="settings-section-nav mb-6 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6"
           >
-            {SETTINGS_SECTIONS.map((section) => (
+            {SETTINGS_SECTIONS.map((section, index) => (
               <button
                 key={section.id}
                 type="button"
@@ -568,14 +624,11 @@ const RestaurantSettingsPage = () => {
                 aria-controls="restaurant-settings-panel"
                 aria-selected={activeSettingsSection === section.id}
                 onClick={() => setActiveSettingsSection(section.id)}
-                className={`rounded-xl border px-3 py-3 text-left transition-colors ${
-                  activeSettingsSection === section.id
-                    ? 'border-primary-600 bg-primary-50 text-primary-800'
-                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                }`}
+                className="settings-section-card"
               >
-                <span className="block text-sm font-semibold">{section.label}</span>
-                <span className="mt-1 hidden text-xs text-gray-500 sm:block">
+                <span className="settings-section-index">{String(index + 1).padStart(2, '0')}</span>
+                <span className="mt-3 block text-sm font-semibold leading-5">{section.label}</span>
+                <span className="mt-1 hidden text-xs leading-4 text-gray-500 sm:block">
                   {section.description}
                 </span>
               </button>
@@ -590,7 +643,7 @@ const RestaurantSettingsPage = () => {
             aria-labelledby={`settings-tab-${activeSettingsSection}`}
             tabIndex={0}
             onSubmit={handleSubmit}
-            className="space-y-6"
+            className="restaurant-settings-form space-y-5"
           >
             {/* Basic Info */}
             {activeSettingsSection === 'general' && (
@@ -702,13 +755,17 @@ const RestaurantSettingsPage = () => {
             <div className="bg-white rounded-xl border border-gray-100 p-5">
               <h2 className="text-xl font-bold mb-4">Логотип {entityLabelLower}</h2>
 
-              {getSelectedRestaurant()?.logo ? (
+              {logoLoading ? (
+                <div className="flex items-center justify-center rounded-lg border border-gray-200 bg-gray-50 py-10 text-sm text-gray-500">
+                  Загружаем текущий логотип...
+                </div>
+              ) : logoUrl ? (
                 /* Compact view when logo exists */
                 <div>
                   <div className="flex items-center gap-4">
                     <div className="relative group flex-shrink-0">
                       <img
-                        src={getSelectedRestaurant().logo}
+                        src={cacheBustImage(logoUrl)}
                         alt="Логотип"
                         className="w-20 h-20 object-contain rounded-lg border border-gray-200 bg-white p-1.5"
                       />
@@ -1544,18 +1601,21 @@ const RestaurantSettingsPage = () => {
             )}
 
             {/* Save Button */}
-            <div className="flex gap-4">
+            <div className="settings-save-bar flex gap-3 sm:gap-4">
+              <p className="hidden flex-1 items-center text-sm text-gray-500 sm:flex">
+                После сохранения изменения появятся в вашем меню.
+              </p>
               <button
                 type="button"
                 onClick={() => navigate('/dashboard')}
-                className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors text-sm font-medium"
+                className="settings-cancel-button px-4 py-2.5 border border-gray-200 rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors text-sm font-medium"
                 disabled={saving || uploadingBanner}
               >
                 Отмена
               </button>
               <button
                 type="submit"
-                className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                className="settings-submit-button px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-semibold"
                 disabled={saving || uploadingBanner}
               >
                 {uploadingBanner ? 'Загрузка баннера...' : saving ? 'Сохранение...' : 'Сохранить изменения'}
@@ -1567,7 +1627,7 @@ const RestaurantSettingsPage = () => {
         {/* Danger Zone - Delete Restaurant - только для владельцев */}
         {
           isOwner() && (
-            <div className="bg-red-50 rounded-xl border-2 border-red-200 p-5 mt-8">
+            <div className="settings-danger-zone bg-red-50 rounded-xl border-2 border-red-200 p-5 mt-8">
               <h2 className="text-xl font-bold text-red-600 mb-2">Опасная зона</h2>
               <p className="text-sm text-gray-700 mb-4">
                 Удаление {entityLabelLower} необратимо. Все данные (меню, категории, блюда, модификаторы) будут удалены навсегда.

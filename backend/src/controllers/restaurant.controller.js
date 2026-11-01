@@ -433,6 +433,39 @@ export const getRestaurantBySubdomain = async (req, res, next) => {
   }
 };
 
+export const getRestaurantLogo = async (req, res, next) => {
+  try {
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: req.params.restaurantId },
+      select: {
+        ownerId: true,
+        logo: true,
+        sharedMenuSourceRestaurantId: true,
+      },
+    });
+
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+    if (restaurant.ownerId !== req.user.id) {
+      return res.status(403).json({ error: 'Only owner can view restaurant settings' });
+    }
+
+    let logo = restaurant.logo;
+    if (restaurant.sharedMenuSourceRestaurantId) {
+      const sourceRestaurant = await prisma.restaurant.findUnique({
+        where: { id: restaurant.sharedMenuSourceRestaurantId },
+        select: { logo: true },
+      });
+      logo = sourceRestaurant?.logo || null;
+    }
+
+    res.json({ logo: logo || null });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const updateRestaurant = async (req, res, next) => {
   try {
     const { id } = req.params;

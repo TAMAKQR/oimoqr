@@ -21,6 +21,11 @@ export const restaurantService = {
     return response.data;
   },
 
+  getLogo: async (restaurantId) => {
+    const response = await api.get(`/restaurants/${encodeURIComponent(restaurantId)}/logo`);
+    return response.data;
+  },
+
   getBySubdomain: async (subdomain, language, options = {}) => {
     const { latitude, longitude, forceRefresh = false } = options;
 

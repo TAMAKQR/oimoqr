@@ -1,0 +1,285 @@
+.restaurant-settings-page {
+  color: #172033;
+}
+
+.settings-page-header {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid #e8ebf2;
+  border-radius: 1.5rem;
+  padding: 1.5rem;
+  background:
+    radial-gradient(circle at 92% 10%, rgba(55, 75, 106, 0.1), transparent 18rem),
+    linear-gradient(135deg, #fff 0%, #f7f8fb 100%);
+  box-shadow: 0 12px 32px rgba(23, 32, 51, 0.045);
+}
+
+.settings-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #dfe4ee;
+  border-radius: 999px;
+  padding: 0.4rem 0.7rem;
+  background: rgba(255, 255, 255, 0.8);
+  color: #52617a;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.settings-status-badge {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  border: 1px solid #e5e9f0;
+  border-radius: 999px;
+  padding: 0.55rem 0.8rem;
+  background: rgba(255, 255, 255, 0.82);
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.settings-restaurant-picker {
+  border: 1px solid #e7eaf0;
+  border-radius: 1.125rem;
+  padding: 1rem;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(23, 32, 51, 0.035);
+}
+
+.settings-picker-icon {
+  display: inline-flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.875rem;
+  background: #f0f2f7;
+  color: #374b6a;
+}
+
+.settings-restaurant-picker .relative > button {
+  min-height: 2.875rem;
+  border-color: #e1e5ec;
+  border-radius: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.settings-restaurant-picker .relative > button:focus-visible {
+  outline: 3px solid rgba(55, 75, 106, 0.2);
+  outline-offset: 2px;
+}
+
+.settings-context-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  border: 1px solid;
+  border-radius: 1rem;
+  padding: 0.9rem 1rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.settings-context-note-inherited {
+  border-color: #f2dfb6;
+  background: #fffbf1;
+  color: #77551a;
+}
+
+.settings-context-note-owner {
+  border-color: #ccebd9;
+  background: #f3fbf6;
+  color: #24633d;
+}
+
+.settings-context-icon {
+  display: inline-flex;
+  width: 1.35rem;
+  height: 1.35rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.settings-section-nav {
+  padding: 0.25rem 0;
+}
+
+.settings-section-card {
+  position: relative;
+  min-height: 7rem;
+  overflow: hidden;
+  border: 1px solid #e5e8ef;
+  border-radius: 1rem;
+  padding: 0.85rem;
+  background: #fff;
+  color: #475569;
+  text-align: left;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.settings-section-card:hover {
+  transform: translateY(-2px);
+  border-color: #c8cfdb;
+  box-shadow: 0 8px 18px rgba(23, 32, 51, 0.06);
+}
+
+.settings-section-card:focus-visible {
+  outline: 3px solid rgba(55, 75, 106, 0.22);
+  outline-offset: 2px;
+}
+
+.settings-section-card[aria-selected="true"] {
+  border-color: #374b6a;
+  background: linear-gradient(145deg, #f3f5f9 0%, #fff 100%);
+  color: #1f2b3f;
+  box-shadow: 0 6px 16px rgba(55, 75, 106, 0.1);
+}
+
+.settings-section-card[aria-selected="true"]::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 3px;
+  background: #374b6a;
+  content: "";
+}
+
+.settings-section-index {
+  display: inline-flex;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.6rem;
+  background: #f1f3f7;
+  color: #6b778b;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.settings-section-card[aria-selected="true"] .settings-section-index {
+  background: #e1e6ef;
+  color: #2a3a54;
+}
+
+.restaurant-settings-form > div.bg-white {
+  border-color: #e7eaf0 !important;
+  border-radius: 1.25rem;
+  padding: 1.5rem;
+  box-shadow: 0 5px 18px rgba(23, 32, 51, 0.035);
+}
+
+.restaurant-settings-form > div.bg-white > h2 {
+  margin-bottom: 1.25rem;
+  color: #172033;
+  letter-spacing: -0.02em;
+}
+
+.restaurant-settings-form .input {
+  min-height: 2.75rem;
+  border-color: #dfe4ec;
+  border-radius: 0.75rem;
+  background-color: #fff;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.restaurant-settings-form .input:focus {
+  border-color: #647692;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(55, 75, 106, 0.12);
+}
+
+.settings-save-bar {
+  position: sticky;
+  z-index: 20;
+  bottom: 1rem;
+  align-items: center;
+  border: 1px solid rgba(223, 228, 236, 0.92);
+  border-radius: 1.125rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 12px 32px rgba(23, 32, 51, 0.12);
+  backdrop-filter: blur(14px);
+}
+
+.settings-cancel-button {
+  flex: 0 0 auto;
+}
+
+.settings-submit-button {
+  min-width: 12.5rem;
+  flex: 0 0 auto;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 10px rgba(31, 43, 63, 0.16);
+}
+
+.settings-submit-button:disabled,
+.settings-cancel-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.settings-danger-zone {
+  border-radius: 1.25rem;
+}
+
+@media (max-width: 639px) {
+  .settings-page-header {
+    border-radius: 1.25rem;
+    padding: 1.25rem;
+  }
+
+  .settings-restaurant-picker > div {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .settings-restaurant-picker > div > div:last-child {
+    max-width: none;
+  }
+
+  .settings-section-card {
+    min-height: 5.25rem;
+    padding: 0.75rem;
+  }
+
+  .restaurant-settings-form > div.bg-white {
+    border-radius: 1rem;
+    padding: 1rem;
+  }
+
+  .settings-save-bar {
+    bottom: 0.5rem;
+    padding: 0.625rem;
+  }
+
+  .settings-cancel-button,
+  .settings-submit-button {
+    min-width: 0;
+    flex: 1 1 0;
+    padding-right: 0.75rem;
+    padding-left: 0.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-section-card,
+  .settings-restaurant-picker .relative > button,
+  .restaurant-settings-form .input {
+    transition: none;
+  }
+}

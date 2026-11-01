@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   getRestaurantBySubdomain,
+  getRestaurantLogo,
   updateRestaurant,
   uploadBanner,
   deleteBanner,
@@ -47,6 +48,7 @@ router.put('/:restaurantId/dishes/:dishId/stop', authenticate, setDishStop);
 router.put('/:restaurantId/modifier-options/:optionId/stop', authenticate, setModifierOptionStop);
 
 // Protected routes
+router.get('/:restaurantId/logo', authenticate, getRestaurantLogo);
 router.put('/:id', authenticate, updateRestaurant);
 router.put('/:id/menu-style', authenticate, updateMenuCardStyle);
 router.post('/:id/copy-menu', authenticate, copyMenu);
