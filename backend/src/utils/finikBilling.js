@@ -1,4 +1,24 @@
 const SUPPORTED_INTERVALS = new Set(['month', 'year']);
+const ACTIVE_PAYMENT_STATUSES = new Set(['CREATING', 'PENDING']);
+
+export const getBillingPaymentStatus = (
+  payment,
+  now = new Date(),
+  settlementGraceMinutes = 5
+) => {
+  if (
+    !payment
+    || !ACTIVE_PAYMENT_STATUSES.has(payment.status)
+    || payment.expiresAt > now
+  ) {
+    return payment?.status;
+  }
+
+  const settlementEndsAt = new Date(
+    payment.expiresAt.getTime() + settlementGraceMinutes * 60 * 1000
+  );
+  return settlementEndsAt > now ? payment.status : 'EXPIRED';
+};
 
 export const isSupportedBillingInterval = (value) => SUPPORTED_INTERVALS.has(value);
 

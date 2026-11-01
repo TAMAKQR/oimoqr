@@ -62,7 +62,7 @@ FINIK_PUBLIC_KEY=
 FINIK_WEBHOOK_URL=https://staging-api.example.com/api/billing/finik/webhook
 FINIK_MERCHANT_NAME=OimoQR
 FINIK_PAYMENT_TTL_MINUTES=30
-FINIK_SETTLEMENT_GRACE_MINUTES=1440
+FINIK_SETTLEMENT_GRACE_MINUTES=5
 FINIK_WEBHOOK_TOLERANCE_SECONDS=300
 FINIK_REQUEST_TIMEOUT_MS=10000
 ```
@@ -73,7 +73,7 @@ FINIK_REQUEST_TIMEOUT_MS=10000
 
 - `FINIK_WEBHOOK_URL` — абсолютный публичный HTTPS URL с точным path `/api/billing/finik/webhook`;
 - `FINIK_PAYMENT_TTL_MINUTES` — локальное время жизни ссылки, минимум 5 минут;
-- `FINIK_SETTLEMENT_GRACE_MINUTES` — защитное окно после истечения ссылки, в течение которого нельзя менять структуру аккаунта: валидный webhook мог быть доставлен с задержкой; по умолчанию 1440 минут;
+- `FINIK_SETTLEMENT_GRACE_MINUTES` — защитное окно после истечения ссылки, в течение которого нельзя менять структуру аккаунта: валидный webhook мог быть доставлен с задержкой; по умолчанию 5 минут. Просроченная попытка остаётся в журнале для сверки, но перестаёт блокировать новую оплату после этого окна;
 - `FINIK_WEBHOOK_TOLERANCE_SECONDS` — допустимое расхождение timestamp webhook, минимум 30 секунд; значение по умолчанию 300;
 - `FINIK_REQUEST_TIMEOUT_MS` — timeout обращения к Finik, минимум 1000 мс;
 - `FINIK_PUBLIC_KEY` обычно оставляют пустым, чтобы использовать официальный ключ выбранной среды.

@@ -11,6 +11,7 @@ import {
 import { prisma } from '../config/prisma.js';
 import {
   addBillingInterval,
+  getBillingPaymentStatus,
   getMoneyMinorUnits,
   getWebhookBindingMismatches,
   isSupportedBillingInterval,
@@ -46,13 +47,7 @@ const normalizeCurrency = (value) => String(value || '').trim().toUpperCase();
 export { addBillingInterval, getMoneyMinorUnits, isTierCompatibleWithRestaurants };
 
 const getPaymentStatus = (payment, now = new Date()) => {
-  if (!payment || !ACTIVE_PAYMENT_STATUSES.includes(payment.status) || payment.expiresAt > now) {
-    return payment?.status;
-  }
-  const settlementEndsAt = new Date(
-    payment.expiresAt.getTime() + config.finik.settlementGraceMinutes * 60 * 1000
-  );
-  return settlementEndsAt > now ? payment.status : 'EXPIRED';
+  return getBillingPaymentStatus(payment, now, config.finik.settlementGraceMinutes);
 };
 
 const serializePayment = (payment, now = new Date()) => {

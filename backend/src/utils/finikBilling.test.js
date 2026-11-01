@@ -2,12 +2,33 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   addBillingInterval,
+  getBillingPaymentStatus,
   getWebhookBindingMismatches,
   getMoneyMinorUnits,
   isSupportedBillingInterval,
   isTierCompatibleWithRestaurants,
   validateFinikTransactionDate,
 } from './finikBilling.js';
+
+test('expires an unpaid payment five minutes after its link expires', () => {
+  const payment = {
+    status: 'PENDING',
+    expiresAt: new Date('2026-11-01T10:30:00.000Z'),
+  };
+
+  assert.equal(
+    getBillingPaymentStatus(payment, new Date('2026-11-01T10:34:59.999Z'), 5),
+    'PENDING'
+  );
+  assert.equal(
+    getBillingPaymentStatus(payment, new Date('2026-11-01T10:35:00.000Z'), 5),
+    'EXPIRED'
+  );
+  assert.equal(
+    getBillingPaymentStatus({ ...payment, status: 'PAID' }, new Date('2026-11-02T00:00:00.000Z'), 5),
+    'PAID'
+  );
+});
 
 test('converts KGS display amounts to integer minor units without rounding charges', () => {
   assert.equal(getMoneyMinorUnits(1500), 150000);

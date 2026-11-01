@@ -32,7 +32,7 @@ export const config = {
     webhookUrl: process.env.FINIK_WEBHOOK_URL,
     merchantName: process.env.FINIK_MERCHANT_NAME || 'OimoQR',
     paymentTtlMinutes: Number.parseInt(process.env.FINIK_PAYMENT_TTL_MINUTES || '30', 10),
-    settlementGraceMinutes: Number.parseInt(process.env.FINIK_SETTLEMENT_GRACE_MINUTES || '1440', 10),
+    settlementGraceMinutes: Number.parseInt(process.env.FINIK_SETTLEMENT_GRACE_MINUTES || '5', 10),
     webhookToleranceSeconds: Number.parseInt(process.env.FINIK_WEBHOOK_TOLERANCE_SECONDS || '300', 10),
     requestTimeoutMs: Number.parseInt(process.env.FINIK_REQUEST_TIMEOUT_MS || '10000', 10),
   },
