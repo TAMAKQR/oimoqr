@@ -1,10 +1,22 @@
 const SUPPORTED_INTERVALS = new Set(['month', 'year']);
 const ACTIVE_PAYMENT_STATUSES = new Set(['CREATING', 'PENDING']);
 
+export const isWithinFinikSettlementWindow = (
+  expiresAt,
+  now = new Date(),
+  settlementGraceMinutes = 1440
+) => {
+  const expiryTime = new Date(expiresAt).getTime();
+  const currentTime = new Date(now).getTime();
+  return Number.isFinite(expiryTime)
+    && Number.isFinite(currentTime)
+    && expiryTime + settlementGraceMinutes * 60 * 1000 > currentTime;
+};
+
 export const getBillingPaymentStatus = (
   payment,
   now = new Date(),
-  settlementGraceMinutes = 5
+  settlementGraceMinutes = 1440
 ) => {
   if (
     !payment
@@ -14,10 +26,9 @@ export const getBillingPaymentStatus = (
     return payment?.status;
   }
 
-  const settlementEndsAt = new Date(
-    payment.expiresAt.getTime() + settlementGraceMinutes * 60 * 1000
-  );
-  return settlementEndsAt > now ? payment.status : 'EXPIRED';
+  return isWithinFinikSettlementWindow(payment.expiresAt, now, settlementGraceMinutes)
+    ? payment.status
+    : 'EXPIRED';
 };
 
 export const isSupportedBillingInterval = (value) => SUPPORTED_INTERVALS.has(value);
@@ -59,6 +70,13 @@ export const isTierCompatibleWithRestaurants = (tier, restaurants = []) => {
   );
 };
 
+export const isFinikAvailableForRestaurant = (restaurant) => {
+  const country = String(restaurant?.country || '').trim().toLowerCase();
+  const isKyrgyzstan = ['kg', 'kgz', 'kyrgyzstan', 'кыргызстан', 'кыргызская республика']
+    .includes(country);
+  return isKyrgyzstan && String(restaurant?.currency || '').trim().toUpperCase() === 'KGS';
+};
+
 export const getWebhookBindingMismatches = (payload, payment, accountId) => {
   const fields = payload?.fields && typeof payload.fields === 'object' ? payload.fields : {};
   const data = payload?.data && typeof payload.data === 'object' ? payload.data : {};
@@ -72,6 +90,23 @@ export const getWebhookBindingMismatches = (payload, payment, accountId) => {
     accountId: String(data.accountId || ''),
     userId: String(fields.oimoqrAccountId || ''),
     pricingTierId: String(fields.oimoqrTierId || ''),
+    verificationToken: String(fields.oimoqrToken || ''),
+  };
+
+  return Object.keys(expected).filter((key) => !expected[key] || received[key] !== expected[key]);
+};
+
+export const getOrderWebhookBindingMismatches = (payload, payment, accountId) => {
+  const fields = payload?.fields && typeof payload.fields === 'object' ? payload.fields : {};
+  const data = payload?.data && typeof payload.data === 'object' ? payload.data : {};
+  const expected = {
+    accountId: String(accountId || ''),
+    orderId: String(payment?.orderId || ''),
+    verificationToken: String(payment?.verificationToken || ''),
+  };
+  const received = {
+    accountId: String(data.accountId || ''),
+    orderId: String(fields.oimoqrOrderId || ''),
     verificationToken: String(fields.oimoqrToken || ''),
   };
 

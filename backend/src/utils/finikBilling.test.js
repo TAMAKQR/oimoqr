@@ -3,30 +3,45 @@ import test from 'node:test';
 import {
   addBillingInterval,
   getBillingPaymentStatus,
+  getOrderWebhookBindingMismatches,
   getWebhookBindingMismatches,
   getMoneyMinorUnits,
+  isWithinFinikSettlementWindow,
   isSupportedBillingInterval,
+  isFinikAvailableForRestaurant,
   isTierCompatibleWithRestaurants,
   validateFinikTransactionDate,
 } from './finikBilling.js';
 
-test('expires an unpaid payment five minutes after its link expires', () => {
+test('keeps an unpaid payment pending for 24 hours after its link expires', () => {
   const payment = {
     status: 'PENDING',
     expiresAt: new Date('2026-11-01T10:30:00.000Z'),
   };
 
   assert.equal(
-    getBillingPaymentStatus(payment, new Date('2026-11-01T10:34:59.999Z'), 5),
+    getBillingPaymentStatus(payment, new Date('2026-11-02T10:29:59.999Z'), 1440),
     'PENDING'
   );
   assert.equal(
-    getBillingPaymentStatus(payment, new Date('2026-11-01T10:35:00.000Z'), 5),
+    getBillingPaymentStatus(payment, new Date('2026-11-02T10:30:00.000Z'), 1440),
     'EXPIRED'
   );
   assert.equal(
-    getBillingPaymentStatus({ ...payment, status: 'PAID' }, new Date('2026-11-02T00:00:00.000Z'), 5),
+    getBillingPaymentStatus({ ...payment, status: 'PAID' }, new Date('2026-11-03T00:00:00.000Z'), 1440),
     'PAID'
+  );
+});
+
+test('closes the Finik settlement window at the exact configured grace boundary', () => {
+  const expiresAt = new Date('2026-11-01T10:30:00.000Z');
+  assert.equal(
+    isWithinFinikSettlementWindow(expiresAt, new Date('2026-11-02T10:29:59.999Z'), 1440),
+    true
+  );
+  assert.equal(
+    isWithinFinikSettlementWindow(expiresAt, new Date('2026-11-02T10:30:00.000Z'), 1440),
+    false
   );
 });
 
@@ -59,6 +74,14 @@ test('checks a tier against every restaurant business type', () => {
   assert.equal(isTierCompatibleWithRestaurants({ businessType: 'ALL' }, restaurants), true);
 });
 
+test('allows Finik only for KGS restaurants registered in Kyrgyzstan', () => {
+  assert.equal(isFinikAvailableForRestaurant({ country: 'Кыргызстан', currency: 'KGS' }), true);
+  assert.equal(isFinikAvailableForRestaurant({ country: 'KG', currency: 'kgs' }), true);
+  assert.equal(isFinikAvailableForRestaurant({ country: 'Россия', currency: 'KGS' }), false);
+  assert.equal(isFinikAvailableForRestaurant({ country: 'Кыргызстан', currency: 'RUB' }), false);
+  assert.equal(isFinikAvailableForRestaurant({ country: null, currency: 'KGS' }), false);
+});
+
 test('binds a signed webhook to the expected merchant, account, tier and nonce', () => {
   const payment = {
     userId: 'user-1',
@@ -89,6 +112,26 @@ test('binds a signed webhook to the expected merchant, account, tier and nonce',
     'pricingTierId',
     'verificationToken',
   ]);
+});
+
+test('binds a signed order webhook to the merchant, order and payment token', () => {
+  const payment = { orderId: 'order-1', verificationToken: 'order-token' };
+  const payload = {
+    data: { accountId: 'finik-account-1' },
+    fields: { oimoqrOrderId: 'order-1', oimoqrToken: 'order-token' },
+  };
+
+  assert.deepEqual(
+    getOrderWebhookBindingMismatches(payload, payment, 'finik-account-1'),
+    []
+  );
+  assert.deepEqual(
+    getOrderWebhookBindingMismatches({
+      ...payload,
+      fields: { ...payload.fields, oimoqrToken: 'wrong-token' },
+    }, payment, 'finik-account-1'),
+    ['verificationToken']
+  );
 });
 
 test('rejects implausible transaction timestamps and distinguishes late payments', () => {

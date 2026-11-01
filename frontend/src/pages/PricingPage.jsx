@@ -349,6 +349,9 @@ const PricingPage = () => {
     && WAITING_PAYMENT_STATUSES.has(pendingPaymentStatus)
     && !pendingExpiredByTime
   );
+  const hasUnsettledPayment = Boolean(
+    pendingPayment && WAITING_PAYMENT_STATUSES.has(pendingPaymentStatus)
+  );
   const pendingTerminalNotice = getPaymentNotice(pendingPaymentStatus);
   const paymentRequiresReview = billingStatus.requiresAction || pendingPaymentStatus === 'REVIEW_REQUIRED';
 
@@ -555,7 +558,7 @@ const PricingPage = () => {
                 </p>
                 <p className="mt-1">
                   {pendingExpiredByTime
-                    ? 'Ссылка больше не действует. Если вы подтверждали оплату перед истечением срока, сначала проверьте статус и не платите повторно.'
+                    ? 'Ссылка больше не действует. Проверка длится 24 часа, а Finik может повторять подтверждение и позже. Не создавайте новую оплату, если деньги списались.'
                     : pendingTerminalNotice?.message || (hasWaitingPayment
                     ? 'Продолжите текущую оплату или проверьте её статус. Создавать второй платёж не нужно.'
                     : 'Можно создать новый платёж для выбранного тарифа.')}
@@ -659,7 +662,7 @@ const PricingPage = () => {
             const canStartPayment = billingStatus.configured
               && onlinePaymentEnabled
               && !paymentRequiresReview
-              && !hasWaitingPayment;
+              && !hasUnsettledPayment;
             const disabled = verifyingReturn
               || Boolean(creatingTierId)
               || Boolean(checkingPaymentId)
@@ -670,6 +673,7 @@ const PricingPage = () => {
             else if (verifyingReturn) buttonLabel = 'Проверяем оплату…';
             else if (hasWaitingPayment && pendingPaymentUrl) buttonLabel = 'Продолжить текущую оплату';
             else if (hasWaitingPayment) buttonLabel = 'Платёж создаётся';
+            else if (hasUnsettledPayment) buttonLabel = 'Ожидаем подтверждение';
             else if (paymentRequiresReview) buttonLabel = 'Требуется проверка';
             else if (!onlinePaymentEnabled) buttonLabel = 'Онлайн-оплата недоступна';
             else if (!billingStatus.configured) buttonLabel = 'Оплата настраивается';

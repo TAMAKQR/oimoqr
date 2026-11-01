@@ -158,7 +158,9 @@ class TelegramService {
                 : order.deliveryType === 'delivery'
                     ? '🚗 Доставка'
                     : '🏃 Самовывоз';
-            const paymentMethod = order.paymentMethod === 'cash' ? '💵 Наличные' : '💳 Карта';
+            const paymentMethod = order.paymentMethod === 'finik'
+                ? '✅ Finik (оплачено)'
+                : (order.paymentMethod === 'cash' ? '💵 Наличные' : '💳 Карта');
             const normalizedOrderNumber = `#${String(order?.orderNumber || '').replace(/^#+/, '')}`;
 
             // Формируем адрес (приоритет у customerAddress с деталями)

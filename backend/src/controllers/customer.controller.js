@@ -7,6 +7,10 @@ import { buildTrustedOrderItems, calculateDeliveryFee } from '../utils/orderPric
 import { loadModifierOptionStops } from '../utils/modifierOptionStops.js';
 import { getRestaurantDeliveryStatus } from '../utils/schedule.js';
 import { isSubscriptionActive } from '../utils/subscription.js';
+import {
+  createFinikOrderPayment,
+  getFinikOrderPaymentAvailability,
+} from '../services/finikOrderPayment.service.js';
 
 const getMenuSourceRestaurantId = async (restaurantId) => {
     const restaurant = await prisma.restaurant.findUnique({
@@ -919,6 +923,11 @@ export const createCustomerOrder = async (req, res, next) => {
             return res.status(400).json({ error: 'Invalid delivery type' });
         }
 
+        const normalizedPaymentMethod = String(paymentMethod || 'cash').trim().toLowerCase();
+        if (!['cash', 'card', 'finik'].includes(normalizedPaymentMethod)) {
+            return res.status(400).json({ error: 'Invalid payment method' });
+        }
+
         const restaurantDetails = await prisma.restaurant.findUnique({
             where: { id: restaurantId },
             select: { id: true }
@@ -927,6 +936,18 @@ export const createCustomerOrder = async (req, res, next) => {
         if (!restaurantDetails) {
             return res.status(404).json({ error: 'Restaurant not found' });
         }
+        if (normalizedPaymentMethod === 'finik') {
+            const availability = await getFinikOrderPaymentAvailability(restaurantId);
+            if (!availability.available) {
+                const status = availability.reason === 'FINIK_NOT_CONFIGURED' ? 503 : 400;
+                return res.status(status).json({
+                    error: availability.reason === 'FINIK_NOT_CONFIGURED'
+                        ? 'Онлайн-оплата Finik временно недоступна'
+                        : 'Finik доступен только для ресторанов в Кыргызстане с валютой KGS',
+                    code: availability.reason
+                });
+            }
+        }
 
         const requestedBonusToSpend = bonusToSpend !== undefined && bonusToSpend !== null
             ? parseInt(bonusToSpend, 10)
@@ -934,6 +955,12 @@ export const createCustomerOrder = async (req, res, next) => {
 
         if (!Number.isFinite(requestedBonusToSpend) || requestedBonusToSpend < 0) {
             return res.status(400).json({ error: 'bonusToSpend must be a non-negative integer' });
+        }
+        if (normalizedPaymentMethod === 'finik' && requestedBonusToSpend > 0) {
+            return res.status(400).json({
+                error: 'Списание бонусов пока недоступно при оплате через Finik',
+                code: 'BONUSES_NOT_SUPPORTED_WITH_FINIK'
+            });
         }
 
         const customer = await prisma.customer.findUnique({
@@ -1134,7 +1161,8 @@ export const createCustomerOrder = async (req, res, next) => {
             deliveryLongitude: normalizedDeliveryType === 'delivery' ? normalizedDeliveryLongitude : null,
             notes: comment || null,
             deliveryType: normalizedDeliveryType,
-            paymentMethod: paymentMethod || 'cash',
+            paymentMethod: normalizedPaymentMethod,
+            ...(normalizedPaymentMethod === 'finik' ? { status: 'pending_payment' } : {}),
             tableNumber: normalizedDeliveryType === 'dine_in' ? tableNumber || null : null,
             customerAddressId: normalizedDeliveryType === 'delivery' ? customerAddressId || null : null,
             items: {
@@ -1217,6 +1245,10 @@ export const createCustomerOrder = async (req, res, next) => {
                 include: includeOrderRelations
             });
 
+        const payment = normalizedPaymentMethod === 'finik'
+            ? await createFinikOrderPayment(order.id)
+            : null;
+
         let notificationRestaurant = order.restaurant;
         if (order.assignedRestaurantId) {
             const assignedRestaurant = await prisma.restaurant.findUnique({
@@ -1228,7 +1260,7 @@ export const createCustomerOrder = async (req, res, next) => {
             }
         }
 
-        if (notificationRestaurant?.telegramGroupId) {
+        if (normalizedPaymentMethod !== 'finik' && notificationRestaurant?.telegramGroupId) {
             telegramService.sendNewOrderNotification(order, notificationRestaurant).catch(err => {
                 console.error('Failed to send Telegram notification:', err);
             });
@@ -1237,9 +1269,13 @@ export const createCustomerOrder = async (req, res, next) => {
         res.status(201).json({
             message: 'Order created successfully',
             order: order,
-            orderNumber: order.orderNumber
+            orderNumber: order.orderNumber,
+            ...(payment ? { payment } : {})
         });
     } catch (error) {
+        if (Number.isInteger(error?.status)) {
+            return next(error);
+        }
         if (error?.statusCode === 400) {
             return res.status(400).json({ error: error.message });
         }

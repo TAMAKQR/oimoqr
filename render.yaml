@@ -40,7 +40,7 @@ services:
       - key: FINIK_PAYMENT_TTL_MINUTES
         value: 30
       - key: FINIK_SETTLEMENT_GRACE_MINUTES
-        value: 5
+        value: 1440
       - key: FINIK_WEBHOOK_TOLERANCE_SECONDS
         value: 300
       - key: FINIK_REQUEST_TIMEOUT_MS

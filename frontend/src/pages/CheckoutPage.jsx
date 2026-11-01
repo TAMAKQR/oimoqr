@@ -9,6 +9,7 @@ import AddressAutocomplete from '../components/AddressAutocomplete';
 import api from '../services/api';
 import customerService from '../services/customerService';
 import { restaurantService } from '../services/restaurantService';
+import { finikOrderPaymentService } from '../services/finikOrderPaymentService';
 
 const GUEST_DELIVERY_LOCATION_KEY = 'guest-delivery-location';
 const GUEST_CHECKOUT_CONTACT_KEY = 'guest-checkout-contact';
@@ -97,6 +98,7 @@ const CheckoutPage = () => {
     };
 
     const [paymentMethod, setPaymentMethod] = useState('cash');
+    const [finikAvailable, setFinikAvailable] = useState(false);
     const [comment, setComment] = useState('');
     const [showNewAddressForm, setShowNewAddressForm] = useState(false);
     const [newAddress, setNewAddress] = useState({ address: '', entrance: '', floor: '', apartment: '', comment: '' });
@@ -122,6 +124,34 @@ const CheckoutPage = () => {
     const [bonusLoading, setBonusLoading] = useState(false);
     const [useBonuses, setUseBonuses] = useState(false);
     const [bonusRequested, setBonusRequested] = useState('0');
+
+    useEffect(() => {
+        const targetRestaurantId = restaurant?.id || cartRestaurantId;
+        if (!targetRestaurantId) {
+            setFinikAvailable(false);
+            return undefined;
+        }
+
+        let active = true;
+        finikOrderPaymentService.getAvailability(targetRestaurantId)
+            .then((result) => {
+                if (active) {
+                    const available = Boolean(result?.available);
+                    setFinikAvailable(available);
+                    if (!available) setPaymentMethod((current) => current === 'finik' ? 'cash' : current);
+                }
+            })
+            .catch((error) => {
+                if (active) {
+                    setFinikAvailable(false);
+                    setPaymentMethod((current) => current === 'finik' ? 'cash' : current);
+                    console.error('Failed to check Finik order payment availability:', error.message);
+                }
+            });
+        return () => {
+            active = false;
+        };
+    }, [restaurant?.id, cartRestaurantId]);
 
     useEffect(() => {
         if (!isCompletingOrder && (!restaurant || !cartItems || cartItems.length === 0)) {
@@ -641,7 +671,7 @@ const CheckoutPage = () => {
                     selectedModifiers: item.modifiers?.map(m => ({ id: m.id, name: m.name, price: m.price })) || []
                 })),
                 total: Number(baseTotalWithDelivery.toFixed(2)),
-                bonusToSpend: customer?.id ? appliedBonus : 0,
+                bonusToSpend: customer?.id && paymentMethod !== 'finik' ? appliedBonus : 0,
                 deliveryType: isDineIn ? 'dine_in' : deliveryType,
                 tableNumber: isDineIn ? tableNumber : null,
                 customerAddressId: customer?.id && deliveryType === 'delivery' ? selectedAddressId : null,
@@ -657,6 +687,14 @@ const CheckoutPage = () => {
             // Для dine_in без авторизации — отправляем на общий endpoint
             const endpoint = customer?.id ? '/customers/orders' : '/orders';
             const response = await api.post(endpoint, payload);
+            const finikPaymentUrl = response?.data?.payment?.url;
+            if (paymentMethod === 'finik') {
+                if (!finikPaymentUrl) {
+                    throw new Error('Ссылка Finik не получена. Проверьте статус заказа перед повторной оплатой.');
+                }
+                window.location.assign(finikPaymentUrl);
+                return;
+            }
             clearCart();
             const orderData = response?.data?.order || response?.data;
             const successPayload = {
@@ -1297,21 +1335,32 @@ const CheckoutPage = () => {
                                 </div>
                             )}
 
-                            {!isDineIn && (
-                                <div className="bg-white rounded-lg shadow-sm p-4">
-                                    <h2 className="font-semibold text-base mb-3">Способ оплаты</h2>
-                                    <select
-                                        value={paymentMethod}
-                                        onChange={(e) => setPaymentMethod(e.target.value)}
-                                        className="input-field w-full text-sm"
-                                    >
-                                        <option value="cash">Наличными</option>
-                                        <option value="card">Картой курьеру</option>
-                                    </select>
-                                </div>
-                            )}
+                            <div className="bg-white rounded-lg shadow-sm p-4">
+                                <h2 className="font-semibold text-base mb-3">Способ оплаты</h2>
+                                <select
+                                    value={paymentMethod}
+                                    onChange={(e) => {
+                                        const nextPaymentMethod = e.target.value;
+                                        setPaymentMethod(nextPaymentMethod);
+                                        if (nextPaymentMethod === 'finik') {
+                                            setUseBonuses(false);
+                                            setBonusRequested('0');
+                                        }
+                                    }}
+                                    className="input-field w-full text-sm"
+                                >
+                                    <option value="cash">Наличными</option>
+                                    {!isDineIn && <option value="card">Картой курьеру</option>}
+                                    {finikAvailable && <option value="finik">Онлайн через Finik</option>}
+                                </select>
+                                {paymentMethod === 'finik' && (
+                                    <p className="mt-2 text-xs text-gray-500">
+                                        Заказ поступит в ресторан после подтверждения оплаты. Finik доступен только для ресторанов в Кыргызстане с валютой KGS.
+                                    </p>
+                                )}
+                            </div>
 
-                            {customer?.id && (
+                            {customer?.id && paymentMethod !== 'finik' && (
                                 <div className="bg-white rounded-lg shadow-sm p-4">
                                     <h2 className="font-semibold text-base mb-3">Списание бонусов</h2>
                                     {bonusLoading ? (

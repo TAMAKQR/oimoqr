@@ -1106,7 +1106,7 @@ const DashboardPage = () => {
                         <h4 className="text-sm font-semibold text-gray-700 mb-2">Тип заказа</h4>
                         <p className="text-sm text-gray-700">Тип: <span className="font-semibold">{selectedOrder.deliveryType === 'dine_in' ? `🍽️ В зале${selectedOrder.tableNumber ? ` (Стол ${selectedOrder.tableNumber})` : ''}` : selectedOrder.deliveryType === 'pickup' ? '🏃 Самовывоз' : '🚗 Доставка'}</span></p>
                         {selectedOrder.deliveryType !== 'dine_in' && (
-                          <p className="text-sm text-gray-700">Оплата: <span className="font-semibold">{selectedOrder.paymentMethod === 'card' ? 'Картой' : 'Наличные'}</span></p>
+                          <p className="text-sm text-gray-700">Оплата: <span className="font-semibold">{selectedOrder.paymentMethod === 'finik' ? 'Finik (оплачено)' : selectedOrder.paymentMethod === 'card' ? 'Картой' : 'Наличные'}</span></p>
                         )}
                         <div className="mt-2 flex items-center gap-2">
                           <span className="text-sm text-gray-700">Статус:</span>

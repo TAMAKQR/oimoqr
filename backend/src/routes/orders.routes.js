@@ -1,10 +1,23 @@
 import express from 'express';
-import { createOrder, getOrdersByRestaurant, getOrderById, getOrderByNumber, reassignOrder, autoReassignOrder, getAssignedRestaurant, updateOrderStatus } from '../controllers/orders.controller.js';
+import {
+  createOrder,
+  getOrdersByRestaurant,
+  getOrderById,
+  getOrderByNumber,
+  getFinikOrderPaymentAvailabilityController,
+  getFinikOrderPaymentController,
+  reassignOrder,
+  autoReassignOrder,
+  getAssignedRestaurant,
+  updateOrderStatus,
+} from '../controllers/orders.controller.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
 
 router.post('/', createOrder);
+router.get('/finik/availability/:restaurantId', getFinikOrderPaymentAvailabilityController);
+router.get('/finik/payments/:paymentId', getFinikOrderPaymentController);
 router.get('/restaurant/:restaurantId', authenticate, getOrdersByRestaurant);
 router.get('/number/:orderNumber', getOrderByNumber);
 router.get('/number/:orderNumber/assigned-restaurant', getAssignedRestaurant); // GET информация о назначенном ресторане

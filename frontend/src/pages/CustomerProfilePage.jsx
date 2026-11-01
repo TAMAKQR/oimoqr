@@ -919,6 +919,7 @@ function OrdersTab({ orders }) {
 
     const statusColors = {
         new: 'bg-blue-100 text-blue-800',
+        pending_payment: 'bg-yellow-100 text-yellow-800',
         confirmed: 'bg-yellow-100 text-yellow-800',
         preparing: 'bg-purple-100 text-purple-800',
         ready: 'bg-green-100 text-green-800',
@@ -928,6 +929,7 @@ function OrdersTab({ orders }) {
 
     const statusLabels = {
         new: 'Новый',
+        pending_payment: 'Ожидает оплаты',
         confirmed: 'Подтвержден',
         preparing: 'Готовится',
         ready: 'Готов',
@@ -980,7 +982,7 @@ function OrdersTab({ orders }) {
                             <span className="text-sm text-gray-600">{order.restaurant?.name}</span>
                             <span className="text-lg font-semibold text-gray-900">{formatMoney(order.totalAmount)} {getCurrencySymbol(order.restaurant?.currency || 'RUB')}</span>
                         </div>
-                        <div className="text-xs text-gray-600">Способ: {order.deliveryType === 'dine_in' ? '🍽️ В зале' : order.deliveryType === 'pickup' ? '🏃 Самовывоз' : '🚗 Доставка'}{order.deliveryType !== 'dine_in' ? ` · Оплата: ${order.paymentMethod === 'card' ? 'Картой' : 'Наличные'}` : ''}</div>
+                        <div className="text-xs text-gray-600">Способ: {order.deliveryType === 'dine_in' ? '🍽️ В зале' : order.deliveryType === 'pickup' ? '🏃 Самовывоз' : '🚗 Доставка'} · Оплата: {order.paymentMethod === 'finik' ? 'Finik' : order.paymentMethod === 'card' ? 'Картой' : 'Наличные'}</div>
                         <div className="text-xs text-gray-700">Адрес: {formatAddress(order)}</div>
                         <div className="text-sm font-semibold text-gray-900 mt-1">Итого: {formatMoney(order.totalAmount)} {getCurrencySymbol(order.restaurant?.currency || 'RUB')}</div>
                     </div>

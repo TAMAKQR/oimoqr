@@ -5,6 +5,11 @@ import { buildTrustedOrderItems, calculateDeliveryFee } from '../utils/orderPric
 import { loadModifierOptionStops } from '../utils/modifierOptionStops.js';
 import { hasRestaurantAccess, ensureRestaurantAccess } from '../utils/restaurantAccess.js';
 import { getRestaurantDeliveryStatus } from '../utils/schedule.js';
+import {
+  createFinikOrderPayment,
+  getFinikOrderPaymentAvailability,
+  getFinikOrderPaymentStatus,
+} from '../services/finikOrderPayment.service.js';
 
 const ALLOWED_STATUSES = [
   'new',
@@ -147,6 +152,22 @@ export const createOrder = async (req, res, next) => {
 
     if (!restaurantDetails) {
       return res.status(404).json({ error: 'Restaurant not found' });
+    }
+    const normalizedPaymentMethod = String(paymentMethod || 'cash').trim().toLowerCase();
+    if (!['cash', 'card', 'finik'].includes(normalizedPaymentMethod)) {
+      return res.status(400).json({ error: 'Invalid payment method' });
+    }
+    if (normalizedPaymentMethod === 'finik') {
+      const availability = await getFinikOrderPaymentAvailability(restaurantId);
+      if (!availability.available) {
+        const status = availability.reason === 'FINIK_NOT_CONFIGURED' ? 503 : 400;
+        return res.status(status).json({
+          error: availability.reason === 'FINIK_NOT_CONFIGURED'
+            ? 'Онлайн-оплата Finik временно недоступна'
+            : 'Finik доступен только для ресторанов в Кыргызстане с валютой KGS',
+          code: availability.reason,
+        });
+      }
     }
 
     if (normalizedDeliveryType !== 'dine_in') {
@@ -346,7 +367,8 @@ export const createOrder = async (req, res, next) => {
         deliveryLongitude: normalizedDeliveryType === 'delivery' ? normalizedDeliveryLongitude : null,
         deliveryType: normalizedDeliveryType,
         tableNumber: normalizedDeliveryType === 'dine_in' ? tableNumber || null : null,
-        paymentMethod: paymentMethod || 'cash',
+        paymentMethod: normalizedPaymentMethod,
+        ...(normalizedPaymentMethod === 'finik' ? { status: 'pending_payment' } : {}),
         notes: comment || null,
         items: {
           create: trustedItems
@@ -365,6 +387,10 @@ export const createOrder = async (req, res, next) => {
       }
     });
 
+    const payment = normalizedPaymentMethod === 'finik'
+      ? await createFinikOrderPayment(order.id)
+      : null;
+
     let notificationRestaurant = order.restaurant;
     if (order.assignedRestaurantId) {
       const assignedRestaurant = await prisma.restaurant.findUnique({
@@ -376,7 +402,7 @@ export const createOrder = async (req, res, next) => {
       }
     }
 
-    if (notificationRestaurant?.telegramGroupId) {
+    if (normalizedPaymentMethod !== 'finik' && notificationRestaurant?.telegramGroupId) {
       telegramService.sendNewOrderNotification(order, notificationRestaurant).catch(err => {
         console.error('Failed to send Telegram notification:', err);
       });
@@ -385,9 +411,13 @@ export const createOrder = async (req, res, next) => {
     res.status(201).json({
       message: 'Order created successfully',
       order: order,
-      orderNumber: order.orderNumber
+      orderNumber: order.orderNumber,
+      ...(payment ? { payment } : {}),
     });
   } catch (error) {
+    if (Number.isInteger(error?.status)) {
+      return next(error);
+    }
     console.error('Order creation error:', error);
     res.status(500).json({
       error: 'Failed to create order',
@@ -408,6 +438,7 @@ export const getOrdersByRestaurant = async (req, res, next) => {
     // или были созданы для этого ресторана (если не переназначены)
     const orders = await prisma.order.findMany({
       where: {
+        status: { not: 'pending_payment' },
         OR: [
           { assignedRestaurantId: restaurantId },
           {
@@ -554,8 +585,27 @@ export const getOrderByNumber = async (req, res, next) => {
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
     }
+    if (order.status === 'pending_payment') {
+      return res.status(404).json({ error: 'Order not found' });
+    }
 
     res.json(order);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getFinikOrderPaymentAvailabilityController = async (req, res, next) => {
+  try {
+    res.json(await getFinikOrderPaymentAvailability(req.params.restaurantId));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getFinikOrderPaymentController = async (req, res, next) => {
+  try {
+    res.json(await getFinikOrderPaymentStatus(req.params.paymentId));
   } catch (error) {
     next(error);
   }
