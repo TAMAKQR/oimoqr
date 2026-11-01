@@ -466,6 +466,51 @@ export const getRestaurantLogo = async (req, res, next) => {
   }
 };
 
+export const getRestaurantSettings = async (req, res, next) => {
+  try {
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: req.params.restaurantId },
+      include: { socialLinks: true },
+    });
+
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+    if (restaurant.ownerId !== req.user.id) {
+      return res.status(403).json({ error: 'Only owner can view restaurant settings' });
+    }
+
+    let banners = [];
+    if (restaurant.banners) {
+      try {
+        banners = typeof restaurant.banners === 'string'
+          ? JSON.parse(restaurant.banners)
+          : restaurant.banners;
+      } catch {
+        banners = [];
+      }
+    }
+
+    const settings = { ...restaurant };
+    delete settings.ownerId;
+    delete settings.telegramBotToken;
+    delete settings.socialLinks;
+    res.json({
+      ...settings,
+      banners: Array.isArray(banners) ? banners : [],
+      workingHours: normalizeSchedule(restaurant.workingHours),
+      deliveryHours: normalizeSchedule(restaurant.deliveryHours),
+      menuCardStyle: restaurant.cardStyle || 'horizontal',
+      instagram: restaurant.socialLinks?.instagram || '',
+      facebook: restaurant.socialLinks?.facebook || '',
+      whatsapp: restaurant.socialLinks?.whatsapp || '',
+      telegram: restaurant.socialLinks?.telegram || '',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const updateRestaurant = async (req, res, next) => {
   try {
     const { id } = req.params;

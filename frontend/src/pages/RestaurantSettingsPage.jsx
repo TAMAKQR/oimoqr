@@ -64,6 +64,7 @@ const RestaurantSettingsPage = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [logoUrl, setLogoUrl] = useState(null);
   const [logoLoading, setLogoLoading] = useState(false);
+  const [settingsLoading, setSettingsLoading] = useState(false);
   const [activeSettingsSection, setActiveSettingsSection] = useState('general');
 
   // Form fields
@@ -142,12 +143,32 @@ const RestaurantSettingsPage = () => {
   ];
 
   useEffect(() => {
-    if (userData && selectedRestaurantId) {
-      const restaurant = getSelectedRestaurant();
-      if (restaurant) {
-        loadRestaurantData(restaurant);
-      }
+    if (!selectedRestaurantId) {
+      setSettingsLoading(false);
+      return undefined;
     }
+
+    let active = true;
+    setSettingsLoading(true);
+    restaurantService.getSettings(selectedRestaurantId)
+      .then((restaurant) => {
+        if (active) loadRestaurantData(restaurant);
+      })
+      .catch((error) => {
+        console.error('Failed to load restaurant settings:', error);
+        if (active) {
+          const cachedRestaurant = getSelectedRestaurant();
+          if (cachedRestaurant) loadRestaurantData(cachedRestaurant);
+          toast.error('Не удалось загрузить актуальные настройки заведения');
+        }
+      })
+      .finally(() => {
+        if (active) setSettingsLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, [selectedRestaurantId, userData]);
 
   useEffect(() => {
@@ -645,6 +666,11 @@ const RestaurantSettingsPage = () => {
             onSubmit={handleSubmit}
             className="restaurant-settings-form space-y-5"
           >
+            {settingsLoading && (
+              <div className="rounded-xl border border-primary-100 bg-primary-50 px-4 py-3 text-sm text-primary-800" role="status">
+                Загружаем актуальные настройки заведения…
+              </div>
+            )}
             {/* Basic Info */}
             {activeSettingsSection === 'general' && (
             <div className="bg-white rounded-xl border border-gray-100 p-5">

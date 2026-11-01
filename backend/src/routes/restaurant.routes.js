@@ -2,6 +2,7 @@ import express from 'express';
 import {
   getRestaurantBySubdomain,
   getRestaurantLogo,
+  getRestaurantSettings,
   updateRestaurant,
   uploadBanner,
   deleteBanner,
@@ -49,6 +50,7 @@ router.put('/:restaurantId/modifier-options/:optionId/stop', authenticate, setMo
 
 // Protected routes
 router.get('/:restaurantId/logo', authenticate, getRestaurantLogo);
+router.get('/:restaurantId/settings', authenticate, getRestaurantSettings);
 router.put('/:id', authenticate, updateRestaurant);
 router.put('/:id/menu-style', authenticate, updateMenuCardStyle);
 router.post('/:id/copy-menu', authenticate, copyMenu);
