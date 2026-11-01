@@ -77,6 +77,10 @@ export const isFinikAvailableForRestaurant = (restaurant) => {
   return isKyrgyzstan && String(restaurant?.currency || '').trim().toUpperCase() === 'KGS';
 };
 
+export const isFinikOrderPaymentEnabled = (restaurant) => (
+  Boolean(restaurant?.finikEnabled) && isFinikAvailableForRestaurant(restaurant)
+);
+
 export const getWebhookBindingMismatches = (payload, payment, accountId) => {
   const fields = payload?.fields && typeof payload.fields === 'object' ? payload.fields : {};
   const data = payload?.data && typeof payload.data === 'object' ? payload.data : {};

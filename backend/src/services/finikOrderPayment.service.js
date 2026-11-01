@@ -10,6 +10,7 @@ import {
   getMoneyMinorUnits,
   getOrderWebhookBindingMismatches,
   isFinikAvailableForRestaurant,
+  isFinikOrderPaymentEnabled,
   isWithinFinikSettlementWindow,
   validateFinikTransactionDate,
 } from '../utils/finikBilling.js';
@@ -59,16 +60,19 @@ const buildOrderPaymentBody = (payment, order) => ({
 export const getFinikOrderPaymentAvailability = async (restaurantId) => {
   const restaurant = await prisma.restaurant.findUnique({
     where: { id: restaurantId },
-    select: { country: true, currency: true },
+    select: { country: true, currency: true, finikEnabled: true },
   });
   if (!restaurant) throw createHttpError(404, 'Ресторан не найден', 'RESTAURANT_NOT_FOUND');
 
   const locationSupported = isFinikAvailableForRestaurant(restaurant);
+  const optedIn = Boolean(restaurant.finikEnabled);
   return {
-    available: locationSupported && isFinikConfigured(),
-    reason: !locationSupported
-      ? 'FINIK_KYRGYZSTAN_KGS_ONLY'
-      : (!isFinikConfigured() ? 'FINIK_NOT_CONFIGURED' : null),
+    available: optedIn && locationSupported && isFinikConfigured(),
+    reason: !optedIn
+      ? 'FINIK_NOT_ENABLED'
+      : (!locationSupported
+        ? 'FINIK_KYRGYZSTAN_KGS_ONLY'
+        : (!isFinikConfigured() ? 'FINIK_NOT_CONFIGURED' : null)),
   };
 };
 
@@ -78,24 +82,24 @@ export const createFinikOrderPayment = async (orderId) => {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: {
-      restaurant: { select: { country: true, currency: true } },
+      restaurant: { select: { country: true, currency: true, finikEnabled: true } },
     },
   });
   const assignedRestaurant = order?.assignedRestaurantId
     ? await prisma.restaurant.findUnique({
       where: { id: order.assignedRestaurantId },
-      select: { country: true, currency: true },
+      select: { country: true, currency: true, finikEnabled: true },
     })
     : null;
   if (!order) throw createHttpError(404, 'Заказ не найден', 'ORDER_NOT_FOUND');
   if (
-    !isFinikAvailableForRestaurant(order.restaurant)
-    || (assignedRestaurant && !isFinikAvailableForRestaurant(assignedRestaurant))
+    !isFinikOrderPaymentEnabled(order.restaurant)
+    || (assignedRestaurant && !isFinikOrderPaymentEnabled(assignedRestaurant))
   ) {
     throw createHttpError(
       400,
-      'Finik доступен только для ресторанов в Кыргызстане с валютой KGS',
-      'FINIK_KYRGYZSTAN_KGS_ONLY'
+      'Ресторан должен включить Finik и использовать валюту KGS в Кыргызстане',
+      'FINIK_ORDER_PAYMENT_NOT_AVAILABLE'
     );
   }
   if (order.paymentMethod !== 'finik' || order.status !== 'pending_payment') {

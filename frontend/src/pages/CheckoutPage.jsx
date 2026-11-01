@@ -690,7 +690,7 @@ const CheckoutPage = () => {
             const finikPaymentUrl = response?.data?.payment?.url;
             if (paymentMethod === 'finik') {
                 if (!finikPaymentUrl) {
-                    throw new Error('Ссылка Finik не получена. Проверьте статус заказа перед повторной оплатой.');
+                    throw new Error('Ссылка для оплаты по QR не получена. Проверьте статус заказа перед повторной оплатой.');
                 }
                 window.location.assign(finikPaymentUrl);
                 return;
@@ -1351,11 +1351,11 @@ const CheckoutPage = () => {
                                 >
                                     <option value="cash">Наличными</option>
                                     {!isDineIn && <option value="card">Картой курьеру</option>}
-                                    {finikAvailable && <option value="finik">Онлайн через Finik</option>}
+                                    {finikAvailable && <option value="finik">Оплатить по QR</option>}
                                 </select>
                                 {paymentMethod === 'finik' && (
                                     <p className="mt-2 text-xs text-gray-500">
-                                        Заказ поступит в ресторан после подтверждения оплаты. Finik доступен только для ресторанов в Кыргызстане с валютой KGS.
+                                        Заказ поступит в ресторан после подтверждения оплаты. Оплата проходит по QR-коду.
                                     </p>
                                 )}
                             </div>

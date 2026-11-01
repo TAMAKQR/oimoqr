@@ -9,6 +9,7 @@ import {
   isWithinFinikSettlementWindow,
   isSupportedBillingInterval,
   isFinikAvailableForRestaurant,
+  isFinikOrderPaymentEnabled,
   isTierCompatibleWithRestaurants,
   validateFinikTransactionDate,
 } from './finikBilling.js';
@@ -80,6 +81,16 @@ test('allows Finik only for KGS restaurants registered in Kyrgyzstan', () => {
   assert.equal(isFinikAvailableForRestaurant({ country: 'Россия', currency: 'KGS' }), false);
   assert.equal(isFinikAvailableForRestaurant({ country: 'Кыргызстан', currency: 'RUB' }), false);
   assert.equal(isFinikAvailableForRestaurant({ country: null, currency: 'KGS' }), false);
+});
+
+test('requires a restaurant to opt in before enabling Finik order payments', () => {
+  const eligibleRestaurant = { country: 'Кыргызстан', currency: 'KGS' };
+  assert.equal(isFinikOrderPaymentEnabled(eligibleRestaurant), false);
+  assert.equal(isFinikOrderPaymentEnabled({ ...eligibleRestaurant, finikEnabled: true }), true);
+  assert.equal(
+    isFinikOrderPaymentEnabled({ country: 'Россия', currency: 'KGS', finikEnabled: true }),
+    false
+  );
 });
 
 test('binds a signed webhook to the expected merchant, account, tier and nonce', () => {

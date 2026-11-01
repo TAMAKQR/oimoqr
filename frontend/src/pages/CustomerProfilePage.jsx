@@ -982,7 +982,7 @@ function OrdersTab({ orders }) {
                             <span className="text-sm text-gray-600">{order.restaurant?.name}</span>
                             <span className="text-lg font-semibold text-gray-900">{formatMoney(order.totalAmount)} {getCurrencySymbol(order.restaurant?.currency || 'RUB')}</span>
                         </div>
-                        <div className="text-xs text-gray-600">Способ: {order.deliveryType === 'dine_in' ? '🍽️ В зале' : order.deliveryType === 'pickup' ? '🏃 Самовывоз' : '🚗 Доставка'} · Оплата: {order.paymentMethod === 'finik' ? 'Finik' : order.paymentMethod === 'card' ? 'Картой' : 'Наличные'}</div>
+                        <div className="text-xs text-gray-600">Способ: {order.deliveryType === 'dine_in' ? '🍽️ В зале' : order.deliveryType === 'pickup' ? '🏃 Самовывоз' : '🚗 Доставка'} · Оплата: {order.paymentMethod === 'finik' ? 'По QR-коду' : order.paymentMethod === 'card' ? 'Картой' : 'Наличные'}</div>
                         <div className="text-xs text-gray-700">Адрес: {formatAddress(order)}</div>
                         <div className="text-sm font-semibold text-gray-900 mt-1">Итого: {formatMoney(order.totalAmount)} {getCurrencySymbol(order.restaurant?.currency || 'RUB')}</div>
                     </div>

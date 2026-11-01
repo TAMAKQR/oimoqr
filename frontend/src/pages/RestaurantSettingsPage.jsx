@@ -39,6 +39,11 @@ const createDefaultSchedule = () => ({
   sunday: { open: '10:00', close: '23:00', isOpen: true, is247: false },
 });
 
+const isFinikCountry = (value) => (
+  ['kg', 'kgz', 'kyrgyzstan', 'кыргызстан', 'кыргызская республика']
+    .includes(String(value || '').trim().toLowerCase())
+);
+
 const RestaurantSettingsPage = () => {
   const navigate = useNavigate();
   const { user, logout, updateUser } = useAuthStore();
@@ -59,6 +64,7 @@ const RestaurantSettingsPage = () => {
   const [instagram, setInstagram] = useState('');
   const [facebook, setFacebook] = useState('');
   const [currency, setCurrency] = useState('KGS');
+  const [finikEnabled, setFinikEnabled] = useState(false);
   const [menuCardStyle, setMenuCardStyle] = useState('horizontal');
   const [primaryColor, setPrimaryColor] = useState('#374B6A');
   const [deliveryEnabled, setDeliveryEnabled] = useState(false);
@@ -236,6 +242,7 @@ const RestaurantSettingsPage = () => {
     setInstagram(r.instagram || '');
     setFacebook(r.facebook || '');
     setCurrency(r.currency || 'KGS');
+    setFinikEnabled(Boolean(r.finikEnabled));
     setMenuCardStyle(r.cardStyle || 'horizontal');
     setPrimaryColor(r.primaryColor || '#374B6A');
     setDeliveryEnabled(r.deliveryEnabled || false);
@@ -417,6 +424,7 @@ const RestaurantSettingsPage = () => {
         name,
         address,
         phone,
+        finikEnabled,
         whatsapp,
         instagram,
         facebook,
@@ -635,6 +643,30 @@ const RestaurantSettingsPage = () => {
                   <p className="text-sm text-gray-500 mt-1">
                     Валюта будет отображаться рядом с ценами в меню
                   </p>
+                </div>
+
+                <div className="rounded-lg border border-gray-200 p-4">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={finikEnabled}
+                      onChange={(e) => setFinikEnabled(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    <span>
+                      <span className="block text-sm font-medium text-gray-900">
+                        Принимать онлайн-оплату через Finik
+                      </span>
+                      <span className="mt-1 block text-sm text-gray-600">
+                        Отметьте, если хотите, чтобы клиенты могли оплачивать заказы через Finik. Опция появится в оформлении только при подключённом Finik на платформе, стране «Кыргызстан» и валюте KGS.
+                      </span>
+                    </span>
+                  </label>
+                  {finikEnabled && (!isFinikCountry(country) || currency.trim().toUpperCase() !== 'KGS') && (
+                    <p className="mt-3 text-sm text-amber-700">
+                      Сейчас Finik недоступен для этой страны или валюты. Ваш выбор сохранится, но клиенты не увидят оплату, пока страна не будет указана как Кыргызстан, а валюта — KGS.
+                    </p>
+                  )}
                 </div>
 
                 <div>

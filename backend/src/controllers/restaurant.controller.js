@@ -458,6 +458,7 @@ export const updateRestaurant = async (req, res, next) => {
       bonusAccrualRate,
       bonusExpiryDays,
       currency,
+      finikEnabled,
       menuCardStyle,
       primaryColor,
       themePalette,
@@ -487,6 +488,10 @@ export const updateRestaurant = async (req, res, next) => {
       return res.status(403).json({ error: 'Only owner can update restaurant' });
     }
 
+    if (finikEnabled !== undefined && typeof finikEnabled !== 'boolean') {
+      return res.status(400).json({ error: 'finikEnabled must be a boolean' });
+    }
+
     const isOutlet = Boolean(existingRestaurant.sharedMenuSourceRestaurantId);
 
     if (bonusAccrualRate !== undefined && bonusAccrualRate !== null) {
@@ -508,6 +513,7 @@ export const updateRestaurant = async (req, res, next) => {
       address,
       phone,
       deliveryEnabled,
+      finikEnabled: finikEnabled !== undefined ? finikEnabled : undefined,
       deliveryFee: deliveryFee ? parseFloat(deliveryFee) : null,
       minOrderAmount: minOrderAmount ? parseFloat(minOrderAmount) : null,
       freeDeliveryThreshold: freeDeliveryThreshold ? parseFloat(freeDeliveryThreshold) : null,

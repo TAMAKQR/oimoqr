@@ -943,7 +943,9 @@ export const createCustomerOrder = async (req, res, next) => {
                 return res.status(status).json({
                     error: availability.reason === 'FINIK_NOT_CONFIGURED'
                         ? 'Онлайн-оплата Finik временно недоступна'
-                        : 'Finik доступен только для ресторанов в Кыргызстане с валютой KGS',
+                        : availability.reason === 'FINIK_NOT_ENABLED'
+                            ? 'Ресторан пока не подключил оплату через Finik'
+                            : 'Finik доступен только для ресторанов в Кыргызстане с валютой KGS',
                     code: availability.reason
                 });
             }
@@ -1051,6 +1053,18 @@ export const createCustomerOrder = async (req, res, next) => {
             nearestServingPoint = nearest;
             if (nearest.id !== restaurantId) {
                 assignedRestaurantId = nearest.id;
+            }
+        }
+
+        if (normalizedPaymentMethod === 'finik' && assignedRestaurantId) {
+            const assignedAvailability = await getFinikOrderPaymentAvailability(assignedRestaurantId);
+            if (!assignedAvailability.available) {
+                return res.status(400).json({
+                    error: assignedAvailability.reason === 'FINIK_NOT_ENABLED'
+                        ? 'Ресторан, который обслуживает этот адрес, пока не подключил оплату через Finik'
+                        : 'Finik доступен только для ресторанов в Кыргызстане с валютой KGS',
+                    code: assignedAvailability.reason
+                });
             }
         }
 

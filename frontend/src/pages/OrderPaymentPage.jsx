@@ -91,14 +91,14 @@ const OrderPaymentPage = () => {
                   ? 'Платёж проверяется'
                   : payment?.status === 'EXPIRED'
                     ? 'Срок проверки платежа истёк'
-                    : 'Ожидаем подтверждение Finik'}
+                    : 'Ожидаем подтверждение оплаты'}
           </h1>
           {error && <p className="mt-3 text-sm text-red-700">{error}</p>}
           {!error && pending && (
             <p className="mt-3 text-sm text-gray-600">
               {linkExpired
                 ? 'Ссылка на оплату истекла. Проверка может занять 24 часа, а Finik может повторять подтверждение и позже. Не оформляйте и не оплачивайте заказ повторно, если деньги списались.'
-                : 'Если вы уже оплатили, дождитесь подтверждения Finik. Ресторан получит заказ только после подтверждения.'}
+                : 'Если вы уже оплатили по QR-коду, дождитесь подтверждения. Ресторан получит заказ только после подтверждения оплаты.'}
             </p>
           )}
           {payment?.status === 'REVIEW_REQUIRED' && (
@@ -119,7 +119,7 @@ const OrderPaymentPage = () => {
               href={payment.url}
               className="mt-5 block w-full rounded-xl bg-primary-600 py-3 text-sm font-semibold text-white"
             >
-              Продолжить оплату
+              Оплатить по QR
             </a>
           )}
           {!checking && (

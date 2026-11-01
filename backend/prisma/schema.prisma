@@ -56,6 +56,7 @@ model Restaurant {
   city                  String?
   country               String?
   currency              String   @default("RUB")
+  finikEnabled          Boolean  @default(false)
   banners               String?
   logo                  String?
   cardStyle             String   @default("grid")

@@ -1,0 +1,2 @@
+ALTER TABLE "Restaurant"
+ADD COLUMN "finikEnabled" BOOLEAN NOT NULL DEFAULT false;
