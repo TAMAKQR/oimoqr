@@ -44,6 +44,15 @@ const isFinikCountry = (value) => (
     .includes(String(value || '').trim().toLowerCase())
 );
 
+const SETTINGS_SECTIONS = [
+  { id: 'general', label: 'Основное', description: 'Название, адрес и контакты' },
+  { id: 'appearance', label: 'Оформление', description: 'Вид меню, логотип и тема' },
+  { id: 'orders', label: 'Заказы и оплата', description: 'Finik, бонусы и уведомления' },
+  { id: 'delivery', label: 'Доставка', description: 'Зоны, стоимость и график доставки' },
+  { id: 'hours', label: 'Режим работы', description: 'Рабочее время и закрытие' },
+  { id: 'qr', label: 'QR-коды', description: 'Коды для меню и столов' },
+];
+
 const RestaurantSettingsPage = () => {
   const navigate = useNavigate();
   const { user, logout, updateUser } = useAuthStore();
@@ -52,6 +61,7 @@ const RestaurantSettingsPage = () => {
   const [saving, setSaving] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [activeSettingsSection, setActiveSettingsSection] = useState('general');
 
   // Form fields
   const [name, setName] = useState('');
@@ -516,7 +526,7 @@ const RestaurantSettingsPage = () => {
       <div className="max-w-3xl mx-auto">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Настройки {entityLabelGenitive}</h1>
-          <p className="text-gray-500 text-sm mt-1">Основные параметры и внешний вид</p>
+          <p className="text-gray-500 text-sm mt-1">Выберите раздел и измените нужные параметры</p>
         </div>
 
         {/* Restaurant Selector */}
@@ -544,8 +554,46 @@ const RestaurantSettingsPage = () => {
         )}
 
         {selectedRestaurantId && (
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <nav
+            aria-label="Разделы настроек ресторана"
+            role="tablist"
+            className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6"
+          >
+            {SETTINGS_SECTIONS.map((section) => (
+              <button
+                key={section.id}
+                type="button"
+                role="tab"
+                id={`settings-tab-${section.id}`}
+                aria-controls="restaurant-settings-panel"
+                aria-selected={activeSettingsSection === section.id}
+                onClick={() => setActiveSettingsSection(section.id)}
+                className={`rounded-xl border px-3 py-3 text-left transition-colors ${
+                  activeSettingsSection === section.id
+                    ? 'border-primary-600 bg-primary-50 text-primary-800'
+                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <span className="block text-sm font-semibold">{section.label}</span>
+                <span className="mt-1 hidden text-xs text-gray-500 sm:block">
+                  {section.description}
+                </span>
+              </button>
+            ))}
+          </nav>
+        )}
+
+        {selectedRestaurantId && (
+          <form
+            id="restaurant-settings-panel"
+            role="tabpanel"
+            aria-labelledby={`settings-tab-${activeSettingsSection}`}
+            tabIndex={0}
+            onSubmit={handleSubmit}
+            className="space-y-6"
+          >
             {/* Basic Info */}
+            {activeSettingsSection === 'general' && (
             <div className="bg-white rounded-xl border border-gray-100 p-5">
               <h2 className="text-xl font-bold mb-4">Основная информация</h2>
 
@@ -645,51 +693,12 @@ const RestaurantSettingsPage = () => {
                   </p>
                 </div>
 
-                <div className="rounded-lg border border-gray-200 p-4">
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={finikEnabled}
-                      onChange={(e) => setFinikEnabled(e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                    />
-                    <span>
-                      <span className="block text-sm font-medium text-gray-900">
-                        Принимать онлайн-оплату через Finik
-                      </span>
-                      <span className="mt-1 block text-sm text-gray-600">
-                        Отметьте, если хотите, чтобы клиенты могли оплачивать заказы через Finik. Опция появится в оформлении только при подключённом Finik на платформе, стране «Кыргызстан» и валюте KGS.
-                      </span>
-                    </span>
-                  </label>
-                  {finikEnabled && (!isFinikCountry(country) || currency.trim().toUpperCase() !== 'KGS') && (
-                    <p className="mt-3 text-sm text-amber-700">
-                      Сейчас Finik недоступен для этой страны или валюты. Ваш выбор сохранится, но клиенты не увидят оплату, пока страна не будет указана как Кыргызстан, а валюта — KGS.
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">Стиль отображения карточек меню</label>
-                  <select
-                    value={menuCardStyle}
-                    onChange={(e) => setMenuCardStyle(e.target.value)}
-                    className="input w-full"
-                    disabled={isInheritedSettingsRestaurant}
-                  >
-                    <option value="horizontal">Горизонтальный (фото слева)</option>
-                    <option value="vertical">Вертикальный (фото сверху)</option>
-                    <option value="grid">Сетка 2 колонки (компактный)</option>
-                    <option value="gallery">Галерея 2 колонки (минимальные отступы)</option>
-                  </select>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Выберите, как будут отображаться карточки блюд в публичном меню
-                  </p>
-                </div>
               </div>
             </div>
+            )}
 
             {/* Logo */}
+            {activeSettingsSection === 'appearance' && (<>
             <div className="bg-white rounded-xl border border-gray-100 p-5">
               <h2 className="text-xl font-bold mb-4">Логотип {entityLabelLower}</h2>
 
@@ -929,11 +938,30 @@ const RestaurantSettingsPage = () => {
               </div>
 
               <ThemeSwitcher inline />
-              <ThemeSwitcher inline />
               <p className="text-xs text-gray-500 mt-3">Переключатель ниже используется для предпросмотра темы на этом устройстве.</p>
             </div>
+            <div className="bg-white rounded-xl border border-gray-100 p-5">
+              <h2 className="text-xl font-bold mb-4">Карточки меню</h2>
+              <label className="block text-sm font-medium mb-1">Стиль отображения карточек</label>
+              <select
+                value={menuCardStyle}
+                onChange={(e) => setMenuCardStyle(e.target.value)}
+                className="input w-full"
+                disabled={isInheritedSettingsRestaurant}
+              >
+                <option value="horizontal">Горизонтальный (фото слева)</option>
+                <option value="vertical">Вертикальный (фото сверху)</option>
+                <option value="grid">Сетка 2 колонки (компактный)</option>
+                <option value="gallery">Галерея 2 колонки (минимальные отступы)</option>
+              </select>
+              <p className="text-sm text-gray-500 mt-1">
+                Выберите, как будут отображаться карточки блюд в публичном меню
+              </p>
+            </div>
+            </>)}
 
             {/* Social Media */}
+            {activeSettingsSection === 'general' && (
             <div className="bg-white rounded-xl border border-gray-100 p-5">
               <h2 className="text-xl font-bold mb-4">Социальные сети</h2>
 
@@ -975,8 +1003,10 @@ const RestaurantSettingsPage = () => {
                 </div>
               </div>
             </div>
+            )}
 
             {/* QR menu settings */}
+            {activeSettingsSection === 'appearance' && (
             <div className="bg-white rounded-xl border border-gray-100 p-5">
               <h2 className="text-xl font-bold mb-4">QR-меню</h2>
 
@@ -999,8 +1029,10 @@ const RestaurantSettingsPage = () => {
                 </div>
               </div>
             </div>
+            )}
 
             {/* Delivery Settings */}
+            {activeSettingsSection === 'delivery' && (
             <div className="bg-white rounded-xl border border-gray-100 p-5">
               <h2 className="text-xl font-bold mb-4">Настройки доставки</h2>
 
@@ -1181,8 +1213,34 @@ const RestaurantSettingsPage = () => {
                 )}
               </div>
             </div>
+            )}
 
             {/* Bonus Program Settings */}
+            {activeSettingsSection === 'orders' && (<>
+            <div className="bg-white rounded-xl border border-gray-100 p-5">
+              <h2 className="text-xl font-bold mb-4">Оплата заказов</h2>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={finikEnabled}
+                  onChange={(e) => setFinikEnabled(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-gray-900">
+                    Принимать оплату по QR-коду
+                  </span>
+                  <span className="mt-1 block text-sm text-gray-600">
+                    Включите, чтобы покупатели могли оплатить заказ онлайн по QR-коду. Опция доступна только при подключённой оплате на платформе, стране «Кыргызстан» и валюте KGS.
+                  </span>
+                </span>
+              </label>
+              {finikEnabled && (!isFinikCountry(country) || currency.trim().toUpperCase() !== 'KGS') && (
+                <p className="mt-3 text-sm text-amber-700">
+                  Сейчас оплата по QR недоступна для этой страны или валюты. Выбор сохранится, но оплата появится после установки страны «Кыргызстан» и валюты KGS.
+                </p>
+              )}
+            </div>
             <div className="bg-white rounded-xl border border-gray-100 p-5">
               <h2 className="text-xl font-bold mb-4">Бонусная программа доставки</h2>
 
@@ -1252,8 +1310,10 @@ const RestaurantSettingsPage = () => {
                 )}
               </div>
             </div>
+            </>)}
 
             {/* Telegram Notifications */}
+            {activeSettingsSection === 'orders' && (
             <div className="bg-white rounded-xl border border-gray-100 p-5">
               <h2 className="text-xl font-bold mb-4">Уведомления Telegram</h2>
 
@@ -1294,9 +1354,10 @@ const RestaurantSettingsPage = () => {
                 </div>
               </div>
             </div>
+            )}
 
             {/* QR Codes */}
-            {getSelectedRestaurant()?.subdomain && (() => {
+            {activeSettingsSection === 'qr' && getSelectedRestaurant()?.subdomain && (() => {
               const bt = getBusinessType(getSelectedRestaurant()?.businessType);
               return (
                 <div className="bg-white rounded-xl border border-gray-100 p-5">
@@ -1435,6 +1496,7 @@ const RestaurantSettingsPage = () => {
             })()}
 
             {/* Working Hours */}
+            {activeSettingsSection === 'hours' && (
             <div className="bg-white rounded-xl border border-gray-100 p-5">
               <h2 className="text-xl font-bold mb-4">Режим работы</h2>
 
@@ -1467,7 +1529,7 @@ const RestaurantSettingsPage = () => {
                       Эта информация будет отображаться в меню для клиентов
                     </p>
                   </div>
-                )}
+                  )}
               </div>
 
               {/* Days of Week */}
@@ -1479,6 +1541,7 @@ const RestaurantSettingsPage = () => {
                 💡 Режим работы будет отображаться в меню. Статус "Открыто/Закрыто" рассчитывается автоматически на основе текущего времени.
               </p>
             </div>
+            )}
 
             {/* Save Button */}
             <div className="flex gap-4">

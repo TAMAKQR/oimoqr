@@ -1,9 +1,8 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuthStore } from '../store/authStore';
-import { getBusinessType } from '../utils/businessTypes';
 
-const getMenuSections = ({ isAdmin, isOwner, isHotel, selectedRestaurantId, settingsLabel }) => [
+const getMenuSections = ({ isAdmin, isOwner, isHotel, selectedRestaurantId }) => [
   {
     id: 'dashboard',
     icon: (
@@ -42,8 +41,8 @@ const getMenuSections = ({ isAdmin, isOwner, isHotel, selectedRestaurantId, sett
     show: isOwner,
     expandable: true,
     children: [
-      { label: settingsLabel, path: '/settings', show: true },
-      { label: 'Языки', path: '/languages', show: true },
+      { label: 'Общие настройки', path: '/settings', show: true },
+      { label: 'Языки и переводы', path: '/languages', show: true },
     ],
   },
   {
@@ -124,10 +123,9 @@ const Sidebar = ({ userData, selectedRestaurantId, collapsed, onToggleCollapsed 
   const isAdmin = user?.isAdmin;
   const selectedRestaurant = allRestaurants.find(r => r.id === selectedRestaurantId);
   const isHotel = selectedRestaurant?.businessType === 'HOTEL';
-  const settingsLabel = selectedRestaurant ? getBusinessType(selectedRestaurant.businessType).label : 'Ресторан';
 
   // Poster POS style menu structure with sections
-  const menuSections = getMenuSections({ isAdmin, isOwner, isHotel, selectedRestaurantId, settingsLabel });
+  const menuSections = getMenuSections({ isAdmin, isOwner, isHotel, selectedRestaurantId });
 
   const isActive = (path) => location.pathname === path;
   const isSectionActive = (section) => {
