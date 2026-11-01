@@ -14,6 +14,7 @@ export const getRestaurantStats = async (req, res, next) => {
       where: { id: restaurantId },
       select: {
         id: true,
+        currency: true,
         sharedMenuSourceRestaurantId: true
       }
     });
@@ -239,6 +240,7 @@ export const getRestaurantStats = async (req, res, next) => {
     }
 
     res.json({
+      currency: restaurant.currency,
       overview: {
         totalDishes: totalItems,
         totalCategories,

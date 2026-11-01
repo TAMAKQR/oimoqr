@@ -28,9 +28,9 @@ const getCurrencySymbol = (currencyCode) => {
     UZS: "so'm",
     KGS: 'с',
     VND: '₫',
-    // JPY: '¥', // JPY не было в списке, но я оставлю на всякий случай
   };
-  return currencySymbols[currencyCode] || '₽'; // По умолчанию используем ₽
+  const normalizedCode = String(currencyCode || '').trim().toUpperCase();
+  return currencySymbols[normalizedCode] || normalizedCode || '₽';
 };
 
 const DashLineChart = ({ data, dataKey = 'orders', color = '#8b5cf6', height = 180 }) => {
@@ -310,6 +310,8 @@ const DashboardPage = () => {
 
   const getSelectedRestaurant = () => selectedRestaurant;
   const isOwner = () => isOwnerFlag;
+  const currencyCode = stats?.currency || selectedRestaurant?.currency;
+  const currencySymbol = getCurrencySymbol(currencyCode);
 
   const handleLogout = () => {
     logout();
@@ -858,7 +860,7 @@ const DashboardPage = () => {
                       <p className="text-sm text-gray-500">Выручка</p>
                     </div>
                     <p className="text-2xl font-bold text-gray-900">
-                      {stats.period.today.revenue.toFixed(0)} {getCurrencySymbol(getSelectedRestaurant()?.currency)}
+                      {stats.period.today.revenue.toFixed(0)} {currencySymbol}
                     </p>
                     <p className="text-xs text-gray-400 mt-1">За сегодня</p>
                   </div>
@@ -878,7 +880,7 @@ const DashboardPage = () => {
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-500">Выручка</span>
-                        <span className="text-sm font-semibold text-gray-900">{stats.period.week.revenue.toFixed(0)} {getCurrencySymbol(getSelectedRestaurant()?.currency)}</span>
+                        <span className="text-sm font-semibold text-gray-900">{stats.period.week.revenue.toFixed(0)} {currencySymbol}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-500">Просмотры</span>
@@ -899,7 +901,7 @@ const DashboardPage = () => {
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-500">Выручка</span>
-                        <span className="text-sm font-semibold text-gray-900">{stats.period.month.revenue.toFixed(0)} {getCurrencySymbol(getSelectedRestaurant()?.currency)}</span>
+                        <span className="text-sm font-semibold text-gray-900">{stats.period.month.revenue.toFixed(0)} {currencySymbol}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-500">Просмотры</span>
@@ -920,7 +922,7 @@ const DashboardPage = () => {
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-500">Выручка</span>
-                        <span className="text-sm font-semibold text-gray-900">{stats.overview.totalRevenue.toFixed(0)} {getCurrencySymbol(getSelectedRestaurant()?.currency)}</span>
+                        <span className="text-sm font-semibold text-gray-900">{stats.overview.totalRevenue.toFixed(0)} {currencySymbol}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-500">Просмотры</span>
@@ -942,7 +944,7 @@ const DashboardPage = () => {
                   {/* Revenue Line Chart */}
                   <div className="bg-white rounded-xl border border-gray-100 p-5">
                     <h3 className="text-sm font-semibold text-gray-900 mb-1">💰 Выручка за 30 дней</h3>
-                    <p className="text-xs text-gray-500 mb-2">Динамика выручки по дням ({getCurrencySymbol(getSelectedRestaurant()?.currency)})</p>
+                    <p className="text-xs text-gray-500 mb-2">Динамика выручки по дням ({currencySymbol})</p>
                     <DashLineChart data={stats.chartData} dataKey="revenue" color="#10b981" />
                   </div>
                 </div>
@@ -1005,7 +1007,7 @@ const DashboardPage = () => {
                                   })}
                                 </td>
                                 <td className="py-3 pr-3">
-                                  <span className="font-semibold text-gray-900">{order.totalAmount.toFixed(0)} {getCurrencySymbol(getSelectedRestaurant()?.currency)}</span>
+                                  <span className="font-semibold text-gray-900">{order.totalAmount.toFixed(0)} {currencySymbol}</span>
                                 </td>
                                 <td className="py-3 pr-3">
                                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[order.status] || statusColors.new}`}>
@@ -1050,7 +1052,7 @@ const DashboardPage = () => {
                           </div>
                           <p className="font-medium text-sm text-gray-900 mb-1">{dish.name}</p>
                           <p className="text-xs text-gray-400">{dish.orderCount} заказов</p>
-                          <p className="text-sm font-semibold text-gray-900 mt-2">{dish.price.toFixed(0)} {getCurrencySymbol(getSelectedRestaurant()?.currency)}</p>
+                          <p className="text-sm font-semibold text-gray-900 mt-2">{dish.price.toFixed(0)} {currencySymbol}</p>
                         </div>
                       ))}
                     </div>
