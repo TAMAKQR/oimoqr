@@ -2,7 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuthStore } from '../store/authStore';
 
-const getMenuSections = ({ isAdmin, isOwner, isHotel, selectedRestaurantId }) => [
+const getMenuSections = ({ isAdmin, isOwner, hasOwnedRestaurants, isHotel, selectedRestaurantId }) => [
   {
     id: 'dashboard',
     icon: (
@@ -15,6 +15,17 @@ const getMenuSections = ({ isAdmin, isOwner, isHotel, selectedRestaurantId }) =>
     show: true,
   },
   {
+    id: 'statistics',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5m.75-9l3-3 2.148 2.148A12.061 12.061 0 0116.5 7.605" />
+      </svg>
+    ),
+    label: 'Статистика',
+    path: '/statistics',
+    show: !isAdmin && hasOwnedRestaurants,
+  },
+  {
     id: 'menu',
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -25,8 +36,9 @@ const getMenuSections = ({ isAdmin, isOwner, isHotel, selectedRestaurantId }) =>
     show: !isAdmin,
     expandable: true,
     children: [
-      { label: 'Управление', path: '/menu-management', show: true },
-      { label: 'Модификаторы', path: '/modifier-templates', show: isOwner },
+      { label: 'Категории и блюда', path: '/menu-management', show: true },
+      { label: 'Шаблоны модификаторов', path: '/modifier-templates', show: isOwner },
+      { label: 'Языки и переводы', path: '/languages', show: isOwner },
     ],
   },
   {
@@ -41,8 +53,7 @@ const getMenuSections = ({ isAdmin, isOwner, isHotel, selectedRestaurantId }) =>
     show: isOwner,
     expandable: true,
     children: [
-      { label: 'Общие настройки', path: '/settings', show: true },
-      { label: 'Языки и переводы', path: '/languages', show: true },
+      { label: 'Настройки заведения', path: '/settings', show: true },
     ],
   },
   {
@@ -52,7 +63,7 @@ const getMenuSections = ({ isAdmin, isOwner, isHotel, selectedRestaurantId }) =>
         <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
       </svg>
     ),
-    label: 'Люди',
+    label: 'Клиенты и команда',
     show: isOwner && !!selectedRestaurantId,
     expandable: true,
     children: [
@@ -120,12 +131,13 @@ const Sidebar = ({ userData, selectedRestaurantId, collapsed, onToggleCollapsed 
   ], [userData]);
 
   const isOwner = !!userData?.restaurants?.some(r => r.id === selectedRestaurantId);
+  const hasOwnedRestaurants = !!userData?.restaurants?.length;
   const isAdmin = user?.isAdmin;
   const selectedRestaurant = allRestaurants.find(r => r.id === selectedRestaurantId);
   const isHotel = selectedRestaurant?.businessType === 'HOTEL';
 
   // Poster POS style menu structure with sections
-  const menuSections = getMenuSections({ isAdmin, isOwner, isHotel, selectedRestaurantId });
+  const menuSections = getMenuSections({ isAdmin, isOwner, hasOwnedRestaurants, isHotel, selectedRestaurantId });
 
   const isActive = (path) => location.pathname === path;
   const isSectionActive = (section) => {
@@ -177,8 +189,9 @@ const Sidebar = ({ userData, selectedRestaurantId, collapsed, onToggleCollapsed 
       {/* Mobile hamburger button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 bg-white text-gray-700 p-2.5 rounded-lg shadow-md border border-gray-200 hover:bg-gray-50 transition-colors"
+        className="fixed left-4 top-3.5 z-50 flex h-11 w-11 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-700 shadow-sm transition-colors hover:bg-gray-50 lg:hidden"
         aria-label="Меню"
+        aria-expanded={isOpen}
       >
         {isOpen ? (
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -195,33 +208,55 @@ const Sidebar = ({ userData, selectedRestaurantId, collapsed, onToggleCollapsed 
       <aside
         ref={sidebarRef}
         className={`
-          fixed lg:sticky lg:top-0 top-0 left-0 h-screen bg-white border-r border-gray-200 z-40
+          fixed lg:sticky lg:top-0 top-0 left-0 h-screen bg-white border-r border-gray-200/80 z-40
           transition-all duration-300 ease-in-out
           flex-shrink-0 flex flex-col
-          ${collapsed ? 'w-[68px]' : 'w-[260px]'}
+          ${collapsed ? 'w-[76px]' : 'w-[276px]'}
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center px-4 border-b border-gray-100 flex-shrink-0 justify-between">
+        <div className="flex h-[72px] flex-shrink-0 items-center justify-between border-b border-gray-100 px-4">
           <div
             className={`flex items-center gap-3 cursor-pointer overflow-hidden ${collapsed ? 'justify-center w-full' : ''}`}
             onClick={() => handleNavigate('/dashboard')}
           >
-            <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center flex-shrink-0">
-              <span className="text-white font-bold text-sm">Q</span>
+            <div className="relative flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary-700 shadow-sm">
+              <span className="text-base font-bold text-white">Q</span>
+              <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-white bg-accent-500" />
             </div>
             {!collapsed && (
-              <span className="text-lg font-bold text-gray-900 tracking-tight whitespace-nowrap">OimoQR</span>
+              <div className="min-w-0">
+                <span className="block whitespace-nowrap text-lg font-bold tracking-tight text-gray-950">OimoQR</span>
+                <span className="block text-[11px] font-medium text-gray-400">Управление заведением</span>
+              </div>
             )}
           </div>
         </div>
 
+        {!collapsed && selectedRestaurant && !isAdmin && (
+          <div className="mx-3 mt-3 rounded-2xl border border-primary-100 bg-primary-50/70 px-3.5 py-3">
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-sm font-bold text-primary-700 shadow-sm ring-1 ring-primary-100">
+                {selectedRestaurant.name?.trim()?.charAt(0)?.toUpperCase() || 'З'}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-gray-950">{selectedRestaurant.name}</p>
+                <p className="mt-0.5 truncate text-xs text-gray-500">
+                  {isOwner ? 'Владелец' : 'Менеджер'}
+                  {selectedRestaurant.address ? ` · ${selectedRestaurant.address}` : ''}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Collapse toggle button (desktop only) */}
         <button
           onClick={onToggleCollapsed}
-          className={`hidden lg:flex items-center justify-center my-2 w-8 h-8 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors flex-shrink-0 ${collapsed ? 'mx-auto' : 'ml-4'}`}
+          className={`my-2 hidden h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 lg:flex ${collapsed ? 'mx-auto' : 'ml-3'}`}
           title={collapsed ? 'Развернуть меню' : 'Свернуть меню'}
+          aria-label={collapsed ? 'Развернуть меню' : 'Свернуть меню'}
         >
           <svg
             className={`w-4 h-4 transition-transform duration-300 ${collapsed ? 'rotate-180' : ''}`}
@@ -232,7 +267,12 @@ const Sidebar = ({ userData, selectedRestaurantId, collapsed, onToggleCollapsed 
         </button>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-1">
+        <nav className="flex-1 overflow-y-auto px-3 pb-4 pt-2">
+          {!collapsed && (
+            <p className="mb-2 px-3 pt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-400">
+              Рабочее пространство
+            </p>
+          )}
           {menuSections.filter(s => s.show).map((section) => (
             <div key={section.id}>
               {section.expandable ? (
@@ -242,25 +282,17 @@ const Sidebar = ({ userData, selectedRestaurantId, collapsed, onToggleCollapsed 
                     onClick={() => toggleSection(section.id)}
                     title={collapsed ? section.label : undefined}
                     className={`
-                      w-full flex items-center ${collapsed ? 'justify-center px-0 py-3' : 'justify-between px-6 py-2.5'} text-sm transition-colors
+                      w-full rounded-xl flex items-center ${collapsed ? 'justify-center px-0 py-3' : 'justify-between px-3 py-2.5'} text-sm transition-colors
                       ${isSectionActive(section)
-                        ? 'text-blue-600 font-medium'
-                        : 'text-gray-700 hover:bg-gray-50'
+                        ? 'bg-primary-50 text-primary-700 font-semibold'
+                        : 'text-gray-700 hover:bg-gray-50 hover:text-gray-950'
                       }
                     `}
                   >
                     <div className={`flex items-center ${collapsed ? '' : 'gap-3'}`}>
-                      <span className={`flex-shrink-0 ${isSectionActive(section) ? 'text-blue-600' : 'text-gray-400'}`}>{section.icon}</span>
+                      <span className={`flex-shrink-0 ${isSectionActive(section) ? 'text-primary-600' : 'text-gray-400'}`}>{section.icon}</span>
                       {!collapsed && <span>{section.label}</span>}
                     </div>
-                    {!collapsed && (
-                      <svg
-                        className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${expandedSection === section.id ? 'rotate-180' : ''}`}
-                        fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                      </svg>
-                    )}
                   </button>
 
                   {/* Expandable children - hidden when collapsed */}
@@ -273,10 +305,10 @@ const Sidebar = ({ userData, selectedRestaurantId, collapsed, onToggleCollapsed 
                           key={child.path}
                           onClick={() => handleNavigate(child.path)}
                           className={`
-                            w-full text-left pl-14 pr-6 py-2 text-sm transition-colors
+                            mt-1 w-full rounded-xl py-2.5 pl-11 pr-3 text-left text-sm transition-colors
                             ${isActive(child.path)
-                              ? 'text-blue-600 font-medium bg-blue-50'
-                              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                              ? 'bg-primary-50 text-primary-700 font-semibold'
+                              : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
                             }
                           `}
                         >
@@ -292,14 +324,14 @@ const Sidebar = ({ userData, selectedRestaurantId, collapsed, onToggleCollapsed 
                   onClick={() => handleNavigate(section.path)}
                   title={collapsed ? section.label : undefined}
                   className={`
-                    w-full flex items-center ${collapsed ? 'justify-center px-0 py-3' : 'gap-3 px-6 py-2.5'} text-sm transition-colors
+                    w-full rounded-xl flex items-center ${collapsed ? 'justify-center px-0 py-3' : 'gap-3 px-3 py-2.5'} text-sm transition-colors
                     ${isActive(section.path)
-                      ? `text-blue-600 font-medium bg-blue-50 ${collapsed ? '' : 'border-r-2 border-blue-600'}`
-                      : 'text-gray-700 hover:bg-gray-50'
+                      ? 'bg-primary-600 text-white font-semibold shadow-sm'
+                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-950'
                     }
                   `}
                 >
-                  <span className={`flex-shrink-0 ${isActive(section.path) ? 'text-blue-600' : 'text-gray-400'}`}>{section.icon}</span>
+                  <span className={`flex-shrink-0 ${isActive(section.path) ? 'text-white' : 'text-gray-400'}`}>{section.icon}</span>
                   {!collapsed && <span>{section.label}</span>}
                   {!collapsed && section.badge && (
                     <span className="ml-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
@@ -314,17 +346,17 @@ const Sidebar = ({ userData, selectedRestaurantId, collapsed, onToggleCollapsed 
 
         {/* User section at bottom */}
         {user && (
-          <div className="border-t border-gray-100 p-3 flex-shrink-0">
+          <div className="flex-shrink-0 border-t border-gray-100 p-3">
             {collapsed ? (
               <div className="flex flex-col items-center gap-2">
-                <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-50">
                   <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                   </svg>
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                  className="flex h-11 w-11 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
                   title="Выйти"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -333,8 +365,8 @@ const Sidebar = ({ userData, selectedRestaurantId, collapsed, onToggleCollapsed 
                 </button>
               </div>
             ) : (
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <div className="flex items-center gap-3 rounded-xl px-1 py-1">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary-50">
                   <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                   </svg>
@@ -345,7 +377,7 @@ const Sidebar = ({ userData, selectedRestaurantId, collapsed, onToggleCollapsed 
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                  className="flex h-11 w-11 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
                   title="Выйти"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -361,7 +393,7 @@ const Sidebar = ({ userData, selectedRestaurantId, collapsed, onToggleCollapsed 
       {/* Mobile overlay */}
       {isOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black/30 z-30 transition-opacity"
+          className="fixed inset-0 z-30 bg-gray-950/40 backdrop-blur-sm transition-opacity lg:hidden"
           onClick={() => setIsOpen(false)}
         />
       )}
