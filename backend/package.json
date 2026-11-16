@@ -17,6 +17,7 @@
     "prisma:db:push": "prisma db push",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
+    "seed:demo": "node src/scripts/seedDemoBusinesses.js",
     "apply:indexes": "node apply-indexes.js",
     "seed": "node src/scripts/seedDatabase.js",
     "import:baku": "node src/scripts/importBakuMenu.js",

@@ -9,14 +9,14 @@ const createHttpError = (status, message, code) => {
   return error;
 };
 
-const validatePaymentUrl = (value) => {
+const validatePaymentUrl = (value, { baseUrl, mode }) => {
   let url;
   try {
-    url = new URL(value, `${getFinikBaseUrl()}/`);
+    url = new URL(value, `${baseUrl}/`);
   } catch {
     throw createHttpError(502, 'Finik вернул некорректную ссылку на оплату', 'FINIK_INVALID_PAYMENT_URL');
   }
-  const allowedHosts = config.finik.mode === 'beta'
+  const allowedHosts = mode === 'beta'
     ? new Set(['beta.qr.finik.kg'])
     : new Set(['qr.finik.kg']);
   if (
@@ -41,8 +41,15 @@ const parseUpstreamError = async (response) => {
   }
 };
 
-export const requestFinikPaymentUrl = async (body) => {
-  const baseUrl = getFinikBaseUrl();
+export const requestFinikPaymentUrl = async (body, credentialOverride = null) => {
+  const hasCredentialOverride = credentialOverride !== null;
+  const mode = hasCredentialOverride ? credentialOverride.mode : config.finik.mode;
+  const apiKey = hasCredentialOverride ? credentialOverride.apiKey : config.finik.apiKey;
+  const privateKey = hasCredentialOverride ? credentialOverride.privateKey : getFinikPrivateKey();
+  const baseUrl = getFinikBaseUrl(mode);
+  if (!baseUrl || !apiKey || !privateKey) {
+    throw createHttpError(503, 'Реквизиты Finik не настроены.', 'FINIK_NOT_CONFIGURED');
+  }
   const path = '/v1/payment';
   const timestamp = Date.now().toString();
   const requestData = {
@@ -50,13 +57,13 @@ export const requestFinikPaymentUrl = async (body) => {
     path,
     headers: {
       Host: new URL(baseUrl).host,
-      'x-api-key': config.finik.apiKey,
+      'x-api-key': apiKey,
       'x-api-timestamp': timestamp,
     },
     queryStringParameters: null,
     body,
   };
-  const signature = signFinikRequest(requestData, getFinikPrivateKey());
+  const signature = signFinikRequest(requestData, privateKey);
 
   let response;
   try {
@@ -64,7 +71,7 @@ export const requestFinikPaymentUrl = async (body) => {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-api-key': config.finik.apiKey,
+        'x-api-key': apiKey,
         'x-api-timestamp': timestamp,
         signature,
       },
@@ -79,13 +86,13 @@ export const requestFinikPaymentUrl = async (body) => {
 
   const location = response.headers.get('location');
   if (response.status === 302 && location) {
-    return validatePaymentUrl(location);
+    return validatePaymentUrl(location, { baseUrl, mode });
   }
 
   if (response.ok) {
     const payload = await response.json().catch(() => null);
     const paymentUrl = payload?.paymentUrl || payload?.url || payload?.redirectUrl || location;
-    if (paymentUrl) return validatePaymentUrl(paymentUrl);
+    if (paymentUrl) return validatePaymentUrl(paymentUrl, { baseUrl, mode });
   }
 
   const upstreamMessage = await parseUpstreamError(response);

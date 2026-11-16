@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useCartStore } from '../store/cartStore';
 import { useCustomerAuthStore } from '../store/customerAuthStore';
+import { getBusinessType } from '../utils/businessTypes';
+import { Button } from './ui/Button';
 
 const Cart = ({ restaurant, isDishModalOpen = false, hideOnDesktop = false }) => {
   const { customer } = useCustomerAuthStore();
@@ -11,6 +13,8 @@ const Cart = ({ restaurant, isDishModalOpen = false, hideOnDesktop = false }) =>
 
   const { items, getTotal, getItemCount, restaurantId: cartRestaurantId, orderMode, tableNumber } = useCartStore();
   const currency = restaurant?.currency || '₽';
+  const businessTypeCfg = getBusinessType(restaurant?.businessType);
+  const isHotel = businessTypeCfg.key === 'HOTEL';
 
   // Не показывать корзину, если она принадлежит другому ресторану
   const isCartForCurrentRestaurant = !cartRestaurantId || !restaurant?.id || cartRestaurantId === restaurant.id;
@@ -24,7 +28,6 @@ const Cart = ({ restaurant, isDishModalOpen = false, hideOnDesktop = false }) =>
   const [isTrackVisible, setIsTrackVisible] = useState(false);
 
   useEffect(() => {
-    // Smoothly reveal the bar on mount
     const timer = setTimeout(() => setIsTrackVisible(true), 10);
     return () => clearTimeout(timer);
   }, []);
@@ -41,9 +44,6 @@ const Cart = ({ restaurant, isDishModalOpen = false, hideOnDesktop = false }) =>
       toast.error(`Минимальная сумма заказа: ${minAmount} ${currency}\nТекущая сумма: ${total} ${currency}`);
       return;
     }
-
-    // Не проверяем авторизацию здесь - гость может смотреть корзину и показать заказ официанту
-    // Авторизация потребуется только на странице checkout при финальном оформлении
 
     setIsCheckingOut(true);
 
@@ -65,20 +65,20 @@ const Cart = ({ restaurant, isDishModalOpen = false, hideOnDesktop = false }) =>
 
   const responsiveHideClass = hideOnDesktop ? 'lg:hidden' : '';
 
-  // Если клиент авторизован - поднимаем корзину выше CustomerBottomNav
   const isCustomerLoggedIn = customer && customer.id;
 
-  // Позиционирование: если есть нижнее меню, поднимаем корзину над ним.
-  // Высоту нижнего меню выставляет CustomerBottomNav в CSS переменную.
   const bottomNavHeight = 'var(--customer-bottom-nav-height, 0px)';
   const guestBottomOffset = 'max(0px, calc(max(env(safe-area-inset-bottom, 0px), var(--visual-bottom-offset, 0px)) - 6px))';
   const cartStyle = isCustomerLoggedIn
     ? { bottom: `calc(${bottomNavHeight} + 8px)` }
     : { bottom: guestBottomOffset };
 
+  const dineInLabel = isHotel
+    ? (tableNumber ? `${businessTypeCfg.tableLabel} ${tableNumber}` : 'В номер')
+    : (tableNumber ? `${businessTypeCfg.tableLabel} ${tableNumber}` : 'В зале');
+
   return (
     <>
-      {/* Fill the bottom gap with subtle blur for a softer Safari/Chrome look */}
       {!isCustomerLoggedIn && (
         <div
           className={`fixed inset-x-0 bottom-0 z-[50] bg-white/70 backdrop-blur-md pointer-events-none ${responsiveHideClass}`}
@@ -86,28 +86,46 @@ const Cart = ({ restaurant, isDishModalOpen = false, hideOnDesktop = false }) =>
         />
       )}
       <div className={`fixed inset-x-0 z-[60] flex justify-center px-0 pb-0 ${responsiveHideClass}`} style={cartStyle}>
-        <div className="w-full max-w-[480px] rounded-none sm:rounded-2xl bg-white border-t border-primary-100 px-4 py-3 sm:px-6 sm:py-4">
+        <div className="w-full max-w-[480px] rounded-none sm:rounded-2xl bg-white border-t border-neutral-200 px-4 py-3 sm:px-6 sm:py-4 shadow-lg">
           <div className="flex flex-col gap-3">
             {orderMode === 'dine_in' && (
               <div className="flex items-center gap-2 text-sm">
-                <span className="bg-primary-100 text-primary-700 px-2.5 py-1 rounded-full font-medium">
-                  🍽 {tableNumber ? `Стол ${tableNumber}` : 'В зале'}
+                <span className="flex items-center gap-1.5 bg-primary-50 text-primary-600 px-3 py-1.5 rounded-full font-medium border border-primary-100">
+                  {dineInLabel}
                 </span>
               </div>
             )}
 
             <div className="flex flex-col gap-2">
-              <button
+              <Button
                 type="button"
                 onClick={handleCheckout}
-                disabled={isCheckingOut}
-                className="w-full py-2.5 rounded-xl bg-primary-600 text-white font-semibold shadow-lg hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
+                disabled={isCheckingOut || needsFulfillmentChoice || isBelowMinimum}
+                variant={isBelowMinimum || needsFulfillmentChoice ? 'secondary' : 'primary'}
+                size="lg"
               >
-                {isCheckingOut ? '...' : orderMode === 'dine_in'
+                {isCheckingOut ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm0 0V12" />
+                    </svg>
+                    Оформляем…
+                  </>
+                ) : orderMode === 'dine_in'
                   ? `Заказать на ${total.toFixed(2)} ${currency}`
-                  : `Оформить на ${total.toFixed(2)} ${currency}`
-                }
-              </button>
+                  : `Оформить на ${total.toFixed(2)} ${currency}`}
+              </Button>
+              {needsFulfillmentChoice && (
+                <p className="text-xs text-neutral-500 text-center">
+                  Выберите способ получения: доставка или самовывоз
+                </p>
+              )}
+              {isBelowMinimum && (
+                <p className="text-xs text-error-600 text-center font-medium">
+                  Минимальная сумма: {minAmount} {currency}
+                </p>
+              )}
             </div>
           </div>
         </div>

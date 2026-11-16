@@ -1,9 +1,10 @@
 import { config } from '../config/env.js';
 import {
-  assertFinikConfigured,
+  getFinikPrivateKey,
   isFinikConfigured,
 } from '../config/finik.js';
 import { prisma } from '../config/prisma.js';
+import { getActiveFinikMerchantCredentialsForRestaurant } from './finikMerchantConnection.service.js';
 import telegramService from './telegram.service.js';
 import {
   getBillingPaymentStatus,
@@ -23,7 +24,26 @@ const createHttpError = (status, message, code) => {
   return error;
 };
 
-const buildOrderPaymentBody = (payment, order) => ({
+const getLegacyMerchantCredentials = () => (
+  isFinikConfigured()
+    ? {
+      connectionId: null,
+      accountId: config.finik.accountId,
+      apiKey: config.finik.apiKey,
+      privateKey: getFinikPrivateKey(),
+      merchantName: config.finik.merchantName,
+      mode: config.finik.mode,
+      credentialVersion: null,
+    }
+    : null
+);
+
+const resolveOrderMerchantCredentials = async (restaurantId) => (
+  (await getActiveFinikMerchantCredentialsForRestaurant(restaurantId))
+  || getLegacyMerchantCredentials()
+);
+
+const buildOrderPaymentBody = (payment, order, merchant) => ({
   Amount: payment.amountMinor / 100,
   CardType: 'FINIK_QR',
   PaymentId: payment.id,
@@ -34,8 +54,8 @@ const buildOrderPaymentBody = (payment, order) => ({
   })(),
   Lang: 'ru',
   Data: {
-    accountId: config.finik.accountId,
-    name_en: config.finik.merchantName,
+    accountId: merchant.accountId,
+    name_en: merchant.merchantName || config.finik.merchantName,
     webhookUrl: config.finik.webhookUrl,
     description: `Заказ ${order.orderNumber}`,
     startDate: payment.createdAt.getTime(),
@@ -66,19 +86,20 @@ export const getFinikOrderPaymentAvailability = async (restaurantId) => {
 
   const locationSupported = isFinikAvailableForRestaurant(restaurant);
   const optedIn = Boolean(restaurant.finikEnabled);
+  const merchant = optedIn && locationSupported
+    ? await resolveOrderMerchantCredentials(restaurantId)
+    : null;
   return {
-    available: optedIn && locationSupported && isFinikConfigured(),
+    available: optedIn && locationSupported && Boolean(merchant),
     reason: !optedIn
       ? 'FINIK_NOT_ENABLED'
       : (!locationSupported
         ? 'FINIK_KYRGYZSTAN_KGS_ONLY'
-        : (!isFinikConfigured() ? 'FINIK_NOT_CONFIGURED' : null)),
+        : (!merchant ? 'FINIK_NOT_CONFIGURED' : null)),
   };
 };
 
 export const createFinikOrderPayment = async (orderId) => {
-  assertFinikConfigured();
-
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: {
@@ -106,6 +127,16 @@ export const createFinikOrderPayment = async (orderId) => {
     throw createHttpError(409, 'Заказ не ожидает оплату через Finik', 'ORDER_PAYMENT_NOT_PENDING');
   }
 
+  const servingRestaurantId = order.assignedRestaurantId || order.restaurantId;
+  const merchant = await resolveOrderMerchantCredentials(servingRestaurantId);
+  if (!merchant) {
+    throw createHttpError(
+      503,
+      'Реквизиты Finik для ресторана не настроены',
+      'FINIK_NOT_CONFIGURED'
+    );
+  }
+
   const amountMinor = getMoneyMinorUnits(order.totalAmount);
   if (amountMinor === null) {
     throw createHttpError(400, 'Сумма заказа не поддерживается для оплаты Finik', 'INVALID_ORDER_AMOUNT');
@@ -120,12 +151,19 @@ export const createFinikOrderPayment = async (orderId) => {
       amountMinor,
       currency: 'KGS',
       status: 'CREATING',
+      finikConnectionId: merchant.connectionId,
+      merchantAccountId: merchant.accountId,
+      credentialVersion: merchant.credentialVersion,
       expiresAt: new Date(Date.now() + config.finik.paymentTtlMinutes * 60 * 1000),
     },
   });
 
   try {
-    const url = await requestFinikPaymentUrl(buildOrderPaymentBody(payment, order));
+    const url = await requestFinikPaymentUrl(buildOrderPaymentBody(payment, order, merchant), {
+      apiKey: merchant.apiKey,
+      privateKey: merchant.privateKey,
+      mode: merchant.mode,
+    });
     await prisma.orderFinikPayment.update({
       where: { id: payment.id },
       data: { status: 'PENDING', paymentUrl: url },
@@ -297,7 +335,11 @@ export const processFinikOrderWebhook = async (payload, webhookEventId) => {
     return flagOrderPaymentForReview(payment, 'TRANSACTION_ID_MISSING', payload);
   }
 
-  const mismatches = getOrderWebhookBindingMismatches(payload, payment, config.finik.accountId);
+  const mismatches = getOrderWebhookBindingMismatches(
+    payload,
+    payment,
+    payment.merchantAccountId || config.finik.accountId
+  );
   if (mismatches.length) {
     return flagOrderPaymentForReview(payment, 'PAYMENT_CONTEXT_MISMATCH', payload);
   }

@@ -14,7 +14,8 @@ const ImageUploader = ({
     label = 'Загрузить изображение',
     showPreview = true,
     currentImage = null,
-    disabled = false
+    disabled = false,
+    compact = false
 }) => {
     const [isDragging, setIsDragging] = useState(false);
     const [selectedFile, setSelectedFile] = useState(null);
@@ -114,8 +115,8 @@ const ImageUploader = ({
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 className={`
-          relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer
-          transition-all duration-200
+          relative cursor-pointer transition-all duration-200
+          ${compact ? 'min-h-[88px] rounded-xl border border-dashed p-3' : 'border-2 border-dashed rounded-lg p-6 text-center'}
           ${isDragging
                         ? 'border-primary-500 bg-primary-50'
                         : 'border-gray-300 hover:border-primary-400 hover:bg-gray-50'
@@ -132,10 +133,87 @@ const ImageUploader = ({
                     disabled={disabled}
                 />
 
-                {isCompressing ? (
+                {compact ? (
+                    isCompressing ? (
+                        <div className="flex min-h-[60px] items-center gap-3 text-sm text-gray-600">
+                            <span className="h-6 w-6 animate-spin rounded-full border-2 border-primary-200 border-t-primary-600" />
+                            Сжатие изображения…
+                        </div>
+                    ) : selectedFile ? (
+                        <div className="flex min-h-[60px] items-center gap-3 text-left">
+                            <img
+                                src={previewUrl}
+                                alt="Предпросмотр"
+                                className="h-12 w-12 shrink-0 rounded-lg border border-gray-200 bg-white object-contain"
+                            />
+                            <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-medium text-gray-800">{selectedFile.name}</p>
+                                <p className="text-xs text-gray-500">{formatFileSize(selectedFile.size)}</p>
+                            </div>
+                            <span className="text-xs font-medium text-primary-700">Готово</span>
+                        </div>
+                    ) : (
+                        <div className="flex min-h-[60px] items-center gap-3 text-left">
+                            <svg
+                                className="h-8 w-8 shrink-0 text-gray-400"
+                                stroke="currentColor"
+                                fill="none"
+                                viewBox="0 0 48 48"
+                                aria-hidden="true"
+                            >
+                                <path
+                                    d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                                    strokeWidth={2}
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
+                            </svg>
+                            <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium text-gray-800">{label}</p>
+                                <p className="mt-0.5 text-xs text-gray-500">
+                                    Перетащите или выберите · до {maxSizeMB} МБ
+                                    {compressOptions.maxSizeMB && ` · сжатие до ${compressOptions.maxSizeMB} МБ`}
+                                </p>
+                            </div>
+                            <span className="shrink-0 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700">
+                                Выбрать
+                            </span>
+                        </div>
+                    )
+                ) : isCompressing ? (
                     <div className="py-4">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-3"></div>
                         <p className="text-sm text-gray-600">Сжатие изображения...</p>
+                    </div>
+                ) : selectedFile ? (
+                    <div className="py-6 text-center">
+                        <img
+                            src={previewUrl}
+                            alt="Предпросмотр"
+                            className="w-full max-w-xs mx-auto rounded-lg border-2 border-primary-300 mb-3"
+                        />
+                        <div className="bg-gray-50 rounded-lg p-3 text-sm w-full max-w-xs mx-auto">
+                            <div className="flex items-center justify-between mb-1">
+                                <span className="text-gray-600">Файл:</span>
+                                <span className="font-medium text-gray-900 truncate">{selectedFile.name}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-gray-600">Размер:</span>
+                                <div className="flex items-center gap-2">
+                                    {originalFile && originalFile.size !== selectedFile.size && (
+                                        <>
+                                            <span className="text-gray-400 line-through">
+                                                {formatFileSize(originalFile.size)}
+                                            </span>
+                                            <span className="text-green-600">→</span>
+                                        </>
+                                    )}
+                                    <span className="font-medium text-green-600">
+                                        {formatFileSize(selectedFile.size)}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 ) : (
                     <>
@@ -165,41 +243,13 @@ const ImageUploader = ({
                 )}
             </div>
 
-            {/* Превью и информация о файле */}
-            {showPreview && (selectedFile || currentImage) && !isCompressing && (
+            {!compact && showPreview && currentImage && !selectedFile && !isCompressing && (
                 <div className="mt-4">
-                    {previewUrl && (
-                        <img
-                            src={previewUrl}
-                            alt="Предпросмотр"
-                            className="w-full max-w-xs mx-auto rounded-lg border-2 border-gray-200 mb-3"
-                        />
-                    )}
-
-                    {selectedFile && (
-                        <div className="bg-gray-50 rounded-lg p-3 text-sm">
-                            <div className="flex items-center justify-between mb-1">
-                                <span className="text-gray-600">Файл:</span>
-                                <span className="font-medium text-gray-900">{selectedFile.name}</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-gray-600">Размер:</span>
-                                <div className="flex items-center gap-2">
-                                    {originalFile && originalFile.size !== selectedFile.size && (
-                                        <>
-                                            <span className="text-gray-400 line-through">
-                                                {formatFileSize(originalFile.size)}
-                                            </span>
-                                            <span className="text-green-600">→</span>
-                                        </>
-                                    )}
-                                    <span className="font-medium text-green-600">
-                                        {formatFileSize(selectedFile.size)}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    <img
+                        src={previewUrl}
+                        alt="Текущий логотип"
+                        className="w-full max-w-xs mx-auto rounded-lg border-2 border-gray-200 mb-3"
+                    />
                 </div>
             )}
         </div>

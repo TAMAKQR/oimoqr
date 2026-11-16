@@ -1,5 +1,5 @@
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Autoplay, Pagination } from 'swiper/modules';
+import { Pagination } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/pagination';
 import { cacheBustImage } from '../utils/imageCache';
@@ -17,32 +17,24 @@ const BannerSlider = ({ banners }) => {
   }
 
   if (!parsedBanners || !Array.isArray(parsedBanners) || parsedBanners.length === 0) {
-    return (
-      <div className="w-full h-64 bg-gradient-to-r from-primary-500 to-primary-700 flex items-center justify-center">
-        <p className="text-white text-xl">Добро пожаловать в наше меню</p>
-      </div>
-    );
+    return null;
   }
 
   return (
     <Swiper
-      modules={[Autoplay, Pagination]}
+      modules={[Pagination]}
       spaceBetween={0}
       slidesPerView={1}
-      autoplay={{
-        delay: 3000,
-        disableOnInteraction: false,
-      }}
       pagination={{ clickable: true }}
       loop={parsedBanners.length > 1}
-      className="w-full h-64 md:h-96"
+      className="h-40 w-full sm:h-48 lg:h-56"
     >
       {parsedBanners.map((banner, index) => (
         <SwiperSlide key={index}>
           <div className="w-full h-full">
             <ImageWithLoader
               src={cacheBustImage(banner, { width: 1440, quality: 'auto:good' })}
-              alt={`Banner ${index + 1}`}
+              alt=""
               loading={index === 0 ? "eager" : "lazy"}
               className="w-full h-full object-cover"
             />

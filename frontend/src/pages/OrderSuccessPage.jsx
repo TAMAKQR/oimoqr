@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import FloatingMenuWidget from '../components/FloatingMenuWidget';
+import { getBusinessType } from '../utils/businessTypes';
 
 const OrderSuccessPage = () => {
     const navigate = useNavigate();
@@ -18,6 +19,8 @@ const OrderSuccessPage = () => {
     const order = location.state?.order || fallbackPayload?.order;
     const restaurant = location.state?.restaurant || fallbackPayload?.restaurant;
     const currency = location.state?.currency || fallbackPayload?.currency;
+    const businessTypeCfg = getBusinessType(restaurant?.businessType);
+    const tableLabel = businessTypeCfg.tableLabel;
 
     const [showCheck, setShowCheck] = useState(false);
     const [showContent, setShowContent] = useState(false);
@@ -85,25 +88,25 @@ const OrderSuccessPage = () => {
 
     const statusSteps = isDineIn
         ? [
-            { icon: '✅', label: 'Заказ принят', desc: 'Ресторан получил ваш заказ', active: true },
-            { icon: '👨‍🍳', label: 'Готовится', desc: 'Повар начнёт приготовление', active: false },
-            { icon: '🍽️', label: 'Подан', desc: 'Блюда будут принесены к столу', active: false },
+            { icon: '✓', label: 'Заказ принят', desc: 'Ресторан получил ваш заказ', active: true },
+            { icon: '…', label: 'Готовится', desc: 'Повар начнёт приготовление', active: false },
+            { icon: '✓', label: 'Подан', desc: `Блюда будут принесены к ${tableLabel.toLowerCase()}`, active: false },
         ]
         : isDelivery
             ? [
-                { icon: '✅', label: 'Заказ принят', desc: 'Ресторан получил ваш заказ', active: true },
-                { icon: '👨‍🍳', label: 'Готовится', desc: 'Повар начнёт приготовление', active: false },
-                { icon: '🚗', label: 'В пути', desc: 'Курьер доставит заказ', active: false },
-                { icon: '📦', label: 'Доставлен', desc: 'Заказ у вас!', active: false },
+                { icon: '✓', label: 'Заказ принят', desc: 'Ресторан получил ваш заказ', active: true },
+                { icon: '…', label: 'Готовится', desc: 'Повар начнёт приготовление', active: false },
+                { icon: '→', label: 'В пути', desc: 'Курьер доставит заказ', active: false },
+                { icon: '✓', label: 'Доставлен', desc: 'Заказ у вас!', active: false },
             ]
             : [
-                { icon: '✅', label: 'Заказ принят', desc: 'Ресторан получил ваш заказ', active: true },
-                { icon: '👨‍🍳', label: 'Готовится', desc: 'Повар начнёт приготовление', active: false },
-                { icon: '🏃', label: 'Готов', desc: 'Можно забирать!', active: false },
+                { icon: '✓', label: 'Заказ принят', desc: 'Ресторан получил ваш заказ', active: true },
+                { icon: '…', label: 'Готовится', desc: 'Повар начнёт приготовление', active: false },
+                { icon: '✓', label: 'Готов', desc: 'Можно забирать!', active: false },
             ];
 
     const deliveryLabel = isDineIn
-        ? `🍽️ В зале${order.tableNumber ? ` · Стол ${order.tableNumber}` : ''}`
+        ? `🍽️ В номер${order.tableNumber ? ` · ${tableLabel} ${order.tableNumber}` : ''}`
         : isDelivery
             ? '🚗 Доставка'
             : '🏃 Самовывоз';
@@ -245,7 +248,7 @@ const OrderSuccessPage = () => {
                                 <>
                                     <li className="flex items-start gap-2.5 text-sm text-gray-600">
                                         <span className="text-base mt-0.5">📱</span>
-                                        <span>Ожидайте — блюда будут поданы к вашему столу</span>
+                                        <span>Ожидайте — блюда будут поданы к вашему ${tableLabel.toLowerCase()}</span>
                                     </li>
                                     <li className="flex items-start gap-2.5 text-sm text-gray-600">
                                         <span className="text-base mt-0.5">🔔</span>

@@ -26,6 +26,7 @@ model User {
   billingPayments     BillingPayment[]
   billingIssues       BillingIssue[]
   brands              RestaurantBrand[] // Опциональная функция для будущего
+  finikMerchantConnection FinikMerchantConnection?
 }
 
 // Бренд/сеть ресторанов - ОПЦИОНАЛЬНАЯ функция (для Enterprise тарифов)
@@ -503,12 +504,41 @@ model OrderFinikPayment {
   appliedAt             DateTime?
   failureCode           String?
   failureMessage        String?
+  finikConnectionId     String?
+  finikConnection       FinikMerchantConnection? @relation(fields: [finikConnectionId], references: [id], onDelete: Restrict)
+  merchantAccountId     String?
+  credentialVersion     Int?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
   @@index([orderId, status, createdAt])
   @@index([status, expiresAt])
+  @@index([finikConnectionId])
   @@unique([orderId])
+}
+
+model FinikMerchantConnection {
+  id                  String   @id @default(cuid())
+  ownerId             String   @unique
+  owner               User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  status              String   @default("DRAFT")
+  mode                String   @default("beta")
+  merchantName        String?
+  accountId           String?
+  apiKeyEncrypted     String?
+  privateKeyEncrypted String?
+  publicKeyPem        String
+  credentialVersion   Int      @default(1)
+  lastTestedAt        DateTime?
+  lastError           String?
+  disabledAt          DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  orderPayments OrderFinikPayment[]
+
+  @@unique([mode, accountId])
+  @@index([status])
 }
 
 model PricingTier {

@@ -14,6 +14,10 @@ import ImageWithLoader from '../components/ImageWithLoader';
 import AddressAutocomplete from '../components/AddressAutocomplete';
 import MapPicker from '../components/MapPicker';
 import api from '../services/api';
+import { getBusinessType } from '../utils/businessTypes';
+import EmptyState from '../components/ui/EmptyState';
+import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
 import { useTheme } from '../theme/ThemeProvider';
 import { cacheBustImage } from '../utils/imageCache';
 
@@ -179,7 +183,6 @@ const MenuPage = () => {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedLanguage, setSelectedLanguage] = useState('ru');
   const [availableLanguages, setAvailableLanguages] = useState([]);
-  const [showLanguageSwitcher, setShowLanguageSwitcher] = useState(true);
   const [showLanguagePrompt, setShowLanguagePrompt] = useState(false);
   const [languagePromptHandled, setLanguagePromptHandled] = useState(false);
   const [isCustomerLoggedIn, setIsCustomerLoggedIn] = useState(false);
@@ -199,7 +202,6 @@ const MenuPage = () => {
   const categoryMenuRef = useRef(null);
   const searchInputRef = useRef(null);
   const isUserClick = useRef(false);
-  const lastScrollY = useRef(0);
   const ticking = useRef(false);
   const prevResolvedRestaurantIdRef = useRef(null);
   const prevResolvedSubdomainRef = useRef(null);
@@ -501,10 +503,23 @@ const MenuPage = () => {
       setOrderMode('dine_in', tableFromUrl);
     } else if (dineInParam) {
       setOrderMode('dine_in', null);
-    } else if (orderMode === 'dine_in') {
+    } else if (
+      orderMode === 'dine_in'
+      && restaurant?.businessType
+      && restaurant.businessType !== 'HOTEL'
+    ) {
       setOrderMode(null, null);
     }
-  }, [tableFromUrl, dineInParam, orderMode, setOrderMode]);
+  }, [tableFromUrl, dineInParam, orderMode, restaurant?.businessType, setOrderMode]);
+
+  // Для отеля по умолчанию — заказ в номер (dine_in). Номер комнаты можно уточнить в корзине.
+  useEffect(() => {
+    if (orderMode !== null) return;
+    if (!restaurant) return;
+    if (restaurant.businessType !== 'HOTEL') return;
+    if (tableFromUrl || dineInParam) return;
+    setOrderMode('dine_in', null);
+  }, [orderMode, restaurant?.businessType, tableFromUrl, dineInParam, setOrderMode]);
 
   useEffect(() => {
     if (orderMode !== 'delivery') return;
@@ -539,6 +554,7 @@ const MenuPage = () => {
   const loadRestaurant = useCallback(async (language) => {
     try {
       setLoading(true);
+      setError('');
       const guestLat = Number(guestDeliveryLocation?.latitude);
       const guestLon = Number(guestDeliveryLocation?.longitude);
       const useGuestCoords = !customerService.isAuthenticated()
@@ -660,6 +676,8 @@ const MenuPage = () => {
   }, [restaurant?.id, restaurant?.subdomain, selectedLanguage, tableFromUrl, dineInParam, orderMode]);
 
   const displayRestaurant = restaurant;
+  const businessTypeCfg = getBusinessType(displayRestaurant?.businessType);
+  const deliveryAvailable = Boolean(displayRestaurant?.deliveryEnabled);
   const isCartForCurrentRestaurant =
     !cartRestaurantId || !displayRestaurant?.id || cartRestaurantId === displayRestaurant.id;
   const effectiveCartItemCount = isCartForCurrentRestaurant ? cartItemCount : 0;
@@ -675,7 +693,7 @@ const MenuPage = () => {
   const hasConfirmedGuestDeliveryLocation = hasGuestDeliveryLocation && Boolean(guestDeliveryLocation?.confirmed);
   const canAddToCart = orderMode === 'dine_in'
     || isPickupMode
-    || (isDeliveryMode && (isCustomerLoggedIn ? hasDeliveryAddress : hasConfirmedGuestDeliveryLocation));
+    || (isDeliveryMode && deliveryAvailable && (isCustomerLoggedIn ? hasDeliveryAddress : hasConfirmedGuestDeliveryLocation));
 
   const handleAddToCartBlocked = () => {
     if (!hasSelectedFulfillmentMode && orderMode !== 'dine_in') {
@@ -699,6 +717,10 @@ const MenuPage = () => {
     toast.error('Сначала добавьте адрес доставки в профиле');
     navigate('/customer/profile');
   };
+
+  const handleModalStateChange = useCallback((isOpen) => {
+    setIsDishModalOpen(isOpen);
+  }, []);
 
   const currencySymbol = getCurrencySymbol(displayRestaurant?.currency);
   const minOrderAmount = displayRestaurant?.minOrderAmount || 0;
@@ -821,39 +843,6 @@ const MenuPage = () => {
     return () => observer.disconnect();
   }, [restaurant]);
 
-  // Скрытие переключателя языка при скролле вниз (с оптимизацией)
-  useEffect(() => {
-    let rafId = null;
-
-    const handleScroll = () => {
-      if (rafId) return; // Пропускаем если уже запланирован update
-
-      rafId = requestAnimationFrame(() => {
-        const currentScrollY = window.scrollY;
-        let newValue;
-
-        if (currentScrollY < 50) {
-          newValue = true;
-        } else if (currentScrollY > lastScrollY.current) {
-          newValue = false;
-        } else {
-          newValue = true;
-        }
-
-        // Обновляем state только если значение действительно изменилось
-        setShowLanguageSwitcher(prev => prev === newValue ? prev : newValue);
-        lastScrollY.current = currentScrollY;
-        rafId = null;
-      });
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      if (rafId) cancelAnimationFrame(rafId);
-    };
-  }, []);
-
   // Обработка клика на категорию
   const handleCategoryClick = (categoryId) => {
     isUserClick.current = true;
@@ -900,19 +889,27 @@ const MenuPage = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="card max-w-md text-center">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Ошибка</h2>
-          <p className="text-gray-600">{error}</p>
+      <div className="flex min-h-screen items-center justify-center bg-[#F6F7F9] px-4">
+        <div className="w-full max-w-md rounded-3xl border border-gray-200 bg-white p-7 text-center shadow-surface">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-error-50 text-error-600">
+            <svg className="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.3 3.7 2.6 17a2 2 0 0 0 1.73 3h15.34a2 2 0 0 0 1.73-3L13.7 3.7a2 2 0 0 0-3.4 0Z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-gray-950">Не удалось открыть меню</h2>
+          <p className="mt-2 text-sm leading-6 text-gray-500">{error}</p>
+          <Button type="button" onClick={() => loadRestaurant(selectedLanguage)} variant="primary" size="lg" className="mt-6 w-full">
+            Повторить
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex justify-center">
+    <div className="flex min-h-screen justify-center bg-[#EEF0F3]">
       {/* Responsive container: mobile-first with desktop expansion */}
-      <div className="w-full max-w-[480px] lg:max-w-[1100px] min-h-screen bg-gray-50 shadow-2xl lg:shadow-xl relative">
+      <div className="relative min-h-screen w-full max-w-[480px] bg-[#FAFAF9] shadow-2xl lg:max-w-[1180px] lg:shadow-xl">
         {showLanguagePrompt && availableLanguages.length > 1 && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4">
             <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl border border-gray-100 p-5">
@@ -924,7 +921,7 @@ const MenuPage = () => {
                 <button
                   type="button"
                   onClick={closeLanguagePrompt}
-                  className="w-9 h-9 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 flex items-center justify-center"
+                  className="flex h-11 w-11 items-center justify-center rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50"
                   aria-label="Закрыть"
                 >
                   <span className="text-xl leading-none">&times;</span>
@@ -937,18 +934,16 @@ const MenuPage = () => {
                   const isActive = languageCode === selectedLanguage;
 
                   return (
-                    <button
+                    <Button
                       key={languageCode}
                       type="button"
+                      variant={isActive ? 'primary' : 'secondary'}
+                      size="sm"
                       onClick={() => handlePromptLanguageSelect(languageCode)}
-                      className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left transition-colors ${isActive
-                        ? 'border-primary-500 bg-primary-50 text-primary-700'
-                        : 'border-gray-200 bg-white text-gray-800 hover:bg-gray-50'
-                        }`}
                     >
                       <span className="font-semibold">{LANGUAGE_LABELS[languageCode] || languageCode.toUpperCase()}</span>
                       <span className="text-xs font-bold uppercase text-gray-400">{languageCode}</span>
-                    </button>
+                    </Button>
                   );
                 })}
               </div>
@@ -958,12 +953,12 @@ const MenuPage = () => {
 
         {/* Language Switcher - Top Left */}
         {availableLanguages.length > 0 && (
-          <div className={`fixed top-4 left-4 z-40 bg-white rounded-lg shadow-md border border-gray-200 transition-all duration-300 ${showLanguageSwitcher ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'
-            }`}>
+          <div className="fixed left-3 top-3 z-40 rounded-xl border border-gray-200 bg-white/95 shadow-md backdrop-blur">
             <select
               value={selectedLanguage}
               onChange={(e) => setSelectedLanguage(e.target.value)}
-              className="px-3 py-2 rounded border-0 bg-white text-gray-700 font-medium cursor-pointer text-sm focus:outline-none uppercase"
+              aria-label="Язык меню"
+              className="min-h-11 cursor-pointer rounded-xl border-0 bg-transparent px-3 py-2 text-sm font-semibold uppercase text-gray-700 focus:outline-none"
             >
               {availableLanguages.map(lang => (
                 <option key={lang.languageCode} value={lang.languageCode}>
@@ -975,38 +970,43 @@ const MenuPage = () => {
         )}
 
         {/* Customer Profile Button - Top Right */}
-        <div className={`fixed top-4 right-4 z-40 transition-all duration-300 ${showLanguageSwitcher ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'}`}>
-          <div className="flex flex-col items-end gap-2">
+        <div className="fixed right-3 top-3 z-40">
+          <div className="flex items-center gap-2">
             {isCustomerLoggedIn ? (
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => navigate('/customer/profile')}
-                className="bg-white rounded-full p-3 shadow-md border border-gray-200 hover:bg-gray-50 transition-colors"
                 title="Личный кабинет"
+                aria-label="Личный кабинет"
               >
                 <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
-              </button>
+              </Button>
             ) : (
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setShowLoginModal(true)}
-                className="bg-white rounded-full p-3 shadow-md border border-gray-200 hover:bg-gray-50 transition-colors"
                 title="Войти"
+                aria-label="Войти"
               >
                 <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
-              </button>
+              </Button>
             )}
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setIsSearchOpen(true)}
-              className="bg-white rounded-full p-3 shadow-md border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
               aria-label="Открыть поиск"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
               </svg>
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -1025,34 +1025,32 @@ const MenuPage = () => {
         <BannerSlider banners={displayRestaurant.banners} />
 
         {orderMode !== 'dine_in' && (
-          <div className="px-4 pt-3">
-            <div className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
-              <div className="mb-2 text-sm font-semibold text-gray-900">Способ получения</div>
-              <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-gray-100 p-1.5">
-                <button
+          <div className="px-4 pt-4">
+            <div className="rounded-2xl border border-neutral-200 bg-white p-1.5 shadow-sm">
+              <div className="mb-3 text-sm font-semibold text-neutral-700">Способ получения</div>
+              <div className={`grid grid-cols-2 gap-1 ${deliveryAvailable ? '' : 'flex flex-col gap-1'}`}>
+                {deliveryAvailable && (
+                  <Button
+                    type="button"
+                    variant={isDeliveryMode ? 'primary' : 'secondary'}
+                    size="sm"
+                    onClick={() => setOrderMode('delivery', null)}
+                  >
+                    Доставка
+                  </Button>
+                )}
+                <Button
                   type="button"
-                  onClick={() => setOrderMode('delivery', null)}
-                  className={`rounded-lg px-3 py-2.5 text-sm font-semibold transition-all ${isDeliveryMode
-                      ? 'bg-white text-gray-900 border border-primary-500 shadow-sm'
-                      : 'border border-transparent text-gray-600 hover:text-gray-900'
-                    }`}
-                >
-                  🚗 Доставка
-                </button>
-                <button
-                  type="button"
+                  variant={isPickupMode ? 'primary' : 'secondary'}
+                  size="sm"
                   onClick={() => setOrderMode('pickup', null)}
-                  className={`rounded-lg px-3 py-2.5 text-sm font-semibold transition-all ${isPickupMode
-                      ? 'bg-white text-gray-900 border border-primary-500 shadow-sm'
-                      : 'border border-transparent text-gray-600 hover:text-gray-900'
-                    }`}
                 >
-                  🏃 Самовывоз
-                </button>
+                   Самовывоз
+                </Button>
               </div>
               {isPickupMode && (
-                <p className="mt-2 text-xs text-emerald-700">
-                  Адрес доставки не нужен — заказ нужно забрать самостоятельно.
+                <p className="mt-3 text-xs text-neutral-500">
+                  Адрес доставки не нужен — заберёте самостоятельно.
                 </p>
               )}
             </div>
@@ -1063,19 +1061,23 @@ const MenuPage = () => {
           <div className="px-4 pt-3">
             {!hasGuestDeliveryLocation && (
               <div className="space-y-2">
-                <button
+                <Button
                   onClick={requestGuestLocation}
                   disabled={isAutoLocating}
-                  className="w-full rounded-xl py-2.5 bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  variant="primary"
+                  size="sm"
+                  className="w-full"
                 >
                   {isAutoLocating ? 'Определяем адрес...' : 'Определить адрес автоматически'}
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => setShowGuestMapModal(true)}
-                  className="w-full rounded-xl py-2.5 border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:bg-gray-50 transition-colors"
+                  variant="secondary"
+                  size="sm"
+                  className="w-full"
                 >
                   Указать вручную
-                </button>
+                </Button>
               </div>
             )}
 
@@ -1125,30 +1127,41 @@ const MenuPage = () => {
         )}
 
         {/* Restaurant Info */}
-        <div className="bg-white shadow-sm">
-          <div className="px-4 py-4">
-            <div className="flex items-start gap-4 mb-4">
-              {displayRestaurant.logo && (
+        <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 p-5 mb-6">
+          <div className="flex items-start gap-4 mb-4">
+            {displayRestaurant.logo && (
+              <div className="relative w-20 h-20 flex-shrink-0">
                 <img
-                  src={displayRestaurant.logo}
+                  src={cacheBustImage(displayRestaurant.logo)}
                   alt={`${displayRestaurant.name} logo`}
-                  className="w-16 h-16 object-contain rounded border-2 border-primary-200 bg-white p-1 flex-shrink-0"
+                  className="w-full h-full object-contain rounded-xl bg-neutral-50 p-1 flex-shrink-0 border border-neutral-200"
                 />
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-2 flex-wrap">
-                  <h1 className="text-2xl font-bold break-words">{displayRestaurant.name}</h1>
-                  <WorkingHoursSection restaurant={displayRestaurant} />
-                </div>
-                {displayRestaurant.address && (
-                  <p className="text-sm text-gray-600 mb-2 break-words">📍 {displayRestaurant.address}</p>
-                )}
-                {displayRestaurant.phone && (
-                  <p className="text-sm text-gray-600 mb-2">📞 {displayRestaurant.phone}</p>
-                )}
-
               </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <h1 className="text-xl sm:text-2xl font-bold text-neutral-900 break-words">{displayRestaurant.name}</h1>
+                <WorkingHoursSection restaurant={displayRestaurant} />
+              </div>
+              {displayRestaurant.address && (
+                <p className="mb-1 flex items-start gap-2 text-sm text-neutral-500">
+                  <svg aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 21s6-5.1 6-11a6 6 0 10-12 0c0 5.9 6 11 6 11z" />
+                    <circle cx="12" cy="10" r="2" />
+                  </svg>
+                  <span className="break-words">{displayRestaurant.address}</span>
+                </p>
+              )}
+              {displayRestaurant.phone && (
+                <p className="mb-2 flex items-center gap-2 text-sm text-neutral-500">
+                  <svg aria-hidden="true" className="h-4 w-4 shrink-0 text-neutral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.4 3.5H5.8A2.3 2.3 0 003.5 5.8C3.5 13.9 10.1 20.5 18.2 20.5a2.3 2.3 0 002.3-2.3v-2.6l-4.2-1.1-1.2 2.2a13.8 13.8 0 01-7.8-7.8l2.2-1.2-1.1-4.2z" />
+                  </svg>
+                  <span className="break-words">{displayRestaurant.phone}</span>
+                </p>
+              )}
             </div>
+          </div>
             {/* Social Links */}
             {(displayRestaurant.instagram || displayRestaurant.facebook || displayRestaurant.whatsapp) && (
               <div className="flex flex-wrap gap-2 mt-3">
@@ -1157,7 +1170,7 @@ const MenuPage = () => {
                     href={`https://www.instagram.com/${displayRestaurant.instagram.replace('@', '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center rounded-full border border-primary-200 bg-white w-10 h-10 shadow-sm text-primary-700 hover:-translate-y-0.5 hover:shadow hover:border-primary-400 transition-transform"
+                    className="flex h-11 w-11 items-center justify-center rounded-full border border-primary-200 bg-white text-primary-700 shadow-sm transition-transform hover:-translate-y-0.5 hover:border-primary-400 hover:shadow"
                   >
                     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <rect x="3" y="3" width="18" height="18" rx="5" ry="5" />
@@ -1171,7 +1184,7 @@ const MenuPage = () => {
                     href={`https://www.facebook.com/${displayRestaurant.facebook}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center rounded-full border border-primary-200 bg-white w-10 h-10 shadow-sm text-primary-700 hover:-translate-y-0.5 hover:shadow hover:border-primary-400 transition-transform"
+                    className="flex h-11 w-11 items-center justify-center rounded-full border border-primary-200 bg-white text-primary-700 shadow-sm transition-transform hover:-translate-y-0.5 hover:border-primary-400 hover:shadow"
                   >
                     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M13 10h2.5l.5-3H13V5.5c0-.9.3-1.5 1.6-1.5H16V1.2C15.3 1.1 14.1 1 13 1c-2.7 0-4 1.6-4 4.3V7H7v3h2v9h4z" />
@@ -1183,7 +1196,7 @@ const MenuPage = () => {
                     href={`https://wa.me/${displayRestaurant.whatsapp.replace(/\D/g, '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center rounded-full border border-primary-200 bg-white w-10 h-10 shadow-sm text-primary-700 hover:-translate-y-0.5 hover:shadow hover:border-primary-400 transition-transform"
+                    className="flex h-11 w-11 items-center justify-center rounded-full border border-primary-200 bg-white text-primary-700 shadow-sm transition-transform hover:-translate-y-0.5 hover:border-primary-400 hover:shadow"
                   >
                     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
@@ -1193,12 +1206,11 @@ const MenuPage = () => {
               </div>
             )}
           </div>
-        </div>
 
-        {/* Category Groups - Stories стиль с градиентом */}
+        {/* Category Groups — Stories стиль */}
         {displayRestaurant.categoryGroups && displayRestaurant.categoryGroups.length > 0 && (
-          <div className="px-4 py-5 bg-gradient-to-b from-gray-50 to-white">
-            <div className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-2">
+          <div className="px-4 py-5 bg-neutral-50">
+            <div className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-3">
               {displayRestaurant.categoryGroups.map((group) => {
                 const dishCount = group.categories?.reduce((sum, cat) =>
                   sum + ((cat.dishes || []).filter((dish) => !dish.stoppedAtRestaurant).length || 0), 0
@@ -1208,7 +1220,6 @@ const MenuPage = () => {
                   <button
                     key={group.id}
                     onClick={() => {
-                      // Прокрутка к первой категории в группе
                       if (group.categories && group.categories.length > 0) {
                         handleCategoryClick(group.categories[0].id);
                       }
@@ -1217,8 +1228,7 @@ const MenuPage = () => {
                   >
                     {group.image ? (
                       <div className="relative mb-2">
-                        {/* Градиентное кольцо */}
-                        <div className="w-[72px] h-[72px] rounded-full bg-gradient-to-tr from-primary-500 via-primary-400 to-primary-300 p-[2.5px] group-active:scale-95 transition-transform">
+                        <div className="w-[72px] h-[72px] rounded-full bg-gradient-to-tr from-primary-400 via-primary-500 to-primary-600 p-[2.5px] group-focus:scale-95 transition-transform">
                           <div className="w-full h-full rounded-full bg-white p-[2px]">
                             <div className="w-full h-full rounded-full overflow-hidden">
                               <ImageWithLoader
@@ -1231,7 +1241,6 @@ const MenuPage = () => {
                           </div>
                         </div>
 
-                        {/* Бейдж с количеством блюд */}
                         {dishCount > 0 && (
                           <div className="absolute -bottom-1 -right-1 bg-primary-600 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-lg border-2 border-white">
                             {dishCount}
@@ -1239,13 +1248,15 @@ const MenuPage = () => {
                         )}
                       </div>
                     ) : (
-                      <div className="w-[72px] h-[72px] rounded-full bg-gradient-to-tr from-gray-200 to-gray-300 flex items-center justify-center mb-2 group-active:scale-95 transition-transform">
-                        <span className="text-2xl">📂</span>
+                      <div className="w-[72px] h-[72px] rounded-full bg-neutral-200 flex items-center justify-center mb-2 group-focus:scale-95 transition-transform text-neutral-400">
+                        <svg aria-hidden="true" className="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3.5 7.5h6l1.8 2H20.5v8a2 2 0 01-2 2h-13a2 2 0 01-2-2v-10z" />
+                        </svg>
                       </div>
                     )}
 
                     <div className="text-center w-full">
-                      <h3 className="font-medium text-[11px] leading-tight text-gray-800 line-clamp-2 px-1">
+                      <h3 className="font-semibold text-[11px] leading-tight text-neutral-800 line-clamp-2 px-1">
                         {group.name}
                       </h3>
                     </div>
@@ -1264,18 +1275,21 @@ const MenuPage = () => {
               className="flex gap-2 overflow-x-auto py-3 pl-[4px] scrollbar-hide scroll-smooth"
             >
               {visibleCategories.map((category) => (
-                <button
+                <Button
                   key={category.id}
                   ref={(el) => (categoryButtonRefs.current[category.id] = el)}
+                  variant={selectedCategory === category.id ? 'primary' : 'secondary'}
+                  size="sm"
                   onClick={() => handleCategoryClick(category.id)}
-                  className={`px-4 py-2 rounded-full whitespace-nowrap transition-all duration-300 text-sm font-medium ${selectedCategory === category.id
-                    ? 'bg-primary-600 text-white shadow-lg scale-105 ring-2 ring-primary-300'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
                 >
                   {category.name}
-                </button>
+                </Button>
               ))}
+              {visibleCategories.length === 0 && (
+                <div className="px-4 py-2 rounded-full bg-neutral-100 text-neutral-400 text-xs font-medium animate-pulse">
+                  Нет категорий
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1283,79 +1297,94 @@ const MenuPage = () => {
         {/* All Categories with Dishes */}
         <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)_300px] lg:gap-6 lg:px-6 lg:py-6">
           <aside className="hidden lg:block">
-            <div className="sticky top-24 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3 px-2">Категории</p>
+            <div className="sticky top-24 rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-4 px-2">Категории</p>
               <div className="space-y-1">
                 {visibleCategories.map((category) => (
-                  <button
+                  <Button
                     key={`desktop-nav-${category.id}`}
+                    variant={selectedCategory === category.id ? 'primary' : 'ghost'}
+                    size="sm"
                     onClick={() => handleCategoryClick(category.id)}
-                    className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${selectedCategory === category.id
-                      ? 'bg-primary-100 text-primary-700 font-semibold'
-                      : 'text-gray-700 hover:bg-gray-100'
-                      }`}
+                    className="w-full text-left"
                   >
                     {category.name}
-                  </button>
+                  </Button>
                 ))}
+                {visibleCategories.length === 0 && (
+                  <div className="px-3 py-2 rounded-lg bg-neutral-50 text-neutral-400 text-xs font-medium animate-pulse">
+                    Нет категорий
+                  </div>
+                )}
               </div>
             </div>
           </aside>
 
           <div className={`${displayRestaurant.menuCardStyle === 'gallery' ? 'px-2 sm:px-3 lg:px-0' : 'px-4 lg:px-0'} py-6 pb-20 sm:pb-6 lg:py-0`}>
-            {!isSearching && visibleCategories.map((category) => (
-              <div
-                key={category.id}
-                ref={(el) => (categoryRefs.current[category.id] = el)}
-                data-category-id={category.id}
-                className="mb-12"
-              >
-                <h2 className="text-xl font-bold mb-4 break-words">{category.name}</h2>
-                {category.description && (
-                  <p className="text-sm text-gray-600 mb-4 break-words">{category.description}</p>
-                )}
+            {!isSearching && visibleCategories.length === 0 ? (
+              <EmptyState
+                 icon=""
+                title="Меню пока пусто"
+                description="В этом заведении ещё нет доступных блюд. Зайдите позже или свяжитесь с администратором."
+              />
+            ) : (
+              <>
+                {!isSearching && visibleCategories.map((category) => (
+                  <div
+                    key={category.id}
+                    ref={(el) => (categoryRefs.current[category.id] = el)}
+                    data-category-id={category.id}
+                    className="mb-12"
+                  >
+                    <h2 className="text-xl font-bold mb-4 break-words">{category.name}</h2>
+                    {category.description && (
+                      <p className="text-sm text-neutral-500 mb-4 break-words">{category.description}</p>
+                    )}
 
-                {category.dishes.length === 0 ? (
-                  <p className="text-center text-gray-500 py-8 text-sm">
-                    В этой категории пока нет блюд
-                  </p>
-                ) : (
-                  <div className={`${displayRestaurant.menuCardStyle === 'gallery' ? 'grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 items-stretch' : 'gap-4'} ${displayRestaurant.menuCardStyle === 'vertical'
-                    ? 'grid grid-cols-1'
-                    : displayRestaurant.menuCardStyle === 'grid'
-                      ? 'grid grid-cols-2 lg:grid-cols-3'
-                      : displayRestaurant.menuCardStyle === 'gallery'
-                        ? 'grid grid-cols-2 lg:grid-cols-3'
-                        : 'flex flex-col'
-                    }`}>
-                    {category.dishes.map((dish) => {
-                      const displayDish = getDisplayDishForOrderMode(dish);
-                      return (
-                        <DishCard
-                          key={dish.id}
-                          dish={displayDish}
-                          currency={currencySymbol}
-                          style={displayRestaurant.menuCardStyle || 'horizontal'}
-                          restaurantId={displayRestaurant.id}
-                          restaurantName={displayRestaurant.name}
-                          canAddToCart={canAddToCart}
-                          onAddToCartBlocked={handleAddToCartBlocked}
-                          onFavoriteToggle={(action) => {
-                            if (action === 'login') {
-                              setShowLoginModal(true);
-                            }
-                          }}
-                          onModalStateChange={(isOpen) => setIsDishModalOpen(isOpen)}
-                        />
-                      );
-                    })}
+                    {category.dishes.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-300 text-xl mb-3">
+                          🍽️
+                        </div>
+                        <p className="text-sm text-neutral-500 font-medium">
+                          В этой категории пока нет блюд
+                        </p>
+                      </div>
+                    ) : (
+                      <div className={`${displayRestaurant.menuCardStyle === 'gallery' ? 'grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 items-stretch' : 'gap-4'} ${displayRestaurant.menuCardStyle === 'vertical'
+                        ? 'grid grid-cols-1'
+                        : displayRestaurant.menuCardStyle === 'grid'
+                          ? 'grid grid-cols-2 lg:grid-cols-3'
+                          : displayRestaurant.menuCardStyle === 'gallery'
+                            ? 'grid grid-cols-2 lg:grid-cols-3'
+                            : 'flex flex-col'
+                      }`}>
+                        {category.dishes.map((dish) => (
+                          <DishCard
+                            key={dish.id}
+                            dish={getDisplayDishForOrderMode(dish)}
+                            currency={currencySymbol}
+                            style={displayRestaurant.menuCardStyle || 'horizontal'}
+                            restaurantId={displayRestaurant.id}
+                            restaurantName={displayRestaurant.name}
+                            canAddToCart={canAddToCart}
+                            onAddToCartBlocked={handleAddToCartBlocked}
+                            onFavoriteToggle={(action) => {
+                              if (action === 'login') {
+                                setShowLoginModal(true);
+                              }
+                            }}
+                            onModalStateChange={handleModalStateChange}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            ))}
-
-            {isSearching && (
-              <div className="space-y-10">
+                ))}
+              </>
+            )}
+              {isSearching && (
+                <div className="space-y-10">
                 {categoriesToRender.length === 0 && (
                   <div className="text-center text-gray-500 py-10">
                     Ничего не найдено
@@ -1373,12 +1402,10 @@ const MenuPage = () => {
                           ? 'grid grid-cols-2 lg:grid-cols-3'
                           : 'flex flex-col'
                       }`}>
-                      {category.dishes.map((dish) => {
-                        const displayDish = getDisplayDishForOrderMode(dish);
-                        return (
-                          <DishCard
+                      {category.dishes.map((dish) => (
+                        <DishCard
                             key={dish.id}
-                            dish={displayDish}
+                            dish={getDisplayDishForOrderMode(dish)}
                             currency={currencySymbol}
                             style={displayRestaurant.menuCardStyle || 'horizontal'}
                             restaurantId={displayRestaurant.id}
@@ -1390,10 +1417,10 @@ const MenuPage = () => {
                                 setShowLoginModal(true);
                               }
                             }}
-                            onModalStateChange={(isOpen) => setIsDishModalOpen(isOpen)}
+                          onModalStateChange={handleModalStateChange}
                           />
-                        );
-                      })}
+                        ))
+                      }
                     </div>
                   </div>
                 ))}
@@ -1587,12 +1614,10 @@ const MenuPage = () => {
                         ? 'grid grid-cols-2 lg:grid-cols-3'
                         : 'flex flex-col'
                     }`}>
-                    {searchResults.map((dish) => {
-                      const displayDish = getDisplayDishForOrderMode(dish);
-                      return (
+                    {searchResults.map((dish) => (
                         <DishCard
                           key={dish.id}
-                          dish={displayDish}
+                          dish={getDisplayDishForOrderMode(dish)}
                           currency={currencySymbol}
                           style={displayRestaurant.menuCardStyle || 'horizontal'}
                           restaurantId={displayRestaurant.id}
@@ -1604,10 +1629,10 @@ const MenuPage = () => {
                               setShowLoginModal(true);
                             }
                           }}
-                          onModalStateChange={(isOpen) => setIsDishModalOpen(isOpen)}
+                          onModalStateChange={handleModalStateChange}
                         />
-                      );
-                    })}
+                      ))
+                    }
                   </div>
                 )}
               </div>
@@ -1615,7 +1640,6 @@ const MenuPage = () => {
           </div>
         )}
       </div>
-      {/* Закрытие mobile wrapper */}
     </div>
   );
 };

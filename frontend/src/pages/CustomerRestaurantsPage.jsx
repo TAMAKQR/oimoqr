@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import customerService from '../services/customerService';
 import CustomerBottomNav from '../components/CustomerBottomNav';
 import toast from 'react-hot-toast';
+import { cacheBustImage } from '../utils/imageCache';
 
 export default function CustomerRestaurantsPage() {
     const navigate = useNavigate();
@@ -79,7 +80,7 @@ export default function CustomerRestaurantsPage() {
                                         {/* Restaurant Image/Logo */}
                                         {restaurant.logo ? (
                                             <img
-                                                src={restaurant.logo}
+                                                src={cacheBustImage(restaurant.logo)}
                                                 alt={restaurant.name}
                                                 className="w-16 h-16 rounded-lg object-contain bg-white border border-gray-200 p-1.5 flex-shrink-0"
                                             />

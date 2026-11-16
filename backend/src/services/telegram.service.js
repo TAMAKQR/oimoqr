@@ -1,4 +1,5 @@
 import TelegramBot from 'node-telegram-bot-api';
+import { getBusinessType } from '../utils/businessTypes.js';
 
 const ORDER_TIMEZONE = process.env.ORDER_TIMEZONE || 'Asia/Bishkek';
 
@@ -153,8 +154,10 @@ class TelegramService {
                 return line;
             }).join('\n');
 
+            const businessTypeCfg = getBusinessType(restaurant?.businessType);
+            const dineInLabel = businessTypeCfg.key === 'HOTEL' ? 'В номер' : 'В заведении';
             const deliveryType = order.deliveryType === 'dine_in'
-                ? (order.tableNumber ? `🍽️ В зале (Стол ${order.tableNumber})` : '🍽️ В зале')
+                ? (order.tableNumber ? `🍽️ ${dineInLabel} (${businessTypeCfg.tableLabel} ${order.tableNumber})` : `🍽️ ${dineInLabel}`)
                 : order.deliveryType === 'delivery'
                     ? '🚗 Доставка'
                     : '🏃 Самовывоз';

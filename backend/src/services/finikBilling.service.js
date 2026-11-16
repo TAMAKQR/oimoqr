@@ -5,6 +5,7 @@ import {
   getFinikPublicKey,
   getFinikWebhookHost,
   isFinikConfigured,
+  isFinikWebhookConfigured,
 } from '../config/finik.js';
 import { prisma } from '../config/prisma.js';
 import {
@@ -1117,7 +1118,7 @@ export const processFinikWebhook = async (payload, metadata = {}) => {
 };
 
 export const verifyFinikWebhook = ({ body, headers, method, path, query }) => {
-  if (!isFinikConfigured()) return { valid: false, reason: 'FINIK_NOT_CONFIGURED' };
+  if (!isFinikWebhookConfigured()) return { valid: false, reason: 'FINIK_WEBHOOK_NOT_CONFIGURED' };
   const signature = headers.signature;
   const timestampValue = headers['x-api-timestamp'];
   if (typeof signature !== 'string' || typeof timestampValue !== 'string') {

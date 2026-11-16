@@ -35,6 +35,9 @@ export const config = {
     settlementGraceMinutes: Number.parseInt(process.env.FINIK_SETTLEMENT_GRACE_MINUTES || '1440', 10),
     webhookToleranceSeconds: Number.parseInt(process.env.FINIK_WEBHOOK_TOLERANCE_SECONDS || '300', 10),
     requestTimeoutMs: Number.parseInt(process.env.FINIK_REQUEST_TIMEOUT_MS || '10000', 10),
+    // Separate envelope key for restaurant-owned Finik credentials. Optional
+    // until a restaurant starts the self-service connection flow.
+    credentialsEncryptionKey: process.env.FINIK_CREDENTIALS_ENCRYPTION_KEY,
   },
 
   // Cloudinary (опционально)

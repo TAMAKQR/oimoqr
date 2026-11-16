@@ -46,12 +46,12 @@ const isFinikCountry = (value) => (
 );
 
 const SETTINGS_SECTIONS = [
-  { id: 'general', label: 'Основное', description: 'Название, адрес и контакты' },
-  { id: 'appearance', label: 'Оформление', description: 'Вид меню, логотип и тема' },
-  { id: 'orders', label: 'Заказы и оплата', description: 'Finik, бонусы и уведомления' },
-  { id: 'delivery', label: 'Доставка', description: 'Зоны, стоимость и график доставки' },
-  { id: 'hours', label: 'Режим работы', description: 'Рабочее время и закрытие' },
-  { id: 'qr', label: 'QR-коды', description: 'Коды для меню и столов' },
+  { id: 'general', label: 'Основное' },
+  { id: 'appearance', label: 'Оформление' },
+  { id: 'orders', label: 'Заказы и оплата' },
+  { id: 'delivery', label: 'Доставка' },
+  { id: 'hours', label: 'Режим работы' },
+  { id: 'qr', label: 'QR-коды' },
 ];
 
 const RestaurantSettingsPage = () => {
@@ -576,20 +576,10 @@ const RestaurantSettingsPage = () => {
 
   return (
     <DashboardLayout userData={userData} selectedRestaurantId={selectedRestaurantId}>
-      <div className="restaurant-settings-page mx-auto max-w-7xl pb-24">
-        <div className="settings-page-header mb-6 sm:mb-8">
-          <span className="settings-eyebrow">УПРАВЛЕНИЕ ЗАВЕДЕНИЕМ</span>
-          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-gray-950 sm:text-4xl">Настройки {entityLabelGenitive}</h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600 sm:text-base">Настройте профиль, оформление меню и работу с заказами — всё в одном месте.</p>
-            </div>
-            {selectedRestaurant && (
-              <span className="settings-status-badge">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                {isInheritedSettingsRestaurant ? 'Филиал' : 'Основное заведение'}
-              </span>
-            )}
+      <div className="restaurant-settings-page mx-auto max-w-7xl pb-8">
+        <div className="settings-page-header mb-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h1 className="text-2xl font-semibold tracking-tight text-gray-950 sm:text-3xl">Настройки {entityLabelGenitive}</h1>
           </div>
         </div>
 
@@ -597,15 +587,7 @@ const RestaurantSettingsPage = () => {
         {userData && (
           <div className="settings-restaurant-picker mb-5">
             <div className="flex items-center gap-3">
-              <span className="settings-picker-icon" aria-hidden="true">
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4M9 9v.01M9 12v.01M9 15v.01M9 18v.01" />
-                </svg>
-              </span>
-              <label className="flex-1 text-sm font-semibold text-gray-900">
-                Выберите {selectedRestaurant ? entityLabelLower : 'заведение'}
-                <span className="mt-0.5 block text-xs font-normal text-gray-500">Настройки будут применены к выбранному заведению</span>
-              </label>
+              <span className="shrink-0 text-sm font-medium text-gray-600">Заведение</span>
               <div className="w-full max-w-sm">
                 <RestaurantSelector
                   userData={userData}
@@ -621,12 +603,10 @@ const RestaurantSettingsPage = () => {
           </div>
         )}
 
-        {selectedRestaurantId && (
-          <div className={`settings-context-note mb-5 ${isInheritedSettingsRestaurant ? 'settings-context-note-inherited' : 'settings-context-note-owner'}`}>
-            <span className="settings-context-icon" aria-hidden="true">{isInheritedSettingsRestaurant ? 'i' : '✓'}</span>
-            {isInheritedSettingsRestaurant
-              ? `Часть настроек (описание, страна/город, валюта, логотип, баннеры, тема и стиль карточек) наследуется от главного ${entityLabelLower} и недоступна для изменения в филиале.`
-              : `Вы редактируете главный ${entityLabelLower}. Все настройки доступны.`}
+        {selectedRestaurantId && isInheritedSettingsRestaurant && (
+          <div className="settings-context-note settings-context-note-inherited mb-4">
+            <span className="settings-context-icon" aria-hidden="true">i</span>
+            Часть настроек наследуется от главного {entityLabelLower}.
           </div>
         )}
 
@@ -634,9 +614,9 @@ const RestaurantSettingsPage = () => {
           <nav
             aria-label="Разделы настроек ресторана"
             role="tablist"
-            className="settings-section-nav mb-6 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6"
+            className="settings-section-nav mb-4"
           >
-            {SETTINGS_SECTIONS.map((section, index) => (
+            {SETTINGS_SECTIONS.map((section) => (
               <button
                 key={section.id}
                 type="button"
@@ -647,11 +627,7 @@ const RestaurantSettingsPage = () => {
                 onClick={() => setActiveSettingsSection(section.id)}
                 className="settings-section-card"
               >
-                <span className="settings-section-index">{String(index + 1).padStart(2, '0')}</span>
-                <span className="mt-3 block text-sm font-semibold leading-5">{section.label}</span>
-                <span className="mt-1 hidden text-xs leading-4 text-gray-500 sm:block">
-                  {section.description}
-                </span>
+                {section.label}
               </button>
             ))}
           </nav>
@@ -664,11 +640,11 @@ const RestaurantSettingsPage = () => {
             aria-labelledby={`settings-tab-${activeSettingsSection}`}
             tabIndex={0}
             onSubmit={handleSubmit}
-            className="restaurant-settings-form space-y-5"
+            className="restaurant-settings-form space-y-4"
           >
             {settingsLoading && (
               <div className="rounded-xl border border-primary-100 bg-primary-50 px-4 py-3 text-sm text-primary-800" role="status">
-                Загружаем актуальные настройки заведения…
+                Загрузка настроек…
               </div>
             )}
             {/* Basic Info */}
@@ -776,272 +752,234 @@ const RestaurantSettingsPage = () => {
             </div>
             )}
 
-            {/* Logo */}
-            {activeSettingsSection === 'appearance' && (<>
-            <div className="bg-white rounded-xl border border-gray-100 p-5">
-              <h2 className="text-xl font-bold mb-4">Логотип {entityLabelLower}</h2>
-
-              {logoLoading ? (
-                <div className="flex items-center justify-center rounded-lg border border-gray-200 bg-gray-50 py-10 text-sm text-gray-500">
-                  Загружаем текущий логотип...
-                </div>
-              ) : logoUrl ? (
-                /* Compact view when logo exists */
-                <div>
-                  <div className="flex items-center gap-4">
-                    <div className="relative group flex-shrink-0">
-                      <img
-                        src={cacheBustImage(logoUrl)}
-                        alt="Логотип"
-                        className="w-20 h-20 object-contain rounded-lg border border-gray-200 bg-white p-1.5"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        ref={(el) => { if (el) el._logoInput = true; }}
-                        className="hidden"
-                        id="logo-replace-input"
-                        onChange={async (e) => {
-                          const file = e.target.files[0];
-                          if (!file) return;
-                          const validation = validateImage(file, { maxSizeMB: 10 });
-                          if (!validation.valid) { toast.error(validation.error); return; }
-                          if (shouldCompress(file, 0.5)) {
-                            try {
-                              const compressed = await compressImage(file, { maxWidth: 800, maxHeight: 800, quality: 0.9, maxSizeMB: 0.5 });
-                              toast.success(`Сжато: ${formatFileSize(file.size)} → ${formatFileSize(compressed.size)}`);
-                              handleLogoFileSelect(compressed);
-                            } catch { handleLogoFileSelect(file); }
-                          } else { handleLogoFileSelect(file); }
-                          e.target.value = '';
-                        }}
-                      />
-                      {!uploadingLogo ? (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => document.getElementById('logo-replace-input').click()}
-                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-                            disabled={isInheritedSettingsRestaurant}
-                          >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
-                            </svg>
-                            Заменить
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleDeleteLogo}
-                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
-                            disabled={isInheritedSettingsRestaurant}
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                            Удалить
-                          </button>
-                        </>
-                      ) : (
-                        <div className="flex items-center gap-3">
-                          <div className="w-32 bg-blue-200 rounded-full h-2">
-                            <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${logoUploadProgress}%` }}></div>
-                          </div>
-                          <span className="text-sm text-blue-600 font-bold">{logoUploadProgress}%</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                /* Full uploader when no logo */
-                <div>
-                  {!uploadingLogo ? (
-                    <ImageUploader
-                      onFileSelect={handleLogoFileSelect}
-                      maxSizeMB={10}
-                      compressOptions={{
-                        maxWidth: 800,
-                        maxHeight: 800,
-                        quality: 0.9,
-                        maxSizeMB: 0.5
-                      }}
-                      label="Загрузите логотип"
-                      showPreview={true}
-                      currentImage={null}
-                      disabled={uploadingLogo || isInheritedSettingsRestaurant}
-                    />
-                  ) : (
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-blue-600 font-medium">Загрузка...</span>
-                        <span className="text-sm text-blue-600 font-bold">{logoUploadProgress}%</span>
-                      </div>
-                      <div className="w-full bg-blue-200 rounded-full h-2">
-                        <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${logoUploadProgress}%` }}></div>
-                      </div>
-                    </div>
-                  )}
-                  <p className="text-xs text-gray-500 mt-1.5">200×200 px, авто-сжатие до 0.5 МБ</p>
-                </div>
-              )}
-            </div>
-
-            {/* Banner */}
-            <div className="bg-white rounded-xl border border-gray-100 p-5">
-              <h2 className="text-xl font-bold mb-4">Баннеры</h2>
-
-              {getSelectedRestaurant()?.banners && getSelectedRestaurant().banners.length > 0 ? (
-                /* Compact view when banners exist */
-                <div>
-                  <div className="flex items-start gap-4">
-                    <div className="flex gap-3 flex-wrap flex-1">
-                      {getSelectedRestaurant().banners.map((banner, index) => (
-                        <div key={index} className="relative group flex-shrink-0">
-                          <ImageWithLoader
-                            src={cacheBustImage(banner, { width: 224, height: 128, quality: 'auto:good' })}
-                            alt={`Banner ${index + 1}`}
-                            className="w-28 h-16 object-cover rounded-lg border border-gray-200"
-                            loading="lazy"
+            {activeSettingsSection === 'appearance' && (
+              <div className="space-y-4">
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <section className="settings-asset-card">
+                    <h2 className="settings-card-title">Логотип</h2>
+                    {logoLoading ? (
+                      <div className="settings-upload-status">Загрузка логотипа…</div>
+                    ) : logoUrl ? (
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-white p-1.5">
+                          <img
+                            src={cacheBustImage(logoUrl)}
+                            alt="Логотип"
+                            className="h-full w-full object-contain"
                           />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            id="logo-replace-input"
+                            onChange={async (e) => {
+                              const file = e.target.files[0];
+                              if (!file) return;
+                              const validation = validateImage(file, { maxSizeMB: 10 });
+                              if (!validation.valid) { toast.error(validation.error); return; }
+                              if (shouldCompress(file, 0.5)) {
+                                try {
+                                  const compressed = await compressImage(file, { maxWidth: 800, maxHeight: 800, quality: 0.9, maxSizeMB: 0.5 });
+                                  toast.success(`Сжато: ${formatFileSize(file.size)} → ${formatFileSize(compressed.size)}`);
+                                  handleLogoFileSelect(compressed);
+                                } catch { handleLogoFileSelect(file); }
+                              } else { handleLogoFileSelect(file); }
+                              e.target.value = '';
+                            }}
+                          />
+                          {!uploadingLogo ? (
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() => document.getElementById('logo-replace-input').click()}
+                                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                                disabled={isInheritedSettingsRestaurant}
+                              >
+                                Заменить
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleDeleteLogo}
+                                className="rounded-lg px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+                                disabled={isInheritedSettingsRestaurant}
+                              >
+                                Удалить
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between text-xs text-gray-500">
+                                <span>Загрузка…</span>
+                                <span>{logoUploadProgress}%</span>
+                              </div>
+                              <div className="h-1.5 rounded-full bg-blue-100">
+                                <div className="h-1.5 rounded-full bg-blue-600 transition-all" style={{ width: `${logoUploadProgress}%` }} />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : uploadingLogo ? (
+                      <div className="settings-upload-status">
+                        <span>Загрузка… {logoUploadProgress}%</span>
+                        <div className="mt-2 h-1.5 rounded-full bg-blue-100">
+                          <div className="h-1.5 rounded-full bg-blue-600 transition-all" style={{ width: `${logoUploadProgress}%` }} />
+                        </div>
+                      </div>
+                    ) : (
+                      <ImageUploader
+                        onFileSelect={handleLogoFileSelect}
+                        maxSizeMB={10}
+                        compressOptions={{
+                          maxWidth: 800,
+                          maxHeight: 800,
+                          quality: 0.9,
+                          maxSizeMB: 0.5
+                        }}
+                        label="Загрузить логотип"
+                        showPreview={false}
+                        disabled={isInheritedSettingsRestaurant}
+                        compact
+                      />
+                    )}
+                  </section>
+
+                  <section className="settings-asset-card">
+                    <h2 className="settings-card-title">Баннеры</h2>
+                    {getSelectedRestaurant()?.banners && getSelectedRestaurant().banners.length > 0 ? (
+                      <div className="space-y-3">
+                        <div className="flex flex-wrap gap-2">
+                          {getSelectedRestaurant().banners.map((banner, index) => (
+                            <div key={index} className="relative group overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+                              <ImageWithLoader
+                                src={cacheBustImage(banner, { width: 224, height: 128, quality: 'auto:good' })}
+                                alt={`Баннер ${index + 1}`}
+                                className="h-16 w-28 object-cover"
+                                loading="lazy"
+                              />
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteBanner(banner);
+                                }}
+                                className="absolute right-1 top-1 rounded-full bg-red-500 p-1 text-white opacity-100 shadow sm:opacity-0 sm:group-hover:opacity-100"
+                                aria-label={`Удалить баннер ${index + 1}`}
+                                title="Удалить баннер"
+                                disabled={isInheritedSettingsRestaurant}
+                              >
+                                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          id="banner-add-input"
+                          onChange={async (e) => {
+                            const file = e.target.files[0];
+                            if (!file) return;
+                            const validation = validateImage(file, { maxSizeMB: 10 });
+                            if (!validation.valid) { toast.error(validation.error); return; }
+                            if (shouldCompress(file, 1)) {
+                              try {
+                                const compressed = await compressImage(file, { maxWidth: 1920, maxHeight: 800, quality: 0.85, maxSizeMB: 1 });
+                                toast.success(`Сжато: ${formatFileSize(file.size)} → ${formatFileSize(compressed.size)}`);
+                                handleBannerFileSelect(compressed);
+                              } catch { handleBannerFileSelect(file); }
+                            } else { handleBannerFileSelect(file); }
+                            e.target.value = '';
+                          }}
+                        />
+                        {!uploadingBanner ? (
                           <button
                             type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteBanner(banner);
-                            }}
-                            className="absolute -top-1.5 -right-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow-lg transition-all opacity-0 group-hover:opacity-100"
-                            title="Удалить баннер"
+                            onClick={() => document.getElementById('banner-add-input').click()}
+                            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
                             disabled={isInheritedSettingsRestaurant}
                           >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
+                            + Добавить баннер
                           </button>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex flex-col gap-2 flex-shrink-0">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        id="banner-add-input"
-                        onChange={async (e) => {
-                          const file = e.target.files[0];
-                          if (!file) return;
-                          const validation = validateImage(file, { maxSizeMB: 10 });
-                          if (!validation.valid) { toast.error(validation.error); return; }
-                          if (shouldCompress(file, 1)) {
-                            try {
-                              const compressed = await compressImage(file, { maxWidth: 1920, maxHeight: 800, quality: 0.85, maxSizeMB: 1 });
-                              toast.success(`Сжато: ${formatFileSize(file.size)} → ${formatFileSize(compressed.size)}`);
-                              handleBannerFileSelect(compressed);
-                            } catch { handleBannerFileSelect(file); }
-                          } else { handleBannerFileSelect(file); }
-                          e.target.value = '';
-                        }}
-                      />
-                      {!uploadingBanner ? (
-                        <button
-                          type="button"
-                          onClick={() => document.getElementById('banner-add-input').click()}
-                          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-                          disabled={isInheritedSettingsRestaurant}
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                          </svg>
-                          Добавить
-                        </button>
-                      ) : (
-                        <div className="flex items-center gap-3">
-                          <div className="w-32 bg-blue-200 rounded-full h-2">
-                            <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-xs text-gray-500">
+                              <span>Загрузка…</span>
+                              <span>{uploadProgress}%</span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-blue-100">
+                              <div className="h-1.5 rounded-full bg-blue-600 transition-all" style={{ width: `${uploadProgress}%` }} />
+                            </div>
                           </div>
-                          <span className="text-sm text-blue-600 font-bold">{uploadProgress}%</span>
+                        )}
+                      </div>
+                    ) : uploadingBanner ? (
+                      <div className="settings-upload-status">
+                        <span>Загрузка… {uploadProgress}%</span>
+                        <div className="mt-2 h-1.5 rounded-full bg-blue-100">
+                          <div className="h-1.5 rounded-full bg-blue-600 transition-all" style={{ width: `${uploadProgress}%` }} />
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    ) : (
+                      <ImageUploader
+                        onFileSelect={handleBannerFileSelect}
+                        maxSizeMB={10}
+                        compressOptions={{
+                          maxWidth: 1920,
+                          maxHeight: 800,
+                          quality: 0.85,
+                          maxSizeMB: 1
+                        }}
+                        label="Загрузить баннер"
+                        showPreview={false}
+                        disabled={isInheritedSettingsRestaurant}
+                        compact
+                      />
+                    )}
+                  </section>
+                </div>
+
+                <section className="settings-content-card">
+                  <h2 className="settings-card-title">Тема меню</h2>
+                  <div className="flex flex-wrap items-center gap-4">
+                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                      Основной цвет
+                      <input
+                        type="color"
+                        value={primaryColor}
+                        onChange={(e) => setPrimaryColor(e.target.value)}
+                        className="h-9 w-11 rounded border border-gray-200 bg-white"
+                        aria-label="Основной цвет меню"
+                        disabled={isInheritedSettingsRestaurant}
+                      />
+                      <span className="font-mono text-xs text-gray-500">{primaryColor}</span>
+                    </label>
+                    <ThemeSwitcher inline />
                   </div>
-                </div>
-              ) : (
-                /* Full uploader when no banners */
-                <div>
-                  {!uploadingBanner ? (
-                    <ImageUploader
-                      onFileSelect={handleBannerFileSelect}
-                      maxSizeMB={10}
-                      compressOptions={{
-                        maxWidth: 1920,
-                        maxHeight: 800,
-                        quality: 0.85,
-                        maxSizeMB: 1
-                      }}
-                      label="Загрузите баннер"
-                      showPreview={true}
-                      disabled={uploadingBanner || isInheritedSettingsRestaurant}
-                    />
-                  ) : (
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-blue-600 font-medium">Загрузка...</span>
-                        <span className="text-sm text-blue-600 font-bold">{uploadProgress}%</span>
-                      </div>
-                      <div className="w-full bg-blue-200 rounded-full h-2">
-                        <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
-                      </div>
-                    </div>
-                  )}
-                  <p className="text-xs text-gray-500 mt-1.5">1200×400 px, авто-сжатие до 1 МБ</p>
-                </div>
-              )}
-            </div>
+                </section>
 
-            {/* Тема оформления */}
-            <div className="bg-white rounded-xl border border-gray-100 p-5">
-              <h2 className="text-xl font-bold mb-2">Тема оформления меню</h2>
-              <p className="text-sm text-gray-600 mb-4">Выберите цветовую гамму для клиентского меню.</p>
-
-              <div className="flex flex-wrap items-center gap-4 mb-4">
-                <div className="flex items-center gap-2">
-                  <label className="text-sm text-gray-700">Основной цвет</label>
-                  <input
-                    type="color"
-                    value={primaryColor}
-                    onChange={(e) => setPrimaryColor(e.target.value)}
-                    className="h-10 w-12 border border-gray-200 rounded cursor-pointer bg-white"
-                    aria-label="Основной цвет меню"
+                <section className="settings-content-card">
+                  <h2 className="settings-card-title">Карточки меню</h2>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">Стиль отображения</label>
+                  <select
+                    value={menuCardStyle}
+                    onChange={(e) => setMenuCardStyle(e.target.value)}
+                    className="input w-full"
                     disabled={isInheritedSettingsRestaurant}
-                  />
-                  <span className="text-sm font-mono text-gray-700">{primaryColor}</span>
-                </div>
-                <p className="text-xs text-gray-500">Цвет сохранится для этого {entityLabelLower} и будет применяться в меню.</p>
+                  >
+                    <option value="horizontal">Горизонтальный (фото слева)</option>
+                    <option value="vertical">Вертикальный (фото сверху)</option>
+                    <option value="grid">Сетка 2 колонки (компактный)</option>
+                    <option value="gallery">Галерея 2 колонки (минимальные отступы)</option>
+                  </select>
+                </section>
               </div>
-
-              <ThemeSwitcher inline />
-              <p className="text-xs text-gray-500 mt-3">Переключатель ниже используется для предпросмотра темы на этом устройстве.</p>
-            </div>
-            <div className="bg-white rounded-xl border border-gray-100 p-5">
-              <h2 className="text-xl font-bold mb-4">Карточки меню</h2>
-              <label className="block text-sm font-medium mb-1">Стиль отображения карточек</label>
-              <select
-                value={menuCardStyle}
-                onChange={(e) => setMenuCardStyle(e.target.value)}
-                className="input w-full"
-                disabled={isInheritedSettingsRestaurant}
-              >
-                <option value="horizontal">Горизонтальный (фото слева)</option>
-                <option value="vertical">Вертикальный (фото сверху)</option>
-                <option value="grid">Сетка 2 колонки (компактный)</option>
-                <option value="gallery">Галерея 2 колонки (минимальные отступы)</option>
-              </select>
-              <p className="text-sm text-gray-500 mt-1">
-                Выберите, как будут отображаться карточки блюд в публичном меню
-              </p>
-            </div>
-            </>)}
+            )}
 
             {/* Social Media */}
             {activeSettingsSection === 'general' && (
@@ -1628,9 +1566,6 @@ const RestaurantSettingsPage = () => {
 
             {/* Save Button */}
             <div className="settings-save-bar flex gap-3 sm:gap-4">
-              <p className="hidden flex-1 items-center text-sm text-gray-500 sm:flex">
-                После сохранения изменения появятся в вашем меню.
-              </p>
               <button
                 type="button"
                 onClick={() => navigate('/dashboard')}
@@ -1644,7 +1579,7 @@ const RestaurantSettingsPage = () => {
                 className="settings-submit-button px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-semibold"
                 disabled={saving || uploadingBanner}
               >
-                {uploadingBanner ? 'Загрузка баннера...' : saving ? 'Сохранение...' : 'Сохранить изменения'}
+                {uploadingBanner ? 'Загрузка…' : saving ? 'Сохранение…' : 'Сохранить'}
               </button>
             </div>
           </form>

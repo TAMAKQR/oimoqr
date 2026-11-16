@@ -45,3 +45,5 @@ services:
         value: 300
       - key: FINIK_REQUEST_TIMEOUT_MS
         value: 10000
+      - key: FINIK_CREDENTIALS_ENCRYPTION_KEY
+        sync: false

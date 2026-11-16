@@ -58,7 +58,8 @@ const RecommendationCard = ({
                 }
                 addItem(dish, [], restaurantId, restaurantName);
               }}
-              className="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-primary-600 text-white rounded-full hover:bg-primary-700 active:scale-95 transition-all shadow-md"
+              className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-primary-600 text-white shadow-md transition-all hover:bg-primary-700 active:scale-95"
+              aria-label={`Добавить «${dish.name}»`}
             >
               <span className="text-lg leading-none">+</span>
             </button>
@@ -74,7 +75,8 @@ const RecommendationCard = ({
                     updateQuantity(itemInCart.itemId, quantity - 1);
                   }
                 }}
-                className="w-6 h-6 flex items-center justify-center text-white hover:bg-primary-700 rounded-full active:scale-95 transition-all"
+                className="flex h-11 w-11 items-center justify-center rounded-full text-white transition-all hover:bg-primary-700 active:scale-95"
+                aria-label={`Уменьшить количество «${dish.name}»`}
               >
                 <span className="text-lg leading-none">−</span>
               </button>
@@ -92,7 +94,8 @@ const RecommendationCard = ({
                   }
                   addItem(dish, [], restaurantId, restaurantName);
                 }}
-                className="w-6 h-6 flex items-center justify-center text-white hover:bg-primary-700 rounded-full active:scale-95 transition-all"
+                className="flex h-11 w-11 items-center justify-center rounded-full text-white transition-all hover:bg-primary-700 active:scale-95"
+                aria-label={`Увеличить количество «${dish.name}»`}
               >
                 <span className="text-lg leading-none">+</span>
               </button>
@@ -155,6 +158,7 @@ const DishModal = ({
 
   // Lock background scroll only when modal is open
   const scrollPositionRef = useRef(0);
+  const dialogRef = useRef(null);
   useEffect(() => {
     if (!isOpen || !document?.body) return;
 
@@ -179,6 +183,23 @@ const DishModal = ({
       window.scrollTo(0, scrollPositionRef.current);
     };
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    const previouslyFocused = document.activeElement;
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') onClose?.();
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    window.requestAnimationFrame(() => dialogRef.current?.focus());
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      previouslyFocused?.focus?.();
+    };
+  }, [isOpen, onClose]);
 
   // Load recommendations when modal opens
   useEffect(() => {
@@ -306,10 +327,27 @@ const DishModal = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-[100] p-0 sm:p-4"
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-gray-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       onClick={handleBackdropClick}
     >
-      <div className="bg-white rounded-t-2xl sm:rounded-lg w-full max-w-[480px] max-h-[80vh] overflow-y-auto shadow-2xl mx-0 animate-slide-up">
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dish-modal-title"
+        className="relative mx-0 max-h-[92dvh] w-full max-w-[560px] overflow-y-auto rounded-t-3xl bg-white shadow-floating animate-slide-up sm:rounded-3xl"
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-3 top-3 z-30 flex h-11 w-11 items-center justify-center rounded-full border border-white/60 bg-white/95 text-gray-700 shadow-md backdrop-blur transition-colors hover:bg-white"
+          aria-label="Закрыть карточку блюда"
+        >
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
         {currentImage && (
           <div className="relative h-56 sm:h-64 md:h-72">
             <ImageWithLoader
@@ -373,7 +411,7 @@ const DishModal = ({
 
         <div className="p-3 sm:p-5">
           <div className="flex items-center gap-3 mb-2">
-            <h2 className="text-xl sm:text-2xl font-bold break-words">{dish.name}</h2>
+            <h2 id="dish-modal-title" className="text-xl font-bold tracking-tight text-gray-950 sm:text-2xl">{dish.name}</h2>
             {!isAvailable && !dish.image && (
               <span className="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full">
                 НЕТ В НАЛИЧИИ
@@ -391,27 +429,33 @@ const DishModal = ({
                   const availableOptions = (modifier.options || []).filter((option) => option?.available !== false);
                   if (availableOptions.length === 0) {
                     return (
-                      <div key={modifier.id} className="mb-4">
-                        {modifier.isRequired && (
-                          <p className="text-xs text-red-500 mb-2">* Обязательный выбор</p>
-                        )}
+                      <fieldset key={modifier.id} className="mb-5 rounded-2xl border border-error-100 bg-error-50/40 p-4">
+                        <legend className="px-1 text-sm font-semibold text-gray-950">{modifier.name}</legend>
+                        <p className="mb-3 mt-1 text-xs text-error-600">
+                          {modifier.isRequired ? 'Обязательный выбор' : 'Необязательно'}
+                        </p>
                         <div className="p-3 border border-red-100 bg-red-50 rounded-lg text-xs text-red-600">
                           Сейчас нет доступных вариантов для "{modifier.name}"
                         </div>
-                      </div>
+                      </fieldset>
                     );
                   }
 
                   return (
-                    <div key={modifier.id} className="mb-4">
-                      {modifier.isRequired && (
-                        <p className="text-xs text-red-500 mb-2">* Обязательный выбор</p>
-                      )}
+                    <fieldset key={modifier.id} className="mb-5 rounded-2xl border border-gray-200 p-4">
+                      <legend className="px-1 text-sm font-semibold text-gray-950">{modifier.name}</legend>
+                      <p className="mb-3 mt-1 text-xs text-gray-500">
+                        {modifier.type === 'single' ? 'Выберите один вариант' : 'Можно выбрать несколько'}
+                        {modifier.isRequired ? ' · обязательно' : ' · необязательно'}
+                      </p>
                       <div className="space-y-2">
                         {availableOptions.map((option) => (
                           <label
                             key={option.id}
-                            className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors gap-2"
+                            className={`flex min-h-12 cursor-pointer items-center justify-between gap-2 rounded-xl border p-3 transition-colors ${selectedModifiers[modifier.id]?.some(o => o.id === option.id)
+                              ? 'border-primary-300 bg-primary-50'
+                              : 'border-gray-200 hover:border-primary-200 hover:bg-gray-50'
+                              }`}
                           >
                             <div className="flex items-center min-w-0 flex-1">
                               <input
@@ -431,7 +475,7 @@ const DishModal = ({
                           </label>
                         ))}
                       </div>
-                    </div>
+                    </fieldset>
                   );
                 })()
               ))}
@@ -468,7 +512,7 @@ const DishModal = ({
         </div>
 
         {/* Fixed bottom bar with buttons */}
-        <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 sm:p-6 shadow-lg">
+        <div className="sticky bottom-0 left-0 right-0 border-t border-gray-200 bg-white/95 p-4 shadow-[0_-10px_30px_rgba(24,35,51,0.08)] backdrop-blur sm:p-5">
           <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-0">
             <div className="flex justify-between sm:block">
               <p className="text-xs sm:text-sm text-gray-600">Итого:</p>
@@ -479,10 +523,10 @@ const DishModal = ({
             <div className="flex gap-2">
               <button
                 onClick={onClose}
-                className="w-12 h-12 flex items-center justify-center rounded-full border-2 border-gray-300 hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-600 text-2xl font-light flex-shrink-0"
+                className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl border border-gray-200 text-2xl font-light text-gray-600 transition-colors hover:bg-gray-100 active:bg-gray-200"
                 aria-label="Закрыть"
               >
-                ✕
+                ×
               </button>
               <button
                 onClick={handleAddToCart}

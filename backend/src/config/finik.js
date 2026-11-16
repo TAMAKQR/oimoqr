@@ -43,7 +43,7 @@ const isValidHttpsUrl = (value) => {
   }
 };
 
-export const getFinikBaseUrl = () => FINIK_ENDPOINTS[config.finik.mode];
+export const getFinikBaseUrl = (mode = config.finik.mode) => FINIK_ENDPOINTS[mode];
 
 export const getFinikPrivateKey = () => normalizePem(config.finik.privateKey);
 
@@ -57,6 +57,8 @@ export const isFinikConfigured = () => Boolean(
   && getFinikPrivateKey().includes('BEGIN')
   && isValidHttpsUrl(config.finik.webhookUrl)
 );
+
+export const isFinikWebhookConfigured = () => isValidHttpsUrl(config.finik.webhookUrl);
 
 export const getFinikWebhookHost = () => {
   if (!isValidHttpsUrl(config.finik.webhookUrl)) return null;

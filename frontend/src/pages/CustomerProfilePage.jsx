@@ -8,6 +8,10 @@ import DishModal from '../components/DishModal';
 import FloatingMenuWidget from '../components/FloatingMenuWidget';
 import { useCartStore } from '../store/cartStore';
 import { optimizeAvatarImage, validateImage } from '../utils/imageCompression';
+import { getBusinessType } from '../utils/businessTypes';
+import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
+import { Input } from '../components/ui/Input';
 
 const currencySymbols = {
     RUB: '₽',
@@ -176,15 +180,16 @@ export default function CustomerProfilePage() {
         toast((t) => (
             <div className="flex items-center gap-3">
                 <span>Добавлено в корзину</span>
-                <button
-                    className="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-semibold text-white"
+                <Button
+                    variant="primary"
+                    size="sm"
                     onClick={() => {
                         toast.dismiss(t.id);
                         navigate(target);
                     }}
                 >
                     К корзине
-                </button>
+                </Button>
             </div>
         ));
     };
@@ -266,15 +271,17 @@ export default function CustomerProfilePage() {
             <div className="w-full max-w-[480px] min-h-screen bg-gray-50 shadow-2xl relative pb-20">
                 {/* Quick access to cart from profile/favorites */}
                 {cartItemCount > 0 && (
-                    <button
+                    <Button
                         type="button"
+                        variant="primary"
+                        size="lg"
                         onClick={handleGoToCheckout}
                         disabled={cartRedirecting}
-                        className="fixed left-1/2 -translate-x-1/2 z-[70] rounded-2xl bg-primary-600 text-white shadow-lg px-4 py-3 font-semibold disabled:opacity-70"
-                        style={{ bottom: 'calc(var(--customer-bottom-nav-height, 0px) + 12px)' }}
+                        className="fixed left-1/2 -translate-x-1/2 z-[70] rounded-2xl px-4 py-3 font-semibold disabled:opacity-70"
+                        loading={cartRedirecting}
                     >
                         {cartRedirecting ? 'Открываем корзину…' : `Корзина · ${cartItemCount}`}
-                    </button>
+                    </Button>
                 )}
 
                 {/* Header */}
@@ -298,22 +305,25 @@ export default function CustomerProfilePage() {
                                     <p className="text-xs text-gray-500">{customer?.phone}</p>
                                 </div>
                             </div>
-                            <button
+                            <Button
+                                variant="ghost"
+                                size="sm"
                                 onClick={handleLogout}
-                                className="px-3 py-1.5 text-xs font-medium text-red-600 active:bg-red-50 rounded-lg transition"
                             >
                                 Выйти
-                            </button>
+                            </Button>
                         </div>
                         <div className="pb-3 flex justify-end">
-                            <button
+                            <Button
                                 type="button"
+                                variant="secondary"
+                                size="sm"
                                 onClick={() => loadData({ isRefresh: true })}
                                 disabled={refreshing}
-                                className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 text-gray-700 bg-white disabled:opacity-50"
+                                loading={refreshing}
                             >
                                 {refreshing ? 'Обновляем…' : 'Обновить'}
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>
@@ -559,8 +569,7 @@ function ProfileTab({ customer, onUpdate }) {
                             <span
                                 key={item.label}
                                 className={`text-[11px] px-2 py-1 rounded-full ${item.done ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
-                            >
-                                {item.done ? '✓' : '○'} {item.label}
+                                >{item.label}
                             </span>
                         ))}
                     </div>
@@ -892,7 +901,10 @@ function OrdersTab({ orders }) {
             const commentText = comment ? ` (${comment})` : '';
             return `${labelText}${main}${parts ? ' | ' + parts : ''}${commentText}`;
         }
-        if (order.deliveryType === 'dine_in') return order.tableNumber ? `Стол ${order.tableNumber}` : 'В зале';
+        if (order.deliveryType === 'dine_in') {
+          const tableLabel = getBusinessType(order.restaurant?.businessType).tableLabel;
+          return order.tableNumber ? `${tableLabel} ${order.tableNumber}` : 'В номер';
+        }
         return order.deliveryAddress || (order.deliveryType === 'pickup' ? 'Самовывоз' : '—');
     };
 
@@ -910,7 +922,11 @@ function OrdersTab({ orders }) {
     if (orders.length === 0) {
         return (
             <div className="text-center py-12">
-                <div className="text-6xl mb-4">🛍️</div>
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-50 text-primary-600">
+                    <svg aria-hidden="true" className="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 4.5h14v15H5zM8 8h8M8 12h8M8 16h5" />
+                    </svg>
+                </div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">У вас пока нет заказов</h3>
                 <p className="text-gray-500">Оформите первый заказ в меню ресторана</p>
             </div>
@@ -982,7 +998,7 @@ function OrdersTab({ orders }) {
                             <span className="text-sm text-gray-600">{order.restaurant?.name}</span>
                             <span className="text-lg font-semibold text-gray-900">{formatMoney(order.totalAmount)} {getCurrencySymbol(order.restaurant?.currency || 'RUB')}</span>
                         </div>
-                        <div className="text-xs text-gray-600">Способ: {order.deliveryType === 'dine_in' ? '🍽️ В зале' : order.deliveryType === 'pickup' ? '🏃 Самовывоз' : '🚗 Доставка'} · Оплата: {order.paymentMethod === 'finik' ? 'По QR-коду' : order.paymentMethod === 'card' ? 'Картой' : 'Наличные'}</div>
+                        <div className="text-xs text-gray-600">Способ: {order.deliveryType === 'dine_in' ? `В номер${order.tableNumber ? ` · ${getBusinessType(order.restaurant?.businessType).tableLabel} ${order.tableNumber}` : ''}` : order.deliveryType === 'pickup' ? 'Самовывоз' : 'Доставка'} · Оплата: {order.paymentMethod === 'finik' ? 'По QR-коду' : order.paymentMethod === 'card' ? 'Картой' : 'Наличные'}</div>
                         <div className="text-xs text-gray-700">Адрес: {formatAddress(order)}</div>
                         <div className="text-sm font-semibold text-gray-900 mt-1">Итого: {formatMoney(order.totalAmount)} {getCurrencySymbol(order.restaurant?.currency || 'RUB')}</div>
                     </div>
@@ -1031,7 +1047,6 @@ function FavoritesTab({ favorites, onRemove, onViewDish, onAddToCart }) {
             return (
                 <div className="w-full h-28 sm:h-32 bg-gradient-to-br from-primary-50 via-white to-gray-100 flex flex-col items-center justify-center text-center px-3">
                     <div className="w-12 h-12 rounded-2xl bg-white/80 border border-primary-100 shadow-sm flex items-center justify-center text-primary-600 text-xl">
-                        🍽️
                     </div>
                     <div className="mt-3 text-[11px] text-gray-500 leading-snug flex flex-col gap-0.5">
                         <span>Фото скоро появится</span>
@@ -1057,7 +1072,11 @@ function FavoritesTab({ favorites, onRemove, onViewDish, onAddToCart }) {
     if (favorites.length === 0) {
         return (
             <div className="text-center py-12">
-                <div className="text-6xl mb-4">❤️</div>
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-50 text-primary-600">
+                    <svg aria-hidden="true" className="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M20.8 4.9a5.5 5.5 0 00-7.8 0L12 5.9l-1-1a5.5 5.5 0 00-7.8 7.8L12 21l8.8-8.3a5.5 5.5 0 000-7.8z" />
+                    </svg>
+                </div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">Нет избранных блюд</h3>
                 <p className="text-gray-500">Добавляйте любимые блюда в избранное для быстрого доступа</p>
             </div>

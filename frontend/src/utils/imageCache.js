@@ -1,4 +1,24 @@
 /**
+ * Приводит относительные пути загрузок к абсолютному URL backend.
+ * Например: /uploads/logo.png -> http://localhost:5000/uploads/logo.png
+ */
+export const resolveAssetUrl = (url) => {
+    if (!url || typeof url !== 'string') return url;
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:') || url.startsWith('data:')) {
+        return url;
+    }
+
+    const normalized = url.startsWith('/') ? url : `/${url}`;
+    const apiUrl = (import.meta.env.VITE_API_URL || '/api').replace(/\/api\/?$/, '');
+
+    if (!apiUrl || apiUrl === '/') {
+        return normalized;
+    }
+
+    return `${apiUrl}${normalized}`;
+};
+
+/**
  * Возвращает URL изображения. Не добавляет timestamp для клиентского меню,
  * чтобы браузер мог использовать кэш и изображения загружались мгновенно.
  * @param {string} url - URL изображения
@@ -16,6 +36,8 @@ export const cacheBustImage = (url, forceRefresh = false) => {
         shouldForceRefresh = false;
     }
 
+    const resolvedUrl = resolveAssetUrl(url);
+
     const {
         width,
         height,
@@ -24,12 +46,12 @@ export const cacheBustImage = (url, forceRefresh = false) => {
     } = options;
 
     // Если это blob URL, возвращаем как есть
-    if (url.startsWith('blob:')) return url;
+    if (resolvedUrl.startsWith('blob:')) return resolvedUrl;
 
     // Cloudinary optimization (only when URL has no explicit transformation yet)
-    let resultUrl = url;
-    if (url.includes('res.cloudinary.com') && url.includes('/upload/')) {
-        const [baseWithoutQuery, queryPart] = url.split('?');
+    let resultUrl = resolvedUrl;
+    if (resolvedUrl.includes('res.cloudinary.com') && resolvedUrl.includes('/upload/')) {
+        const [baseWithoutQuery, queryPart] = resolvedUrl.split('?');
         const uploadMarker = '/upload/';
         const markerIndex = baseWithoutQuery.indexOf(uploadMarker);
 

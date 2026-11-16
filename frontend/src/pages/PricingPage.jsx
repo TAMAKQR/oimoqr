@@ -123,7 +123,7 @@ const PricingPage = () => {
   const paymentReturnHandled = useRef(false);
   const { userData, loading: userLoading, refresh } = useUserData();
   const refreshRef = useRef(refresh);
-  const { selectedRestaurantId, selectedRestaurant } = useSelectedRestaurant(userData);
+  const { selectedRestaurantId } = useSelectedRestaurant(userData);
   const [pricingTiers, setPricingTiers] = useState([]);
   const [billingStatus, setBillingStatus] = useState({
     configured: false,
@@ -134,7 +134,6 @@ const PricingPage = () => {
     billingIssue: null,
   });
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('RESTAURANT');
   const [creatingTierId, setCreatingTierId] = useState(null);
   const [checkingPaymentId, setCheckingPaymentId] = useState(null);
   const [verifyingReturn, setVerifyingReturn] = useState(false);
@@ -155,12 +154,6 @@ const PricingPage = () => {
       navigate('/dashboard');
     }
   }, [userLoading, isOwner, navigate]);
-
-  useEffect(() => {
-    if (selectedRestaurant?.businessType) {
-      setActiveTab(normalizeBusinessType(selectedRestaurant.businessType));
-    }
-  }, [selectedRestaurant?.businessType]);
 
   useEffect(() => {
     if (userLoading || !isOwner) return undefined;
@@ -324,6 +317,9 @@ const PricingPage = () => {
     (userData?.restaurants || []).map((restaurant) => normalizeBusinessType(restaurant.businessType))
   ), [userData?.restaurants]);
   const hasMixedBusinessTypes = accountBusinessTypes.size > 1;
+  const accountBusinessType = accountBusinessTypes.size === 1
+    ? [...accountBusinessTypes][0]
+    : null;
 
   const currentSubscription = billingStatus.subscription || localSubscription;
   const currentTierId = currentSubscription?.pricingTierId || currentSubscription?.pricingTier?.id;
@@ -472,45 +468,27 @@ const PricingPage = () => {
     ? Math.max(0, Math.ceil((new Date(periodEnd) - new Date()) / (1000 * 60 * 60 * 24)))
     : null;
   const currentRestaurantCount = userData?.restaurants?.length || 0;
+  const pricingAudience = hasMixedBusinessTypes
+    ? 'Универсальные тарифы'
+    : accountBusinessType === 'HOTEL'
+      ? 'Тарифы для отеля'
+      : 'Тарифы для ресторана';
   const visibleTiers = pricingTiers.filter((tier) => (
     hasMixedBusinessTypes
       ? tier.businessType === 'ALL'
-      : (!tier.businessType || tier.businessType === activeTab || tier.businessType === 'ALL')
+      : (!tier.businessType || tier.businessType === (accountBusinessType || 'RESTAURANT') || tier.businessType === 'ALL')
   ));
 
   return (
     <DashboardLayout userData={userData} selectedRestaurantId={selectedRestaurantId}>
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Тарифные планы</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Разовая онлайн-оплата через Finik. Каждый следующий период продлевается вручную.
-          </p>
-          {hasMixedBusinessTypes ? (
-            <div className="mt-4 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-800 w-fit">
-              Для аккаунта с ресторанами и отелями доступны только универсальные тарифы.
-            </div>
-          ) : (
-            <div className="flex gap-1 mt-4 bg-gray-100 rounded-lg p-1 w-fit">
-              <button
-                type="button"
-                onClick={() => setActiveTab('RESTAURANT')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'RESTAURANT'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                🍽 Рестораны
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('HOTEL')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'HOTEL'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                🏨 Отели
-              </button>
-            </div>
+      <div className="max-w-5xl mx-auto">
+        <div className="mb-4">
+          <h1 className="text-2xl font-semibold text-gray-900">{pricingAudience}</h1>
+          <p className="text-gray-500 text-sm mt-1">Продление вручную через Finik.</p>
+          {hasMixedBusinessTypes && (
+            <p className="mt-2 text-xs text-gray-500">
+              Аккаунт управляет отелями и ресторанами — подходят только универсальные тарифы.
+            </p>
           )}
         </div>
 
@@ -529,8 +507,8 @@ const PricingPage = () => {
         )}
 
         {!billingStatus.configured && (
-          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            Онлайн-оплата пока настраивается. Тарифы можно посмотреть, но оплатить их станет возможно после подключения Finik.
+          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            Оплата через Finik пока не настроена.
           </div>
         )}
 
@@ -593,71 +571,62 @@ const PricingPage = () => {
         )}
 
         {currentSubscription && (
-          <div className={`mb-6 rounded-xl border ${statusMeta.panel}`}>
-            <div className="p-5">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-white/70 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">
-                      {currentSubscription.pricingTier?.name || (currentStatus === 'TRIAL' ? 'Пробный период' : currentSubscription.plan || 'Тариф')}
-                    </h3>
-                    {hasActiveEntitlement && (
-                      <p className="text-xs text-gray-600 mt-0.5">Автоматического списания нет — следующий период оплачивается вручную</p>
-                    )}
-                  </div>
-                </div>
-                <span className={`px-3 py-1 text-xs font-medium rounded-full w-fit ${statusMeta.badge}`}>
-                  {statusMeta.label}
-                </span>
+          <div className={`mb-4 rounded-lg border px-4 py-3 ${statusMeta.panel}`}>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-600">Текущий тариф</span>
+                <h3 className="text-sm font-semibold text-gray-900">
+                  {currentSubscription.pricingTier?.name || (currentStatus === 'TRIAL' ? 'Пробный период' : currentSubscription.plan || 'Тариф')}
+                </h3>
               </div>
+              <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${statusMeta.badge}`}>
+                {statusMeta.label}
+              </span>
+            </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-                <div className="bg-white/60 rounded-lg p-3">
-                  <p className="text-gray-500 text-xs mb-1">Объекты</p>
-                  <p className="font-semibold text-gray-900">
-                    {currentSubscription.pricingTier?.maxRestaurants
-                      ? `${currentRestaurantCount} из ${currentSubscription.pricingTier.maxRestaurants}`
-                      : `${currentRestaurantCount} · без лимита`}
+            <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
+              <div>
+                <p className="text-xs text-gray-500">Объекты</p>
+                <p className="font-medium text-gray-900">
+                  {currentSubscription.pricingTier?.maxRestaurants
+                    ? `${currentRestaurantCount} из ${currentSubscription.pricingTier.maxRestaurants}`
+                    : `${currentRestaurantCount} · без лимита`}
+                </p>
+              </div>
+              {currentSubscription.pricingTier && (
+                <div>
+                  <p className="text-xs text-gray-500">Стоимость периода</p>
+                  <p className="font-medium text-gray-900">
+                    {formatBillingPrice(currentSubscription.pricingTier)}/{currentSubscription.pricingTier.billingInterval === 'year' ? 'год' : 'мес'}
                   </p>
                 </div>
-                {currentSubscription.pricingTier && (
-                  <div className="bg-white/60 rounded-lg p-3">
-                    <p className="text-gray-500 text-xs mb-1">Стоимость периода</p>
-                    <p className="font-semibold text-gray-900">
-                      {formatBillingPrice(currentSubscription.pricingTier)}/{currentSubscription.pricingTier.billingInterval === 'year' ? 'год' : 'мес'}
-                    </p>
-                  </div>
-                )}
-                {periodEnd && (
-                  <div className="bg-white/60 rounded-lg p-3">
-                    <p className="text-gray-500 text-xs mb-1">
-                      {currentStatus === 'PAST_DUE' ? 'Льготный доступ до' : 'Оплачено до'}
-                    </p>
-                    <p className="font-semibold text-gray-900">{formatDate(periodEnd)}</p>
-                    {daysLeft !== null && <p className="text-xs text-gray-500 mt-0.5">Осталось дней: {daysLeft}</p>}
-                  </div>
-                )}
-              </div>
-
-              {['PAST_DUE', 'UNPAID', 'EXPIRED'].includes(currentStatus) && (
-                <p className="text-sm text-amber-900 mt-3">
-                  Оплатите новый период вручную, чтобы восстановить доступ.
-                </p>
+              )}
+              {periodEnd && (
+                <div>
+                  <p className="text-xs text-gray-500">
+                    {currentStatus === 'PAST_DUE' ? 'Доступ до' : 'Оплачено до'}
+                  </p>
+                  <p className="font-medium text-gray-900">{formatDate(periodEnd)}</p>
+                  {daysLeft !== null && <p className="text-xs text-gray-500">{daysLeft} дн.</p>}
+                </div>
               )}
             </div>
+
+            {['PAST_DUE', 'UNPAID', 'EXPIRED'].includes(currentStatus) && (
+              <p className="mt-3 text-sm text-amber-900">
+                Оплатите новый период вручную, чтобы восстановить доступ.
+              </p>
+            )}
           </div>
         )}
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className={`grid gap-4 ${visibleTiers.length === 1 ? 'max-w-md grid-cols-1' : 'sm:grid-cols-2 lg:grid-cols-3'}`}>
           {visibleTiers.map((tier) => {
             const isCurrentTier = tier.id === currentTierId;
             const isCreatingThisTier = creatingTierId === tier.id;
             const onlinePaymentEnabled = tier.isPurchasable ?? tier.onlinePaymentEnabled ?? true;
+            const tierFeatures = tier.features || [];
+            const hasTierFeatures = Boolean(tier.maxRestaurants) || tierFeatures.length > 0;
             const canContinuePending = hasWaitingPayment && Boolean(pendingPaymentUrl);
             const canStartPayment = billingStatus.configured
               && onlinePaymentEnabled
@@ -676,55 +645,54 @@ const PricingPage = () => {
             else if (hasUnsettledPayment) buttonLabel = 'Ожидаем подтверждение';
             else if (paymentRequiresReview) buttonLabel = 'Требуется проверка';
             else if (!onlinePaymentEnabled) buttonLabel = 'Онлайн-оплата недоступна';
-            else if (!billingStatus.configured) buttonLabel = 'Оплата настраивается';
+            else if (!billingStatus.configured) buttonLabel = 'Оплата скоро появится';
 
             return (
               <div
                 key={tier.id}
-                className={`relative rounded-xl overflow-hidden transition-all hover:shadow-md ${isCurrentTier && hasActiveEntitlement
+                className={`relative rounded-xl transition-shadow hover:shadow-md ${isCurrentTier && hasActiveEntitlement
                   ? 'ring-2 ring-primary-600 bg-primary-50'
                   : 'bg-white border border-gray-100'}`}
               >
-                {isCurrentTier && hasActiveEntitlement && (
-                  <div className="absolute top-4 right-4">
-                    <span className="bg-primary-600 text-white text-xs font-bold px-3 py-1 rounded-full">
-                      Текущий
-                    </span>
-                  </div>
-                )}
-
-                <div className="p-6">
-                  <h3 className="text-2xl font-bold mb-2 pr-20">{tier.name}</h3>
-                  <div className="mb-6">
-                    <span className="text-4xl font-bold">{formatBillingPrice(tier)}</span>
-                    <span className="text-gray-600 ml-2">/{tier.billingInterval === 'year' ? 'год' : 'месяц'}</span>
+                <div className="p-4">
+                  <div className="mb-3 flex items-start justify-between gap-2">
+                    <h3 className="text-lg font-semibold text-gray-900">{tier.name}</h3>
+                    {isCurrentTier && hasActiveEntitlement && (
+                      <span className="shrink-0 rounded-full bg-primary-600 px-2.5 py-1 text-xs font-semibold text-white">
+                        Текущий
+                      </span>
+                    )}
                   </div>
 
-                  {tier.description && <p className="text-gray-600 text-sm mb-6">{tier.description}</p>}
+                  <div className="mb-3">
+                    <span className="text-3xl font-semibold">{formatBillingPrice(tier)}</span>
+                    <span className="ml-1.5 text-sm text-gray-600">/{tier.billingInterval === 'year' ? 'год' : 'мес'}</span>
+                  </div>
 
-                  <div className="mb-6">
-                    <p className="font-semibold mb-3 text-sm text-gray-700">Что включено:</p>
-                    <ul className="space-y-2">
+                  {tier.description && <p className="mb-3 text-sm text-gray-600">{tier.description}</p>}
+
+                  {hasTierFeatures && (
+                    <ul className="mb-4 space-y-1.5">
                       {tier.maxRestaurants && (
-                        <li className="flex items-start gap-2 text-sm">
-                          <span className="text-green-500 mt-0.5">✓</span>
-                          <span>До {tier.maxRestaurants} {tier.maxRestaurants === 1 ? 'ресторана' : 'ресторанов'}</span>
+                        <li className="flex items-start gap-2 text-sm text-gray-700">
+                          <span className="mt-0.5 text-green-600">✓</span>
+                          <span>Лимит объектов: {tier.maxRestaurants}</span>
                         </li>
                       )}
-                      {(tier.features || []).map((feature, index) => (
-                        <li key={`${feature}-${index}`} className="flex items-start gap-2 text-sm">
-                          <span className="text-green-500 mt-0.5">✓</span>
+                      {tierFeatures.map((feature, index) => (
+                        <li key={`${feature}-${index}`} className="flex items-start gap-2 text-sm text-gray-700">
+                          <span className="mt-0.5 text-green-600">✓</span>
                           <span>{feature}</span>
                         </li>
                       ))}
                     </ul>
-                  </div>
+                  )}
 
                   <button
                     type="button"
                     onClick={() => (canContinuePending ? continuePendingPayment() : startPayment(tier))}
                     disabled={disabled}
-                    className={`w-full py-3 rounded-lg font-semibold transition-colors ${disabled
+                    className={`w-full rounded-lg py-2.5 text-sm font-semibold transition-colors ${disabled
                       ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                       : 'bg-primary-600 text-white hover:bg-primary-700'}`}
                   >
@@ -737,24 +705,23 @@ const PricingPage = () => {
         </div>
 
         {visibleTiers.length === 0 && (
-          <div className="rounded-xl border border-gray-100 bg-white p-8 text-center text-gray-500">
-            Для выбранного типа бизнеса пока нет доступных тарифов.
+          <div className="rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-500">
+            {hasMixedBusinessTypes
+              ? 'Для аккаунта с отелями и ресторанами пока нет универсальных тарифов.'
+              : accountBusinessType === 'HOTEL'
+                ? 'Для отеля пока нет доступных тарифов.'
+                : 'Для ресторана пока нет доступных тарифов.'}
           </div>
         )}
 
-        <div className="mt-12 p-5 bg-white rounded-xl border border-gray-100">
-          <h3 className="font-semibold text-lg mb-3">Нужна помощь в выборе тарифа?</h3>
-          <p className="text-gray-600 mb-4">
-            Напишите нам — поможем подобрать план и разобраться с оплатой через Finik.
-          </p>
-          <div className="flex flex-wrap gap-4">
-            <a href="mailto:admin@oimoqr.com" className="text-primary-600 hover:text-primary-700 font-medium text-sm">
-              📧 admin@oimoqr.com
-            </a>
-            <a href="https://t.me/oimoqr_support" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:text-primary-700 font-medium text-sm">
-              💬 Telegram
-            </a>
-          </div>
+        <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-gray-200 pt-4 text-sm">
+          <span className="text-gray-500">Нужна помощь?</span>
+          <a href="mailto:admin@oimoqr.com" className="font-medium text-primary-600 hover:text-primary-700">
+            admin@oimoqr.com
+          </a>
+          <a href="https://t.me/oimoqr_support" target="_blank" rel="noopener noreferrer" className="font-medium text-primary-600 hover:text-primary-700">
+            Telegram
+          </a>
         </div>
       </div>
     </DashboardLayout>

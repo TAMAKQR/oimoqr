@@ -3,7 +3,9 @@ export const errorHandler = (err, req, res, next) => {
   console.error('Stack:', err.stack);
   console.error('Request path:', req.path);
   const requestUrl = req.originalUrl || req.path || '';
-  const isSensitiveRequest = requestUrl.includes('/auth') || requestUrl.includes('/billing');
+  const isSensitiveRequest = requestUrl.includes('/auth')
+    || requestUrl.includes('/billing')
+    || requestUrl.includes('/finik-connection');
   if (process.env.NODE_ENV !== 'production' && !isSensitiveRequest) {
     console.error('Request body:', req.body);
   }

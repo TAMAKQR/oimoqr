@@ -274,8 +274,8 @@ const HomePage = () => {
               </Reveal>
 
               <Reveal delay={100}>
-                <h1 className="text-4xl sm:text-5xl md:text-6xl xl:text-[4rem] font-extrabold text-gray-900 mb-6 leading-[1.15] tracking-tight">
-                  {t('home.hero.titleStart')}<br />
+                <h1 className="text-4xl sm:text-5xl md:text-[3.4rem] font-bold text-gray-900 mb-5 leading-[1.05] tracking-[-0.04em]">
+                  {t('home.hero.titleStart')}{' '}
                   <span className="bg-gradient-to-r from-primary-600 via-primary-500 to-amber-500 bg-clip-text text-transparent">
                     {t('home.hero.titleHighlight')}
                   </span>
@@ -283,27 +283,26 @@ const HomePage = () => {
               </Reveal>
 
               <Reveal delay={200}>
-                <p className="text-lg md:text-xl text-gray-500 mb-8 leading-relaxed max-w-lg mx-auto lg:mx-0">
+                <p className="text-base md:text-lg text-gray-600 mb-7 leading-relaxed max-w-md mx-auto lg:mx-0">
                   {t('home.hero.subtitle')}
                 </p>
               </Reveal>
 
               <Reveal delay={300}>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-                  <Link to="/register" className="group inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold text-white bg-gradient-to-r from-primary-600 to-primary-700 rounded-2xl shadow-xl shadow-primary-600/25 hover:shadow-2xl hover:shadow-primary-600/30 hover:-translate-y-0.5 transition-all">
+                  <Link to="/register" className="group inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold text-white bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg shadow-primary-600/20 hover:shadow-xl hover:shadow-primary-600/25 transition-all">
                     {t('home.cta')}
-                    <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+                    <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
                   </Link>
-                  <a href="#how" className="inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold text-gray-700 bg-gray-100 rounded-2xl hover:bg-gray-200 transition-colors">
-                    <svg className="w-5 h-5 text-primary-600" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                  <a href="#how" className="inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
+                    <svg className="w-4 h-4 text-primary-600" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                     {t('home.hero.demo')}
                   </a>
                 </div>
               </Reveal>
 
-              {/* Trust bar */}
               <Reveal delay={400}>
-                <div className="mt-10 flex items-center gap-4 justify-center lg:justify-start">
+                <div className="mt-8 flex flex-wrap items-center gap-3 justify-center lg:justify-start text-sm text-gray-500">
                   <div className="flex -space-x-2">
                     {['bg-primary-400', 'bg-amber-400', 'bg-emerald-400', 'bg-rose-400'].map((c, i) => (
                       <div key={i} className={`w-8 h-8 rounded-full ${c} border-2 border-white flex items-center justify-center text-white text-[10px] font-bold`}>
@@ -311,18 +310,18 @@ const HomePage = () => {
                       </div>
                     ))}
                   </div>
-                  <div className="text-sm text-gray-500">
-                    <span className="font-semibold text-gray-800">500+</span> {t('home.hero.trust')}
-                  </div>
+                  <span>
+                    <span className="font-semibold text-gray-900">500+</span> {t('home.hero.trust')}
+                  </span>
                 </div>
               </Reveal>
 
               <Reveal delay={500}>
-                <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-2.5 max-w-2xl mx-auto lg:mx-0">
-                  {valueHighlights.map((item) => (
-                    <div key={item.key} className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 shadow-sm">
-                      <span className="text-base leading-none">{item.icon}</span>
-                      <span className="truncate">{t(`home.features.${item.key}`)}</span>
+                <div className="mt-6 flex flex-wrap gap-2 justify-center lg:justify-start max-w-lg">
+                  {valueHighlights.slice(0, 3).map((item) => (
+                    <div key={item.key} className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm">
+                      <span className="text-sm leading-none">{item.icon}</span>
+                      {t(`home.features.${item.key}`)}
                     </div>
                   ))}
                 </div>
@@ -364,8 +363,8 @@ const HomePage = () => {
           <Reveal>
             <div className="text-center mb-16">
               <span className="inline-block px-4 py-1.5 rounded-full bg-primary-50 text-primary-600 text-sm font-semibold mb-4">{t('home.nav.solutions')}</span>
-              <h2 className="text-3xl md:text-5xl font-extrabold text-gray-900 mb-4">{t('home.business.title')}</h2>
-              <p className="text-gray-500 max-w-xl mx-auto text-lg">{t('home.business.subtitle')}</p>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">{t('home.business.title')}</h2>
+              <p className="text-gray-500 max-w-xl mx-auto text-base">{t('home.business.subtitle')}</p>
             </div>
           </Reveal>
           <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
@@ -405,8 +404,8 @@ const HomePage = () => {
           <Reveal>
             <div className="text-center mb-16">
               <span className="inline-block px-4 py-1.5 rounded-full bg-primary-50 text-primary-600 text-sm font-semibold mb-4">{t('home.nav.features')}</span>
-              <h2 className="text-3xl md:text-5xl font-extrabold text-gray-900 mb-4">{t('home.features.title')}</h2>
-              <p className="text-gray-500 max-w-xl mx-auto text-lg">{t('home.features.subtitle')}</p>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">{t('home.features.title')}</h2>
+              <p className="text-gray-500 max-w-xl mx-auto text-base">{t('home.features.subtitle')}</p>
             </div>
           </Reveal>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-6xl mx-auto">
@@ -447,8 +446,8 @@ const HomePage = () => {
           <Reveal>
             <div className="text-center mb-16">
               <span className="inline-block px-4 py-1.5 rounded-full bg-white/10 text-primary-300 text-sm font-semibold mb-4 backdrop-blur-sm border border-white/10">{t('home.nav.howItWorks')}</span>
-              <h2 className="text-3xl md:text-5xl font-extrabold text-white mb-4">{t('home.how.title')}</h2>
-              <p className="text-gray-400 max-w-xl mx-auto text-lg">{t('home.how.subtitle')}</p>
+              <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">{t('home.how.title')}</h2>
+              <p className="text-gray-400 max-w-xl mx-auto text-base">{t('home.how.subtitle')}</p>
             </div>
           </Reveal>
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
@@ -470,9 +469,9 @@ const HomePage = () => {
           </div>
           <Reveal delay={500}>
             <div className="text-center mt-12">
-              <Link to="/register" className="inline-flex items-center gap-2 px-8 py-4 bg-white text-primary-700 font-bold rounded-2xl hover:shadow-xl hover:shadow-white/10 hover:-translate-y-0.5 transition-all">
+              <Link to="/register" className="inline-flex items-center gap-2 px-5 py-3 bg-white text-primary-700 font-semibold rounded-xl hover:shadow-lg hover:shadow-white/10 transition-all">
                 {t('home.cta')}
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
               </Link>
             </div>
           </Reveal>
@@ -485,7 +484,7 @@ const HomePage = () => {
           <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-16 items-center">
             <Reveal className="flex-1">
               <span className="inline-block px-4 py-1.5 rounded-full bg-primary-50 text-primary-600 text-sm font-semibold mb-4">{t('home.capabilities.tag')}</span>
-              <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-8">{t('home.capabilities.title')}</h2>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">{t('home.capabilities.title')}</h2>
               <ul className="space-y-4">
                 {['banner', 'categories', 'modifiers', 'social', 'subdomain', 'trial'].map((cap, i) => (
                   <Reveal key={cap} delay={i * 80}>
@@ -549,7 +548,7 @@ const HomePage = () => {
           <Reveal>
             <div className="text-center mb-14">
               <span className="inline-block px-4 py-1.5 rounded-full bg-primary-50 text-primary-600 text-sm font-semibold mb-4">FAQ</span>
-              <h2 className="text-3xl md:text-5xl font-extrabold text-gray-900 mb-4">{t('home.faq.title')}</h2>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">{t('home.faq.title')}</h2>
             </div>
           </Reveal>
           <div className="max-w-2xl mx-auto">
@@ -568,11 +567,11 @@ const HomePage = () => {
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.2) 1px, transparent 0)', backgroundSize: '32px 32px' }} />
         <div className="container mx-auto relative text-center">
           <Reveal>
-            <h2 className="text-3xl md:text-5xl font-extrabold text-white mb-5">{t('home.finalCta.title')}</h2>
-            <p className="text-primary-200 text-lg mb-10 max-w-xl mx-auto">{t('home.finalCta.subtitle')}</p>
-            <Link to="/register" className="group inline-flex items-center gap-3 bg-white text-primary-700 font-bold text-lg px-10 py-4.5 rounded-2xl hover:shadow-2xl hover:shadow-white/20 hover:-translate-y-1 transition-all">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">{t('home.finalCta.title')}</h2>
+            <p className="text-primary-200 text-base mb-8 max-w-xl mx-auto">{t('home.finalCta.subtitle')}</p>
+            <Link to="/register" className="group inline-flex items-center gap-3 bg-white text-primary-700 font-semibold text-sm px-6 py-3 rounded-xl hover:shadow-xl hover:shadow-white/20 transition-all">
               {t('home.cta')}
-              <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+              <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
             </Link>
           </Reveal>
         </div>

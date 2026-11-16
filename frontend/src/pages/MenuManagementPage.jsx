@@ -49,6 +49,10 @@ const MenuManagementPage = () => {
   const [dishStopMatrix, setDishStopMatrix] = useState(null);
   const [loadingDishStopMatrix, setLoadingDishStopMatrix] = useState(false);
   const [savingDishStopMatrix, setSavingDishStopMatrix] = useState(false);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [categoriesError, setCategoriesError] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [availabilityFilter, setAvailabilityFilter] = useState('all');
 
   // Автоматически выбираем ресторан при загрузке (handled by useSelectedRestaurant)
 
@@ -130,6 +134,8 @@ const MenuManagementPage = () => {
 
   const loadCategories = async (restaurantId) => {
     try {
+      setCategoriesLoading(true);
+      setCategoriesError('');
       const cats = await menuService.getCategories(restaurantId);
 
       setCategories(cats);
@@ -144,7 +150,10 @@ const MenuManagementPage = () => {
       return cats;
     } catch (err) {
       console.error('Error loading categories:', err);
+      setCategoriesError(err.response?.data?.error || 'Не удалось загрузить меню');
       return [];
+    } finally {
+      setCategoriesLoading(false);
     }
   };
 
@@ -152,7 +161,7 @@ const MenuManagementPage = () => {
     try {
       const { categoryGroupService } = await import('../services/categoryGroupService');
       const groups = await categoryGroupService.getCategoryGroups(restaurantId);
-      console.log('📂 Loaded category groups:', groups);
+      console.log('Loaded category groups:', groups);
       setCategoryGroups(groups);
     } catch (err) {
       console.error('Error loading category groups:', err);
@@ -561,6 +570,35 @@ const MenuManagementPage = () => {
     }
   };
 
+  const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase('ru-RU');
+  const isFilteringMenu = Boolean(normalizedSearchQuery) || availabilityFilter !== 'all';
+
+  const getFilteredDishes = (category) => {
+    const categoryDishes = dishes[category.id] || [];
+    const categoryMatches = normalizedSearchQuery
+      && category.name?.toLocaleLowerCase('ru-RU').includes(normalizedSearchQuery);
+
+    return categoryDishes.filter((dish) => {
+      const matchesSearch = !normalizedSearchQuery
+        || categoryMatches
+        || dish.name?.toLocaleLowerCase('ru-RU').includes(normalizedSearchQuery)
+        || dish.description?.toLocaleLowerCase('ru-RU').includes(normalizedSearchQuery);
+      const isStopped = getDishStoppedStateForScope(dish) || dish.available === false;
+      const matchesAvailability = availabilityFilter === 'all'
+        || (availabilityFilter === 'available' && !isStopped)
+        || (availabilityFilter === 'stopped' && isStopped);
+
+      return matchesSearch && matchesAvailability;
+    });
+  };
+
+  const filteredCategories = categories.filter((category) => {
+    if (!isFilteringMenu) return true;
+    const categoryMatches = normalizedSearchQuery
+      && category.name?.toLocaleLowerCase('ru-RU').includes(normalizedSearchQuery);
+    return categoryMatches || getFilteredDishes(category).length > 0;
+  });
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -571,25 +609,60 @@ const MenuManagementPage = () => {
 
   return (
     <DashboardLayout userData={userData} selectedRestaurantId={selectedRestaurantId}>
-      <div className="max-w-6xl mx-auto">
-        {/* Page header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Управление меню</h1>
-          <p className="text-gray-500 text-sm mt-1">Категории, блюда и модификаторы</p>
+      <div className="mx-auto max-w-[1280px]">
+        <div className="page-header">
+          <div>
+            <p className="page-eyebrow">Меню</p>
+            <h1 className="page-title">Категории и блюда</h1>
+            <p className="page-description">Управляйте составом меню, ценами и доступностью позиций.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {selectedRestaurant?.subdomain && (
+              <a
+                href={`/${getBusinessType(selectedRestaurant.businessType).route}/${selectedRestaurant.subdomain}`}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-secondary"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+                  <circle cx="12" cy="12" r="2.5" />
+                </svg>
+                Открыть гостевое меню
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={() => categories[0] && handleAddDish(categories[0].id)}
+              disabled={!categories.length || isSharedMenuConsumer || isManagerForSelectedRestaurant}
+              className="btn-primary"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path strokeLinecap="round" d="M12 5v14M5 12h14" />
+              </svg>
+              Добавить блюдо
+            </button>
+          </div>
         </div>
+
         {/* Restaurant Selector */}
         {userData && (
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Выберите {selectedRestaurant ? getBusinessType(selectedRestaurant.businessType).label.toLowerCase() : 'заведение'}</label>
-            <RestaurantSelector
-              userData={userData}
-              selectedRestaurantId={selectedRestaurantId}
-              placeholderLabel={selectedRestaurant ? getBusinessType(selectedRestaurant.businessType).label.toLowerCase() : 'заведение'}
-              onSelectRestaurant={(id) => {
-                setSelectedRestaurantId(id);
-                localStorage.setItem('selectedRestaurantId', id);
-              }}
-            />
+          <div className="surface mb-5 flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Выбранное заведение</p>
+              <p className="mt-0.5 text-xs text-gray-500">Изменения применятся только к выбранной точке.</p>
+            </div>
+            <div className="w-full sm:max-w-sm">
+              <RestaurantSelector
+                userData={userData}
+                selectedRestaurantId={selectedRestaurantId}
+                placeholderLabel={selectedRestaurant ? getBusinessType(selectedRestaurant.businessType).label.toLowerCase() : 'заведение'}
+                onSelectRestaurant={(id) => {
+                  setSelectedRestaurantId(id);
+                  localStorage.setItem('selectedRestaurantId', id);
+                }}
+              />
+            </div>
           </div>
         )}
 
@@ -605,37 +678,80 @@ const MenuManagementPage = () => {
           </div>
         )}
 
-        {/* Add Category Button */}
-        <div className="mb-4 flex justify-between items-center gap-2 flex-wrap">
-          <h2 className="text-lg font-semibold text-gray-900">Категории и блюда</h2>
-          <div className="flex gap-2 flex-wrap">
-            <button onClick={() => setShowCategoryGroupsModal(true)} className="inline-flex items-center gap-1.5 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">
-              <svg className="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" /></svg>
-              Группы категорий
-            </button>
-            <button
-              onClick={() => setShowCopyModal(true)}
-              disabled={isSharedMenuConsumer || isManagerForSelectedRestaurant}
-              className="inline-flex items-center gap-1.5 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.5a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>
-              Копировать меню
-            </button>
-            <button
-              onClick={handleAddCategory}
-              disabled={isSharedMenuConsumer || isManagerForSelectedRestaurant}
-              title={isSharedMenuConsumer ? 'Редактирование делается в ресторане-источнике' : isManagerForSelectedRestaurant ? 'Менеджер может управлять только стоп-листом' : 'Добавить категорию'}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-              Добавить категорию
-            </button>
+        <div className="surface mb-4 p-3 sm:p-4">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex flex-1 flex-col gap-2 sm:flex-row">
+              <label className="relative block flex-1">
+                <span className="sr-only">Найти блюдо или категорию</span>
+                <svg className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <circle cx="11" cy="11" r="7" /><path strokeLinecap="round" d="m20 20-3.5-3.5" />
+                </svg>
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Найти блюдо или категорию"
+                  className="input pl-10"
+                />
+              </label>
+              <select
+                value={availabilityFilter}
+                onChange={(event) => setAvailabilityFilter(event.target.value)}
+                className="select-field sm:w-48"
+                aria-label="Фильтр доступности"
+              >
+                <option value="all">Все позиции</option>
+                <option value="available">В меню</option>
+                <option value="stopped">В стоп-листе</option>
+              </select>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => setShowCategoryGroupsModal(true)} className="btn-secondary">
+                Группы
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCopyModal(true)}
+                disabled={isSharedMenuConsumer || isManagerForSelectedRestaurant}
+                className="btn-secondary"
+              >
+                Копировать
+              </button>
+              <button
+                type="button"
+                onClick={handleAddCategory}
+                disabled={isSharedMenuConsumer || isManagerForSelectedRestaurant}
+                title={isSharedMenuConsumer ? 'Редактирование выполняется в заведении-источнике' : isManagerForSelectedRestaurant ? 'Менеджер управляет только стоп-листом' : 'Добавить категорию'}
+                className="btn-secondary"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" d="M12 5v14M5 12h14" /></svg>
+                Категория
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Categories List */}
-        {categories.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-100 text-center py-16">
+        {categoriesLoading ? (
+          <div className="surface space-y-4 p-5" aria-live="polite" aria-label="Загрузка меню">
+            {[0, 1, 2].map((item) => (
+              <div key={item} className="animate-pulse rounded-2xl border border-gray-100 p-4">
+                <div className="h-4 w-40 rounded bg-gray-200" />
+                <div className="mt-3 h-3 w-24 rounded bg-gray-100" />
+              </div>
+            ))}
+          </div>
+        ) : categoriesError ? (
+          <div className="surface px-5 py-14 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-error-50 text-error-600">
+              <svg className="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.3 3.7 2.6 17a2 2 0 0 0 1.73 3h15.34a2 2 0 0 0 1.73-3L13.7 3.7a2 2 0 0 0-3.4 0Z" /></svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-950">Не удалось загрузить меню</h3>
+            <p className="mx-auto mt-2 max-w-md text-sm text-gray-500">{categoriesError}</p>
+            <button type="button" onClick={() => loadCategories(selectedRestaurantId)} className="btn-primary mt-5">Повторить</button>
+          </div>
+        ) : categories.length === 0 ? (
+          <div className="surface py-16 text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-2xl mx-auto mb-4 flex items-center justify-center">
               <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
@@ -646,42 +762,54 @@ const MenuManagementPage = () => {
             <button
               onClick={handleAddCategory}
               disabled={isSharedMenuConsumer || isManagerForSelectedRestaurant}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-primary"
             >
               Создать категорию
             </button>
           </div>
+        ) : filteredCategories.length === 0 ? (
+          <div className="surface px-5 py-14 text-center">
+            <h3 className="text-lg font-semibold text-gray-950">Ничего не найдено</h3>
+            <p className="mt-2 text-sm text-gray-500">Измените запрос или сбросьте фильтр доступности.</p>
+            <button
+              type="button"
+              onClick={() => { setSearchQuery(''); setAvailabilityFilter('all'); }}
+              className="btn-secondary mt-5"
+            >
+              Сбросить фильтры
+            </button>
+          </div>
         ) : (
           <div className="space-y-3">
-            {categories.map((category) => (
+            {filteredCategories.map((category) => (
               <div
                 key={category.id}
-                className={`bg-white rounded-xl border transition-all ${draggedCategoryId === category.id ? 'opacity-50' : ''} ${dragOverCategoryId === category.id ? 'border-blue-400 bg-blue-50' : 'border-gray-100'}`}
-                draggable={!isSharedMenuConsumer && !isManagerForSelectedRestaurant}
+                className={`overflow-hidden rounded-2xl border bg-white shadow-sm transition-all ${draggedCategoryId === category.id ? 'opacity-50' : ''} ${dragOverCategoryId === category.id ? 'border-primary-400 bg-primary-50' : 'border-gray-200'}`}
+                draggable={!isFilteringMenu && !isSharedMenuConsumer && !isManagerForSelectedRestaurant}
                 onDragStart={(e) => handleCategoryDragStart(e, category.id)}
                 onDragOver={(e) => handleCategoryDragOver(e, category.id)}
                 onDragLeave={handleCategoryDragLeave}
                 onDrop={(e) => handleCategoryDrop(e, category.id)}
               >
                 {/* Category Header */}
-                <div className={`flex items-center justify-between px-5 py-4 ${(isSharedMenuConsumer || isManagerForSelectedRestaurant) ? '' : 'cursor-move'}`}>
-                  <div className="flex items-center gap-3 flex-1 min-w-0" onClick={() => toggleCategory(category.id)}>
+                <div className={`flex items-center justify-between gap-3 px-4 py-4 sm:px-5 ${(!isFilteringMenu && !isSharedMenuConsumer && !isManagerForSelectedRestaurant) ? 'cursor-move' : ''}`}>
+                  <button type="button" className="flex min-w-0 flex-1 items-center gap-3 text-left" onClick={() => toggleCategory(category.id)} aria-expanded={expandedCategories.has(category.id)}>
                     <svg className={`w-4 h-4 text-gray-400 transition-transform duration-200 flex-shrink-0 ${expandedCategories.has(category.id) ? 'rotate-90' : ''}`} fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                     </svg>
                     <div className="min-w-0">
                       <h3 className="text-base font-semibold text-gray-900 break-words">{category.name}</h3>
                       <p className="text-xs text-gray-400 mt-0.5">
-                        {dishes[category.id]?.length || 0} блюд
+                        {getFilteredDishes(category).length} из {dishes[category.id]?.length || 0} блюд
                       </p>
                     </div>
-                  </div>
+                  </button>
                   {/* Action Buttons */}
                   <div className="flex items-center gap-1.5 flex-shrink-0">
                     <button
                       onClick={() => handleAddDish(category.id)}
                       disabled={isSharedMenuConsumer || isManagerForSelectedRestaurant}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="inline-flex min-h-11 items-center gap-1 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:border-primary-200 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                       Блюдо
@@ -689,16 +817,18 @@ const MenuManagementPage = () => {
                     <button
                       onClick={() => handleEditCategory(category)}
                       disabled={isSharedMenuConsumer || isManagerForSelectedRestaurant}
-                      className="p-1.5 border border-gray-200 rounded-lg text-gray-400 hover:text-orange-500 hover:border-orange-200 bg-white hover:bg-orange-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex h-11 w-11 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-400 transition-colors hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
                       title="Редактировать"
+                      aria-label={`Редактировать категорию «${category.name}»`}
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
                     </button>
                     <button
                       onClick={() => handleDeleteCategory(category.id)}
                       disabled={isSharedMenuConsumer || isManagerForSelectedRestaurant}
-                      className="p-1.5 border border-gray-200 rounded-lg text-gray-400 hover:text-red-500 hover:border-red-200 bg-white hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex h-11 w-11 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-400 transition-colors hover:border-error-100 hover:bg-error-50 hover:text-error-600 disabled:cursor-not-allowed disabled:opacity-50"
                       title="Удалить"
+                      aria-label={`Удалить категорию «${category.name}»`}
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
                     </button>
@@ -708,14 +838,14 @@ const MenuManagementPage = () => {
                 {/* Dishes List */}
                 {expandedCategories.has(category.id) && (
                   <div className="border-t border-gray-100">
-                    {dishes[category.id]?.length === 0 ? (
+                    {getFilteredDishes(category).length === 0 ? (
                       <p className="text-gray-400 text-sm py-6 text-center">Нет блюд в этой категории</p>
                     ) : (
-                      dishes[category.id]?.map((dish, idx) => (
+                      getFilteredDishes(category).map((dish, idx) => (
                         <div
                           key={dish.id}
-                          className={`flex items-center gap-4 px-5 py-3 transition-colors ${(isSharedMenuConsumer || isManagerForSelectedRestaurant) ? '' : 'cursor-move'} ${draggedDishId === dish.id ? 'opacity-50' : ''} ${dragOverDishId === dish.id ? 'bg-blue-50' : 'hover:bg-gray-50'} ${idx > 0 ? 'border-t border-gray-50' : ''}`}
-                          draggable={!isSharedMenuConsumer && !isManagerForSelectedRestaurant}
+                          className={`flex flex-wrap items-center gap-3 px-4 py-3.5 transition-colors sm:flex-nowrap sm:gap-4 sm:px-5 ${(!isFilteringMenu && !isSharedMenuConsumer && !isManagerForSelectedRestaurant) ? 'cursor-move' : ''} ${draggedDishId === dish.id ? 'opacity-50' : ''} ${dragOverDishId === dish.id ? 'bg-primary-50' : 'hover:bg-gray-50/80'} ${idx > 0 ? 'border-t border-gray-100' : ''}`}
+                          draggable={!isFilteringMenu && !isSharedMenuConsumer && !isManagerForSelectedRestaurant}
                           onDragStart={(e) => handleDishDragStart(e, dish.id)}
                           onDragOver={(e) => handleDishDragOver(e, dish.id)}
                           onDragLeave={handleDishDragLeave}
@@ -783,12 +913,13 @@ const MenuManagementPage = () => {
                           </div>
 
                           {/* Actions */}
-                          <div className="flex items-center gap-1 flex-shrink-0">
+                          <div className="ml-auto flex w-full flex-shrink-0 items-center justify-end gap-1 sm:w-auto">
                             {dishHasModifierOptions(dish) && (
                               <button
                                 onClick={() => handleOpenOptionStopModal(dish)}
-                                className="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 transition-colors"
+                                className="flex h-11 w-11 items-center justify-center rounded-xl text-info-600 transition-colors hover:bg-info-50"
                                 title="Стоп по опциям"
+                                aria-label={`Стоп-лист опций блюда «${dish.name}»`}
                               >
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 6.75h15m-15 5.25h15m-15 5.25h15" />
@@ -800,10 +931,11 @@ const MenuManagementPage = () => {
                             )}
                             <button
                               onClick={() => handleToggleAvailability(dish)}
-                              className={`p-1.5 rounded-lg transition-colors ${getDishStoppedStateForScope(dish) || (isLocalStopScope() && dish.stoppedAtMenuSource)
-                                ? 'text-red-500 hover:bg-red-50'
-                                : 'text-green-500 hover:bg-green-50'}`}
+                              className={`flex h-11 w-11 items-center justify-center rounded-xl transition-colors ${getDishStoppedStateForScope(dish) || (isLocalStopScope() && dish.stoppedAtMenuSource)
+                                ? 'text-error-600 hover:bg-error-50'
+                                : 'text-success-600 hover:bg-success-50'}`}
                               title={getDishStopButtonTitle(dish)}
+                              aria-label={`${getDishStopButtonTitle(dish)}: ${dish.name}`}
                             >
                               {(getDishStoppedStateForScope(dish) || (isLocalStopScope() && dish.stoppedAtMenuSource)) ? (
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" /></svg>
@@ -814,16 +946,18 @@ const MenuManagementPage = () => {
                             <button
                               onClick={() => handleEditDish(dish)}
                               disabled={isSharedMenuConsumer || isManagerForSelectedRestaurant}
-                              className="p-1.5 rounded-lg text-gray-400 hover:text-orange-500 hover:bg-orange-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="flex h-11 w-11 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-primary-50 hover:text-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
                               title="Редактировать"
+                              aria-label={`Редактировать блюдо «${dish.name}»`}
                             >
                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
                             </button>
                             <button
                               onClick={() => handleDeleteDish(dish.id)}
                               disabled={isSharedMenuConsumer || isManagerForSelectedRestaurant}
-                              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="flex h-11 w-11 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-error-50 hover:text-error-600 disabled:cursor-not-allowed disabled:opacity-50"
                               title="Удалить"
+                              aria-label={`Удалить блюдо «${dish.name}»`}
                             >
                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
                             </button>
@@ -884,14 +1018,17 @@ const MenuManagementPage = () => {
         <DishModal
           dish={editingDish}
           categoryId={selectedCategoryId}
+          categories={categories}
           currency={currency}
           restaurantId={selectedRestaurantId}
           onClose={() => setShowDishModal(false)}
-          onSave={() => {
+          onSave={(savedCategoryId) => {
             setShowDishModal(false); // Закрываем модалку
             // Автоматически раскрываем категорию после добавления/редактирования блюда
-            if (selectedCategoryId) {
-              setExpandedCategories(prev => new Set([...prev, selectedCategoryId]));
+            const categoryToExpand = savedCategoryId || selectedCategoryId;
+            if (categoryToExpand) {
+              setSelectedCategoryId(categoryToExpand);
+              setExpandedCategories(prev => new Set([...prev, categoryToExpand]));
             }
             loadCategories(selectedRestaurantId); // Обновляем список
             setDataTimestamp(Date.now()); // Обновляем timestamp для изображений
@@ -1340,16 +1477,28 @@ const CategoryModal = ({ category, restaurantId, onClose, onSave, categoryGroups
   );
 };
 
+const parseAllergenValue = (value) => {
+  if (Array.isArray(value)) return value;
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
 // Dish Modal Component
-const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restaurantId }) => {
+const DishModal = ({ dish, categoryId, categories = [], currency = '₽', onClose, onSave, restaurantId }) => {
   const [name, setName] = useState(dish?.name || '');
   const [description, setDescription] = useState(dish?.description || '');
   const [price, setPrice] = useState(dish?.price || '');
   const [deliveryPrice, setDeliveryPrice] = useState(dish?.deliveryPrice || '');
+  const [dishCategoryId, setDishCategoryId] = useState(dish?.categoryId || categoryId || '');
   const [imageFile, setImageFile] = useState(null);
   const [currentImageUrl, setCurrentImageUrl] = useState(dish?.imageUrl || null);
   const [modifiers, setModifiers] = useState(dish?.modifiers || []);
-  const [allergens, setAllergens] = useState(dish?.allergens ? JSON.parse(dish.allergens) : []);
+  const [allergens, setAllergens] = useState(() => parseAllergenValue(dish?.allergens));
   const [discount, setDiscount] = useState(dish?.discount || '');
   const [badge, setBadge] = useState(dish?.badge || '');
   const [saving, setSaving] = useState(false);
@@ -1389,6 +1538,14 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
     setAutoRecommendationsEnabled(Boolean(dish?.autoRecommendationsEnabled));
     setOptionEditorByModifier({});
   }, [dish?.id]);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape' && !saving && !uploadingImage) onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose, saving, uploadingImage]);
 
   // Загрузка всех блюд ресторана (для выбора рекомендаций)
   useEffect(() => {
@@ -1433,14 +1590,14 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
   };
 
   const availableAllergens = [
-    { id: 'gluten', name: 'Глютен', icon: '🌾' },
-    { id: 'dairy', name: 'Молоко', icon: '🥛' },
-    { id: 'nuts', name: 'Орехи', icon: '🥜' },
-    { id: 'eggs', name: 'Яйца', icon: '🥚' },
-    { id: 'fish', name: 'Рыба', icon: '🐟' },
-    { id: 'shellfish', name: 'Морепродукты', icon: '🦐' },
-    { id: 'soy', name: 'Соя', icon: '🫘' },
-    { id: 'sesame', name: 'Кунжут', icon: '🌰' }
+    { id: 'gluten', name: 'Глютен' },
+    { id: 'dairy', name: 'Молоко' },
+    { id: 'nuts', name: 'Орехи' },
+    { id: 'eggs', name: 'Яйца' },
+    { id: 'fish', name: 'Рыба' },
+    { id: 'shellfish', name: 'Морепродукты' },
+    { id: 'soy', name: 'Соя' },
+    { id: 'sesame', name: 'Кунжут' }
   ];
 
   const toggleAllergen = (allergenId) => {
@@ -1728,9 +1885,9 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
     }
 
     try {
-      console.log('📤 [Upload API] Calling uploadModifierOptionImage...');
+        console.log('[Upload API] Calling uploadModifierOptionImage...');
       const result = await menuService.uploadModifierOptionImage(option.id, file, (progress) => {
-        console.log(`📊 [Upload Progress] ${progress}%`);
+        console.log(`[Upload Progress] ${progress}%`);
       }, restaurantId);
 
       console.log('✅ [Upload Success] Result:', result);
@@ -1819,7 +1976,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
         description,
         price: parsedPrice,
         deliveryPrice: parsedDeliveryPrice,
-        categoryId,
+        categoryId: dishCategoryId,
         allergens: allergens.length > 0 ? JSON.stringify(allergens) : null,
         discount: parsedDiscount,
         badge: badge || null,
@@ -1836,6 +1993,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
 
       // Upload image if selected
       if (imageFile) {
+        let imageUploadFailed = false;
         console.log('🖼️ [Dish Image] Starting upload...');
         console.log('🖼️ [Dish Image] File:', imageFile.name, 'Size:', imageFile.size, 'Type:', imageFile.type);
         console.log('🖼️ [Dish Image] Dish ID:', savedDish.id);
@@ -1843,9 +2001,9 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
         setUploadingImage(true);
         setUploadProgress(0);
         try {
-          console.log('📤 [Dish Image] Calling uploadDishImage...');
+          console.log('[Dish Image] Calling uploadDishImage...');
           const result = await menuService.uploadDishImage(savedDish.id, imageFile, (progress) => {
-            console.log(`📊 [Dish Image] Progress: ${progress}%`);
+            console.log(`[Dish Image] Progress: ${progress}%`);
             setUploadProgress(progress);
           });
 
@@ -1859,15 +2017,18 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
             setCurrentImageUrl(newUrl);
           }
         } catch (err) {
+          imageUploadFailed = true;
           console.error('❌ [Dish Image] Upload failed:', err);
           console.error('❌ [Dish Image] Error message:', err.message);
           console.error('❌ [Dish Image] Error response:', err.response?.data);
-          toast.error(`Ошибка загрузки фото: ${err.response?.data?.error || err.message}`);
+          toast.error(`Основные данные сохранены, но фото не загрузилось: ${err.response?.data?.error || err.message}`);
         } finally {
           setUploadingImage(false);
           setUploadProgress(0);
-          setImageFile(null);
+          if (!imageUploadFailed) setImageFile(null);
         }
+
+        if (imageUploadFailed) return;
       }
 
       // Save new modifiers with options
@@ -1893,7 +2054,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
         }
       }
 
-      onSave();
+      onSave(dishCategoryId);
     } catch (err) {
       toast.error('Ошибка при сохранении блюда');
       console.error(err);
@@ -1903,16 +2064,20 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-      <div className="bg-white rounded-t-2xl sm:rounded-lg p-4 sm:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold">
-            {dish ? 'Редактировать блюдо' : 'Новое блюдо'}
-          </h3>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-gray-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+      <div className="flex max-h-[94dvh] w-full flex-col overflow-hidden rounded-t-3xl bg-[#F6F7F9] shadow-floating sm:max-w-3xl sm:rounded-3xl lg:max-w-4xl" role="dialog" aria-modal="true" aria-labelledby="dish-editor-title">
+        <div className="flex items-start justify-between border-b border-gray-200 bg-white px-5 py-4 sm:px-6 sm:py-5">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary-600">Меню</p>
+            <h3 id="dish-editor-title" className="mt-1 text-xl font-bold tracking-tight text-gray-950 sm:text-2xl">
+              {dish ? 'Редактировать блюдо' : 'Новое блюдо'}
+            </h3>
+            <p className="mt-1 text-sm text-gray-500">Заполните основную информацию, цены и параметры показа.</p>
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 hover:text-gray-800"
             aria-label="Закрыть"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1921,9 +2086,33 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 space-y-5 overflow-y-auto px-4 py-5 sm:px-6">
+          {dish && (
+            <div className="rounded-2xl border border-warning-100 bg-warning-50 px-4 py-3 text-sm leading-6 text-warning-700">
+              Основные поля сохранятся по кнопке «Сохранить». Удаление фото и изменения уже созданных модификаторов применяются сразу.
+            </div>
+          )}
+          <section className="surface-section space-y-4">
+            <div>
+              <h4 className="text-base font-semibold text-gray-950">Основное</h4>
+              <p className="mt-1 text-xs text-gray-500">Название, описание и цены, которые увидит гость.</p>
+            </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Название</label>
+            <label className="form-label">Категория</label>
+            <select
+              value={dishCategoryId}
+              onChange={(event) => setDishCategoryId(event.target.value)}
+              className="select-field"
+              required
+            >
+              <option value="" disabled>Выберите категорию</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>{category.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="form-label">Название</label>
             <input
               type="text"
               value={name}
@@ -1934,18 +2123,18 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Описание</label>
+            <label className="form-label">Описание</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="input w-full"
+              className="textarea-field"
               rows="3"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium mb-1">Цена в зале ({currency})</label>
+              <label className="form-label">Цена в зале ({currency})</label>
               <input
                 type="number"
                 value={price}
@@ -1958,7 +2147,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Цена доставки ({currency})</label>
+              <label className="form-label">Цена доставки ({currency})</label>
               <input
                 type="number"
                 value={deliveryPrice}
@@ -1971,10 +2160,16 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
               />
             </div>
           </div>
-          <p className="text-xs text-gray-500 -mt-2">Если цена доставки не указана, используется цена в зале</p>
+          <p className="form-hint -mt-2">Если цена доставки не указана, используется цена в зале.</p>
+          </section>
 
+          <section className="surface-section grid gap-5 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <h4 className="text-base font-semibold text-gray-950">Продажи и маркировка</h4>
+              <p className="mt-1 text-xs text-gray-500">Скидка, отметка на карточке и сведения об аллергенах.</p>
+            </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Скидка (%)</label>
+            <label className="form-label">Скидка (%)</label>
             <input
               type="number"
               value={discount}
@@ -1987,15 +2182,15 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
             <p className="text-xs text-gray-500 mt-1">Оставьте пустым, если скидки нет</p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-2">Аллергены</label>
-            <div className="grid grid-cols-2 gap-2">
+          <div className="sm:row-span-2">
+            <label className="form-label">Аллергены</label>
+            <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
               {availableAllergens.map((allergen) => (
                 <label
                   key={allergen.id}
-                  className={`flex items-center gap-2 p-2 border rounded cursor-pointer transition-colors ${allergens.includes(allergen.id)
-                    ? 'bg-orange-50 border-orange-300'
-                    : 'bg-white border-gray-300 hover:bg-gray-50'
+                  className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 transition-colors ${allergens.includes(allergen.id)
+                    ? 'border-accent-500 bg-accent-50 text-accent-700'
+                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
                     }`}
                 >
                   <input
@@ -2005,7 +2200,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
                     className="w-4 h-4"
                   />
                   <span className="text-sm">
-                    {allergen.icon} {allergen.name}
+                    {allergen.name}
                   </span>
                 </label>
               ))}
@@ -2013,27 +2208,31 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Бэдж (наклейка на фото)</label>
+            <label className="form-label">Отметка на фото</label>
             <select
               value={badge}
               onChange={(e) => setBadge(e.target.value)}
-              className="input w-full"
+              className="select-field"
             >
               <option value="">Без бэджа</option>
               <option value="NEW">🆕 NEW</option>
-              <option value="HIT">🔥 HIT</option>
+              <option value="HIT">HIT</option>
             </select>
-            <p className="text-xs text-gray-500 mt-1">Выбранный бэдж будет отображаться слева сверху на фото</p>
+            <p className="form-hint">Отметка показывается в верхнем углу карточки блюда.</p>
           </div>
+          </section>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Фото</label>
+          <section className="surface-section">
+            <div className="mb-4">
+              <h4 className="text-base font-semibold text-gray-950">Фото блюда</h4>
+              <p className="mt-1 text-xs text-gray-500">Рекомендуем горизонтальное изображение без текста и рамок.</p>
+            </div>
             {currentImageUrl && !imageFile && (
               <div className="relative mb-2">
                 <ImageWithLoader
                   src={cacheBustImage(currentImageUrl, { width: 800, quality: 'auto:good' })}
                   alt={dish?.name || 'Блюдо'}
-                  className="w-full h-48 object-cover rounded"
+                  className="h-56 w-full rounded-2xl object-cover"
                   loading="lazy"
                 />
                 {dish && (
@@ -2043,8 +2242,9 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
                       e.stopPropagation();
                       handleDeleteImage();
                     }}
-                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-lg transition-colors"
+                    className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-xl bg-error-600 text-white shadow-lg transition-colors hover:bg-error-700"
                     title="Удалить изображение"
+                    aria-label="Удалить изображение"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -2058,7 +2258,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
                 <img
                   src={URL.createObjectURL(imageFile)}
                   alt="Предпросмотр"
-                  className="w-full h-48 object-cover rounded"
+                  className="h-56 w-full rounded-2xl object-cover"
                 />
               </div>
             )}
@@ -2070,7 +2270,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
             />
             {imageFile && !uploadingImage && (
               <p className="text-sm text-green-600 mt-1">
-                ✓ Выбран файл: {imageFile.name}
+                Выбран файл: {imageFile.name}
               </p>
             )}
             {uploadingImage && (
@@ -2091,13 +2291,14 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
                 </div>
               </div>
             )}
-          </div>
+          </section>
 
           {/* Модификаторы */}
-          <div className="border-t pt-4">
-            <label className="block text-sm font-medium mb-2">
-              Модификаторы (размер, добавки, вкусы)
-            </label>
+          <section className="surface-section">
+            <div className="mb-4">
+              <h4 className="text-base font-semibold text-gray-950">Модификаторы и опции</h4>
+              <p className="mt-1 text-xs text-gray-500">Размеры, добавки, вкусы и другие варианты выбора.</p>
+            </div>
 
             {/* Список модификаторов */}
             {modifiers.length > 0 && (
@@ -2195,7 +2396,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
                               onClick={() => handleDeleteOption(modifier, option)}
                               className="text-red-600 hover:text-red-800 text-sm px-2"
                             >
-                              ✕
+                               ×
                             </button>
                           </div>
                         </div>
@@ -2328,7 +2529,7 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
                     onClick={() => setShowTemplates(false)}
                     className="text-gray-400 hover:text-gray-600"
                   >
-                    ✕
+                    ×
                   </button>
                 </div>
                 {loadingTemplates ? (
@@ -2367,24 +2568,21 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
             <p className="text-xs text-gray-500 mt-2">
               Модификаторы позволяют клиентам выбирать размер, вкус, добавки и т.д. Вы можете добавить фото для каждой опции.
             </p>
-          </div>
+          </section>
 
           {/* Рекомендации */}
-          <div className="border-t pt-4">
-            <label className="block text-sm font-medium mb-2">
-              💡 Рекомендации (что предложить с этим блюдом?)
-            </label>
-            <p className="text-xs text-gray-500 mb-3">
-              Выберите блюда, которые будут показаны как рекомендации при просмотре этого блюда.
-              Это увеличит средний чек! 🚀
-            </p>
+          <section className="surface-section">
+            <div className="mb-4">
+              <h4 className="text-base font-semibold text-gray-950">Рекомендации</h4>
+              <p className="mt-1 text-xs text-gray-500">Выберите блюда, которые можно предложить вместе с этой позицией.</p>
+            </div>
 
-            <label className="mb-3 flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800">
+            <label className="mb-3 flex min-h-11 items-start gap-2 rounded-xl border border-info-100 bg-info-50 px-3 py-3 text-xs text-info-700">
               <input
                 type="checkbox"
                 checked={autoRecommendationsEnabled}
                 onChange={(e) => setAutoRecommendationsEnabled(e.target.checked)}
-                className="mt-0.5 h-4 w-4 flex-shrink-0 accent-blue-600"
+                className="mt-0.5 h-4 w-4 flex-shrink-0 accent-primary-600"
               />
               <span>
                 Включить автоподбор рекомендаций. Если выключено и вручную ничего не выбрано — рекомендации клиенту не показываются.
@@ -2448,23 +2646,23 @@ const DishModal = ({ dish, categoryId, currency = '₽', onClose, onSave, restau
 
             {recommendationIds.length > 0 && (
               <div className="mt-2 text-xs text-green-600">
-                ✓ Выбрано блюд: {recommendationIds.length}
+                Выбрано блюд: {recommendationIds.length}
               </div>
             )}
-          </div>
+          </section>
 
-          <div className="flex gap-3 pt-4">
+          <div className="sticky -bottom-5 z-20 -mx-4 mt-6 flex gap-3 border-t border-gray-200 bg-white/95 px-4 py-4 shadow-[0_-10px_30px_rgba(24,35,51,0.08)] backdrop-blur sm:-mx-6 sm:px-6">
             <button
               type="button"
               onClick={onClose}
-              className="btn-secondary flex-1"
+              className="btn-secondary flex-1 sm:flex-none"
               disabled={saving || uploadingImage}
             >
               Отмена
             </button>
             <button
               type="submit"
-              className="btn-primary flex-1"
+              className="btn-primary flex-1 sm:ml-auto sm:flex-none sm:min-w-40"
               disabled={saving || uploadingImage}
             >
               {uploadingImage ? 'Загрузка фото...' : saving ? 'Сохранение...' : 'Сохранить'}

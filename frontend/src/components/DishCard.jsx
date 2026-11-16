@@ -4,18 +4,7 @@ import { useCartStore } from '../store/cartStore';
 import customerService from '../services/customerService';
 import { cacheBustImage } from '../utils/imageCache';
 import ImageWithLoader from './ImageWithLoader';
-
-// Иконки и названия аллергенов вынесены за пределы компонента, чтобы не создаваться при каждом рендере
-const allergenIcons = {
-  gluten: '🌾',
-  dairy: '🥛',
-  nuts: '🥜',
-  eggs: '🥚',
-  fish: '🐟',
-  shellfish: '🦐',
-  soy: '🫘',
-  sesame: '🌰'
-};
+import { Button } from './ui/Button';
 
 const allergenNames = {
   gluten: 'Глютен',
@@ -26,6 +15,18 @@ const allergenNames = {
   shellfish: 'Морепродукты',
   soy: 'Соя',
   sesame: 'Кунжут'
+};
+
+const parseAllergens = (value) => {
+  if (Array.isArray(value)) return value;
+  if (!value) return [];
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 };
 
 const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteToggle, onModalStateChange, restaurantId, restaurantName, canAddToCart = true, onAddToCartBlocked }) => {
@@ -40,8 +41,7 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
   const isAvailable = availabilityFlag !== false; // По умолчанию true если поле отсутствует
   const hasModifiers = dish.modifiers && dish.modifiers.length > 0;
 
-  // Парсим аллергены из JSON строки
-  const allergens = dish.allergens ? JSON.parse(dish.allergens) : [];
+  const allergens = parseAllergens(dish.allergens);
 
   useEffect(() => {
     setIsFavorite(Boolean(dish?.isFavorite));
@@ -117,13 +117,14 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
 
   // Обработчик клика на карточку
   const handleCardClick = () => {
-    if (!canAddToCart) {
-      onAddToCartBlocked?.();
-      return;
-    }
+    setIsModalOpen(true);
+  };
 
-    if (isAvailable) {
-      setIsModalOpen(true);
+  const handleCardKeyDown = (event) => {
+    if (event.target !== event.currentTarget) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleCardClick();
     }
   };
 
@@ -169,10 +170,11 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
         <div
           data-dish-id={dish.id}
           onClick={handleCardClick}
-          className={`card transition-all duration-200 relative ${isAvailable
-            ? 'cursor-pointer hover:shadow-lg active:scale-98'
-            : 'opacity-60 cursor-not-allowed'
-            }`}
+          onKeyDown={handleCardKeyDown}
+          role="button"
+          tabIndex={0}
+          aria-label={`Открыть блюдо «${dish.name}»${isAvailable ? '' : ', временно недоступно'}`}
+          className="card relative cursor-pointer transition-all duration-200 hover:border-primary-200 hover:shadow-surface active:scale-98"
         >
           {/* Плашки в правом верхнем углу */}
           <div className="absolute top-2 right-2 z-10 flex flex-col gap-1 items-end">
@@ -180,8 +182,10 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
             <button
               onClick={handleFavoriteClick}
               disabled={favoriteLoading}
-              className="bg-white/90 backdrop-blur-sm rounded-full p-2.5 shadow-md hover:bg-white transition-colors"
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-white/95 shadow-md backdrop-blur-sm transition-colors hover:bg-white"
               title={isFavorite ? 'Удалить из избранного' : 'Добавить в избранное'}
+              aria-label={isFavorite ? 'Удалить из избранного' : 'Добавить в избранное'}
+              aria-pressed={isFavorite}
             >
               {favoriteLoading ? (
                 <svg className="w-5 h-5 text-gray-400 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -253,7 +257,7 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
                         className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-800 text-xs rounded-full"
                         title={allergenNames[allergen]}
                       >
-                        {allergenIcons[allergen]} {allergenNames[allergen]}
+                        {allergenNames[allergen]}
                       </span>
                     ))}
                   </div>
@@ -292,7 +296,7 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
                     className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center bg-gray-300 text-gray-500 rounded-full text-2xl font-light cursor-not-allowed"
                     aria-label="Недоступно"
                   >
-                    ✕
+                    ×
                   </button>
                 )}
               </div>
@@ -324,10 +328,11 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
         <div
           data-dish-id={dish.id}
           onClick={handleCardClick}
-          className={`overflow-hidden rounded-lg border border-gray-200 bg-white transition-all duration-200 flex flex-col h-full ${isAvailable
-            ? 'cursor-pointer hover:shadow-lg active:scale-98'
-            : 'opacity-60 cursor-not-allowed'
-            }`}
+          onKeyDown={handleCardKeyDown}
+          role="button"
+          tabIndex={0}
+          aria-label={`Открыть блюдо «${dish.name}»${isAvailable ? '' : ', временно недоступно'}`}
+          className="flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white transition-all duration-200 hover:border-primary-200 hover:shadow-surface active:scale-98"
         >
           <div className="relative w-full aspect-[4/3]">
             {dish.image ? (
@@ -380,7 +385,7 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
                       className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-800 text-xs rounded-full"
                       title={allergenNames[allergen]}
                     >
-                      {allergenIcons[allergen]} {allergenNames[allergen]}
+                      {allergenNames[allergen]}
                     </span>
                   ))}
                 </div>
@@ -436,6 +441,8 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
           favoriteLoading={favoriteLoading}
           restaurantId={restaurantId}
           restaurantName={restaurantName}
+          canAddToCart={canAddToCart}
+          onAddToCartBlocked={onAddToCartBlocked}
         />
       </>
     );
@@ -447,10 +454,11 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
       <>
         <div
           onClick={handleCardClick}
-          className={`overflow-hidden rounded-2xl bg-white shadow-[0_10px_30px_rgba(0,0,0,0.06)] transition-all duration-200 flex flex-col h-full min-h-[320px] sm:min-h-[360px] ${isAvailable
-            ? 'cursor-pointer hover:shadow-[0_12px_36px_rgba(0,0,0,0.08)] active:scale-98'
-            : 'opacity-60 cursor-not-allowed'
-            }`}
+          onKeyDown={handleCardKeyDown}
+          role="button"
+          tabIndex={0}
+          aria-label={`Открыть блюдо «${dish.name}»${isAvailable ? '' : ', временно недоступно'}`}
+          className="flex h-full min-h-[320px] cursor-pointer flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-200 hover:border-primary-200 hover:shadow-surface active:scale-98 sm:min-h-[360px]"
         >
           {dish.image ? (
             <div className="relative w-full aspect-[3/4]">
@@ -483,7 +491,9 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
               <button
                 onClick={handleFavoriteClick}
                 disabled={favoriteLoading}
-                className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm rounded-full p-2 shadow-md hover:bg-white transition"
+                className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-full bg-white/95 shadow-md backdrop-blur-sm transition hover:bg-white"
+                aria-label={isFavorite ? 'Удалить из избранного' : 'Добавить в избранное'}
+                aria-pressed={isFavorite}
               >
                 {favoriteLoading ? (
                   <svg className="w-4 h-4 text-gray-400 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -518,8 +528,8 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
               {allergens.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-1">
                   {allergens.slice(0, 4).map((allergen) => (
-                    <span key={allergen} className="text-xs" title={allergenNames[allergen]}>
-                      {allergenIcons[allergen]}
+                    <span key={allergen} className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] text-amber-800" title={allergenNames[allergen]}>
+                      {allergenNames[allergen]}
                     </span>
                   ))}
                 </div>
@@ -547,16 +557,18 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
               {isAvailable ? (
                 <button
                   onClick={handleAddClick}
-                  className={`w-9 h-9 flex items-center justify-center bg-primary-600 hover:bg-primary-700 text-white rounded-full text-xl font-light transition-all shadow-md active:scale-95 ${isAdding ? 'animate-spin-once' : ''}`}
+                  className={`flex h-11 w-11 items-center justify-center rounded-full bg-primary-600 text-xl font-light text-white shadow-md transition-all hover:bg-primary-700 active:scale-95 ${isAdding ? 'animate-spin-once' : ''}`}
+                  aria-label="Добавить в корзину"
                 >
                   +
                 </button>
               ) : (
                 <button
                   disabled
-                  className="w-9 h-9 flex items-center justify-center bg-gray-300 text-gray-500 rounded-full text-xl cursor-not-allowed"
+                  className="flex h-11 w-11 cursor-not-allowed items-center justify-center rounded-full bg-gray-200 text-xl text-gray-500"
+                  aria-label="Временно недоступно"
                 >
-                  ✕
+                  ×
                 </button>
               )}
             </div>
@@ -573,6 +585,8 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
           favoriteLoading={favoriteLoading}
           restaurantId={restaurantId}
           restaurantName={restaurantName}
+          canAddToCart={canAddToCart}
+          onAddToCartBlocked={onAddToCartBlocked}
         />
       </>
     );
@@ -583,10 +597,11 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
     <>
       <div
         onClick={handleCardClick}
-        className={`overflow-hidden rounded-lg border border-gray-200 bg-white transition-all duration-200 flex flex-col h-full ${isAvailable
-          ? 'cursor-pointer hover:shadow-lg active:scale-98'
-          : 'opacity-60 cursor-not-allowed'
-          }`}
+        onKeyDown={handleCardKeyDown}
+        role="button"
+        tabIndex={0}
+        aria-label={`Открыть блюдо «${dish.name}»${isAvailable ? '' : ', временно недоступно'}`}
+        className="flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white transition-all duration-200 hover:border-primary-200 hover:shadow-surface active:scale-98"
       >
         {/* Image */}
         {dish.image ? (
@@ -621,7 +636,9 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
             <button
               onClick={handleFavoriteClick}
               disabled={favoriteLoading}
-              className="absolute top-1 right-1 bg-white/90 backdrop-blur-sm rounded-full p-2 shadow-md hover:bg-white transition-colors"
+              className="absolute right-1 top-1 flex h-11 w-11 items-center justify-center rounded-full bg-white/95 shadow-md backdrop-blur-sm transition-colors hover:bg-white"
+              aria-label={isFavorite ? 'Удалить из избранного' : 'Добавить в избранное'}
+              aria-pressed={isFavorite}
             >
               {favoriteLoading ? (
                 <svg className="w-4 h-4 text-gray-400 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -661,10 +678,10 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
                 {allergens.map((allergen) => (
                   <span
                     key={allergen}
-                    className="text-xs"
+                    className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] text-amber-800"
                     title={allergenNames[allergen]}
                   >
-                    {allergenIcons[allergen]}
+                    {allergenNames[allergen]}
                   </span>
                 ))}
               </div>
@@ -693,16 +710,18 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
             {isAvailable ? (
               <button
                 onClick={handleAddClick}
-                className={`w-7 h-7 flex items-center justify-center bg-primary-600 hover:bg-primary-700 text-white rounded-full text-lg font-light transition-all shadow-md active:scale-95 ${isAdding ? 'animate-spin-once' : ''}`}
+                className={`flex h-11 w-11 items-center justify-center rounded-full bg-primary-600 text-lg font-light text-white shadow-md transition-all hover:bg-primary-700 active:scale-95 ${isAdding ? 'animate-spin-once' : ''}`}
+                aria-label="Добавить в корзину"
               >
                 +
               </button>
             ) : (
               <button
                 disabled
-                className="w-7 h-7 flex items-center justify-center bg-gray-300 text-gray-500 rounded-full text-lg cursor-not-allowed"
+                className="flex h-11 w-11 cursor-not-allowed items-center justify-center rounded-full bg-gray-200 text-lg text-gray-500"
+                aria-label="Временно недоступно"
               >
-                ✕
+                ×
               </button>
             )}
           </div>
@@ -719,6 +738,8 @@ const DishCard = ({ dish, currency = '₽', style = 'horizontal', onFavoriteTogg
         favoriteLoading={favoriteLoading}
         restaurantId={restaurantId}
         restaurantName={restaurantName}
+        canAddToCart={canAddToCart}
+        onAddToCartBlocked={onAddToCartBlocked}
       />
     </>
   );

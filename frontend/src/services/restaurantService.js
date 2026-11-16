@@ -31,6 +31,34 @@ export const restaurantService = {
     return response.data;
   },
 
+  getFinikConnectionStatus: async (restaurantId) => {
+    const response = await api.get(`/restaurants/${encodeURIComponent(restaurantId)}/finik-connection/status`);
+    return response.data;
+  },
+
+  startFinikConnection: async (restaurantId) => {
+    const response = await api.post(`/restaurants/${encodeURIComponent(restaurantId)}/finik-connection/start`);
+    return response.data;
+  },
+
+  completeFinikConnection: async (restaurantId, data) => {
+    const response = await api.post(
+      `/restaurants/${encodeURIComponent(restaurantId)}/finik-connection/complete`,
+      data
+    );
+    return response.data;
+  },
+
+  testFinikConnection: async (restaurantId) => {
+    const response = await api.post(`/restaurants/${encodeURIComponent(restaurantId)}/finik-connection/test`);
+    return response.data;
+  },
+
+  disconnectFinikConnection: async (restaurantId) => {
+    const response = await api.post(`/restaurants/${encodeURIComponent(restaurantId)}/finik-connection/disconnect`);
+    return response.data;
+  },
+
   getBySubdomain: async (subdomain, language, options = {}) => {
     const { latitude, longitude, forceRefresh = false } = options;
 

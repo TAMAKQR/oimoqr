@@ -10,6 +10,10 @@ import api from '../services/api';
 import customerService from '../services/customerService';
 import { restaurantService } from '../services/restaurantService';
 import { finikOrderPaymentService } from '../services/finikOrderPaymentService';
+import { getBusinessType } from '../utils/businessTypes';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Badge } from '../components/ui/Badge';
 
 const GUEST_DELIVERY_LOCATION_KEY = 'guest-delivery-location';
 const GUEST_CHECKOUT_CONTACT_KEY = 'guest-checkout-contact';
@@ -59,6 +63,8 @@ const CheckoutPage = () => {
         reconcileWithRestaurantMenu
     } = useCartStore();
     const { restaurant, currency } = location.state || {};
+    const businessTypeCfg = getBusinessType(restaurant?.businessType);
+    const tableLabel = businessTypeCfg.tableLabel;
     const { setTheme, setCustomColors } = useTheme();
 
     // Apply restaurant theme on mount so checkout inherits the QR-menu style
@@ -355,7 +361,7 @@ const CheckoutPage = () => {
                 if (summary?.removedItems > 0) {
                     toast.error(`Удалено недоступных позиций: ${summary.removedItems}. Корзина обновлена по ближайшей точке.`, { duration: 5000 });
                 } else if (summary?.updatedItems > 0) {
-                    toast('Корзина обновлена по ближайшей точке доставки.', { icon: '📍' });
+                    toast('Корзина обновлена по ближайшей точке доставки.', { duration: 3000 });
                 }
             } catch (error) {
                 console.error('Failed to reconcile cart for serving point', error);
@@ -768,7 +774,7 @@ const CheckoutPage = () => {
         : guestDeliveryLocation;
     const hasExactDeliveryAddress = useMemo(() => hasHouseNumber(selectedAddressForSummary?.address || ''), [selectedAddressForSummary?.address]);
     const deliveryMethodLabel = isDineIn
-        ? (tableNumber ? `В зале · стол ${tableNumber}` : 'В зале')
+        ? (tableNumber ? `В номер · ${tableLabel} ${tableNumber}` : 'В номер')
         : deliveryType === 'delivery'
             ? 'Доставка'
             : 'Самовывоз';
@@ -891,8 +897,8 @@ const CheckoutPage = () => {
     );
 
     return (
-        <div className="min-h-screen bg-gray-50" style={{ paddingBottom: 'calc(136px + env(safe-area-inset-bottom, 0px))' }}>
-            <div className="max-w-[480px] mx-auto px-4 pt-4 pb-8 space-y-4">
+        <div className="min-h-screen bg-neutral-50" style={{ paddingBottom: 'calc(136px + env(safe-area-inset-bottom, 0px))' }}>
+            <div className="max-w-[480px] mx-auto px-4 pt-4 pb-8 space-y-5">
                 <div className="flex items-center gap-3">
                     <button
                         onClick={() => {
@@ -904,38 +910,38 @@ const CheckoutPage = () => {
                         }}
                         aria-label={checkoutStep === 2 ? 'К корзине' : 'Назад'}
                         title={checkoutStep === 2 ? 'К корзине' : 'Назад'}
-                        className="w-8 h-8 rounded-full border border-primary-200 text-primary-600 flex items-center justify-center"
+                        className="w-10 h-10 rounded-xl border border-neutral-200 bg-white text-neutral-700 flex items-center justify-center shadow-sm hover:bg-neutral-100 transition-colors"
                     >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
-                    <h1 className="text-xl font-bold">Оформление заказа</h1>
+                    <h1 className="text-lg font-bold text-neutral-900">Оформление заказа</h1>
                 </div>
 
-                <div className="bg-white rounded-lg shadow-sm p-4">
-                    <div className="flex items-center justify-between text-sm text-gray-600 mb-3">
-                        <span>Шаг {checkoutStep} из 2</span>
+                <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 p-5">
+                    <div className="flex items-center justify-between text-sm text-neutral-500 mb-4">
+                        <span className="font-medium">Шаг {checkoutStep} из 2</span>
                     </div>
 
-                    <div className="mb-4 grid grid-cols-2 gap-2">
-                        <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
-                            <div className="text-[11px] uppercase tracking-wide text-gray-500">Блюд</div>
-                            <div className="text-sm font-semibold text-gray-900">{totalDishCount}</div>
+                    <div className="mb-5 grid grid-cols-2 gap-3">
+                        <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3">
+                            <div className="text-[10px] uppercase tracking-wide text-neutral-400">Блюд</div>
+                            <div className="text-sm font-semibold text-neutral-900">{totalDishCount}</div>
                         </div>
-                        <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
-                            <div className="text-[11px] uppercase tracking-wide text-gray-500">Метод</div>
-                            <div className="text-sm font-semibold text-gray-900">{deliveryMethodLabel}</div>
+                        <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3">
+                            <div className="text-[10px] uppercase tracking-wide text-neutral-400">Метод</div>
+                            <div className="text-sm font-semibold text-neutral-900">{deliveryMethodLabel}</div>
                         </div>
                         {!isDineIn && deliveryType === 'delivery' && (
-                            <div className="col-span-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
-                                <div className="text-[11px] uppercase tracking-wide text-gray-500">Адрес</div>
-                                <div className="text-sm font-semibold text-gray-900 truncate">
+                            <div className="col-span-2 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3">
+                                <div className="text-[10px] uppercase tracking-wide text-neutral-400">Адрес</div>
+                                <div className="text-sm font-semibold text-neutral-900 truncate">
                                     {compactDeliveryAddress || (customer?.id ? 'Выберите адрес доставки' : 'Сначала укажите адрес в меню')}
                                 </div>
                             </div>
                         )}
-                        <div className="col-span-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                        <div className="col-span-2 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-xs text-neutral-500">
                             {servingRestaurant?.name
                                 ? `Обслуживает: ${servingRestaurant.name}`
                                 : `Ресторан: ${restaurant?.name || '—'}`}
@@ -946,73 +952,76 @@ const CheckoutPage = () => {
                         orderSection
                     ) : (
                         <div className="space-y-4">
-                            {/* Для dine_in показываем номер стола */}
+                            {/* Для dine_in показываем номер комнаты/стола */}
                             {isDineIn ? (
                                 <div className="bg-white rounded-lg shadow-sm p-4">
-                                    <h2 className="font-semibold text-base mb-3">Заказ в зале</h2>
+                                    <h2 className="font-semibold text-base mb-3">Заказ в номер</h2>
                                     <div className="flex items-center gap-3 p-3 bg-primary-50 rounded-lg border-2 border-primary-600">
-                                        <div className="text-3xl">🍽️</div>
+                                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-primary-700 shadow-sm">
+                                            <svg aria-hidden="true" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 17h16M6 14a6 6 0 0112 0v3H6v-3zM12 8V6" />
+                                            </svg>
+                                        </div>
                                         <div>
-                                            <div className="font-semibold text-base">{tableNumber ? `Стол ${tableNumber}` : 'Заказ в зале'}</div>
+                                            <div className="font-semibold text-base">{tableNumber ? `${tableLabel} ${tableNumber}` : 'Заказ в номер'}</div>
                                             <div className="text-xs text-gray-500">Заказ будет отправлен на кухню</div>
                                         </div>
                                     </div>
                                 </div>
                             ) : (
-                                <div className="bg-white rounded-lg shadow-sm p-4">
-                                    <h2 className="font-semibold text-base mb-3">Способ получения</h2>
-                                    <div className="grid grid-cols-2 gap-2 rounded-xl bg-gray-100 p-1.5">
-                                        <button
+                                <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 p-5">
+                                    <h2 className="font-semibold text-base mb-4 text-neutral-900">Способ получения</h2>
+                                    <div className="grid grid-cols-2 gap-3 rounded-xl bg-neutral-50 p-1.5">
+                                        <Button
+                                            variant={deliveryType === 'delivery' ? 'primary' : 'secondary'}
+                                            size="lg"
                                             onClick={() => selectDeliveryType('delivery')}
-                                            className={`rounded-lg px-3 py-2.5 text-left transition-all ${deliveryType === 'delivery'
-                                                ? 'bg-white border border-primary-500 shadow-sm'
-                                                : 'border border-transparent text-gray-700'
-                                                }`}
+                                            className="text-left"
                                         >
-                                            <div className="font-semibold text-sm">Доставка</div>
-                                            {isFreeDelivery ? (
-                                                <div className="text-xs text-green-600 font-medium">Бесплатно ✓</div>
-                                            ) : restaurant?.deliveryFee > 0 ? (
-                                                <div className="text-xs text-gray-500">{restaurant.deliveryFee} {currency}</div>
-                                            ) : null}
-                                        </button>
-                                        <button
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm">Доставка</span>
+                                                {isFreeDelivery ? (
+                                                    <span className="text-[10px] text-success-600 font-medium">Бесплатно</span>
+                                                ) : restaurant?.deliveryFee > 0 ? (
+                                                    <span className="text-[10px] text-neutral-500">{restaurant.deliveryFee} {currency}</span>
+                                                ) : null}
+                                            </div>
+                                        </Button>
+                                        <Button
+                                            variant={deliveryType === 'pickup' ? 'primary' : 'secondary'}
+                                            size="lg"
                                             onClick={() => selectDeliveryType('pickup')}
-                                            className={`rounded-lg px-3 py-2.5 text-left transition-all ${deliveryType === 'pickup'
-                                                ? 'bg-white border border-primary-500 shadow-sm'
-                                                : 'border border-transparent text-gray-700'
-                                                }`}
+                                            className="text-left"
                                         >
-                                            <div className="font-semibold text-sm">Самовывоз</div>
-                                            <div className="text-xs text-gray-500">Бесплатно</div>
-                                        </button>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm">Самовывоз</span>
+                                                <span className="text-[10px] text-neutral-500">Бесплатно</span>
+                                            </div>
+                                        </Button>
                                     </div>
                                 </div>
                             )}
 
                             {!customer?.id && !isDineIn && (
-                                <div className="bg-white rounded-lg shadow-sm p-4">
-                                    <h2 className="font-semibold text-base mb-3">Контактные данные</h2>
-                                    <div className="space-y-2.5">
-                                        <label className="block text-xs font-medium text-gray-600 mb-1">Имя</label>
-                                        <input
-                                            type="text"
+                                <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 p-5 mt-5">
+                                    <h2 className="font-semibold text-base mb-4 text-neutral-900">Контактные данные</h2>
+                                    <div className="space-y-3">
+                                        <label className="text-xs font-medium text-neutral-500 uppercase tracking-wider">Имя</label>
+                                        <Input
                                             placeholder="Например, Азамат"
                                             value={guestContactName}
                                             onChange={(e) => setGuestContactName(e.target.value)}
-                                            className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition"
                                         />
-                                        <label className="block text-xs font-medium text-gray-600 mb-1">Телефон</label>
-                                        <input
+                                        <label className="text-xs font-medium text-neutral-500 uppercase tracking-wider mt-3">Телефон</label>
+                                        <Input
                                             type="tel"
                                             inputMode="tel"
                                             autoComplete="tel"
                                             placeholder="+996 700 000 000"
                                             value={guestContactPhone}
                                             onChange={(e) => setGuestContactPhone(e.target.value)}
-                                            className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition"
                                         />
-                                        <p className="text-xs text-gray-500">
+                                        <p className="text-xs text-neutral-400 mt-2">
                                             Нужны только для связи по заказу.
                                         </p>
                                     </div>
@@ -1030,13 +1039,13 @@ const CheckoutPage = () => {
                                         <><svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg> Проверяем зону доставки...</>
                                     )}
                                     {zoneStatus === 'ok' && (
-                                        <><span>📍</span> {zoneMessage}</>
+                                        <>{zoneMessage}</>
                                     )}
                                     {zoneStatus === 'outside' && (
-                                        <><span>⚠️</span> {zoneMessage}</>
+                                        <>{zoneMessage}</>
                                     )}
                                     {zoneStatus === 'error' && (
-                                        <><span>📍</span> {zoneMessage}
+                                        <>{zoneMessage}
                                             <button onClick={() => {
                                                 if (customer?.id) {
                                                     const addr = addresses.find(a => a.id === selectedAddressId);
@@ -1256,18 +1265,20 @@ const CheckoutPage = () => {
                                                 />
                                             </div>
                                             <div className="flex gap-2.5 pt-1">
-                                                <button onClick={handleAddAddress} className="btn-primary flex-1 text-sm py-2.5 rounded-xl">
+                                                <Button onClick={handleAddAddress} variant="primary" size="sm" className="flex-1">
                                                     Сохранить
-                                                </button>
-                                                <button
+                                                </Button>
+                                                <Button
                                                     onClick={() => {
                                                         setShowNewAddressForm(false);
                                                         setNewAddress({ address: '', entrance: '', floor: '', apartment: '', comment: '' });
                                                     }}
-                                                    className="btn-secondary flex-1 text-sm py-2.5 rounded-xl"
+                                                    variant="secondary"
+                                                    size="sm"
+                                                    className="flex-1"
                                                 >
                                                     Отмена
-                                                </button>
+                                                </Button>
                                             </div>
                                         </div>
                                     )}
@@ -1335,8 +1346,8 @@ const CheckoutPage = () => {
                                 </div>
                             )}
 
-                            <div className="bg-white rounded-lg shadow-sm p-4">
-                                <h2 className="font-semibold text-base mb-3">Способ оплаты</h2>
+                            <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 p-5 mt-5">
+                                <h2 className="font-semibold text-base mb-4 text-neutral-900">Способ оплаты</h2>
                                 <select
                                     value={paymentMethod}
                                     onChange={(e) => {
@@ -1347,14 +1358,14 @@ const CheckoutPage = () => {
                                             setBonusRequested('0');
                                         }
                                     }}
-                                    className="input-field w-full text-sm"
+                                    className="w-full px-4 py-3 text-base text-neutral-900 bg-white border border-neutral-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 cursor-pointer transition-all duration-200 appearance-none"
                                 >
                                     <option value="cash">Наличными</option>
                                     {!isDineIn && <option value="card">Картой курьеру</option>}
                                     {finikAvailable && <option value="finik">Оплатить по QR</option>}
                                 </select>
                                 {paymentMethod === 'finik' && (
-                                    <p className="mt-2 text-xs text-gray-500">
+                                    <p className="mt-3 text-xs text-neutral-500">
                                         Заказ поступит в ресторан после подтверждения оплаты. Оплата проходит по QR-коду.
                                     </p>
                                 )}
@@ -1428,26 +1439,28 @@ const CheckoutPage = () => {
             {checkoutStep === 1 ? (
                 <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-lg z-50">
                     <div className="max-w-[480px] mx-auto p-3 space-y-2" style={{ paddingBottom: 'calc(8px + env(safe-area-inset-bottom, 0px))' }}>
-                        <button onClick={() => setCheckoutStep(2)} className="btn-primary w-full py-3 text-base shadow-lg">
+                        <Button onClick={() => setCheckoutStep(2)} variant="primary" size="lg" className="w-full">
                             Далее
-                        </button>
+                        </Button>
                     </div>
                 </div>
             ) : (
                 <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-lg z-50">
                     <div className="max-w-[480px] mx-auto p-3 space-y-2" style={{ paddingBottom: 'calc(8px + env(safe-area-inset-bottom, 0px))' }}>
-                        <button
+                        <Button
                             onClick={handlePlaceOrder}
-                            disabled={isPlaceOrderDisabled}
-                            className="btn-primary w-full py-3 text-base disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                            disabled={isPlaceOrderDisabled || loading}
+                            variant="primary"
+                            size="lg"
+                            className="w-full"
+                            loading={loading}
                         >
-                            {loading ? 'Оформление...' : isDineIn
+                            {isDineIn
                                 ? `Заказать на ${finalTotal} ${currency}`
-                                : `Оформить на ${finalTotal} ${currency}`
-                            }
-                        </button>
+                                : `Оплатить ${finalTotal} ${currency}`}
+                        </Button>
                         {isPlaceOrderDisabled && (
-                            <p className="text-xs text-gray-500 text-center">{placeOrderDisabledReason}</p>
+                            <p className="text-xs text-error-600 text-center font-medium">{placeOrderDisabledReason}</p>
                         )}
                     </div>
                 </div>

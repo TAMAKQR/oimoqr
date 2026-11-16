@@ -23,6 +23,13 @@ import {
 } from '../controllers/restaurant.controller.js';
 import { getCategories } from '../controllers/category.controller.js';
 import { getRestaurantDishes } from '../controllers/dish.controller.js';
+import {
+  completeFinikConnection,
+  disconnectFinikConnection,
+  getFinikConnectionStatus,
+  startFinikConnection,
+  testFinikConnection,
+} from '../controllers/finikConnection.controller.js';
 import { authenticate } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
 
@@ -51,6 +58,11 @@ router.put('/:restaurantId/modifier-options/:optionId/stop', authenticate, setMo
 // Protected routes
 router.get('/:restaurantId/logo', authenticate, getRestaurantLogo);
 router.get('/:restaurantId/settings', authenticate, getRestaurantSettings);
+router.get('/:restaurantId/finik-connection/status', authenticate, getFinikConnectionStatus);
+router.post('/:restaurantId/finik-connection/start', authenticate, startFinikConnection);
+router.post('/:restaurantId/finik-connection/complete', authenticate, completeFinikConnection);
+router.post('/:restaurantId/finik-connection/test', authenticate, testFinikConnection);
+router.post('/:restaurantId/finik-connection/disconnect', authenticate, disconnectFinikConnection);
 router.put('/:id', authenticate, updateRestaurant);
 router.put('/:id/menu-style', authenticate, updateMenuCardStyle);
 router.post('/:id/copy-menu', authenticate, copyMenu);

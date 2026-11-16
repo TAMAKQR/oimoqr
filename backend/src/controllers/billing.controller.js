@@ -1,4 +1,4 @@
-import { isFinikConfigured } from '../config/finik.js';
+import { isFinikWebhookConfigured } from '../config/finik.js';
 import {
   createBillingPayment,
   getBillingPayment,
@@ -38,7 +38,7 @@ export const getPayment = async (req, res, next) => {
 };
 
 export const finikWebhook = async (req, res) => {
-  if (!isFinikConfigured()) {
+  if (!isFinikWebhookConfigured()) {
     return res.status(503).json({ error: 'Finik webhook is not configured' });
   }
 
